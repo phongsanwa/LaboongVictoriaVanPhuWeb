@@ -46,4 +46,9 @@ class Customer extends Model
     {
         return $this->belongsTo(CustomerTier::class, 'tier_id');
     }
+
+    public function store(): BelongsTo
+    {
+        return $this->belongsTo(Store::class);
+    }
 }
