@@ -1,0 +1,32 @@
+/* ============ Laboong · Đăng nhập (FR-002) — extends register.css ============ */
+
+/* method tabs */
+.tabs { display: flex; background: var(--bg-2); border-radius: 999px; padding: 4px; gap: 3px; margin-bottom: 20px; }
+.tabs button { flex: 1; padding: 10px; border-radius: 999px; font-size: 14px; font-weight: 700; color: var(--ink-2); transition: .15s; display: inline-flex; align-items: center; justify-content: center; gap: 7px; }
+.tabs button.on { background: var(--card); color: var(--brand); box-shadow: var(--shadow-sm); }
+
+/* password field eye toggle */
+.inp-wrap .eye { position: absolute; right: 8px; width: 36px; height: 36px; border-radius: 9px; display: grid; place-items: center; color: var(--ink-3); transition: .14s; }
+.inp-wrap .eye:hover { background: var(--bg-2); color: var(--ink); }
+
+.row-between { display: flex; align-items: center; justify-content: space-between; margin: -4px 2px 16px; }
+.remember { display: inline-flex; align-items: center; gap: 9px; font-size: 13.5px; font-weight: 600; color: var(--ink-2); }
+.check { width: 22px; height: 22px; border-radius: 7px; border: 1.5px solid var(--line); display: grid; place-items: center; transition: .14s; flex: none; background: var(--card); }
+.check.on { background: var(--brand); border-color: var(--brand); }
+.forgot { font-size: 13.5px; font-weight: 700; color: var(--brand); padding: 4px; }
+.forgot:hover { text-decoration: underline; }
+
+/* social / alt logins */
+.divider { display: flex; align-items: center; gap: 14px; margin: 22px 0 18px; color: var(--ink-3); font-size: 12.5px; font-weight: 600; }
+.divider::before, .divider::after { content: ""; height: 1px; background: var(--line); flex: 1; }
+.socials { display: flex; gap: 11px; }
+.social { flex: 1; padding: 13px; border-radius: var(--r-sm); border: 1.5px solid var(--line); background: var(--card); display: inline-flex; align-items: center; justify-content: center; gap: 9px; font-weight: 700; font-size: 14px; transition: .15s; }
+.social:hover { border-color: var(--ink-3); background: var(--bg-2); }
+.social .g { width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; font-family: var(--display); font-weight: 800; font-size: 13px; color: #fff; }
+.social .g.google { background: linear-gradient(135deg,#EA4335,#FBBC05); }
+.social .g.zalo { background: #0068FF; font-size: 11px; }
+
+/* not registered notice */
+.notice { background: var(--bg-2); border: 1px solid var(--line); border-radius: var(--r-sm); padding: 13px 15px; font-size: 13px; color: var(--ink-2); font-weight: 500; margin-top: 14px; display: flex; gap: 10px; align-items: flex-start; line-height: 1.45; }
+.notice b { color: var(--ink); font-weight: 700; }
+.notice a { color: var(--brand); font-weight: 700; }

@@ -1,0 +1,199 @@
+/* ============ Laboong · Đổi quà & Voucher của tôi (FR-008) ============ */
+
+:root {
+  --brand: #0F623F; --brand-deep: #07432A;
+  --brand-soft: color-mix(in srgb, var(--brand) 12%, #fff);
+  --brand-ink: color-mix(in srgb, var(--brand) 68%, #000);
+
+  --peach: #FF8A5B; --yellow: #FFC23D; --pink: #FF6FA5;
+  --amber: #E8973A; --amber-bg: #FCEFD9; --amber-ink: #8A5618;
+  --ok: #1C9B5E; --ok-bg: #E2F4EA;
+
+  --bg: #F6F1E7; --bg-2: #EFE7D7; --card: #FFFFFF;
+  --ink: #1C2620; --ink-2: #5C6B62; --ink-3: #91A096;
+  --line: #E9E2D4; --line-2: #EFEAE0;
+
+  --shadow-sm: 0 1px 2px rgba(20,40,28,.06), 0 2px 8px rgba(20,40,28,.05);
+  --shadow-md: 0 6px 18px rgba(20,40,28,.08), 0 2px 6px rgba(20,40,28,.05);
+  --shadow-lg: 0 18px 44px rgba(7,67,42,.16), 0 6px 14px rgba(7,67,42,.10);
+  --shadow-brand: 0 14px 30px rgba(15,98,63,.30);
+
+  --r-sm: 12px; --r-md: 18px; --r-lg: 24px; --r-xl: 32px;
+  --font: 'Be Vietnam Pro', system-ui, sans-serif;
+  --display: 'Baloo 2', system-ui, sans-serif;
+  --maxw: 860px;
+}
+
+[data-theme="dark"] {
+  --bg: #0E1512; --bg-2: #121C17; --card: #18211C;
+  --ink: #ECF3ED; --ink-2: #9DB0A4; --ink-3: #6F8278;
+  --line: #243029; --line-2: #1F2A24;
+  --brand-soft: color-mix(in srgb, var(--brand) 26%, var(--card));
+  --brand-ink: color-mix(in srgb, var(--brand) 42%, #fff);
+  --amber-bg: #2C2210; --amber-ink: #E8B873; --ok-bg: #10271B;
+  --shadow-sm: 0 1px 2px rgba(0,0,0,.3);
+  --shadow-md: 0 6px 18px rgba(0,0,0,.35);
+  --shadow-lg: 0 18px 44px rgba(0,0,0,.5);
+  --shadow-brand: 0 14px 30px rgba(0,0,0,.5);
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; }
+body { font-family: var(--font); background: var(--bg); color: var(--ink); -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; }
+button { font-family: inherit; cursor: pointer; border: none; background: none; color: inherit; }
+a { color: inherit; text-decoration: none; }
+.tnum { font-variant-numeric: tabular-nums; }
+
+.app { max-width: var(--maxw); margin: 0 auto; padding: 0 18px 90px; }
+
+/* header */
+.hdr { position: sticky; top: 0; z-index: 40; background: color-mix(in srgb, var(--bg) 88%, transparent); backdrop-filter: saturate(1.4) blur(12px); border-bottom: 1px solid var(--line); }
+.hdr-in { max-width: var(--maxw); margin: 0 auto; padding: 13px 18px; display: flex; align-items: center; gap: 13px; }
+.back { width: 40px; height: 40px; border-radius: 12px; display: grid; place-items: center; background: var(--card); border: 1px solid var(--line); color: var(--ink); transition: .15s; flex: none; }
+.back:hover { border-color: var(--ink-3); }
+.hdr-title { font-family: var(--display); font-weight: 800; font-size: 18px; letter-spacing: -.01em; }
+.hdr-sub { font-size: 12px; color: var(--ink-2); font-weight: 500; margin-top: 1px; }
+.hdr-bal { margin-left: auto; display: flex; align-items: center; gap: 8px; background: linear-gradient(150deg, var(--brand), var(--brand-deep)); color: #fff; padding: 8px 15px 8px 11px; border-radius: 999px; box-shadow: var(--shadow-brand); flex: none; }
+.hdr-bal .bn { font-family: var(--display); font-weight: 800; font-size: 16px; line-height: 1; font-variant-numeric: tabular-nums; }
+.hdr-bal .bl { font-size: 10.5px; opacity: .8; font-weight: 600; margin-top: 1px; }
+
+/* tabs */
+.tabs { display: flex; gap: 6px; background: var(--bg-2); padding: 5px; border-radius: 999px; margin: 20px 0 6px; }
+.tab { flex: 1; display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 11px; border-radius: 999px; font-size: 14.5px; font-weight: 700; color: var(--ink-2); transition: .15s; }
+.tab.on { background: var(--card); color: var(--brand); box-shadow: var(--shadow-sm); }
+.tab .cnt { font-size: 11.5px; font-weight: 800; background: var(--brand); color: #fff; min-width: 20px; height: 20px; padding: 0 6px; border-radius: 999px; display: inline-grid; place-items: center; }
+.tab:not(.on) .cnt { background: var(--ink-3); }
+
+/* expiry push banner */
+.push-banner { margin-top: 14px; background: var(--amber-bg); border: 1px solid color-mix(in srgb, var(--amber) 32%, transparent); border-radius: var(--r-md); padding: 14px 16px; display: flex; align-items: center; gap: 13px; animation: bell-in .4s ease; }
+@keyframes bell-in { from { transform: translateY(-6px); opacity: 0; } }
+.push-banner .pi { width: 42px; height: 42px; border-radius: 13px; background: var(--amber); color: #fff; display: grid; place-items: center; flex: none; position: relative; }
+.push-banner .pi::after { content: ""; position: absolute; inset: 0; border-radius: 13px; border: 2px solid var(--amber); animation: ring 1.8s ease-out infinite; }
+@keyframes ring { 0% { transform: scale(1); opacity: .6; } 100% { transform: scale(1.4); opacity: 0; } }
+.push-banner .pt { font-weight: 700; font-size: 14px; color: var(--amber-ink); }
+.push-banner .pd { font-size: 12.5px; color: color-mix(in srgb, var(--amber-ink) 82%, transparent); margin-top: 2px; font-weight: 500; }
+.push-banner .px { margin-left: auto; flex: none; width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; color: var(--amber-ink); }
+.push-banner .px:hover { background: color-mix(in srgb, var(--amber) 18%, transparent); }
+
+/* section head */
+.sec-h { display: flex; align-items: center; gap: 8px; margin: 22px 2px 12px; }
+.sec-h h2 { font-family: var(--display); font-weight: 800; font-size: 17px; margin: 0; letter-spacing: -.01em; }
+.sec-h .hint { margin-left: auto; font-size: 12.5px; color: var(--ink-3); font-weight: 500; }
+
+/* pick grid */
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 14px; }
+.gift { background: var(--card); border: 1px solid var(--line-2); border-radius: var(--r-lg); overflow: hidden; box-shadow: var(--shadow-sm); display: flex; flex-direction: column; transition: .18s; }
+.gift:hover { box-shadow: var(--shadow-md); transform: translateY(-3px); }
+.gift.locked { opacity: .82; }
+.gift-thumb { height: 104px; position: relative; display: grid; place-items: center; }
+.gift-thumb::after { content:""; position:absolute; inset:0; background-image: radial-gradient(circle at 18% 82%, rgba(255,255,255,.16) 0 18px, transparent 19px); }
+.gift-thumb .ti { position: relative; z-index: 1; color: #fff; filter: drop-shadow(0 4px 10px rgba(0,0,0,.22)); }
+.gift-body { padding: 12px 13px 5px; flex: 1; }
+.gift-cat { font-size: 11px; color: var(--ink-3); font-weight: 600; }
+.gift-name { font-weight: 700; font-size: 14px; line-height: 1.3; margin-top: 2px; }
+.gift-foot { padding: 4px 13px 13px; }
+.gift-pts { display: flex; align-items: center; gap: 5px; }
+.gift-pts .p { font-family: var(--display); font-weight: 800; font-size: 17px; color: var(--brand); }
+.gift-pts .u { font-size: 11.5px; color: var(--ink-3); font-weight: 600; }
+.gift-btn { margin-top: 9px; width: 100%; padding: 9px; border-radius: var(--r-sm); font-weight: 700; font-size: 13px; transition: .15s; display: inline-flex; align-items: center; justify-content: center; gap: 6px; }
+.gift-btn.can { background: var(--brand); color: #fff; } .gift-btn.can:hover { background: var(--brand-deep); }
+.gift-btn.cant { background: var(--bg-2); color: var(--ink-3); cursor: default; }
+
+/* ===== voucher ticket (wallet) ===== */
+.wallet { display: flex; flex-direction: column; gap: 14px; }
+.vou { background: var(--card); border: 1px solid var(--line-2); border-radius: var(--r-lg); box-shadow: var(--shadow-sm); overflow: hidden; transition: .18s; }
+.vou.used, .vou.expired { opacity: .62; }
+.vou-main { display: flex; align-items: stretch; cursor: pointer; }
+.vou-strip { width: 86px; flex: none; display: grid; place-items: center; color: #fff; position: relative; }
+.vou-strip::after { content:""; position:absolute; inset:0; background-image: radial-gradient(circle at 30% 80%, rgba(255,255,255,.18) 0 12px, transparent 13px); }
+.vou-strip .ti { position: relative; z-index: 1; filter: drop-shadow(0 3px 8px rgba(0,0,0,.22)); }
+/* perforation */
+.vou-perf { width: 1px; border-left: 2px dashed var(--line); position: relative; }
+.vou-info { flex: 1; min-width: 0; padding: 14px 16px; display: flex; flex-direction: column; justify-content: center; }
+.vou-name { font-weight: 700; font-size: 15px; letter-spacing: -.01em; }
+.vou-meta { display: flex; align-items: center; gap: 10px; margin-top: 6px; flex-wrap: wrap; }
+.vou-exp { font-size: 12.5px; color: var(--ink-2); font-weight: 600; display: inline-flex; align-items: center; gap: 5px; }
+.vou-exp.soon { color: var(--amber-ink); }
+.vou-status { font-size: 11px; font-weight: 800; padding: 3px 9px; border-radius: 999px; }
+.vs-active { background: var(--ok-bg); color: var(--ok); }
+.vs-soon { background: var(--amber-bg); color: var(--amber-ink); }
+.vs-used { background: var(--bg-2); color: var(--ink-2); }
+.vs-expired { background: var(--bg-2); color: var(--ink-3); }
+.vou-chev { display: grid; place-items: center; padding-right: 14px; color: var(--ink-3); transition: transform .22s; }
+.vou.open .vou-chev { transform: rotate(90deg); }
+
+/* expandable QR */
+.vou-detail { max-height: 0; overflow: hidden; transition: max-height .3s ease; border-top: 1px solid transparent; }
+.vou.open .vou-detail { max-height: 420px; border-top-color: var(--line-2); }
+.vou-detail-in { padding: 18px; display: flex; gap: 18px; align-items: center; }
+.vou-qr { width: 132px; height: 132px; background: #fff; border-radius: 16px; padding: 11px; flex: none; box-shadow: var(--shadow-sm); border: 1px solid var(--line); position: relative; }
+.vou-qr .qr-canvas { display: grid; width: 100%; height: 100%; }
+.vou-qr .qr-canvas i { display: block; }
+.vou-code-wrap { flex: 1; min-width: 0; }
+.vou-code-l { font-size: 11.5px; color: var(--ink-3); font-weight: 700; text-transform: uppercase; letter-spacing: .04em; }
+.vou-code { display: flex; align-items: center; gap: 8px; margin-top: 6px; }
+.vou-code .code { font-family: 'Be Vietnam Pro', monospace; font-weight: 800; font-size: 18px; letter-spacing: .08em; background: var(--bg-2); padding: 8px 12px; border-radius: 10px; flex: 1; text-align: center; }
+.vou-copy { width: 38px; height: 38px; border-radius: 10px; background: var(--brand-soft); color: var(--brand); display: grid; place-items: center; flex: none; transition: .15s; }
+.vou-copy:hover { background: color-mix(in srgb, var(--brand) 18%, var(--card)); }
+.vou-fine { font-size: 12px; color: var(--ink-2); margin-top: 12px; line-height: 1.45; }
+.vou-use-btn { margin-top: 13px; width: 100%; padding: 11px; border-radius: var(--r-sm); background: var(--brand); color: #fff; font-weight: 700; font-size: 13.5px; }
+.vou-use-btn:hover { background: var(--brand-deep); }
+
+.wallet-empty { text-align: center; padding: 50px 20px; color: var(--ink-3); font-weight: 500; }
+.wallet-empty .ei { width: 58px; height: 58px; border-radius: 17px; background: var(--card); border: 1px solid var(--line); display: grid; place-items: center; margin: 0 auto 14px; color: var(--ink-3); }
+.wallet-empty .gobtn { margin-top: 16px; display: inline-flex; align-items: center; gap: 7px; background: var(--brand); color: #fff; padding: 11px 20px; border-radius: 999px; font-weight: 700; font-size: 14px; }
+
+/* ===== redeem flow modal ===== */
+.scrim { position: fixed; inset: 0; z-index: 100; background: rgba(8,30,20,.55); backdrop-filter: blur(6px); display: grid; place-items: center; padding: 20px; animation: fade .2s ease; }
+@keyframes fade { from { opacity: 0; } }
+.flow { width: 100%; max-width: 400px; background: var(--card); border-radius: var(--r-xl); box-shadow: var(--shadow-lg); overflow: hidden; animation: pop .26s cubic-bezier(.2,.9,.3,1.2); }
+@keyframes pop { from { transform: translateY(16px) scale(.96); opacity: 0; } }
+.flow-x { position: absolute; top: 14px; right: 14px; width: 32px; height: 32px; border-radius: 50%; background: rgba(0,0,0,.3); display: grid; place-items: center; color: #fff; z-index: 3; }
+
+/* confirm step */
+.flow-thumb { height: 128px; display: grid; place-items: center; color: #fff; position: relative; }
+.flow-thumb .ti { filter: drop-shadow(0 4px 10px rgba(0,0,0,.22)); }
+.flow-b { padding: 20px 22px 24px; text-align: center; }
+.flow-name { font-family: var(--display); font-weight: 800; font-size: 19px; }
+.flow-cost { margin-top: 12px; display: inline-flex; align-items: center; gap: 8px; background: var(--brand-soft); color: var(--brand-ink); padding: 9px 16px; border-radius: 999px; font-weight: 700; font-size: 14px; }
+.flow-bal { font-size: 13px; color: var(--ink-2); margin-top: 14px; font-weight: 500; }
+.flow-bal b { color: var(--ink); font-weight: 700; }
+.flow-actions { display: flex; gap: 10px; margin-top: 18px; }
+.flow-actions button { flex: 1; padding: 13px; border-radius: var(--r-sm); font-weight: 700; font-size: 14px; }
+.flow-cancel { background: var(--bg-2); color: var(--ink); }
+.flow-confirm { background: var(--brand); color: #fff; } .flow-confirm:hover { background: var(--brand-deep); }
+
+/* success step */
+.flow-success { padding: 0 0 24px; text-align: center; }
+.success-h { background: linear-gradient(150deg, var(--brand), var(--brand-deep)); color: #fff; padding: 26px 22px 22px; position: relative; }
+.success-check { width: 64px; height: 64px; border-radius: 50%; background: rgba(255,255,255,.18); display: grid; place-items: center; margin: 0 auto 12px; animation: check-pop .4s cubic-bezier(.2,.9,.3,1.4) .1s both; }
+@keyframes check-pop { from { transform: scale(0); } }
+.success-h h3 { font-family: var(--display); font-weight: 800; font-size: 21px; margin: 0; }
+.success-h p { margin: 4px 0 0; font-size: 13px; opacity: .9; }
+.success-qr { width: 168px; height: 168px; background: #fff; border-radius: 20px; padding: 13px; margin: -22px auto 0; position: relative; box-shadow: var(--shadow-md); border: 1px solid var(--line); }
+.success-qr .qr-canvas { display: grid; width: 100%; height: 100%; }
+.success-qr .qr-canvas i { display: block; }
+.success-qr .qr-logo { position: absolute; inset: 0; margin: auto; width: 38px; height: 38px; border-radius: 10px; background: linear-gradient(150deg, var(--brand), var(--brand-deep)); display: grid; place-items: center; font-family: var(--display); font-weight: 800; color: #fff; font-size: 18px; border: 3px solid #fff; }
+.success-name { font-family: var(--display); font-weight: 800; font-size: 17px; margin-top: 14px; padding: 0 24px; }
+.success-code { margin: 12px 24px 0; }
+.success-code .l { font-size: 11px; color: var(--ink-3); font-weight: 700; text-transform: uppercase; letter-spacing: .04em; }
+.success-code .c { display: flex; align-items: center; gap: 8px; margin-top: 6px; }
+.success-code .code { font-family: 'Be Vietnam Pro', monospace; font-weight: 800; font-size: 18px; letter-spacing: .08em; background: var(--bg-2); padding: 9px; border-radius: 10px; flex: 1; }
+.success-code .cp { width: 40px; height: 40px; border-radius: 10px; background: var(--brand-soft); color: var(--brand); display: grid; place-items: center; flex: none; }
+.success-exp { font-size: 13px; color: var(--ink-2); margin: 12px 24px 0; font-weight: 500; display: inline-flex; align-items: center; gap: 6px; }
+.success-done { margin: 18px 24px 0; }
+.success-done button { width: 100%; padding: 13px; border-radius: var(--r-sm); background: var(--brand); color: #fff; font-weight: 700; font-size: 14.5px; }
+.success-done button:hover { background: var(--brand-deep); }
+
+/* toast */
+.toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); z-index: 120; background: var(--ink); color: var(--bg); padding: 13px 20px; border-radius: 999px; font-size: 14px; font-weight: 600; box-shadow: var(--shadow-lg); display: flex; align-items: center; gap: 10px; animation: tin .3s cubic-bezier(.2,.8,.2,1); }
+.toast .tc { width: 24px; height: 24px; border-radius: 50%; background: var(--brand); display: grid; place-items: center; flex: none; }
+@keyframes tin { from { transform: translateX(-50%) translateY(16px); opacity: 0; } }
+[data-theme="dark"] .toast { background: var(--card); color: var(--ink); border: 1px solid var(--line); }
+
+@media (max-width: 560px) {
+  .grid { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; }
+  .hdr-sub { display: none; }
+  .vou-detail-in { flex-direction: column; }
+  .vou-qr { width: 150px; height: 150px; }
+}
