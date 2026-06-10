@@ -4,29 +4,29 @@ const { useState, useEffect, useRef } = React;
 const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
   "brand": ["#0F623F", "#07432A"],
   "dark": false,
-  "points": 2450,
   "accent": "peach"
 }/*EDITMODE-END*/;
 
-/* ---- static content ---- */
-const MEMBER = { name: "Minh Anh", id: "LBVP·0257·418", tier: "Hạng Vàng" };
-const GOAL = 3000;
-const REWARD = "1 ly trà sữa size L miễn phí";
+/* ---- data from server ---- */
+const HOME = window.HOME_DATA || {};
+const MEMBER = HOME.member || { name: "", id: "", tier: "" };
+const GOAL = HOME.goal || 0;
+const REWARD = HOME.reward || "";
+const PROMOS = HOME.promos || [];
+const TX = HOME.transactions || [];
+const STORE = HOME.store || null;
+const POINTS_THIS_WEEK = HOME.pointsThisWeek || 0;
 
-const PROMOS = [
-  { tag: "Hot", icon: "cup", bg: "linear-gradient(135deg,#0F623F,#1AA86A)",
-    title: "Mua 1 Tặng 1 trà sữa", sub: "Trân châu đường đen size L · Thứ 4 hàng tuần" },
-  { tag: "Ưu đãi", icon: "spark", bg: "linear-gradient(135deg,#FF8A5B,#FF6FA5)",
-    title: "Giảm 30% qua App", sub: "Đơn từ 99k · áp dụng đến hết 15/06" },
-  { tag: "Mới", icon: "star", bg: "linear-gradient(135deg,#FFB13D,#FF7A3D)",
-    title: "Tặng 50 điểm đánh giá", sub: "Đánh giá 5★ sau mỗi lần mua hàng" },
-];
-
-const TX = [
-  { type: "earn", icon: "cup", title: "Trà sữa trân châu đường đen", meta: "Hôm nay · 14:20", amt: 45 },
-  { type: "redeem", icon: "gift", title: "Đổi voucher giảm 30.000đ", meta: "Hôm qua · 19:05", amt: -300 },
-  { type: "earn", icon: "cup", title: "2 ly Macchiato kem phô mai", meta: "05/06 · 12:30", amt: 60 },
-];
+function storeStatus(store) {
+  if (!store || !store.opening_time || !store.closing_time) return "";
+  const now = new Date();
+  const mins = now.getHours() * 60 + now.getMinutes();
+  const toMins = t => { const [h, m] = t.split(":").map(Number); return h * 60 + m; };
+  const open = toMins(store.opening_time);
+  const close = toMins(store.closing_time);
+  const isOpen = mins >= open && mins < close;
+  return isOpen ? `Đang mở · đến ${store.closing_time.slice(0, 5)}` : `Đã đóng cửa · mở lại ${store.opening_time.slice(0, 5)}`;
+}
 
 /* ================= App ================= */
 function App() {
@@ -35,9 +35,9 @@ function App() {
   const [slide, setSlide] = useState(0);
   const [tab, setTab] = useState("home");
 
-  const points = t.points;
+  const points = HOME.points || 0;
   const remain = Math.max(0, GOAL - points);
-  const pct = Math.min(100, Math.round((points / GOAL) * 100));
+  const pct = GOAL > 0 ? Math.min(100, Math.round((points / GOAL) * 100)) : 100;
 
   // theme vars
   useEffect(() => {
@@ -50,9 +50,18 @@ function App() {
 
   // auto-rotate promo
   useEffect(() => {
+    if (PROMOS.length < 2) return;
     const id = setInterval(() => setSlide(s => (s + 1) % PROMOS.length), 4200);
     return () => clearInterval(id);
   }, []);
+
+  const initials = (MEMBER.name || "")
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(-2)
+    .map(w => w[0])
+    .join("")
+    .toUpperCase();
 
   // esc closes modal
   useEffect(() => {
@@ -80,7 +89,7 @@ function App() {
             <a href={NAV_URLS.store}>Cửa hàng</a>
             <a href={NAV_URLS.history}>Lịch sử</a>
           </nav>
-          <a className="avatar" href={NAV_URLS.profile} title={MEMBER.name}>MA</a>
+          <a className="avatar" href={NAV_URLS.profile} title={MEMBER.name}>{initials}</a>
         </div>
       </header>
 
@@ -105,18 +114,22 @@ function App() {
               <div className="points-row">
                 <span className="points-num">{fmt(points)}</span>
                 <span className="points-unit">điểm</span>
-                <span className="points-delta"><Icon name="spark" size={13} color="#fff"/> +105 tuần này</span>
+                {POINTS_THIS_WEEK > 0 && (
+                  <span className="points-delta"><Icon name="spark" size={13} color="#fff"/> +{fmt(POINTS_THIS_WEEK)} tuần này</span>
+                )}
               </div>
 
               {/* progress to next reward */}
-              <div className="prog">
-                <div className="prog-top">
-                  <div className="prog-goal">Mốc đổi quà gần nhất · <b>{REWARD}</b></div>
-                  <div className="prog-need">Còn <b>{fmt(remain)}</b> điểm</div>
+              {GOAL > 0 && (
+                <div className="prog">
+                  <div className="prog-top">
+                    <div className="prog-goal">Mốc đổi quà gần nhất · <b>{REWARD}</b></div>
+                    <div className="prog-need">Còn <b>{fmt(remain)}</b> điểm</div>
+                  </div>
+                  <div className="prog-bar"><div className="prog-fill" style={{ width: pct + "%" }} /></div>
+                  <div className="prog-scale"><span>{fmt(points)} điểm</span><span>{fmt(GOAL)} điểm</span></div>
                 </div>
-                <div className="prog-bar"><div className="prog-fill" style={{ width: pct + "%" }} /></div>
-                <div className="prog-scale"><span>{fmt(points)} điểm</span><span>{fmt(GOAL)} điểm</span></div>
-              </div>
+              )}
 
               {/* main CTA */}
               <button className="qr-cta" onClick={openQR}>
@@ -130,59 +143,64 @@ function App() {
             </section>
 
             {/* ---- Promo carousel ---- */}
-            <section className="promo">
-              <div className="promo-track">
-                {PROMOS.map((p, i) => (
-                  <div className="promo-slide" key={i}
-                    style={{ background: p.bg, transform: `translateX(-${slide * 100}%)` }}>
-                    <div className="pico"><Icon name={p.icon} size={30} color="#fff"/></div>
-                    <div style={{ minWidth: 0 }}>
-                      <span className="promo-tag">{p.tag}</span>
-                      <h4>{p.title}</h4>
-                      <p>{p.sub}</p>
+            {PROMOS.length > 0 && (
+              <section className="promo">
+                <div className="promo-track">
+                  {PROMOS.map((p, i) => (
+                    <div className="promo-slide" key={i}
+                      style={{ background: p.bg, transform: `translateX(-${slide * 100}%)` }}>
+                      <div className="pico"><Icon name={p.icon} size={30} color="#fff"/></div>
+                      <div style={{ minWidth: 0 }}>
+                        <span className="promo-tag">{p.tag}</span>
+                        <h4>{p.title}</h4>
+                        <p>{p.sub}</p>
+                      </div>
+                      <button className="promo-go">Xem <Icon name="arrow" size={15}/></button>
                     </div>
-                    <button className="promo-go">Xem <Icon name="arrow" size={15}/></button>
+                  ))}
+                </div>
+                {PROMOS.length > 1 && (
+                  <div className="promo-dots">
+                    {PROMOS.map((_, i) => (
+                      <button key={i} className={i === slide ? "on" : ""} onClick={() => setSlide(i)} aria-label={"Promo " + (i+1)} />
+                    ))}
                   </div>
-                ))}
-              </div>
-              <div className="promo-dots">
-                {PROMOS.map((_, i) => (
-                  <button key={i} className={i === slide ? "on" : ""} onClick={() => setSlide(i)} aria-label={"Promo " + (i+1)} />
-                ))}
-              </div>
-            </section>
+                )}
+              </section>
+            )}
           </div>
 
           {/* ============ RIGHT COLUMN ============ */}
           <div className="col">
 
             {/* ---- Nearest store ---- */}
-            <section className="card">
-              <div className="card-h">
-                <h3>Cửa hàng gần bạn</h3>
-                <a className="link" href={NAV_URLS.store}>Tất cả <Icon name="chev" size={15}/></a>
-              </div>
-              <div className="store-map">
-                <div className="pin" />
-                <span className="maplabel">// bản đồ vị trí cửa hàng</span>
-              </div>
-              <div className="store-body">
-                <div className="store-row">
-                  <div style={{ minWidth: 0 }}>
-                    <div className="store-name">Laboong Victoria Văn Phú</div>
-                    <div className="store-addr">S2.03 KĐT Văn Phú, P. Phú La, Hà Đông, Hà Nội</div>
-                  </div>
-                  <div className="store-dist">
-                    <div className="km">0,4 km</div>
-                    <div className="open">Đang mở · đến 22:30</div>
+            {STORE && (
+              <section className="card">
+                <div className="card-h">
+                  <h3>Cửa hàng của bạn</h3>
+                  <a className="link" href={NAV_URLS.store}>Tất cả <Icon name="chev" size={15}/></a>
+                </div>
+                <div className="store-map">
+                  <div className="pin" />
+                  <span className="maplabel">// bản đồ vị trí cửa hàng</span>
+                </div>
+                <div className="store-body">
+                  <div className="store-row">
+                    <div style={{ minWidth: 0 }}>
+                      <div className="store-name">{STORE.name}</div>
+                      <div className="store-addr">{STORE.address}</div>
+                    </div>
+                    <div className="store-dist">
+                      <div className="open">{storeStatus(STORE)}</div>
+                    </div>
                   </div>
                 </div>
-              </div>
-              <div className="store-btns">
-                <button className="sbtn primary"><Icon name="nav" size={17} color="#fff"/> Chỉ đường</button>
-                <button className="sbtn ghost"><Icon name="phone" size={17}/> Gọi cửa hàng</button>
-              </div>
-            </section>
+                <div className="store-btns">
+                  <button className="sbtn primary"><Icon name="nav" size={17} color="#fff"/> Chỉ đường</button>
+                  <button className="sbtn ghost"><Icon name="phone" size={17}/> Gọi cửa hàng</button>
+                </div>
+              </section>
+            )}
 
             {/* ---- Recent transactions ---- */}
             <section className="card">
@@ -191,6 +209,7 @@ function App() {
                 <a className="link" href={NAV_URLS.history}>Xem tất cả <Icon name="chev" size={15}/></a>
               </div>
               <div className="tx-list">
+                {TX.length === 0 && <div className="tx-meta">Chưa có giao dịch nào.</div>}
                 {TX.map((x, i) => (
                   <div className="tx" key={i}>
                     <div className={"tx-ic " + (x.type === "earn" ? "earn" : "redeem")}>
@@ -252,9 +271,6 @@ function App() {
           options={[["#0F623F","#07432A"],["#005A36","#003D24"],["#7A4A28","#56331A"],["#6B4FA0","#4A357A"]]}
           onChange={v => setTweak("brand", v)} />
         <TweakToggle label="Chế độ tối" value={t.dark} onChange={v => setTweak("dark", v)} />
-        <TweakSection label="Dữ liệu mẫu" />
-        <TweakSlider label="Điểm hiện tại" value={t.points} min={0} max={3000} step={10} unit=" điểm"
-          onChange={v => setTweak("points", v)} />
       </TweaksPanel>
     </>
   );
