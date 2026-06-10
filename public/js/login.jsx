@@ -6,11 +6,27 @@ const TW_DEFAULTS = /*EDITMODE-BEGIN*/{
   "dark": false
 }/*EDITMODE-END*/;
 
-/* tài khoản đã đăng ký (demo) */
-const REGISTERED = ["0912845207", "0987213668", "0905558410", "0931234567"];
-const DEMO_OTP = "284913";
-const DEMO_PW = "laboong";
 const OTP_TTL = 180;
+
+/* ---------------- backend API helpers ---------------- */
+function csrfToken() {
+  const meta = document.querySelector('meta[name="csrf-token"]');
+  return meta ? meta.content : "";
+}
+async function apiPost(url, body) {
+  const res = await fetch(url, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Accept": "application/json",
+      "X-CSRF-TOKEN": csrfToken(),
+    },
+    body: JSON.stringify(body),
+  });
+  let data = {};
+  try { data = await res.json(); } catch (e) { /* no body */ }
+  return { ok: res.ok, status: res.status, data };
+}
 
 function normPhone(raw) { return raw.replace(/[\s.\-]/g, ""); }
 function validPhone(raw) {
@@ -23,11 +39,13 @@ function fmtTime(s) { const m = Math.floor(s / 60), ss = s % 60; return `${m}:${
 function prettyPhone(raw) { return normPhone(raw).replace(/^0/, "").replace(/(\d{3})(\d{3})(\d{3})/, "$1 $2 $3"); }
 
 /* ---------------- OTP entry (shared) ---------------- */
-function OtpStep({ phone, onBack, onVerify }) {
+function OtpStep({ phone, debugOtp, onBack, onVerify }) {
   const [digits, setDigits] = useState(["", "", "", "", "", ""]);
   const [left, setLeft] = useState(OTP_TTL);
   const [bad, setBad] = useState(false);
   const [shake, setShake] = useState(false);
+  const [errMsg, setErrMsg] = useState("");
+  const [loading, setLoading] = useState(false);
   const refs = useRef([]);
 
   useEffect(() => { refs.current[0]?.focus(); }, []);
@@ -40,8 +58,19 @@ function OtpStep({ phone, onBack, onVerify }) {
   const setAt = (i, v) => { if (!/^\d?$/.test(v)) return; setBad(false); const nd = [...digits]; nd[i] = v; setDigits(nd); if (v && i < 5) refs.current[i + 1]?.focus(); };
   const onKey = (i, e) => { if (e.key === "Backspace" && !digits[i] && i > 0) refs.current[i - 1]?.focus(); };
   const onPaste = (e) => { const t = (e.clipboardData.getData("text") || "").replace(/\D/g, "").slice(0, 6); if (!t) return; e.preventDefault(); const nd = ["", "", "", "", "", ""]; for (let i = 0; i < t.length; i++) nd[i] = t[i]; setDigits(nd); refs.current[Math.min(t.length, 5)]?.focus(); };
-  const verify = () => { if (expired) return; if (code === DEMO_OTP) return onVerify(); setBad(true); setShake(true); setTimeout(() => setShake(false), 400); };
-  const resend = () => { setDigits(["", "", "", "", "", ""]); setLeft(OTP_TTL); setBad(false); refs.current[0]?.focus(); };
+  const verify = async () => {
+    if (expired || loading) return;
+    setLoading(true); setErrMsg("");
+    const { ok, data } = await apiPost("/login/verify", { phone: normPhone(phone), otp_code: code });
+    setLoading(false);
+    if (ok) return onVerify(data.redirect);
+    setErrMsg(data.message || "Mã không đúng. Vui lòng kiểm tra lại.");
+    setBad(true); setShake(true); setTimeout(() => setShake(false), 400);
+  };
+  const resend = async () => {
+    setDigits(["", "", "", "", "", ""]); setLeft(OTP_TTL); setBad(false); setErrMsg(""); refs.current[0]?.focus();
+    await apiPost("/login/otp", { phone: normPhone(phone) });
+  };
 
   return (
     <>
@@ -56,20 +85,22 @@ function OtpStep({ phone, onBack, onVerify }) {
           <input key={i} ref={el => refs.current[i] = el} className={"otp-box" + (d ? " filled" : "") + (bad && shake ? " bad" : "")} inputMode="numeric" maxLength={1} value={d} onChange={e => setAt(i, e.target.value)} onKeyDown={e => onKey(i, e)} />
         ))}
       </div>
-      {bad && <div className="otp-err" style={{ marginTop: 18 }}><Icon name="info" size={16} color="var(--danger)" /> Mã không đúng. Vui lòng kiểm tra lại.</div>}
+      {bad && <div className="otp-err" style={{ marginTop: 18 }}><Icon name="info" size={16} color="var(--danger)" /> {errMsg}</div>}
       <div className="otp-meta">
         <div className={"otp-timer" + (expired ? " expired" : "")}><Icon name="clock" size={15} color={expired ? "var(--danger)" : "var(--brand)"} />{expired ? "Mã đã hết hạn" : <>Còn lại <span className="tval">{fmtTime(left)}</span></>}</div>
         <button className="otp-resend" disabled={left > OTP_TTL - 15 && !expired} onClick={resend}>{expired ? "Gửi lại mã" : "Gửi lại"}</button>
       </div>
-      <button className="btn primary" disabled={!full || expired} onClick={verify}>Đăng nhập <Icon name="arrow" size={18} color={full && !expired ? "#fff" : "currentColor"} /></button>
-      <div className="demo-hint"><Icon name="info" size={15} color="var(--ink-3)" /><span>Bản demo — mã OTP mẫu là <b>{DEMO_OTP}</b></span></div>
+      <button className="btn primary" disabled={!full || expired || loading} onClick={verify}>
+        {loading ? "Đang đăng nhập…" : <>Đăng nhập <Icon name="arrow" size={18} color={full && !expired ? "#fff" : "currentColor"} /></>}
+      </button>
+      {debugOtp && <div className="demo-hint"><Icon name="info" size={15} color="var(--ink-3)" /><span>Bản demo — mã OTP của bạn là <b>{debugOtp}</b></span></div>}
     </>
   );
 }
 
 /* ---------------- Success ---------------- */
-function SuccessStep() {
-  useEffect(() => { const id = setTimeout(() => { location.href = NAV_URLS.home; }, 1900); return () => clearTimeout(id); }, []);
+function SuccessStep({ redirect }) {
+  useEffect(() => { const id = setTimeout(() => { location.href = redirect || NAV_URLS.home; }, 1900); return () => clearTimeout(id); }, [redirect]);
   return (
     <div className="success">
       <div className="succ-ring"><div className="ck"><Icon name="check" size={30} color="#fff" /></div></div>
@@ -92,6 +123,9 @@ function App() {
   const [touched, setTouched] = useState(false);
   const [pwErr, setPwErr] = useState("");
   const [notReg, setNotReg] = useState(false);
+  const [debugOtp, setDebugOtp] = useState(null);
+  const [redirect, setRedirect] = useState(null);
+  const [sending, setSending] = useState(false);
 
   useEffect(() => {
     const r = document.documentElement;
@@ -103,17 +137,32 @@ function App() {
 
   const pRes = validPhone(phone);
 
-  const sendOtp = () => {
+  const sendOtp = async () => {
     setTouched(true); setNotReg(false);
-    if (!pRes.ok) return;
-    if (!REGISTERED.includes(normPhone(phone))) { setNotReg(true); return; }
+    if (!pRes.ok || sending) return;
+    setSending(true);
+    const { ok, data } = await apiPost("/login/otp", { phone: normPhone(phone) });
+    setSending(false);
+    if (!ok) {
+      if (data.not_registered) { setNotReg(true); return; }
+      setNotReg(false);
+      return;
+    }
+    setDebugOtp(data.debug_otp || null);
     setPhase("otp");
   };
-  const loginPw = () => {
+  const loginPw = async () => {
     setTouched(true); setNotReg(false); setPwErr("");
-    if (!pRes.ok) return;
-    if (!REGISTERED.includes(normPhone(phone))) { setNotReg(true); return; }
-    if (pw !== DEMO_PW) { setPwErr("Mật khẩu không đúng. (demo: " + DEMO_PW + ")"); return; }
+    if (!pRes.ok || sending) return;
+    setSending(true);
+    const { ok, data } = await apiPost("/login/password", { phone: normPhone(phone), password: pw, remember });
+    setSending(false);
+    if (!ok) {
+      if (data.not_registered) { setNotReg(true); return; }
+      setPwErr(data.message || "Mật khẩu không đúng.");
+      return;
+    }
+    setRedirect(data.redirect || null);
     setPhase("success");
   };
 
@@ -179,8 +228,8 @@ function App() {
               )}
 
               {method === "otp"
-                ? <button className="btn primary" style={{ marginTop: 6 }} onClick={sendOtp}>Gửi mã đăng nhập <Icon name="arrow" size={18} color="#fff" /></button>
-                : <button className="btn primary" style={{ marginTop: 6 }} onClick={loginPw}>Đăng nhập <Icon name="arrow" size={18} color="#fff" /></button>}
+                ? <button className="btn primary" style={{ marginTop: 6 }} disabled={sending} onClick={sendOtp}>{sending ? "Đang gửi…" : <>Gửi mã đăng nhập <Icon name="arrow" size={18} color="#fff" /></>}</button>
+                : <button className="btn primary" style={{ marginTop: 6 }} disabled={sending} onClick={loginPw}>{sending ? "Đang đăng nhập…" : <>Đăng nhập <Icon name="arrow" size={18} color="#fff" /></>}</button>}
 
               <div className="divider">hoặc tiếp tục với</div>
               <div className="socials">
@@ -188,12 +237,12 @@ function App() {
                 <button className="social"><span className="g zalo">Z</span> Zalo</button>
               </div>
 
-              <div className="demo-hint" style={{ marginTop: 16 }}><Icon name="info" size={15} color="var(--ink-3)" /><span>Demo — SĐT đã đăng ký: <b>0912845207</b>{method === "password" ? <> · mật khẩu <b>{DEMO_PW}</b></> : <> · OTP <b>{DEMO_OTP}</b></>}</span></div>
+              <div className="demo-hint" style={{ marginTop: 16 }}><Icon name="info" size={15} color="var(--ink-3)" /><span>Demo — SĐT đã đăng ký: <b>0912345678</b> · mật khẩu <b>password</b></span></div>
             </>
           )}
 
-          {phase === "otp" && <OtpStep phone={phone} onBack={() => setPhase("login")} onVerify={() => setPhase("success")} />}
-          {phase === "success" && <SuccessStep />}
+          {phase === "otp" && <OtpStep phone={phone} debugOtp={debugOtp} onBack={() => setPhase("login")} onVerify={(redirectUrl) => { setRedirect(redirectUrl); setPhase("success"); }} />}
+          {phase === "success" && <SuccessStep redirect={redirect} />}
         </div>
 
         {phase === "login" && <div className="foot-note">Chưa có tài khoản? <a href="Laboong Register.html">Đăng ký</a></div>}
