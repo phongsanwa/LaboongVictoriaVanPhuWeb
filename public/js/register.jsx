@@ -6,10 +6,27 @@ const TW_DEFAULTS = /*EDITMODE-BEGIN*/{
   "dark": false
 }/*EDITMODE-END*/;
 
-/* mock: số đã đăng ký (để test "unique") */
-const TAKEN = ["0912845207", "0987213668", "0905558410"];
 const OTP_TTL = 180;       // 3 phút
-const DEMO_CODE = "284913";
+
+/* ---------------- backend API helpers ---------------- */
+function csrfToken() {
+  const meta = document.querySelector('meta[name="csrf-token"]');
+  return meta ? meta.content : "";
+}
+async function apiPost(url, body) {
+  const res = await fetch(url, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Accept": "application/json",
+      "X-CSRF-TOKEN": csrfToken(),
+    },
+    body: JSON.stringify(body),
+  });
+  let data = {};
+  try { data = await res.json(); } catch (e) { /* no body */ }
+  return { ok: res.ok, status: res.status, data };
+}
 
 /* chuẩn hoá + validate SĐT VN */
 function normalizePhone(raw) { return raw.replace(/[\s.\-]/g, ""); }
@@ -18,7 +35,6 @@ function validatePhone(raw) {
   if (!p) return { ok: false, msg: "Vui lòng nhập số điện thoại" };
   if (!/^0\d{9}$/.test(p)) return { ok: false, msg: "SĐT phải gồm 10 số, bắt đầu bằng 0" };
   if (!/^(03|05|07|08|09)\d{8}$/.test(p)) return { ok: false, msg: "Đầu số không hợp lệ (03/05/07/08/09)" };
-  if (TAKEN.includes(p)) return { ok: false, msg: "Số điện thoại này đã được đăng ký" };
   return { ok: true };
 }
 function validateEmail(raw) {
@@ -30,14 +46,26 @@ function fmtTime(s) { const m = Math.floor(s / 60), ss = s % 60; return `${m}:${
 /* ---------------- Step 1: form ---------------- */
 function FormStep({ data, setData, onNext }) {
   const [touched, setTouched] = useState({});
+  const [serverError, setServerError] = useState("");
+  const [loading, setLoading] = useState(false);
   const phoneRes = validatePhone(data.phone);
   const emailRes = validateEmail(data.email);
   const nameOk = data.name.trim().length >= 2;
   const canSubmit = phoneRes.ok && emailRes.ok && nameOk;
 
-  const submit = () => {
+  const submit = async () => {
     setTouched({ phone: true, name: true, email: true });
-    if (canSubmit) onNext();
+    setServerError("");
+    if (!canSubmit) return;
+
+    setLoading(true);
+    const { ok, data: res } = await apiPost("/register/otp", {
+      phone: normalizePhone(data.phone), name: data.name, email: data.email, dob: data.dob,
+    });
+    setLoading(false);
+
+    if (!ok) { setServerError(res.message || "Có lỗi xảy ra, vui lòng thử lại."); return; }
+    onNext(res.debug_otp);
   };
 
   return (
@@ -52,15 +80,17 @@ function FormStep({ data, setData, onNext }) {
         <div className="inp-wrap has-prefix">
           <span className="lic"><Icon name="phone" size={18} /></span>
           <span className="pfx">+84</span>
-          <input className={"inp" + (touched.phone && !phoneRes.ok ? " bad" : "")} inputMode="numeric"
+          <input className={"inp" + ((touched.phone && !phoneRes.ok) || serverError ? " bad" : "")} inputMode="numeric"
             placeholder="9xx xxx xxx" value={data.phone}
-            onChange={e => setData({ ...data, phone: e.target.value.replace(/[^\d\s.\-]/g, "") })}
+            onChange={e => { setData({ ...data, phone: e.target.value.replace(/[^\d\s.\-]/g, "") }); setServerError(""); }}
             onBlur={() => setTouched(t => ({ ...t, phone: true }))} />
-          {phoneRes.ok && data.phone && <span className="okmark"><Icon name="check" size={18} /></span>}
+          {phoneRes.ok && data.phone && !serverError && <span className="okmark"><Icon name="check" size={18} /></span>}
         </div>
-        {touched.phone && !phoneRes.ok
-          ? <div className="err"><Icon name="info" size={14} color="var(--danger)" /> {phoneRes.msg}</div>
-          : <div className="hint">Dùng để đăng nhập và nhận mã OTP xác thực.</div>}
+        {serverError
+          ? <div className="err"><Icon name="info" size={14} color="var(--danger)" /> {serverError}</div>
+          : touched.phone && !phoneRes.ok
+            ? <div className="err"><Icon name="info" size={14} color="var(--danger)" /> {phoneRes.msg}</div>
+            : <div className="hint">Dùng để đăng nhập và nhận mã OTP xác thực.</div>}
       </div>
 
       <div className="fld">
@@ -97,8 +127,8 @@ function FormStep({ data, setData, onNext }) {
         <div className="hint">Nhận quà sinh nhật đặc biệt từ Laboong 🎂</div>
       </div>
 
-      <button className="btn primary" disabled={!canSubmit} onClick={submit} style={{ marginTop: 6 }}>
-        Gửi mã xác thực <Icon name="arrow" size={18} color={canSubmit ? "#fff" : "currentColor"} />
+      <button className="btn primary" disabled={!canSubmit || loading} onClick={submit} style={{ marginTop: 6 }}>
+        {loading ? "Đang gửi…" : <>Gửi mã xác thực <Icon name="arrow" size={18} color={canSubmit ? "#fff" : "currentColor"} /></>}
       </button>
 
       <div className="legal">
@@ -109,11 +139,13 @@ function FormStep({ data, setData, onNext }) {
 }
 
 /* ---------------- Step 2: OTP ---------------- */
-function OtpStep({ data, onBack, onVerify }) {
+function OtpStep({ data, debugOtp, onBack, onVerify }) {
   const [digits, setDigits] = useState(["", "", "", "", "", ""]);
   const [left, setLeft] = useState(OTP_TTL);
   const [bad, setBad] = useState(false);
   const [shake, setShake] = useState(false);
+  const [errMsg, setErrMsg] = useState("");
+  const [loading, setLoading] = useState(false);
   const refs = useRef([]);
 
   useEffect(() => { refs.current[0]?.focus(); }, []);
@@ -148,13 +180,26 @@ function OtpStep({ data, onBack, onVerify }) {
     refs.current[Math.min(t.length, 5)]?.focus();
   };
 
-  const verify = () => {
-    if (expired) return;
-    if (code === DEMO_CODE) { onVerify(); return; }
+  const verify = async () => {
+    if (expired || loading) return;
+    setLoading(true);
+    setErrMsg("");
+    const { ok, data: res } = await apiPost("/register/verify", {
+      phone: normalizePhone(data.phone), name: data.name, email: data.email, dob: data.dob, otp_code: code,
+    });
+    setLoading(false);
+
+    if (ok) { onVerify(res.redirect); return; }
+    setErrMsg(res.message || "Mã không đúng. Vui lòng kiểm tra lại.");
     setBad(true); setShake(true);
     setTimeout(() => setShake(false), 400);
   };
-  const resend = () => { setDigits(["", "", "", "", "", ""]); setLeft(OTP_TTL); setBad(false); refs.current[0]?.focus(); };
+  const resend = async () => {
+    setDigits(["", "", "", "", "", ""]); setLeft(OTP_TTL); setBad(false); setErrMsg(""); refs.current[0]?.focus();
+    await apiPost("/register/otp", {
+      phone: normalizePhone(data.phone), name: data.name, email: data.email, dob: data.dob,
+    });
+  };
 
   return (
     <>
@@ -180,7 +225,7 @@ function OtpStep({ data, onBack, onVerify }) {
         ))}
       </div>
 
-      {bad && <div className="otp-err" style={{ marginTop: 18 }}><Icon name="info" size={16} color="var(--danger)" /> Mã không đúng. Vui lòng kiểm tra lại.</div>}
+      {bad && <div className="otp-err" style={{ marginTop: 18 }}><Icon name="info" size={16} color="var(--danger)" /> {errMsg}</div>}
 
       <div className="otp-meta">
         <div className={"otp-timer" + (expired ? " expired" : "")}>
@@ -192,18 +237,18 @@ function OtpStep({ data, onBack, onVerify }) {
         </button>
       </div>
 
-      <button className="btn primary" disabled={!full || expired} onClick={verify}>
-        Xác nhận <Icon name="check" size={18} color={full && !expired ? "#fff" : "currentColor"} />
+      <button className="btn primary" disabled={!full || expired || loading} onClick={verify}>
+        {loading ? "Đang xác nhận…" : <>Xác nhận <Icon name="check" size={18} color={full && !expired ? "#fff" : "currentColor"} /></>}
       </button>
 
-      <div className="demo-hint"><Icon name="info" size={15} color="var(--ink-3)" /><span>Bản demo — mã OTP mẫu là <b>{DEMO_CODE}</b></span></div>
+      {debugOtp && <div className="demo-hint"><Icon name="info" size={15} color="var(--ink-3)" /><span>Bản demo — mã OTP của bạn là <b>{debugOtp}</b></span></div>}
     </>
   );
 }
 
 /* ---------------- Step 3: success ---------------- */
-function SuccessStep({ data }) {
-  useEffect(() => { const id = setTimeout(() => { location.href = NAV_URLS.home; }, 2200); return () => clearTimeout(id); }, []);
+function SuccessStep({ data, redirect }) {
+  useEffect(() => { const id = setTimeout(() => { location.href = redirect || NAV_URLS.home; }, 2200); return () => clearTimeout(id); }, [redirect]);
   return (
     <div className="success">
       <div className="succ-ring"><div className="ck"><Icon name="check" size={30} color="#fff" /></div></div>
@@ -246,6 +291,8 @@ function App() {
   const [tw, setTweak] = useTweaks(TW_DEFAULTS);
   const [step, setStep] = useState(0);
   const [data, setData] = useState({ phone: "", name: "", email: "", dob: "" });
+  const [debugOtp, setDebugOtp] = useState(null);
+  const [redirect, setRedirect] = useState(null);
   const [push, setPush] = useState(false);
 
   useEffect(() => {
@@ -280,9 +327,9 @@ function App() {
             ))}
           </div>
 
-          {step === 0 && <FormStep data={data} setData={setData} onNext={() => setStep(1)} />}
-          {step === 1 && <OtpStep data={data} onBack={() => setStep(0)} onVerify={() => setStep(2)} />}
-          {step === 2 && <SuccessStep data={data} />}
+          {step === 0 && <FormStep data={data} setData={setData} onNext={(otp) => { setDebugOtp(otp); setStep(1); }} />}
+          {step === 1 && <OtpStep data={data} debugOtp={debugOtp} onBack={() => setStep(0)} onVerify={(redirectUrl) => { setRedirect(redirectUrl); setStep(2); }} />}
+          {step === 2 && <SuccessStep data={data} redirect={redirect} />}
         </div>
 
         {step === 0 && <div className="foot-note">Đã có tài khoản? <a href="#">Đăng nhập</a></div>}
