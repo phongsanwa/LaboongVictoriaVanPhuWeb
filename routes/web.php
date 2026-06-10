@@ -6,7 +6,7 @@ use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
     return view('welcome');
-})->name('home');
+})->middleware('auth')->name('home');
 
 Route::get('/register', [RegisterController::class, 'show'])->name('register');
 Route::post('/register/otp', [RegisterController::class, 'sendOtp'])->name('register.otp');
