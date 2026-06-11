@@ -41,6 +41,16 @@ function validateEmail(raw) {
   if (!raw.trim()) return { ok: true }; // optional
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(raw.trim()) ? { ok: true } : { ok: false, msg: "Email không hợp lệ" };
 }
+function validatePassword(raw) {
+  if (!raw) return { ok: false, msg: "Vui lòng nhập mật khẩu" };
+  if (raw.length < 6) return { ok: false, msg: "Mật khẩu phải có ít nhất 6 ký tự" };
+  return { ok: true };
+}
+function validatePasswordConfirm(pw, confirm) {
+  if (!confirm) return { ok: false, msg: "Vui lòng nhập lại mật khẩu" };
+  if (pw !== confirm) return { ok: false, msg: "Mật khẩu xác nhận không khớp" };
+  return { ok: true };
+}
 function fmtTime(s) { const m = Math.floor(s / 60), ss = s % 60; return `${m}:${String(ss).padStart(2, "0")}`; }
 
 /* ---------------- Step 1: form ---------------- */
@@ -48,19 +58,24 @@ function FormStep({ data, setData, onNext }) {
   const [touched, setTouched] = useState({});
   const [serverError, setServerError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [showPw, setShowPw] = useState(false);
+  const [showPw2, setShowPw2] = useState(false);
   const phoneRes = validatePhone(data.phone);
   const emailRes = validateEmail(data.email);
+  const pwRes = validatePassword(data.password);
+  const pw2Res = validatePasswordConfirm(data.password, data.password_confirmation);
   const nameOk = data.name.trim().length >= 2;
-  const canSubmit = phoneRes.ok && emailRes.ok && nameOk;
+  const canSubmit = phoneRes.ok && emailRes.ok && nameOk && pwRes.ok && pw2Res.ok;
 
   const submit = async () => {
-    setTouched({ phone: true, name: true, email: true });
+    setTouched({ phone: true, name: true, email: true, password: true, password_confirmation: true });
     setServerError("");
     if (!canSubmit) return;
 
     setLoading(true);
     const { ok, data: res } = await apiPost("/register/otp", {
       phone: normalizePhone(data.phone), name: data.name, email: data.email, dob: data.dob,
+      password: data.password, password_confirmation: data.password_confirmation,
     });
     setLoading(false);
 
@@ -103,6 +118,34 @@ function FormStep({ data, setData, onNext }) {
             onBlur={() => setTouched(t => ({ ...t, name: true }))} />
         </div>
         {touched.name && !nameOk && <div className="err"><Icon name="info" size={14} color="var(--danger)" /> Vui lòng nhập họ tên</div>}
+      </div>
+
+      <div className="fld">
+        <label>Mật khẩu<span className="req">*</span></label>
+        <div className="inp-wrap">
+          <span className="lic"><Icon name="lock" size={18} /></span>
+          <input className={"inp" + (touched.password && !pwRes.ok ? " bad" : "")} type={showPw ? "text" : "password"}
+            placeholder="Tối thiểu 6 ký tự" value={data.password}
+            style={{ paddingRight: 50 }}
+            onChange={e => setData({ ...data, password: e.target.value })}
+            onBlur={() => setTouched(t => ({ ...t, password: true }))} />
+          <button type="button" className="eye" onClick={() => setShowPw(s => !s)} tabIndex={-1}><Icon name={showPw ? "eyeoff" : "eye"} size={18} /></button>
+        </div>
+        {touched.password && !pwRes.ok && <div className="err"><Icon name="info" size={14} color="var(--danger)" /> {pwRes.msg}</div>}
+      </div>
+
+      <div className="fld">
+        <label>Nhập lại mật khẩu<span className="req">*</span></label>
+        <div className="inp-wrap">
+          <span className="lic"><Icon name="lock" size={18} /></span>
+          <input className={"inp" + (touched.password_confirmation && !pw2Res.ok ? " bad" : "")} type={showPw2 ? "text" : "password"}
+            placeholder="Nhập lại mật khẩu" value={data.password_confirmation}
+            style={{ paddingRight: 50 }}
+            onChange={e => setData({ ...data, password_confirmation: e.target.value })}
+            onBlur={() => setTouched(t => ({ ...t, password_confirmation: true }))} />
+          <button type="button" className="eye" onClick={() => setShowPw2(s => !s)} tabIndex={-1}><Icon name={showPw2 ? "eyeoff" : "eye"} size={18} /></button>
+        </div>
+        {touched.password_confirmation && !pw2Res.ok && <div className="err"><Icon name="info" size={14} color="var(--danger)" /> {pw2Res.msg}</div>}
       </div>
 
       <div className="fld">
@@ -185,7 +228,8 @@ function OtpStep({ data, debugOtp, onBack, onVerify }) {
     setLoading(true);
     setErrMsg("");
     const { ok, data: res } = await apiPost("/register/verify", {
-      phone: normalizePhone(data.phone), name: data.name, email: data.email, dob: data.dob, otp_code: code,
+      phone: normalizePhone(data.phone), name: data.name, email: data.email, dob: data.dob,
+      password: data.password, password_confirmation: data.password_confirmation, otp_code: code,
     });
     setLoading(false);
 
@@ -198,6 +242,7 @@ function OtpStep({ data, debugOtp, onBack, onVerify }) {
     setDigits(["", "", "", "", "", ""]); setLeft(OTP_TTL); setBad(false); setErrMsg(""); refs.current[0]?.focus();
     await apiPost("/register/otp", {
       phone: normalizePhone(data.phone), name: data.name, email: data.email, dob: data.dob,
+      password: data.password, password_confirmation: data.password_confirmation,
     });
   };
 
@@ -290,7 +335,7 @@ function PushDemo({ onClose }) {
 function App() {
   const [tw, setTweak] = useTweaks(TW_DEFAULTS);
   const [step, setStep] = useState(0);
-  const [data, setData] = useState({ phone: "", name: "", email: "", dob: "" });
+  const [data, setData] = useState({ phone: "", name: "", email: "", dob: "", password: "", password_confirmation: "" });
   const [debugOtp, setDebugOtp] = useState(null);
   const [redirect, setRedirect] = useState(null);
   const [push, setPush] = useState(false);

@@ -98,9 +98,9 @@ class RegisterController extends Controller
             $user = User::create([
                 'name' => $request->input('name'),
                 'phone' => $phone,
-                'email' => $request->input('email') ?: null,
+                'email' => $request->input('email') ?: $phone . '@laboong.local',
                 'phone_verified_at' => now(),
-                'password' => Hash::make(Str::random(32)),
+                'password' => Hash::make($request->input('password')),
                 'user_type' => 'customer',
                 'status' => 'active',
             ]);
@@ -152,12 +152,16 @@ class RegisterController extends Controller
         return Validator::make($request->all(), [
             'phone' => $phoneRules,
             'name' => ['required', 'string', 'min:2'],
+            'password' => ['required', 'string', 'min:6', 'confirmed'],
             'email' => ['nullable', 'email'],
             'dob' => ['nullable', 'date'],
         ], [
             'phone.regex' => 'Số điện thoại không hợp lệ',
             'phone.unique' => 'Số điện thoại này đã được đăng ký',
             'name.min' => 'Vui lòng nhập họ tên',
+            'password.required' => 'Vui lòng nhập mật khẩu',
+            'password.min' => 'Mật khẩu phải có ít nhất 6 ký tự',
+            'password.confirmed' => 'Mật khẩu xác nhận không khớp',
         ]);
     }
 }
