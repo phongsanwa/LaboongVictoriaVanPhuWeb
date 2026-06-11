@@ -237,6 +237,41 @@ class LaboongDemoSeeder extends Seeder
             'created_at' => $now, 'updated_at' => $now,
         ]);
 
+        /* additional rewards catalog items */
+        foreach ([
+            ['name' => 'Thêm topping trân châu',    'reward_type' => 'free_item',       'points_required' => 80,   'value' => null,   'quantity_available' => 312, 'min_purchase' => null,   'category' => 'upgrade', 'display_order' => 4,  'is_featured' => false, 'age_days' => 60],
+            ['name' => 'Upsize miễn phí mọi đơn',   'reward_type' => 'free_item',       'points_required' => 120,  'value' => null,   'quantity_available' => 358, 'min_purchase' => null,   'category' => 'upgrade', 'display_order' => 5,  'is_featured' => false, 'age_days' => 55],
+            ['name' => 'Trà đào cam sả miễn phí',   'reward_type' => 'free_item',       'points_required' => 400,  'value' => 45000,  'quantity_available' => 12,  'min_purchase' => null,   'category' => 'drink',   'display_order' => 6,  'is_featured' => false, 'age_days' => 50],
+            ['name' => 'Voucher giảm 50.000đ',      'reward_type' => 'discount_voucher','points_required' => 500,  'value' => 50000,  'quantity_available' => 116, 'min_purchase' => 150000, 'category' => 'voucher', 'display_order' => 7,  'is_featured' => false, 'age_days' => 45],
+            ['name' => 'Bộ sticker Laboong',        'reward_type' => 'other',           'points_required' => 200,  'value' => null,   'quantity_available' => 367, 'min_purchase' => null,   'category' => 'gift',    'display_order' => 8,  'is_featured' => false, 'age_days' => 5],
+            ['name' => 'Combo 2 ly Macchiato',      'reward_type' => 'free_item',       'points_required' => 800,  'value' => 110000, 'quantity_available' => 104, 'min_purchase' => null,   'category' => 'drink',   'display_order' => 9,  'is_featured' => false, 'age_days' => 40],
+            ['name' => 'Túi tote canvas Laboong',   'reward_type' => 'other',           'points_required' => 1800, 'value' => null,   'quantity_available' => 73,  'min_purchase' => null,   'category' => 'gift',    'display_order' => 10, 'is_featured' => false, 'age_days' => 3],
+            ['name' => 'Ly giữ nhiệt Laboong',      'reward_type' => 'other',           'points_required' => 2500, 'value' => null,   'quantity_available' => 8,   'min_purchase' => null,   'category' => 'gift',    'display_order' => 11, 'is_featured' => false, 'age_days' => 70],
+            ['name' => 'Voucher sinh nhật 70.000đ', 'reward_type' => 'discount_voucher','points_required' => 700,  'value' => 70000,  'quantity_available' => 189, 'min_purchase' => 150000, 'category' => 'voucher', 'display_order' => 12, 'is_featured' => false, 'age_days' => 2],
+            ['name' => 'Voucher giảm 100.000đ',     'reward_type' => 'discount_voucher','points_required' => 1000, 'value' => 100000, 'quantity_available' => 6,   'min_purchase' => 300000, 'category' => 'voucher', 'display_order' => 13, 'is_featured' => true,  'age_days' => 35],
+        ] as $r) {
+            $createdAt = $now->copy()->subDays($r['age_days']);
+
+            DB::table('rewards')->insert([
+                'name' => $r['name'],
+                'description' => $r['name'],
+                'reward_type' => $r['reward_type'],
+                'points_required' => $r['points_required'],
+                'value' => $r['value'],
+                'quantity_available' => $r['quantity_available'],
+                'quantity_total' => $r['quantity_available'],
+                'image_url' => null,
+                'valid_from' => $now->copy()->subMonths(1)->toDateString(),
+                'valid_until' => $now->copy()->addMonths(6)->toDateString(),
+                'min_purchase' => $r['min_purchase'],
+                'category' => $r['category'],
+                'status' => 'active',
+                'display_order' => $r['display_order'],
+                'is_featured' => $r['is_featured'],
+                'created_at' => $createdAt, 'updated_at' => $createdAt,
+            ]);
+        }
+
         /* ---------------- transactions + details + points ---------------- */
         // Transaction 1: today, earn points
         $tx1 = DB::table('transactions')->insertGetId([

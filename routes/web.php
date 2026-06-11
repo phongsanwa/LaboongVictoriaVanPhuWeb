@@ -5,10 +5,16 @@ use App\Http\Controllers\Auth\RegisterController;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\PointsController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\RewardsCatalogController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', [HomeController::class, 'index'])->middleware('auth')->name('home');
 Route::get('/points', [PointsController::class, 'index'])->middleware('auth')->name('points');
+
+Route::middleware('auth')->prefix('rewards')->name('rewards.')->group(function () {
+    Route::get('/', [RewardsCatalogController::class, 'index'])->name('catalog');
+    Route::post('/redeem', [RewardsCatalogController::class, 'redeem'])->name('redeem');
+});
 
 Route::middleware('auth')->prefix('profile')->name('profile.')->group(function () {
     Route::get('/', [ProfileController::class, 'show'])->name('show');
