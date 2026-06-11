@@ -134,8 +134,8 @@ const NAV_URLS = {
   // customer
   register: "Laboong Register.html",
   login: "Laboong Login.html",
-  home: "Laboong Dashboard.html",
-  points: "Laboong Points Detail.html",
+  home: "/",
+  points: "/points",
   catalog: "Laboong Rewards Catalog.html",
   wallet: "Laboong Redeem & Wallet.html",
   history: "Laboong Transaction History.html",
