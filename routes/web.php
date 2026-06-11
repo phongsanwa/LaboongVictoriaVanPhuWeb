@@ -20,8 +20,7 @@ Route::middleware('auth')->prefix('profile')->name('profile.')->group(function (
 });
 
 Route::get('/register', [RegisterController::class, 'show'])->name('register');
-Route::post('/register/otp', [RegisterController::class, 'sendOtp'])->name('register.otp');
-Route::post('/register/verify', [RegisterController::class, 'verify'])->name('register.verify');
+Route::post('/register', [RegisterController::class, 'register'])->name('register.submit');
 
 Route::get('/login', [LoginController::class, 'show'])->name('login');
 Route::post('/login/otp', [LoginController::class, 'sendOtp'])->name('login.otp');
