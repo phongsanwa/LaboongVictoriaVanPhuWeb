@@ -6,24 +6,10 @@ const TW_DEFAULTS = /*EDITMODE-BEGIN*/{
   "dark": false
 }/*EDITMODE-END*/;
 
-/* now: dùng để tính trạng thái mở cửa (demo: Thứ 2, 15:30) */
-const NOW = { dayIdx: 0, mins: 15 * 60 + 30 }; // 0 = Thứ 2
+const STORE_DATA = window.STORE_DATA || { stores: [], selectedId: null, todayIdx: 0 };
+const STORES = STORE_DATA.stores;
+const TODAY_IDX = STORE_DATA.todayIdx;
 const DAYS = ["Thứ 2", "Thứ 3", "Thứ 4", "Thứ 5", "Thứ 6", "Thứ 7", "Chủ nhật"];
-
-const STORES = [
-  { id: "s1", name: "Laboong Victoria Văn Phú", short: "Victoria Văn Phú",
-    addr: "S2.03 KĐT Văn Phú, P. Phú La, Hà Đông, Hà Nội", phone: "024 6543 2107",
-    km: 0.4, rating: 4.8, reviews: 326, x: 52, y: 46, open: "08:00", close: "22:30" },
-  { id: "s2", name: "Laboong Royal City", short: "Royal City",
-    addr: "B2-R6 Royal City, 72A Nguyễn Trãi, Thanh Xuân, Hà Nội", phone: "024 6512 8890",
-    km: 2.1, rating: 4.7, reviews: 512, x: 30, y: 28, open: "08:30", close: "22:00" },
-  { id: "s3", name: "Laboong Times City", short: "Times City",
-    addr: "T3 Times City, 458 Minh Khai, Hai Bà Trưng, Hà Nội", phone: "024 6677 4521",
-    km: 3.4, rating: 4.9, reviews: 408, x: 72, y: 64, open: "08:00", close: "22:30" },
-  { id: "s4", name: "Laboong Aeon Hà Đông", short: "Aeon Hà Đông",
-    addr: "Aeon Mall, Dương Nội, Hà Đông, Hà Nội", phone: "024 6299 3340",
-    km: 1.8, rating: 4.6, reviews: 274, x: 24, y: 72, open: "09:00", close: "22:00" },
-];
 
 const AMEN = [
   { ic: "wifi", l: "Wifi miễn phí" }, { ic: "car", l: "Chỗ đậu xe" },
@@ -37,8 +23,11 @@ const PHOTO_GRADS = [
 ];
 const PHOTO_LABELS = ["Không gian quán", "Quầy pha chế", "Đồ uống", "Khu vực ngồi"];
 
-function toMins(hhmm) { const [h, m] = hhmm.split(":").map(Number); return h * 60 + m; }
-function isOpenNow(s) { return NOW.mins >= toMins(s.open) && NOW.mins < toMins(s.close); }
+function directionsHref(s) {
+  return s.lat != null && s.lng != null
+    ? `https://www.google.com/maps/dir/?api=1&destination=${s.lat},${s.lng}`
+    : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(s.addr)}`;
+}
 
 /* stylized map background */
 function MapBg() {
@@ -73,7 +62,7 @@ function MapBg() {
 
 function App() {
   const [tw, setTweak] = useTweaks(TW_DEFAULTS);
-  const [sel, setSel] = useState(STORES[0].id);
+  const [sel, setSel] = useState(STORE_DATA.selectedId ?? (STORES[0] && STORES[0].id));
   const [fav, setFav] = useState(false);
   const [hoursOpen, setHoursOpen] = useState(false);
 
@@ -86,8 +75,19 @@ function App() {
   }, [tw.brand, tw.dark]);
 
   const store = STORES.find(s => s.id === sel);
-  const open = isOpenNow(store);
   const switchStore = (id) => { setSel(id); setHoursOpen(false); window.scrollTo({ top: 0, behavior: "smooth" }); };
+
+  if (!store) {
+    return (
+      <main className="app">
+        <div className="body">
+          <div className="empty">Hiện chưa có cửa hàng nào hoạt động.</div>
+        </div>
+      </main>
+    );
+  }
+
+  const open = store.isOpenNow;
 
   return (
     <>
@@ -137,8 +137,10 @@ function App() {
               </div>
             </div>
             <div className="actions">
-              <button className="act primary"><Icon name="nav" size={18} color="#fff" /> Chỉ đường · {store.km} km</button>
-              <button className="act ghost"><Icon name="phone" size={19} /> Gọi</button>
+              <a className="act primary" href={directionsHref(store)} target="_blank" rel="noreferrer">
+                <Icon name="nav" size={18} color="#fff" /> Chỉ đường{store.km != null ? ` · ${store.km} km` : ""}
+              </a>
+              <a className="act ghost" href={"tel:" + store.phone.replace(/\s/g, "")}><Icon name="phone" size={19} /> Gọi</a>
               <button className="act ghost"><Icon name="share" size={18} /> Chia sẻ</button>
             </div>
           </section>
@@ -158,9 +160,9 @@ function App() {
               {hoursOpen && (
                 <div className="hours">
                   {DAYS.map((d, i) => (
-                    <div key={d} className={"hrow" + (i === NOW.dayIdx ? " today" : "")}>
-                      <span className="d">{d}{i === NOW.dayIdx ? " (hôm nay)" : ""}</span>
-                      <span className="h">{store.open} – {store.close}</span>
+                    <div key={d} className={"hrow" + (i === TODAY_IDX ? " today" : "")}>
+                      <span className="d">{d}{i === TODAY_IDX ? " (hôm nay)" : ""}</span>
+                      <span className="h">{store.operatingDays.includes(i) ? `${store.open} – ${store.close}` : "Đóng cửa"}</span>
                     </div>
                   ))}
                 </div>
@@ -201,27 +203,28 @@ function App() {
           </section>
 
           {/* nearby branches */}
-          <section className="sec">
-            <div className="sec-t">Chi nhánh khác gần bạn</div>
-            <div className="panel">
-              {STORES.map(s => {
-                const o = isOpenNow(s);
-                const active = s.id === sel;
-                return (
-                  <button key={s.id} className={"branch" + (active ? " active" : "")} onClick={() => switchStore(s.id)}>
-                    <span className="bi"><Icon name="cup" size={20} color="currentColor" /></span>
-                    <div style={{ minWidth: 0, flex: 1 }}>
-                      <div className="bn">{s.short}</div>
-                      <div className="ba">{s.addr}</div>
-                    </div>
-                    {active
-                      ? <span className="activeflag">Đang xem</span>
-                      : <div className="bd"><div className="bkm">{s.km} km</div><div className={"bopen " + (o ? "o" : "c")}>{o ? "Đang mở" : "Đã đóng"}</div></div>}
-                  </button>
-                );
-              })}
-            </div>
-          </section>
+          {STORES.length > 1 && (
+            <section className="sec">
+              <div className="sec-t">Chi nhánh khác gần bạn</div>
+              <div className="panel">
+                {STORES.map(s => {
+                  const active = s.id === sel;
+                  return (
+                    <button key={s.id} className={"branch" + (active ? " active" : "")} onClick={() => switchStore(s.id)}>
+                      <span className="bi"><Icon name="cup" size={20} color="currentColor" /></span>
+                      <div style={{ minWidth: 0, flex: 1 }}>
+                        <div className="bn">{s.short}</div>
+                        <div className="ba">{s.addr}</div>
+                      </div>
+                      {active
+                        ? <span className="activeflag">Đang xem</span>
+                        : <div className="bd">{s.km != null && <div className="bkm">{s.km} km</div>}<div className={"bopen " + (s.isOpenNow ? "o" : "c")}>{s.isOpenNow ? "Đang mở" : "Đã đóng"}</div></div>}
+                    </button>
+                  );
+                })}
+              </div>
+            </section>
+          )}
         </div>
       </main>
 

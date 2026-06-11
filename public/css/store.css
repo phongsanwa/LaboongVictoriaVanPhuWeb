@@ -79,6 +79,7 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
 
 /* ---- content ---- */
 .body { padding: 0 16px; }
+.empty { text-align: center; padding: 60px 20px; color: var(--ink-3); font-weight: 500; }
 
 .store-id { background: var(--card); border: 1px solid var(--line-2); border-radius: var(--r-lg); box-shadow: var(--shadow-md); padding: 18px 18px 6px; margin-top: -22px; position: relative; z-index: 5; }
 .store-top { display: flex; align-items: flex-start; gap: 13px; }
