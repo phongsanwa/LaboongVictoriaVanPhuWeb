@@ -139,7 +139,7 @@ const NAV_URLS = {
   catalog: "Laboong Rewards Catalog.html",
   wallet: "Laboong Redeem & Wallet.html",
   history: "Laboong Transaction History.html",
-  profile: "Laboong Profile.html",
+  profile: "/profile",
   store: "Laboong Store Detail.html",
   pos: "Laboong POS Tích điểm.html",
   // admin

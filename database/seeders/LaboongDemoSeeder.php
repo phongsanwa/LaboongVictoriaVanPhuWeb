@@ -173,7 +173,7 @@ class LaboongDemoSeeder extends Seeder
                 'last_purchase_at' => $now->copy()->subHours(6),
                 'is_newsletter' => true,
                 'is_push_enabled' => true,
-                'favorite_items' => json_encode(['Trà sữa trân châu đường đen', 'Macchiato kem phô mai']),
+                'favorite_items' => json_encode(['m1', 'm2']),
                 'created_at' => $now, 'updated_at' => $now,
             ]);
         }
