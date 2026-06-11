@@ -1,0 +1,168 @@
+<?php
+
+namespace App\Http\Controllers;
+
+use App\Models\CustomerAddress;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Validation\Rule;
+
+class ProfileController extends Controller
+{
+    public function show()
+    {
+        $user = Auth::user();
+        $customer = $user->customer()->with(['tier', 'addresses'])->first();
+
+        $member = [
+            'name' => $user->name,
+            'email' => $user->email,
+            'dob' => $customer?->date_of_birth?->toDateString(),
+            'phone' => $user->phone,
+            'tier' => $customer?->tier->name ?? '',
+            'id' => $customer?->referral_code ?? ('LBVP-' . str_pad((string) ($customer?->id ?? 0), 5, '0', STR_PAD_LEFT)),
+        ];
+
+        $addresses = ($customer?->addresses ?? collect())->map(fn (CustomerAddress $a) => [
+            'id' => $a->id,
+            'label' => $a->label,
+            'name' => $a->recipient_name,
+            'text' => $a->address_text,
+            'def' => $a->is_default,
+        ])->values()->all();
+
+        return view('profile', ['profileData' => [
+            'member' => $member,
+            'addresses' => $addresses,
+            'favorites' => $customer?->favorite_items ?? [],
+        ]]);
+    }
+
+    public function update(Request $request): JsonResponse
+    {
+        $user = Auth::user();
+        $customer = $user->customer()->first();
+
+        $request->merge(['dob' => $request->input('dob') ?: null]);
+
+        $validated = $request->validate([
+            'name' => ['required', 'string', 'min:2'],
+            'email' => ['required', 'email', Rule::unique('users', 'email')->ignore($user->id)],
+            'dob' => ['nullable', 'date'],
+            'favorites' => ['array'],
+            'favorites.*' => ['string'],
+        ], [
+            'name.min' => 'Vui lòng nhập họ tên',
+            'email.email' => 'Email không hợp lệ',
+            'email.unique' => 'Email này đã được sử dụng',
+        ]);
+
+        $user->update([
+            'name' => $validated['name'],
+            'email' => $validated['email'],
+        ]);
+
+        if ($customer) {
+            $customer->update([
+                'date_of_birth' => $validated['dob'] ?? null,
+                'favorite_items' => $validated['favorites'] ?? [],
+            ]);
+        }
+
+        return response()->json(['message' => 'Đã lưu thông tin cá nhân']);
+    }
+
+    public function storeAddress(Request $request): JsonResponse
+    {
+        $customer = Auth::user()->customer()->first();
+
+        $validated = $request->validate([
+            'label' => ['required', 'string', 'max:50'],
+            'name' => ['required', 'string', 'min:2', 'max:150'],
+            'text' => ['required', 'string', 'min:6'],
+            'def' => ['boolean'],
+        ]);
+
+        $address = $customer->addresses()->create([
+            'label' => $validated['label'],
+            'recipient_name' => $validated['name'],
+            'address_text' => $validated['text'],
+            'is_default' => (bool) ($validated['def'] ?? false) || $customer->addresses()->count() === 0,
+        ]);
+
+        if ($address->is_default) {
+            $customer->addresses()->where('id', '!=', $address->id)->update(['is_default' => false]);
+        }
+
+        return response()->json(['message' => 'Đã thêm địa chỉ', 'address' => $this->formatAddress($address)]);
+    }
+
+    public function updateAddress(Request $request, CustomerAddress $address): JsonResponse
+    {
+        $this->authorizeAddress($address);
+
+        $validated = $request->validate([
+            'label' => ['required', 'string', 'max:50'],
+            'name' => ['required', 'string', 'min:2', 'max:150'],
+            'text' => ['required', 'string', 'min:6'],
+            'def' => ['boolean'],
+        ]);
+
+        $address->update([
+            'label' => $validated['label'],
+            'recipient_name' => $validated['name'],
+            'address_text' => $validated['text'],
+            'is_default' => (bool) ($validated['def'] ?? false),
+        ]);
+
+        if ($address->is_default) {
+            $address->customer->addresses()->where('id', '!=', $address->id)->update(['is_default' => false]);
+        }
+
+        return response()->json(['message' => 'Đã cập nhật địa chỉ', 'address' => $this->formatAddress($address)]);
+    }
+
+    public function destroyAddress(CustomerAddress $address): JsonResponse
+    {
+        $this->authorizeAddress($address);
+
+        $customer = $address->customer;
+        $wasDefault = $address->is_default;
+        $address->delete();
+
+        if ($wasDefault) {
+            $customer->addresses()->orderBy('id')->first()?->update(['is_default' => true]);
+        }
+
+        return response()->json(['message' => 'Đã xoá địa chỉ']);
+    }
+
+    public function setDefaultAddress(CustomerAddress $address): JsonResponse
+    {
+        $this->authorizeAddress($address);
+
+        $address->customer->addresses()->update(['is_default' => false]);
+        $address->update(['is_default' => true]);
+
+        return response()->json(['message' => 'Đã đặt địa chỉ mặc định']);
+    }
+
+    private function authorizeAddress(CustomerAddress $address): void
+    {
+        $customer = Auth::user()->customer()->first();
+
+        abort_unless($customer && $address->customer_id === $customer->id, 403);
+    }
+
+    private function formatAddress(CustomerAddress $address): array
+    {
+        return [
+            'id' => $address->id,
+            'label' => $address->label,
+            'name' => $address->recipient_name,
+            'text' => $address->address_text,
+            'def' => $address->is_default,
+        ];
+    }
+}

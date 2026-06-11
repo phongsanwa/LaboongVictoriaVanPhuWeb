@@ -6,7 +6,28 @@ const TW_DEFAULTS = /*EDITMODE-BEGIN*/{
   "dark": false
 }/*EDITMODE-END*/;
 
-const MEMBER = { tier: "Hạng Vàng", id: "LBVP·0257·418", phone: "0912 845 207", av: "linear-gradient(140deg,#0F623F,#1AA86A)" };
+/* ---------------- backend API helpers ---------------- */
+function csrfToken() {
+  const meta = document.querySelector('meta[name="csrf-token"]');
+  return meta ? meta.content : "";
+}
+async function apiCall(method, url, body) {
+  const res = await fetch(url, {
+    method,
+    headers: {
+      "Content-Type": "application/json",
+      "Accept": "application/json",
+      "X-CSRF-TOKEN": csrfToken(),
+    },
+    body: body !== undefined ? JSON.stringify(body) : undefined,
+  });
+  let data = {};
+  try { data = await res.json(); } catch (e) { /* no body */ }
+  return { ok: res.ok, status: res.status, data };
+}
+
+const PROFILE = window.PROFILE_DATA || {};
+const MEMBER = { tier: PROFILE.member?.tier || "", id: PROFILE.member?.id || "", phone: PROFILE.member?.phone || "", av: "linear-gradient(140deg,#0F623F,#1AA86A)" };
 
 const MENU = [
   { id: "m1", name: "Trà sữa trân châu ĐĐ", cat: "Trà sữa", ic: "cup", grad: "linear-gradient(135deg,#6B4A2B,#A9743F)" },
@@ -20,15 +41,12 @@ const MENU = [
 ];
 
 const INITIAL = {
-  name: "Nguyễn Minh Anh",
-  email: "minhanh.ng@gmail.com",
-  dob: "1998-05-30",
+  name: PROFILE.member?.name || "",
+  email: PROFILE.member?.email || "",
+  dob: PROFILE.member?.dob || "",
   avatar: null, // dataURL
-  addresses: [
-    { id: "a1", label: "Nhà", name: "Minh Anh · 0912 845 207", text: "S2.03 KĐT Văn Phú, P. Phú La, Hà Đông, Hà Nội", def: true },
-    { id: "a2", label: "Công ty", name: "Minh Anh · 0912 845 207", text: "Tầng 12, Toà Keangnam, Phạm Hùng, Nam Từ Liêm, Hà Nội", def: false },
-  ],
-  favorites: ["m1", "m3", "m5"],
+  addresses: PROFILE.addresses || [],
+  favorites: PROFILE.favorites || [],
 };
 
 function initials(n) { const p = n.trim().split(/\s+/); return ((p[0]?.[0] || "") + (p[p.length - 1]?.[0] || "")).toUpperCase(); }
@@ -56,6 +74,12 @@ function App() {
 
   const flash = (m) => { setToast(m); setTimeout(() => setToast(null), 2800); };
 
+  const logout = async (e) => {
+    e.preventDefault();
+    await apiCall("POST", "/logout");
+    location.href = NAV_URLS.login;
+  };
+
   const onAvatar = (e) => {
     const f = e.target.files?.[0]; if (!f) return;
     const reader = new FileReader();
@@ -64,24 +88,51 @@ function App() {
     e.target.value = "";
   };
 
-  const save = () => { if (!emailOk || !nameOk) return; setSaved(data); flash("Đã lưu thông tin cá nhân"); };
+  const save = async () => {
+    if (!emailOk || !nameOk) return;
+    const { ok, data: res } = await apiCall("PUT", "/profile", { name: data.name, email: data.email, dob: data.dob, favorites: data.favorites });
+    if (!ok) { flash(res.message || "Có lỗi xảy ra, vui lòng thử lại."); return; }
+    setSaved(data);
+    flash(res.message || "Đã lưu thông tin cá nhân");
+  };
   const discard = () => setData(saved);
 
   const toggleFav = (id) => setData(d => ({ ...d, favorites: d.favorites.includes(id) ? d.favorites.filter(x => x !== id) : [...d.favorites, id] }));
 
-  const delAddr = (id) => setData(d => ({ ...d, addresses: d.addresses.filter(a => a.id !== id) }));
-  const setDefault = (id) => setData(d => ({ ...d, addresses: d.addresses.map(a => ({ ...a, def: a.id === id })) }));
+  const setAddresses = (addresses) => {
+    setData(d => ({ ...d, addresses }));
+    setSaved(s => ({ ...s, addresses }));
+  };
 
-  const saveAddr = (form) => {
-    setData(d => {
-      let list;
-      if (form.id) list = d.addresses.map(a => a.id === form.id ? { ...a, ...form } : a);
-      else list = [...d.addresses, { ...form, id: "a" + Date.now() }];
-      if (form.def) list = list.map(a => ({ ...a, def: a.id === (form.id || list[list.length - 1].id) }));
-      else if (!list.some(a => a.def) && list.length) list[0].def = true;
-      return { ...d, addresses: list };
-    });
+  const delAddr = async (id) => {
+    const { ok, data: res } = await apiCall("DELETE", `/profile/addresses/${id}`);
+    if (!ok) { flash(res.message || "Có lỗi xảy ra, vui lòng thử lại."); return; }
+    setAddresses(data.addresses.filter(a => a.id !== id));
+    flash(res.message || "Đã xoá địa chỉ");
+  };
+
+  const setDefault = async (id) => {
+    const { ok, data: res } = await apiCall("POST", `/profile/addresses/${id}/default`);
+    if (!ok) { flash(res.message || "Có lỗi xảy ra, vui lòng thử lại."); return; }
+    setAddresses(data.addresses.map(a => ({ ...a, def: a.id === id })));
+    flash(res.message || "Đã đặt địa chỉ mặc định");
+  };
+
+  const saveAddr = async (form) => {
+    const { ok, data: res } = form.id
+      ? await apiCall("PUT", `/profile/addresses/${form.id}`, { label: form.label, name: form.name, text: form.text, def: form.def })
+      : await apiCall("POST", "/profile/addresses", { label: form.label, name: form.name, text: form.text, def: form.def });
+
+    if (!ok) { flash(res.message || "Có lỗi xảy ra, vui lòng thử lại."); return; }
+
+    let list;
+    if (form.id) list = data.addresses.map(a => a.id === form.id ? res.address : a);
+    else list = [...data.addresses, res.address];
+    if (res.address.def) list = list.map(a => ({ ...a, def: a.id === res.address.id }));
+
+    setAddresses(list);
     setAddrModal(null);
+    flash(res.message || "Đã lưu địa chỉ");
   };
 
   return (
@@ -113,7 +164,7 @@ function App() {
           <a className="acct-link" href={NAV_URLS.history}><span className="ali"><Icon name="receipt" size={19} color="currentColor" /></span><span className="alt">Lịch sử giao dịch</span><span className="alc"><Icon name="chev" size={18} /></span></a>
           <a className="acct-link" href={NAV_URLS.wallet}><span className="ali"><Icon name="gift" size={19} color="currentColor" /></span><span className="alt">Đổi quà &amp; Voucher của tôi</span><span className="alc"><Icon name="chev" size={18} /></span></a>
           <a className="acct-link" href={NAV_URLS.store}><span className="ali"><Icon name="pin" size={19} color="currentColor" /></span><span className="alt">Cửa hàng Laboong</span><span className="alc"><Icon name="chev" size={18} /></span></a>
-          <a className="acct-link danger" href={NAV_URLS.login}><span className="ali"><Icon name="logout" size={19} color="currentColor" /></span><span className="alt">Đăng xuất</span><span className="alc"><Icon name="chev" size={18} /></span></a>
+          <a className="acct-link danger" href={NAV_URLS.login} onClick={logout}><span className="ali"><Icon name="logout" size={19} color="currentColor" /></span><span className="alt">Đăng xuất</span><span className="alc"><Icon name="chev" size={18} /></span></a>
         </nav>
 
         {/* personal info */}
