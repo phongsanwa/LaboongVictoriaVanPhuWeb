@@ -98,7 +98,7 @@ class LoginController extends Controller
 
         $this->login($user, $request);
 
-        return response()->json(['message' => 'Đăng nhập thành công', 'redirect' => route('home')]);
+        return response()->json(['message' => 'Đăng nhập thành công', 'redirect' => $this->redirectPathFor($user)]);
     }
 
     /**
@@ -128,7 +128,7 @@ class LoginController extends Controller
         $user = Auth::user();
         $user->forceFill(['last_login_at' => now()])->save();
 
-        return response()->json(['message' => 'Đăng nhập thành công', 'redirect' => route('home')]);
+        return response()->json(['message' => 'Đăng nhập thành công', 'redirect' => $this->redirectPathFor($user)]);
     }
 
     public function logout(Request $request)
@@ -145,6 +145,11 @@ class LoginController extends Controller
         Auth::login($user);
         $request->session()->regenerate();
         $user->forceFill(['last_login_at' => now()])->save();
+    }
+
+    private function redirectPathFor(User $user): string
+    {
+        return $user->user_type === 'admin' ? route('admin.dashboard') : route('home');
     }
 
     private function validatePhone(Request $request): \Illuminate\Validation\Validator

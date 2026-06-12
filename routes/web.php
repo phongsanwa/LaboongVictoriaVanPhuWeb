@@ -35,3 +35,5 @@ Route::post('/login/otp', [LoginController::class, 'sendOtp'])->name('login.otp'
 Route::post('/login/verify', [LoginController::class, 'verifyOtp'])->name('login.verify');
 Route::post('/login/password', [LoginController::class, 'loginWithPassword'])->name('login.password');
 Route::post('/logout', [LoginController::class, 'logout'])->name('logout');
+
+require __DIR__.'/admin.php';

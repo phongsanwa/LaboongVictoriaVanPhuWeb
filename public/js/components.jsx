@@ -143,7 +143,7 @@ const NAV_URLS = {
   store: "/store",
   pos: "Laboong POS Tích điểm.html",
   // admin
-  adminHome: "Laboong Admin Dashboard.html",
+  adminHome: "/admin",
   adminCustomers: "Laboong Admin.html",
   adminPoints: "Laboong Points.html",
   adminRewards: "Laboong Rewards.html",
