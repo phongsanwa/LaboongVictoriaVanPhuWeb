@@ -1,10 +1,29 @@
-/* global React, ReactDOM, Icon, fmt, CAMPAIGNS, CAMP_TYPES, AUDIENCES, CAMP_STATUS, CampaignWizard, PushComposer, useTweaks, TweaksPanel, TweakSection, TweakColor, TweakToggle */
+/* global React, ReactDOM, Icon, fmt, CAMPAIGNS, CAMP_TYPES, AUDIENCES, CAMP_STATUS, CampaignWizard, PushComposer, useTweaks, TweaksPanel, TweakSection, TweakColor, TweakToggle, ADMIN_CAMPAIGNS_DATA, NAV_URLS, adminHref */
 const { useState, useEffect, useMemo } = React;
 
 const CM_DEFAULTS = /*EDITMODE-BEGIN*/{
   "brand": ["#0F623F", "#07432A"],
   "dark": false
 }/*EDITMODE-END*/;
+
+function csrfToken() {
+  const meta = document.querySelector('meta[name="csrf-token"]');
+  return meta ? meta.content : "";
+}
+async function apiCall(method, url, body) {
+  const res = await fetch(url, {
+    method,
+    headers: {
+      "Content-Type": "application/json",
+      "Accept": "application/json",
+      "X-CSRF-TOKEN": csrfToken(),
+    },
+    body: body !== undefined ? JSON.stringify(body) : undefined,
+  });
+  let data = {};
+  try { data = await res.json(); } catch (e) { /* no body */ }
+  return { ok: res.ok, status: res.status, data };
+}
 
 function fmtD(iso) { const [y, m, d] = iso.split("-"); return `${d}/${m}/${y}`; }
 
@@ -88,33 +107,46 @@ function CampaignsApp() {
     return true;
   }), [items, type, status, q]);
 
-  const onSave = (data) => {
-    if (data.id) {
-      setItems(list => list.map(i => i.id === data.id ? { ...i, ...data } : i));
+  const onSave = async (data) => {
+    const payload = {
+      name: data.name, type: data.type, value: data.value ?? null,
+      start: data.start, end: data.end, condition: data.condition, audience: data.audience,
+    };
+    if (data.dbId) {
+      const { ok, data: res } = await apiCall("PUT", `/admin/campaigns/${data.dbId}`, payload);
+      if (!ok) { flash(res.message || "Có lỗi xảy ra, vui lòng thử lại"); return; }
+      setItems(list => list.map(i => i.dbId === data.dbId ? res.campaign : i));
       flash(`Đã cập nhật "${data.name}"`);
     } else {
-      const id = "CMP" + (800 + items.length);
-      const today = "2026-06-08";
-      const st = data.start > today ? "scheduled" : "running";
-      setItems(list => [{ id, opened: 0, converted: 0, pushSent: false, status: st, ...data }, ...list]);
-      flash(`Đã tạo chiến dịch "${data.name}" (${st === "scheduled" ? "đã lên lịch" : "đang chạy"})`);
+      const { ok, data: res } = await apiCall("POST", "/admin/campaigns", payload);
+      if (!ok) { flash(res.message || "Có lỗi xảy ra, vui lòng thử lại"); return; }
+      setItems(list => [res.campaign, ...list]);
+      flash(`Đã tạo chiến dịch "${data.name}" (${res.campaign.status === "scheduled" ? "đã lên lịch" : "đang chạy"})`);
     }
     setWizard(null);
   };
-  const onToggle = (c) => {
-    const next = c.status === "running" ? "scheduled" : "running";
+  const onToggle = async (c) => {
+    const { ok, data: res } = await apiCall("POST", `/admin/campaigns/${c.dbId}/toggle`);
+    if (!ok) { flash(res.message || "Có lỗi xảy ra, vui lòng thử lại"); return; }
+    setItems(list => list.map(i => i.dbId === c.dbId ? res.campaign : i));
     if (c.status === "ended" || c.status === "draft") {
-      setItems(list => list.map(i => i.id === c.id ? { ...i, status: "running" } : i));
       flash(`"${c.name}" đã được kích hoạt`);
-      return;
+    } else {
+      flash(`"${c.name}" → ${res.campaign.status === "running" ? "Đang chạy" : "Tạm dừng"}`);
     }
-    setItems(list => list.map(i => i.id === c.id ? { ...i, status: next } : i));
-    flash(`"${c.name}" → ${next === "running" ? "Đang chạy" : "Tạm dừng"}`);
   };
-  const onSend = (title, count) => {
-    setItems(list => list.map(i => i.id === push.id ? { ...i, pushSent: true } : i));
+  const onSend = async (title, count) => {
+    const { ok, data: res } = await apiCall("POST", `/admin/campaigns/${push.dbId}/push`);
+    if (!ok) { flash(res.message || "Có lỗi xảy ra, vui lòng thử lại"); return; }
+    setItems(list => list.map(i => i.dbId === push.dbId ? res.campaign : i));
     flash(`Đã gửi thông báo "${title}" tới ${fmt(count)} người`);
     setPush(null);
+  };
+
+  const logout = async (e) => {
+    e.preventDefault();
+    await apiCall("POST", "/logout");
+    location.href = NAV_URLS.login;
   };
 
   const NAV = [
@@ -148,9 +180,9 @@ function CampaignsApp() {
         </nav>
         <div className="side-foot">
           <div className="side-user">
-            <div className="side-av">QT</div>
-            <div style={{ minWidth: 0 }}><div className="un">Quản trị viên</div><div className="ur">admin@laboong.vn</div></div>
-            <button className="icon-btn" style={{ width: 32, height: 32, marginLeft: "auto" }} title="Đăng xuất"><Icon name="logout" size={16} /></button>
+            <div className="side-av">{ADMIN_CAMPAIGNS_DATA.admin.initials}</div>
+            <div style={{ minWidth: 0 }}><div className="un">{ADMIN_CAMPAIGNS_DATA.admin.name}</div><div className="ur">{ADMIN_CAMPAIGNS_DATA.admin.email}</div></div>
+            <button className="icon-btn" style={{ width: 32, height: 32, marginLeft: "auto" }} onClick={logout} title="Đăng xuất"><Icon name="logout" size={16} /></button>
           </div>
         </div>
       </aside>

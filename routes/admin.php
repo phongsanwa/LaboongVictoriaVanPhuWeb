@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Admin\CampaignsController;
 use App\Http\Controllers\Admin\CustomersController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\PointsController;
@@ -18,6 +19,11 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
     Route::post('/rewards/{reward}/toggle', [RewardsController::class, 'toggle'])->name('rewards.toggle');
     Route::post('/rewards/{reward}/duplicate', [RewardsController::class, 'duplicate'])->name('rewards.duplicate');
     Route::delete('/rewards/{reward}', [RewardsController::class, 'destroy'])->name('rewards.destroy');
+    Route::get('/campaigns', [CampaignsController::class, 'index'])->name('campaigns.index');
+    Route::post('/campaigns', [CampaignsController::class, 'store'])->name('campaigns.store');
+    Route::put('/campaigns/{campaign}', [CampaignsController::class, 'update'])->name('campaigns.update');
+    Route::post('/campaigns/{campaign}/toggle', [CampaignsController::class, 'toggle'])->name('campaigns.toggle');
+    Route::post('/campaigns/{campaign}/push', [CampaignsController::class, 'push'])->name('campaigns.push');
     Route::get('/roles', [RolesController::class, 'index'])->name('roles.index');
     Route::post('/roles', [RolesController::class, 'update'])->name('roles.update');
 });
