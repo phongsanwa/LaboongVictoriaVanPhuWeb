@@ -1,28 +1,81 @@
 /* global React, ReactDOM, Icon, QRCanvas, fmt, useTweaks, TweaksPanel, TweakSection, TweakColor, TweakToggle */
-const { useState, useEffect, useRef } = React;
+const { useState, useEffect } = React;
 
 const TW_DEFAULTS = /*EDITMODE-BEGIN*/{
   "brand": ["#0F623F", "#07432A"],
   "dark": false
 }/*EDITMODE-END*/;
 
-const PER_POINT = 10000;  // 10.000đ = 1 điểm
-const STAFF = { name: "Khánh Linh", role: "Thu ngân", store: "Victoria Văn Phú" };
-
-const CUSTOMERS = [
-  { name: "Nguyễn Minh Anh", id: "LBVP·0257·418", tier: "Hạng Vàng", points: 2450, av: "linear-gradient(140deg,#0F623F,#1AA86A)" },
-  { name: "Trần Quốc Bảo",   id: "LBVP·0142·907", tier: "Hạng Bạc",  points: 3140, av: "linear-gradient(140deg,#FF8A5B,#FF6FA5)" },
-  { name: "Đỗ Khánh Linh",   id: "LBVP·0391·556", tier: "Hạng Vàng", points: 6450, av: "linear-gradient(140deg,#1E8FA8,#4FC3D9)" },
-];
+const DATA = window.POS_DATA || {
+  staff: { name: "Khánh Linh", role: "Thu ngân", store: "Victoria Văn Phú" },
+  perPoint: 10000,
+};
+const PER_POINT = DATA.perPoint;
+const STAFF = DATA.staff;
 
 function initials(n) { const p = n.trim().split(/\s+/); return p[p.length - 1][0]; }
+
+function csrfToken() {
+  const meta = document.querySelector('meta[name="csrf-token"]');
+  return meta ? meta.content : "";
+}
+async function apiCall(method, url, body) {
+  const res = await fetch(url, {
+    method,
+    headers: {
+      "Content-Type": "application/json",
+      "Accept": "application/json",
+      "X-CSRF-TOKEN": csrfToken(),
+    },
+    body: body !== undefined ? JSON.stringify(body) : undefined,
+  });
+  let data = {};
+  try { data = await res.json(); } catch (e) { /* no body */ }
+  return { ok: res.ok, status: res.status, data };
+}
+
+function MemberLookup({ code, setCode, onLookup, found, error, busy }) {
+  return (
+    <div className="member-lookup">
+      <div className="fld">
+        <input
+          className="inp"
+          value={code}
+          onChange={e => setCode(e.target.value)}
+          onKeyDown={e => { if (e.key === "Enter") onLookup(); }}
+          placeholder="Quét hoặc nhập mã thành viên / SĐT"
+          autoFocus
+        />
+      </div>
+      {error && <div className="lookup-error"><Icon name="close" size={14} /> {error}</div>}
+      {found && (
+        <div className="cust-strip found">
+          <div className="ca" style={{ background: found.av }}>{initials(found.name)}</div>
+          <div style={{ minWidth: 0 }}>
+            <div className="cn">{found.name}</div>
+            <div className="cm"><span className="cust-tier"><Icon name="star" size={11} color="#C99A2E" /> {found.tier}</span> ID {found.id}</div>
+          </div>
+        </div>
+      )}
+      <button className="cta primary" disabled={!code.trim() || busy} onClick={onLookup}>
+        {busy ? "Đang tìm…" : found ? <><Icon name="check" size={18} color="#fff" /> Xác nhận tích điểm</> : <>Tìm khách hàng <Icon name="arrow" size={18} color="#fff" /></>}
+      </button>
+    </div>
+  );
+}
 
 function App() {
   const [tw, setTweak] = useTweaks(TW_DEFAULTS);
   const [step, setStep] = useState(0);          // 0 bill · 1 method · 2 scan · 3 counter-qr · 4 result
   const [bill, setBill] = useState(0);          // đồng
   const [cust, setCust] = useState(null);
-  const timer = useRef(null);
+  const [earned, setEarned] = useState(0);
+  const [pointsBefore, setPointsBefore] = useState(0);
+  const [multiplier, setMultiplier] = useState(1);
+  const [code, setCode] = useState("");
+  const [found, setFound] = useState(null);
+  const [error, setError] = useState("");
+  const [busy, setBusy] = useState(false);
 
   useEffect(() => {
     const r = document.documentElement;
@@ -32,9 +85,7 @@ function App() {
     r.setAttribute("data-theme", tw.dark ? "dark" : "light");
   }, [tw.brand, tw.dark]);
 
-  useEffect(() => () => clearTimeout(timer.current), []);
-
-  const earned = Math.floor(bill / PER_POINT);
+  const baseEarned = Math.floor(bill / PER_POINT);
   const press = (d) => setBill(b => Math.min(b * 10 + d, 99999999));
   const press000 = () => setBill(b => Math.min(b * 1000, 99999999));
   const delDigit = () => setBill(b => Math.floor(b / 10));
@@ -42,21 +93,41 @@ function App() {
 
   const dotIndex = { 0: 0, 1: 1, 2: 2, 3: 2, 4: 3 }[step];
 
-  // staff scans customer → simulate detection
-  const startScan = () => {
-    setStep(2);
-    timer.current = setTimeout(() => finish(), 2600);
-  };
-  // counter QR — customer scans (simulated by button)
-  const startCounter = () => setStep(3);
+  const resetLookup = () => { setCode(""); setFound(null); setError(""); };
 
-  const finish = () => {
-    const c = CUSTOMERS[Math.floor(Math.random() * CUSTOMERS.length)];
-    setCust(c);
+  const goStep = (s) => { resetLookup(); setStep(s); };
+
+  const lookupOrCharge = async () => {
+    if (!code.trim()) return;
+    setBusy(true);
+    setError("");
+
+    if (!found) {
+      const { ok, data } = await apiCall("POST", "/pos/points/lookup", { code: code.trim() });
+      setBusy(false);
+      if (!ok) { setError(data.message || "Không tìm thấy khách hàng"); return; }
+      setFound(data.customer);
+      return;
+    }
+
+    const { ok, data } = await apiCall("POST", "/pos/points/charge", { code: code.trim(), amount: bill });
+    setBusy(false);
+    if (!ok) { setError(data.message || "Có lỗi xảy ra, vui lòng thử lại"); setFound(null); return; }
+
+    setCust(data.customer);
+    setEarned(data.earned);
+    setPointsBefore(data.pointsBefore);
+    setMultiplier(data.multiplier);
     setStep(4);
   };
 
-  const restart = () => { clearTimeout(timer.current); setBill(0); setCust(null); setStep(0); };
+  const restart = () => { setBill(0); setCust(null); resetLookup(); setStep(0); };
+
+  const logout = async (e) => {
+    e.preventDefault();
+    await apiCall("POST", "/logout");
+    location.href = "/login";
+  };
 
   return (
     <>
@@ -70,6 +141,7 @@ function App() {
           <div className="tb-av">{initials(STAFF.name)}</div>
           <div><div className="sn">{STAFF.name}</div><div className="sr">{STAFF.role}</div></div>
         </div>
+        <button className="icon-btn" style={{ width: 34, height: 34, marginLeft: 8 }} onClick={logout} title="Đăng xuất"><Icon name="logout" size={16} /></button>
       </header>
 
       <main className="stage">
@@ -85,7 +157,7 @@ function App() {
               <div className="bill-display">
                 <div className="bill-label">Tổng tiền hoá đơn</div>
                 <div className={"bill-amt tnum" + (bill === 0 ? " zero" : "")}>{fmt(bill)}<span className="cur">đ</span></div>
-                <div className="bill-conv"><Icon name="coin" size={16} color="var(--brand)" /> Khách nhận <span className="pp">+{fmt(earned)} điểm</span></div>
+                <div className="bill-conv"><Icon name="coin" size={16} color="var(--brand)" /> Khách nhận <span className="pp">+{fmt(baseEarned)} điểm</span></div>
               </div>
               <div className="quick">
                 {[20000, 50000, 100000].map(v => <button key={v} onClick={() => add(v)}>+{fmt(v / 1000)}k</button>)}
@@ -110,12 +182,12 @@ function App() {
               <div className="step-title">Chọn cách tích điểm</div>
               <div className="center-row">
                 <div className="bill-chip">
-                  Hoá đơn {fmt(bill)}đ · +{fmt(earned)} điểm
+                  Hoá đơn {fmt(bill)}đ · +{fmt(baseEarned)} điểm
                   <button className="e" onClick={() => setStep(0)} title="Sửa hoá đơn"><Icon name="edit" size={14} /></button>
                 </div>
               </div>
               <div className="methods">
-                <button className="method scan" onClick={startScan}>
+                <button className="method scan" onClick={() => goStep(2)}>
                   <div className="mi"><Icon name="scan" size={26} color="#fff" /></div>
                   <div>
                     <div className="mt">Nhân viên quét mã khách</div>
@@ -123,7 +195,7 @@ function App() {
                   </div>
                   <span className="mgo"><Icon name="chev" size={18} /></span>
                 </button>
-                <button className="method show" onClick={startCounter}>
+                <button className="method show" onClick={() => goStep(3)}>
                   <div className="mi"><Icon name="qr" size={26} color="#fff" /></div>
                   <div>
                     <div className="mt">Khách quét mã tại quầy</div>
@@ -140,16 +212,16 @@ function App() {
         {step === 2 && (
           <div className="card">
             <div className="card-pad">
-              <div className="step-title">Đang quét mã khách…</div>
-              <div className="step-desc">Đưa mã QR của khách vào khung hình</div>
+              <div className="step-title">Quét mã khách</div>
+              <div className="step-desc">Đưa mã QR của khách vào khung hình hoặc nhập mã thành viên</div>
               <div className="scanner">
                 <div className="cust-qr"><QRCanvas /></div>
                 <span className="scan-corner tl" /><span className="scan-corner tr" />
                 <span className="scan-corner bl" /><span className="scan-corner br" />
                 <span className="scan-line" />
               </div>
-              <div className="scan-status"><span className="spin" /> Đang nhận diện thành viên…</div>
-              <button className="linkback" onClick={() => setStep(1)} style={{ display: "block", margin: "14px auto 0" }}>Huỷ quét</button>
+              <MemberLookup code={code} setCode={setCode} onLookup={lookupOrCharge} found={found} error={error} busy={busy} />
+              <button className="linkback" onClick={() => setStep(1)} style={{ display: "block", margin: "14px auto 0" }}>← Đổi cách khác</button>
             </div>
           </div>
         )}
@@ -159,13 +231,13 @@ function App() {
           <div className="card">
             <div className="card-pad">
               <div className="step-title">Khách quét mã này</div>
-              <div className="step-desc">Mời khách mở app Laboong và quét mã QR bên dưới</div>
+              <div className="step-desc">Mời khách mở app Laboong và quét mã QR bên dưới, sau đó nhập mã thành viên của khách để xác nhận</div>
               <div className="counter-qr">
                 <QRCanvas />
                 <div className="cq-logo">L</div>
               </div>
-              <div className="counter-hint">Hoá đơn <b>{fmt(bill)}đ</b> · khách sẽ nhận <b>+{fmt(earned)} điểm</b></div>
-              <button className="demo-sim" onClick={finish}><Icon name="phone" size={16} /> Mô phỏng: khách đã quét xong</button>
+              <div className="counter-hint">Hoá đơn <b>{fmt(bill)}đ</b> · khách sẽ nhận <b>+{fmt(baseEarned)} điểm</b></div>
+              <MemberLookup code={code} setCode={setCode} onLookup={lookupOrCharge} found={found} error={error} busy={busy} />
               <button className="linkback" onClick={() => setStep(1)} style={{ display: "block", margin: "12px auto 0" }}>← Đổi cách khác</button>
             </div>
           </div>
@@ -178,6 +250,7 @@ function App() {
               <div className="rh-check"><div className="ck"><Icon name="check" size={26} color="var(--brand)" /></div></div>
               <div className="rh-title">Tích điểm thành công!</div>
               <div className="rh-earned"><span className="pn">+{fmt(earned)}</span><span className="pl">điểm</span></div>
+              {multiplier > 1 && <div className="rh-bonus">x{multiplier} điểm áp dụng</div>}
             </div>
             <div className="result-body">
               <div className="cust-strip">
@@ -189,15 +262,15 @@ function App() {
               </div>
 
               <div className="pts-flow">
-                <div className="pts-box"><div className="pl">Điểm cũ</div><div className="pv tnum">{fmt(cust.points)}</div></div>
+                <div className="pts-box"><div className="pl">Điểm cũ</div><div className="pv tnum">{fmt(pointsBefore)}</div></div>
                 <div className="arr"><Icon name="arrow" size={20} color="var(--brand)" /></div>
-                <div className="pts-box new"><div className="pl">Điểm mới</div><div className="pv tnum">{fmt(cust.points + earned)}</div></div>
+                <div className="pts-box new"><div className="pl">Điểm mới</div><div className="pv tnum">{fmt(cust.points)}</div></div>
               </div>
 
               <div className="total-row">
                 <div className="ti"><Icon name="coin" size={22} color="#fff" /></div>
                 <div><div className="tl">Tổng điểm hiện tại</div></div>
-                <div className="tv tnum">{fmt(cust.points + earned)}<small>điểm</small></div>
+                <div className="tv tnum">{fmt(cust.points)}<small>điểm</small></div>
               </div>
 
               <div className="result-actions">
