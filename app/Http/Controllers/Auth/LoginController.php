@@ -149,7 +149,15 @@ class LoginController extends Controller
 
     private function redirectPathFor(User $user): string
     {
-        return $user->user_type === 'admin' ? route('admin.dashboard') : route('home');
+        if ($user->user_type === 'admin') {
+            return route('admin.dashboard');
+        }
+
+        if ($user->user_type === 'staff') {
+            return route('pos.points');
+        }
+
+        return route('home');
     }
 
     private function validatePhone(Request $request): \Illuminate\Validation\Validator

@@ -37,3 +37,4 @@ Route::post('/login/password', [LoginController::class, 'loginWithPassword'])->n
 Route::post('/logout', [LoginController::class, 'logout'])->name('logout');
 
 require __DIR__.'/admin.php';
+require __DIR__.'/pos.php';
