@@ -144,11 +144,11 @@ const NAV_URLS = {
   pos: "Laboong POS Tích điểm.html",
   // admin
   adminHome: "/admin",
-  adminCustomers: "Laboong Admin.html",
-  adminPoints: "Laboong Points.html",
-  adminRewards: "Laboong Rewards.html",
+  adminCustomers: "/admin/customers",
+  adminPoints: "/admin/points",
+  adminRewards: "/admin/rewards",
   adminCampaigns: "Laboong Campaigns.html",
-  adminRoles: "Laboong Roles.html",
+  adminRoles: "/admin/roles",
   adminSettings: "Laboong Admin Settings.html",
 };
 const ADMIN_NAV_HREF = {

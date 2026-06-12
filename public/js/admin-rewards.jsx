@@ -1,4 +1,4 @@
-/* global React, ReactDOM, Icon, fmt, REWARDS, REWARD_CATS, expStatus, RewardEditor, ConfirmDelete, useTweaks, TweaksPanel, TweakSection, TweakColor, TweakToggle */
+/* global React, ReactDOM, Icon, fmt, REWARDS, REWARD_CATS, expStatus, RewardEditor, ConfirmDelete, useTweaks, TweaksPanel, TweakSection, TweakColor, TweakToggle, ADMIN_REWARDS_DATA, NAV_URLS, adminHref */
 const { useState, useEffect, useMemo } = React;
 
 const RW_DEFAULTS = /*EDITMODE-BEGIN*/{
@@ -6,7 +6,27 @@ const RW_DEFAULTS = /*EDITMODE-BEGIN*/{
   "dark": false
 }/*EDITMODE-END*/;
 
-const TODAY = "2026-06-08";
+const TODAY = new Date().toISOString().slice(0, 10);
+
+function csrfToken() {
+  const meta = document.querySelector('meta[name="csrf-token"]');
+  return meta ? meta.content : "";
+}
+async function apiCall(method, url, body) {
+  const res = await fetch(url, {
+    method,
+    headers: {
+      "Content-Type": "application/json",
+      "Accept": "application/json",
+      "X-CSRF-TOKEN": csrfToken(),
+    },
+    body: body !== undefined ? JSON.stringify(body) : undefined,
+  });
+  let data = {};
+  try { data = await res.json(); } catch (e) { /* no body */ }
+  return { ok: res.ok, status: res.status, data };
+}
+
 
 function fmtExpiry(iso) { const [y, m, d] = iso.split("-"); return `${d}/${m}/${y}`; }
 
@@ -97,30 +117,48 @@ function RewardsApp() {
     return true;
   }), [items, cat, status, q]);
 
-  const onSave = (data) => {
-    if (data.id) {
-      setItems(list => list.map(i => i.id === data.id ? { ...i, ...data } : i));
+  const onSave = async (data) => {
+    const payload = {
+      name: data.name, cat: data.cat, points: data.points, qty: data.qty,
+      expiry: data.expiry, status: data.status, grad: data.grad, img: data.img,
+    };
+    if (data.dbId) {
+      const { ok, data: res } = await apiCall("PUT", `/admin/rewards/${data.dbId}`, payload);
+      if (!ok) { flash(res.message || "Có lỗi xảy ra, vui lòng thử lại"); return; }
+      setItems(list => list.map(i => i.dbId === data.dbId ? res.reward : i));
       flash(`Đã cập nhật "${data.name}"`);
     } else {
-      const id = "RW" + (5000 + items.length);
-      setItems(list => [{ id, redeemed: 0, used: 0, ...data }, ...list]);
+      const { ok, data: res } = await apiCall("POST", "/admin/rewards", payload);
+      if (!ok) { flash(res.message || "Có lỗi xảy ra, vui lòng thử lại"); return; }
+      setItems(list => [res.reward, ...list]);
       flash(`Đã tạo phần thưởng "${data.name}"`);
     }
     setEditor(null);
   };
-  const onToggle = (r) => {
-    setItems(list => list.map(i => i.id === r.id ? { ...i, status: i.status === "on" ? "off" : "on" } : i));
+  const onToggle = async (r) => {
+    const { ok, data: res } = await apiCall("POST", `/admin/rewards/${r.dbId}/toggle`);
+    if (!ok) { flash(res.message || "Có lỗi xảy ra, vui lòng thử lại"); return; }
+    setItems(list => list.map(i => i.dbId === r.dbId ? res.reward : i));
     flash(`"${r.name}" → ${r.status === "on" ? "Inactive" : "Active"}`);
   };
-  const onDup = (r) => {
-    const id = "RW" + (5000 + items.length);
-    setItems(list => [{ ...r, id, name: r.name + " (bản sao)", redeemed: 0, used: 0, status: "off" }, ...list]);
+  const onDup = async (r) => {
+    const { ok, data: res } = await apiCall("POST", `/admin/rewards/${r.dbId}/duplicate`);
+    if (!ok) { flash(res.message || "Có lỗi xảy ra, vui lòng thử lại"); return; }
+    setItems(list => [res.reward, ...list]);
     flash(`Đã nhân bản "${r.name}"`);
   };
-  const doDelete = () => {
-    setItems(list => list.filter(i => i.id !== delTarget.id));
+  const doDelete = async () => {
+    const { ok, data: res } = await apiCall("DELETE", `/admin/rewards/${delTarget.dbId}`);
+    if (!ok) { flash(res.message || "Có lỗi xảy ra, vui lòng thử lại"); setDelTarget(null); return; }
+    setItems(list => list.filter(i => i.dbId !== delTarget.dbId));
     flash(`Đã xoá "${delTarget.name}"`);
     setDelTarget(null);
+  };
+
+  const logout = async (e) => {
+    e.preventDefault();
+    await apiCall("POST", "/logout");
+    location.href = NAV_URLS.login;
   };
 
   const NAV = [
@@ -154,9 +192,9 @@ function RewardsApp() {
         </nav>
         <div className="side-foot">
           <div className="side-user">
-            <div className="side-av">QT</div>
-            <div style={{ minWidth: 0 }}><div className="un">Quản trị viên</div><div className="ur">admin@laboong.vn</div></div>
-            <button className="icon-btn" style={{ width: 32, height: 32, marginLeft: "auto" }} title="Đăng xuất"><Icon name="logout" size={16} /></button>
+            <div className="side-av">{ADMIN_REWARDS_DATA.admin.initials}</div>
+            <div style={{ minWidth: 0 }}><div className="un">{ADMIN_REWARDS_DATA.admin.name}</div><div className="ur">{ADMIN_REWARDS_DATA.admin.email}</div></div>
+            <button className="icon-btn" style={{ width: 32, height: 32, marginLeft: "auto" }} onClick={logout} title="Đăng xuất"><Icon name="logout" size={16} /></button>
           </div>
         </div>
       </aside>

@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Reward extends Model
 {
@@ -15,6 +16,7 @@ class Reward extends Model
         'quantity_available',
         'quantity_total',
         'image_url',
+        'gradient',
         'valid_from',
         'valid_until',
         'min_purchase',
@@ -31,5 +33,10 @@ class Reward extends Model
             'valid_until' => 'date',
             'is_featured' => 'boolean',
         ];
+    }
+
+    public function redemptions(): HasMany
+    {
+        return $this->hasMany(Redemption::class);
     }
 }

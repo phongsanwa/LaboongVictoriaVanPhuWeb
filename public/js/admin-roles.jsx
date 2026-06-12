@@ -1,4 +1,4 @@
-/* global React, ReactDOM, Icon, useTweaks, TweaksPanel, TweakSection, TweakColor, TweakToggle */
+/* global React, ReactDOM, Icon, useTweaks, TweaksPanel, TweakSection, TweakColor, TweakToggle, NAV_URLS, adminHref */
 const { useState, useEffect, useMemo } = React;
 
 const TW_DEFAULTS = /*EDITMODE-BEGIN*/{
@@ -6,65 +6,46 @@ const TW_DEFAULTS = /*EDITMODE-BEGIN*/{
   "dark": false
 }/*EDITMODE-END*/;
 
-const ROLES = {
-  cashier: { key: "cashier", label: "Thu ngân", ic: "scan", grad: "linear-gradient(150deg,#1E8FA8,#4FC3D9)",
-    desc: "Nhân viên tại quầy — xử lý tích điểm, đổi quà và tra cứu khách hàng cơ bản." },
-  manager: { key: "manager", label: "Quản lý", ic: "shield", grad: "linear-gradient(150deg,#0F623F,#07432A)",
-    desc: "Quản lý cửa hàng — toàn quyền vận hành, marketing, báo cáo và phân quyền nhân viên." },
+const DATA = window.ADMIN_ROLES_DATA || {
+  admin: { name: "Quản trị viên", email: "", initials: "QT" },
+  roles: {
+    cashier: { key: "cashier", label: "Thu ngân", ic: "scan", grad: "linear-gradient(150deg,#1E8FA8,#4FC3D9)", desc: "", count: 0, staff: [] },
+    manager: { key: "manager", label: "Quản lý", ic: "shield", grad: "linear-gradient(150deg,#0F623F,#07432A)", desc: "", count: 0, staff: [] },
+  },
+  total: 0,
+  permGroups: [],
+  perms: {},
 };
 
-/* staff per role */
-const STAFF = {
-  cashier: [["Phạm Gia Huy","#FF8A5B"],["Đỗ Khánh Linh","#1E8FA8"],["Vũ Đức Thành","#C99A2E"],["Ngô Hải Đăng","#6B4FA0"],["Lý Thanh Phong","#3E7CB1"],["Cao Diệu My","#E0518A"]],
-  manager: [["Trần Quốc Bảo","#0F623F"],["Hoàng Thu Trang","#9B4DA0"]],
-};
+const ALL_PERMS = DATA.permGroups.flatMap(g => g.perms);
+const TOTAL = DATA.total;
 
-/* permission groups. each perm: cashier default, manager default, lockedManager (manager luôn bật, không tắt được) */
-const PERM_GROUPS = [
-  { title: "Tích điểm & giao dịch", ic: "receipt", perms: [
-    { id: "scan",       name: "Quét mã QR tích điểm",      desc: "Quét mã thành viên để cộng điểm khi bán hàng", cashier: true,  manager: true },
-    { id: "adjust",     name: "Cộng / trừ điểm thủ công",  desc: "Điều chỉnh điểm kèm lý do",                   cashier: false, manager: true },
-    { id: "tx_view",    name: "Xem lịch sử giao dịch",     desc: "Tra cứu các giao dịch tích / tiêu điểm",      cashier: true,  manager: true },
-    { id: "tx_void",    name: "Huỷ / hoàn giao dịch",      desc: "Thu hồi điểm khi sai sót hoặc hoàn hàng",     cashier: false, manager: true },
-  ]},
-  { title: "Khách hàng", ic: "users", perms: [
-    { id: "cust_list",  name: "Xem danh sách khách hàng",  desc: "Truy cập danh bạ thành viên",                 cashier: true,  manager: true },
-    { id: "cust_detail",name: "Xem chi tiết hồ sơ",        desc: "Hồ sơ, điểm và lịch sử của từng khách",       cashier: true,  manager: true },
-    { id: "cust_edit",  name: "Sửa thông tin khách",       desc: "Cập nhật tên, SĐT, email…",                   cashier: false, manager: true },
-    { id: "cust_export",name: "Xuất dữ liệu (Excel/CSV)",  desc: "Tải danh sách khách hàng",                    cashier: false, manager: true },
-  ]},
-  { title: "Quà & Voucher", ic: "gift", perms: [
-    { id: "redeem",     name: "Đổi quà cho khách",         desc: "Xác nhận đổi điểm lấy quà / voucher",          cashier: true,  manager: true },
-    { id: "gift_edit",  name: "Tạo / sửa voucher & quà",   desc: "Quản lý danh mục phần thưởng",                 cashier: false, manager: true },
-    { id: "gift_del",   name: "Xoá voucher & quà",         desc: "Gỡ phần thưởng khỏi danh mục",                 cashier: false, manager: true },
-  ]},
-  { title: "Chiến dịch & Marketing", ic: "mega", perms: [
-    { id: "camp_view",  name: "Xem chiến dịch",            desc: "Theo dõi các chương trình đang chạy",          cashier: true,  manager: true },
-    { id: "camp_edit",  name: "Tạo / sửa chiến dịch",      desc: "Thiết lập ưu đãi, điều kiện, đối tượng",       cashier: false, manager: true },
-    { id: "push",       name: "Gửi push notification",     desc: "Gửi thông báo đẩy tới khách hàng",             cashier: false, manager: true },
-  ]},
-  { title: "Báo cáo & Hệ thống", ic: "gear", perms: [
-    { id: "report",     name: "Xem báo cáo & thống kê",    desc: "Doanh thu, điểm phát hành, hiệu quả CT",       cashier: false, manager: true },
-    { id: "staff",      name: "Quản lý nhân viên & phân quyền", desc: "Thêm nhân viên, gán vai trò",            cashier: false, manager: true, lockManager: true },
-    { id: "settings",   name: "Cài đặt hệ thống",          desc: "Cấu hình cửa hàng, quy tắc tích điểm",         cashier: false, manager: true },
-  ]},
-];
-
-const ALL_PERMS = PERM_GROUPS.flatMap(g => g.perms);
-const TOTAL = ALL_PERMS.length;
-
-function initState() {
-  const s = {};
-  ALL_PERMS.forEach(p => { s[p.id] = { cashier: p.cashier, manager: p.manager }; });
-  return s;
+function csrfToken() {
+  const meta = document.querySelector('meta[name="csrf-token"]');
+  return meta ? meta.content : "";
+}
+async function apiCall(method, url, body) {
+  const res = await fetch(url, {
+    method,
+    headers: {
+      "Content-Type": "application/json",
+      "Accept": "application/json",
+      "X-CSRF-TOKEN": csrfToken(),
+    },
+    body: body !== undefined ? JSON.stringify(body) : undefined,
+  });
+  let data = {};
+  try { data = await res.json(); } catch (e) { /* no body */ }
+  return { ok: res.ok, status: res.status, data };
 }
 
 function App() {
   const [tw, setTweak] = useTweaks(TW_DEFAULTS);
-  const [perms, setPerms] = useState(initState);
-  const [saved, setSaved] = useState(initState);
+  const [perms, setPerms] = useState(DATA.perms);
+  const [saved, setSaved] = useState(DATA.perms);
   const [sideOpen, setSideOpen] = useState(false);
   const [toast, setToast] = useState(null);
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     const r = document.documentElement;
@@ -75,8 +56,8 @@ function App() {
   }, [tw.brand, tw.dark]);
 
   const counts = useMemo(() => ({
-    cashier: ALL_PERMS.filter(p => perms[p.id].cashier).length,
-    manager: ALL_PERMS.filter(p => perms[p.id].manager).length,
+    cashier: ALL_PERMS.filter(p => perms[p.id]?.cashier).length,
+    manager: ALL_PERMS.filter(p => perms[p.id]?.manager).length,
   }), [perms]);
 
   const dirty = useMemo(() => JSON.stringify(perms) !== JSON.stringify(saved), [perms, saved]);
@@ -85,8 +66,26 @@ function App() {
     if (lock) return;
     setPerms(s => ({ ...s, [pid]: { ...s[pid], [role]: !s[pid][role] } }));
   };
-  const save = () => { setSaved(perms); setToast("Đã lưu thay đổi phân quyền"); setTimeout(() => setToast(null), 3000); };
+
+  const save = async () => {
+    setSaving(true);
+    const { ok, data } = await apiCall("POST", "/admin/roles", { perms });
+    setSaving(false);
+    if (ok) {
+      setSaved(perms);
+      setToast(data.message || "Đã lưu thay đổi phân quyền");
+    } else {
+      setToast(data.message || "Có lỗi xảy ra, vui lòng thử lại");
+    }
+    setTimeout(() => setToast(null), 3000);
+  };
   const reset = () => setPerms(saved);
+
+  const logout = async (e) => {
+    e.preventDefault();
+    await apiCall("POST", "/logout");
+    location.href = NAV_URLS.login;
+  };
 
   const NAV = [
     { ic: "chart", label: "Tổng quan" },
@@ -99,8 +98,7 @@ function App() {
   ];
 
   const RoleCard = ({ role }) => {
-    const r = ROLES[role];
-    const team = STAFF[role];
+    const r = DATA.roles[role];
     const cnt = counts[role];
     return (
       <div className="role-card">
@@ -108,28 +106,28 @@ function App() {
           <div className="rc-ic" style={{ background: r.grad }}><Icon name={r.ic} size={24} color="#fff" /></div>
           <div>
             <div className="rc-name">{r.label}</div>
-            <div className="rc-count"><Icon name="users" size={13} color="var(--ink-3)" /> {team.length} nhân viên</div>
+            <div className="rc-count"><Icon name="users" size={13} color="var(--ink-3)" /> {r.staff.length} nhân viên</div>
           </div>
         </div>
         <div className="rc-desc">{r.desc}</div>
         <div className="rc-perms">
-          <div className="rc-bar"><div className="rc-fill" style={{ width: (cnt / TOTAL * 100) + "%", background: r.grad }} /></div>
+          <div className="rc-bar"><div className="rc-fill" style={{ width: (cnt / (TOTAL || 1) * 100) + "%", background: r.grad }} /></div>
           <span className="rc-frac">{cnt}/{TOTAL} quyền</span>
         </div>
         <div className="rc-team">
-          {team.slice(0, 5).map((m, i) => (
-            <div key={i} className="rc-av" style={{ background: m[1] }} title={m[0]}>
-              {m[0].trim().split(/\s+/).slice(-1)[0][0]}
+          {r.staff.slice(0, 5).map((m, i) => (
+            <div key={i} className="rc-av" style={{ background: m.color }} title={m.name}>
+              {m.name.trim().split(/\s+/).slice(-1)[0][0]}
             </div>
           ))}
-          {team.length > 5 && <div className="rc-more">+{team.length - 5}</div>}
+          {r.staff.length > 5 && <div className="rc-more">+{r.staff.length - 5}</div>}
         </div>
       </div>
     );
   };
 
   const Ptog = ({ pid, role, locked }) => {
-    const on = perms[pid][role];
+    const on = perms[pid]?.[role];
     return (
       <button className={"ptog " + role + (on ? " on" : "") + (locked ? " locked" : "")}
         onClick={() => toggle(pid, role, locked)} title={locked ? "Quyền bắt buộc của Quản lý" : ""}>
@@ -166,9 +164,9 @@ function App() {
         </nav>
         <div className="side-foot">
           <div className="side-user">
-            <div className="side-av">QT</div>
-            <div style={{ minWidth: 0 }}><div className="un">Quản trị viên</div><div className="ur">admin@laboong.vn</div></div>
-            <button className="icon-btn" style={{ width: 32, height: 32, marginLeft: "auto" }} title="Đăng xuất"><Icon name="logout" size={16} /></button>
+            <div className="side-av">{DATA.admin.initials}</div>
+            <div style={{ minWidth: 0 }}><div className="un">{DATA.admin.name}</div><div className="ur">{DATA.admin.email}</div></div>
+            <button className="icon-btn" style={{ width: 32, height: 32, marginLeft: "auto" }} onClick={logout} title="Đăng xuất"><Icon name="logout" size={16} /></button>
           </div>
         </div>
       </aside>
@@ -182,8 +180,8 @@ function App() {
           </div>
           <div className="topbar-spacer" />
           {dirty && <button className="btn ghost" onClick={reset}>Hoàn tác</button>}
-          <button className="btn primary" disabled={!dirty} onClick={save}>
-            <Icon name="check" size={16} color={dirty ? "#fff" : "currentColor"} /> Lưu thay đổi
+          <button className="btn primary" disabled={!dirty || saving} onClick={save}>
+            <Icon name="check" size={16} color={(dirty && !saving) ? "#fff" : "currentColor"} /> {saving ? "Đang lưu…" : "Lưu thay đổi"}
           </button>
         </header>
 
@@ -200,7 +198,7 @@ function App() {
               <div className="mh-role"><span className="mh-chip manager"><Icon name="shield" size={14} color="currentColor" /> Quản lý</span></div>
             </div>
 
-            {PERM_GROUPS.map(g => (
+            {DATA.permGroups.map(g => (
               <div key={g.title}>
                 <div className="pgroup-title"><span className="pgi"><Icon name={g.ic} size={15} color="currentColor" /></span>{g.title}</div>
                 {g.perms.map(p => (
