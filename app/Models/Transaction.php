@@ -32,6 +32,11 @@ class Transaction extends Model
         return $this->belongsTo(Store::class);
     }
 
+    public function staff(): BelongsTo
+    {
+        return $this->belongsTo(Staff::class);
+    }
+
     public function details(): HasMany
     {
         return $this->hasMany(TransactionDetail::class);

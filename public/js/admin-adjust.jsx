@@ -1,4 +1,4 @@
-/* global React, Icon, CUSTOMERS, ADJUST_REASONS, avColor, initials, fmt */
+/* global React, Icon, ADJUST_REASONS, avColor, initials, fmt */
 const { useState: useStateAdj, useMemo: useMemoAdj } = React;
 
 function AdjustModal({ customers, onClose, onConfirm }) {
@@ -23,15 +23,11 @@ function AdjustModal({ customers, onClose, onConfirm }) {
   const submit = () => {
     if (!valid) return;
     onConfirm({
-      cust: { name: cust.name, id: cust.id, tier: cust.tier },
-      type: "adjust",
-      desc: mode === "add" ? "Cộng điểm thủ công" : "Trừ điểm thủ công",
+      customerId: cust.dbId,
+      mode,
+      amount: amt,
       reason,
       note: note.trim(),
-      source: "Điều chỉnh thủ công",
-      staff: "Quản trị viên",
-      ts: new Date(),
-      points: mode === "add" ? amt : -Math.min(amt, cust.points),
     });
   };
 
