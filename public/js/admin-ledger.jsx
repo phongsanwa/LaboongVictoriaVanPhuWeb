@@ -35,4 +35,21 @@ const ADJUST_REASONS = [
   "Khác",
 ];
 
-Object.assign(window, { ADMIN_POINTS_DATA, LEDGER, fmtTs, TYPE_META, ADJUST_REASONS, NOW });
+const AV_COLORS = [
+  "linear-gradient(140deg,#0F623F,#1AA86A)",
+  "linear-gradient(140deg,#FF8A5B,#FF6FA5)",
+  "linear-gradient(140deg,#C99A2E,#E0B84A)",
+  "linear-gradient(140deg,#1E8FA8,#4FC3D9)",
+  "linear-gradient(140deg,#6B4FA0,#9B7FD4)",
+  "linear-gradient(140deg,#3E7CB1,#6FB1E0)",
+];
+function avColor(name) {
+  let h = 0; for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) >>> 0;
+  return AV_COLORS[h % AV_COLORS.length];
+}
+function initials(name) {
+  const p = name.trim().split(/\s+/);
+  return ((p[0]?.[0] || "") + (p[p.length - 1]?.[0] || "")).toUpperCase();
+}
+
+Object.assign(window, { ADMIN_POINTS_DATA, LEDGER, fmtTs, TYPE_META, ADJUST_REASONS, NOW, avColor, initials });
