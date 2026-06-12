@@ -39,13 +39,67 @@ async function apiCall(method, url, body) {
   return { ok: res.ok, status: res.status, data };
 }
 
+function AssignModal({ role, onClose, onAssign }) {
+  const r = DATA.roles[role];
+  const [phone, setPhone] = useState("");
+  const [error, setError] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    const h = (e) => { if (e.key === "Escape") onClose(); };
+    window.addEventListener("keydown", h);
+    return () => window.removeEventListener("keydown", h);
+  }, [onClose]);
+
+  const submit = async () => {
+    if (!phone.trim()) { setError("Vui lòng nhập số điện thoại"); return; }
+    setBusy(true);
+    setError("");
+    const ok = await onAssign(phone.trim());
+    setBusy(false);
+    if (!ok.success) { setError(ok.message); return; }
+    onClose();
+  };
+
+  return (
+    <div className="modal-scrim" onClick={onClose}>
+      <div className="modal" onClick={e => e.stopPropagation()}>
+        <div className="modal-h">
+          <div className="mh-ic" style={{ background: r.grad, color: "#fff" }}><Icon name={r.ic} size={20} color="#fff" /></div>
+          <div>
+            <h3>Gán vai trò {r.label}</h3>
+            <p>Nhập số điện thoại người dùng để gán làm {r.label.toLowerCase()}</p>
+          </div>
+          <button className="x" onClick={onClose}><Icon name="close" size={18} /></button>
+        </div>
+        <div className="modal-b">
+          <div className="fld">
+            <label>Số điện thoại</label>
+            <input className="inp" value={phone} onChange={e => setPhone(e.target.value)} placeholder="VD: 0912345678" autoFocus
+              onKeyDown={e => { if (e.key === "Enter") submit(); }} />
+          </div>
+          {error && <div style={{ color: "var(--danger, #C0392B)", fontSize: 13, marginTop: 6 }}>{error}</div>}
+        </div>
+        <div className="modal-f">
+          <button className="btn ghost" style={{ flex: ".6" }} onClick={onClose}>Huỷ</button>
+          <button className="btn primary" disabled={busy} onClick={submit}>
+            <Icon name="check" size={17} color="#fff" /> {busy ? "Đang gán…" : "Gán vai trò"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function App() {
   const [tw, setTweak] = useTweaks(TW_DEFAULTS);
   const [perms, setPerms] = useState(DATA.perms);
   const [saved, setSaved] = useState(DATA.perms);
+  const [roles, setRoles] = useState(DATA.roles);
   const [sideOpen, setSideOpen] = useState(false);
   const [toast, setToast] = useState(null);
   const [saving, setSaving] = useState(false);
+  const [assigning, setAssigning] = useState(null);
 
   useEffect(() => {
     const r = document.documentElement;
@@ -81,6 +135,26 @@ function App() {
   };
   const reset = () => setPerms(saved);
 
+  const handleAssign = async (phone) => {
+    const { ok, data } = await apiCall("POST", "/admin/roles/assign", { phone, role: assigning });
+    if (!ok) {
+      const msg = data.errors?.phone?.[0] || data.message || "Có lỗi xảy ra, vui lòng thử lại";
+      return { success: false, message: msg };
+    }
+    setRoles(data.roles);
+    setToast(data.message);
+    setTimeout(() => setToast(null), 3000);
+    return { success: true };
+  };
+
+  const handleRemoveStaff = async (staffId) => {
+    const { ok, data } = await apiCall("DELETE", `/admin/roles/staff/${staffId}`);
+    if (!ok) { setToast(data.message || "Có lỗi xảy ra, vui lòng thử lại"); setTimeout(() => setToast(null), 3000); return; }
+    setRoles(data.roles);
+    setToast(data.message);
+    setTimeout(() => setToast(null), 3000);
+  };
+
   const logout = async (e) => {
     e.preventDefault();
     await apiCall("POST", "/logout");
@@ -98,7 +172,7 @@ function App() {
   ];
 
   const RoleCard = ({ role }) => {
-    const r = DATA.roles[role];
+    const r = roles[role];
     const cnt = counts[role];
     return (
       <div className="role-card">
@@ -108,6 +182,9 @@ function App() {
             <div className="rc-name">{r.label}</div>
             <div className="rc-count"><Icon name="users" size={13} color="var(--ink-3)" /> {r.staff.length} nhân viên</div>
           </div>
+          <button className="icon-btn" style={{ marginLeft: "auto" }} title={`Gán vai trò ${r.label}`} onClick={() => setAssigning(role)}>
+            <Icon name="plus" size={16} />
+          </button>
         </div>
         <div className="rc-desc">{r.desc}</div>
         <div className="rc-perms">
@@ -115,12 +192,15 @@ function App() {
           <span className="rc-frac">{cnt}/{TOTAL} quyền</span>
         </div>
         <div className="rc-team">
-          {r.staff.slice(0, 5).map((m, i) => (
-            <div key={i} className="rc-av" style={{ background: m.color }} title={m.name}>
+          {r.staff.map((m) => (
+            <div key={m.id} className="rc-av" style={{ background: m.color, position: "relative" }} title={`${m.name} · ${m.phone}`}>
               {m.name.trim().split(/\s+/).slice(-1)[0][0]}
+              <button className="rc-av-x" title="Gỡ khỏi vai trò" onClick={() => handleRemoveStaff(m.id)}>
+                <Icon name="close" size={10} color="#fff" />
+              </button>
             </div>
           ))}
-          {r.staff.length > 5 && <div className="rc-more">+{r.staff.length - 5}</div>}
+          {r.staff.length === 0 && <span style={{ fontSize: 12.5, color: "var(--ink-3)" }}>Chưa có nhân viên</span>}
         </div>
       </div>
     );
@@ -224,6 +304,8 @@ function App() {
       </div>
 
       {toast && <div className="toast"><span className="tc"><Icon name="check" size={15} color="#fff" /></span>{toast}</div>}
+
+      {assigning && <AssignModal role={assigning} onClose={() => setAssigning(null)} onAssign={handleAssign} />}
 
       <TweaksPanel>
         <TweakSection label="Giao diện" />
