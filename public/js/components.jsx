@@ -146,7 +146,7 @@ const NAV_URLS = {
   adminHome: "/admin",
   adminCustomers: "/admin/customers",
   adminPoints: "/admin/points",
-  adminRewards: "Laboong Rewards.html",
+  adminRewards: "/admin/rewards",
   adminCampaigns: "Laboong Campaigns.html",
   adminRoles: "/admin/roles",
   adminSettings: "Laboong Admin Settings.html",
