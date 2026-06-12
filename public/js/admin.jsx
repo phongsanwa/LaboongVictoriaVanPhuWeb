@@ -1,4 +1,4 @@
-/* global React, ReactDOM, Icon, fmt, TIERS, TIER_ORDER, STORES, CUSTOMERS, avColor, initials, fmtVND, fmtDate, useTweaks, TweaksPanel, TweakSection, TweakColor, TweakToggle, TweakRadio */
+/* global React, ReactDOM, Icon, fmt, TIERS, TIER_ORDER, STORES, CUSTOMERS, ADMIN_CUSTOMERS_DATA, avColor, initials, fmtVND, fmtDate, useTweaks, TweaksPanel, TweakSection, TweakColor, TweakToggle, TweakRadio, NAV_URLS, adminHref */
 const { useState, useEffect, useMemo, useRef } = React;
 
 const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
@@ -8,6 +8,25 @@ const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
 }/*EDITMODE-END*/;
 
 const PAGE_SIZE = 7;
+
+function csrfToken() {
+  const meta = document.querySelector('meta[name="csrf-token"]');
+  return meta ? meta.content : "";
+}
+async function apiCall(method, url, body) {
+  const res = await fetch(url, {
+    method,
+    headers: {
+      "Content-Type": "application/json",
+      "Accept": "application/json",
+      "X-CSRF-TOKEN": csrfToken(),
+    },
+    body: body !== undefined ? JSON.stringify(body) : undefined,
+  });
+  let data = {};
+  try { data = await res.json(); } catch (e) { /* no body */ }
+  return { ok: res.ok, status: res.status, data };
+}
 
 function TierBadge({ tier }) {
   const t = TIERS[tier];
@@ -86,12 +105,15 @@ function App() {
   };
 
   const stats = useMemo(() => {
-    const total = CUSTOMERS.length;
-    const active = CUSTOMERS.filter(c => c.status === "on").length;
-    const newM = CUSTOMERS.filter(c => c.joined >= "2025-01-01").length;
-    const pts = CUSTOMERS.reduce((s, c) => s + c.points, 0);
-    return { total, active, newM, pts };
+    const s = ADMIN_CUSTOMERS_DATA.stats;
+    return { total: s.total, active: s.active, newM: s.newThisMonth, pts: s.points };
   }, []);
+
+  const logout = async (e) => {
+    e.preventDefault();
+    await apiCall("POST", "/logout");
+    location.href = NAV_URLS.login;
+  };
 
   const NAV = [
     { ic: "chart", label: "Tổng quan" },
@@ -129,12 +151,12 @@ function App() {
         </nav>
         <div className="side-foot">
           <div className="side-user">
-            <div className="side-av">QT</div>
+            <div className="side-av">{ADMIN_CUSTOMERS_DATA.admin.initials}</div>
             <div style={{ minWidth: 0 }}>
-              <div className="un">Quản trị viên</div>
-              <div className="ur">admin@laboong.vn</div>
+              <div className="un">{ADMIN_CUSTOMERS_DATA.admin.name}</div>
+              <div className="ur">{ADMIN_CUSTOMERS_DATA.admin.email}</div>
             </div>
-            <button className="icon-btn" style={{ width: 32, height: 32, marginLeft: "auto" }} title="Đăng xuất"><Icon name="logout" size={16} /></button>
+            <button className="icon-btn" style={{ width: 32, height: 32, marginLeft: "auto" }} onClick={logout} title="Đăng xuất"><Icon name="logout" size={16} /></button>
           </div>
         </div>
       </aside>
@@ -163,7 +185,7 @@ function App() {
             <div className="stat"><div className="stat-ic a"><Icon name="check" size={22} /></div>
               <div><div className="lbl">Đang hoạt động</div><div className="val tnum">{stats.active}</div><div className="chg up">{Math.round(stats.active / stats.total * 100)}% tổng số</div></div></div>
             <div className="stat"><div className="stat-ic y"><Icon name="star" size={20} /></div>
-              <div><div className="lbl">Khách mới (2025)</div><div className="val tnum">{stats.newM}</div><div className="chg up"><Icon name="spark" size={13} /> Tăng trưởng tốt</div></div></div>
+              <div><div className="lbl">Khách mới tháng này</div><div className="val tnum">{stats.newM}</div><div className="chg up"><Icon name="spark" size={13} /> Tăng trưởng tốt</div></div></div>
             <div className="stat"><div className="stat-ic p"><Icon name="coin" size={22} /></div>
               <div><div className="lbl">Điểm đã phát hành</div><div className="val tnum">{fmt(stats.pts)}</div><div className="chg up">Trên toàn hệ thống</div></div></div>
           </div>
