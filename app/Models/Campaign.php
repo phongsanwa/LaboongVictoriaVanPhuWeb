@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Campaign extends Model
 {
@@ -17,11 +18,14 @@ class Campaign extends Model
         'end_date',
         'bonus_points',
         'multiplier',
+        'discount_percent',
         'min_purchase',
         'max_participants',
         'current_participants',
+        'opened_count',
         'status',
         'is_stackable',
+        'push_sent',
         'banner_image_url',
         'created_by',
     ];
@@ -32,6 +36,12 @@ class Campaign extends Model
             'start_date' => 'date',
             'end_date' => 'date',
             'is_stackable' => 'boolean',
+            'push_sent' => 'boolean',
         ];
+    }
+
+    public function tier(): BelongsTo
+    {
+        return $this->belongsTo(CustomerTier::class, 'tier_id');
     }
 }

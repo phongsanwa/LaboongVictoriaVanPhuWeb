@@ -526,6 +526,7 @@ class LaboongDemoSeeder extends Seeder
             'end_date' => $now->copy()->addWeeks(3)->toDateString(),
             'bonus_points' => null,
             'multiplier' => null,
+            'discount_percent' => 30,
             'min_purchase' => 99000,
             'max_participants' => null,
             'current_participants' => 256,
