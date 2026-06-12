@@ -180,6 +180,71 @@ class LaboongDemoSeeder extends Seeder
 
         $minhAnhId = $customerIds['minh_anh'];
 
+        /* ---------------- helper: a date within a given past month ---------------- */
+        $dateInMonth = function (int $monthsAgo, int $day, int $hour, int $minute) use ($now) {
+            $monthStart = $now->copy()->subMonthsNoOverflow($monthsAgo)->startOfMonth();
+            $maxDay = $monthsAgo === 0 ? min($day, $now->day) : min($day, $monthStart->daysInMonth);
+
+            return $monthStart->copy()->addDays($maxDay - 1)->setTime($hour, $minute);
+        };
+
+        /* ---------------- extra customers (12 months of growth history) ---------------- */
+        $extraCustomers = [
+            ['name' => 'Nguyễn Thị Lan', 'phone' => '0911000001', 'email' => 'lan.nguyen01@gmail.com', 'tier' => 1, 'monthsAgo' => 11],
+            ['name' => 'Trần Văn Minh', 'phone' => '0911000002', 'email' => 'minh.tran02@gmail.com', 'tier' => 1, 'monthsAgo' => 10],
+            ['name' => 'Phạm Thị Hương', 'phone' => '0911000003', 'email' => 'huong.pham03@gmail.com', 'tier' => 2, 'monthsAgo' => 9],
+            ['name' => 'Lê Văn Đức', 'phone' => '0911000004', 'email' => 'duc.le04@gmail.com', 'tier' => 1, 'monthsAgo' => 8],
+            ['name' => 'Hoàng Thị Mai', 'phone' => '0911000005', 'email' => 'mai.hoang05@gmail.com', 'tier' => 2, 'monthsAgo' => 7],
+            ['name' => 'Vũ Văn Tùng', 'phone' => '0911000006', 'email' => 'tung.vu06@gmail.com', 'tier' => 1, 'monthsAgo' => 6],
+            ['name' => 'Đặng Thị Thu', 'phone' => '0911000007', 'email' => 'thu.dang07@gmail.com', 'tier' => 3, 'monthsAgo' => 5],
+            ['name' => 'Bùi Văn Hải', 'phone' => '0911000008', 'email' => 'hai.bui08@gmail.com', 'tier' => 1, 'monthsAgo' => 4],
+            ['name' => 'Ngô Thị Hằng', 'phone' => '0911000009', 'email' => 'hang.ngo09@gmail.com', 'tier' => 2, 'monthsAgo' => 3],
+            ['name' => 'Đỗ Văn Quân', 'phone' => '0911000010', 'email' => 'quan.do10@gmail.com', 'tier' => 1, 'monthsAgo' => 2],
+            ['name' => 'Vương Thị Nga', 'phone' => '0911000011', 'email' => 'nga.vuong11@gmail.com', 'tier' => 2, 'monthsAgo' => 1],
+            ['name' => 'Phan Văn Đạt', 'phone' => '0911000012', 'email' => 'dat.phan12@gmail.com', 'tier' => 1, 'monthsAgo' => 0],
+        ];
+
+        $extraCustomerIds = [];
+        foreach ($extraCustomers as $i => $c) {
+            $createdAt = $dateInMonth($c['monthsAgo'], 15, 10, 0);
+
+            $extraUserId = DB::table('users')->insertGetId([
+                'name' => $c['name'],
+                'phone' => $c['phone'],
+                'email' => $c['email'],
+                'email_verified_at' => $createdAt,
+                'phone_verified_at' => $createdAt,
+                'password' => $password,
+                'user_type' => 'customer',
+                'status' => 'active',
+                'avatar_url' => null,
+                'last_login_at' => $createdAt,
+                'created_at' => $createdAt, 'updated_at' => $createdAt,
+            ]);
+
+            $extraCustomerIds[] = DB::table('customers')->insertGetId([
+                'user_id' => $extraUserId,
+                'store_id' => $i % 2 === 0 ? $storeIds['vp'] : $storeIds['ld'],
+                'date_of_birth' => null,
+                'gender' => null,
+                'address' => null,
+                'city' => 'Hà Nội',
+                'tier_id' => $tierIds[$c['tier']],
+                'total_points' => 0,
+                'lifetime_points' => 0,
+                'total_spent' => 0,
+                'referral_code' => sprintf('LBVP-EXT%02d', $i + 1),
+                'referred_by_id' => null,
+                'last_purchase_at' => null,
+                'is_newsletter' => true,
+                'is_push_enabled' => true,
+                'favorite_items' => json_encode([]),
+                'created_at' => $createdAt, 'updated_at' => $createdAt,
+            ]);
+        }
+
+        $allCustomerIds = array_merge(array_values($customerIds), $extraCustomerIds);
+
         /* ---------------- rewards ---------------- */
         $rewardIds = [];
         $rewardIds['free_milktea'] = DB::table('rewards')->insertGetId([
@@ -238,21 +303,22 @@ class LaboongDemoSeeder extends Seeder
         ]);
 
         /* additional rewards catalog items */
+        $extraRewardIds = [];
         foreach ([
-            ['name' => 'Thêm topping trân châu',    'reward_type' => 'free_item',       'points_required' => 80,   'value' => null,   'quantity_available' => 312, 'min_purchase' => null,   'category' => 'upgrade', 'display_order' => 4,  'is_featured' => false, 'age_days' => 60],
-            ['name' => 'Upsize miễn phí mọi đơn',   'reward_type' => 'free_item',       'points_required' => 120,  'value' => null,   'quantity_available' => 358, 'min_purchase' => null,   'category' => 'upgrade', 'display_order' => 5,  'is_featured' => false, 'age_days' => 55],
-            ['name' => 'Trà đào cam sả miễn phí',   'reward_type' => 'free_item',       'points_required' => 400,  'value' => 45000,  'quantity_available' => 12,  'min_purchase' => null,   'category' => 'drink',   'display_order' => 6,  'is_featured' => false, 'age_days' => 50],
-            ['name' => 'Voucher giảm 50.000đ',      'reward_type' => 'discount_voucher','points_required' => 500,  'value' => 50000,  'quantity_available' => 116, 'min_purchase' => 150000, 'category' => 'voucher', 'display_order' => 7,  'is_featured' => false, 'age_days' => 45],
-            ['name' => 'Bộ sticker Laboong',        'reward_type' => 'other',           'points_required' => 200,  'value' => null,   'quantity_available' => 367, 'min_purchase' => null,   'category' => 'gift',    'display_order' => 8,  'is_featured' => false, 'age_days' => 5],
-            ['name' => 'Combo 2 ly Macchiato',      'reward_type' => 'free_item',       'points_required' => 800,  'value' => 110000, 'quantity_available' => 104, 'min_purchase' => null,   'category' => 'drink',   'display_order' => 9,  'is_featured' => false, 'age_days' => 40],
-            ['name' => 'Túi tote canvas Laboong',   'reward_type' => 'other',           'points_required' => 1800, 'value' => null,   'quantity_available' => 73,  'min_purchase' => null,   'category' => 'gift',    'display_order' => 10, 'is_featured' => false, 'age_days' => 3],
-            ['name' => 'Ly giữ nhiệt Laboong',      'reward_type' => 'other',           'points_required' => 2500, 'value' => null,   'quantity_available' => 8,   'min_purchase' => null,   'category' => 'gift',    'display_order' => 11, 'is_featured' => false, 'age_days' => 70],
-            ['name' => 'Voucher sinh nhật 70.000đ', 'reward_type' => 'discount_voucher','points_required' => 700,  'value' => 70000,  'quantity_available' => 189, 'min_purchase' => 150000, 'category' => 'voucher', 'display_order' => 12, 'is_featured' => false, 'age_days' => 2],
-            ['name' => 'Voucher giảm 100.000đ',     'reward_type' => 'discount_voucher','points_required' => 1000, 'value' => 100000, 'quantity_available' => 6,   'min_purchase' => 300000, 'category' => 'voucher', 'display_order' => 13, 'is_featured' => true,  'age_days' => 35],
+            ['key' => 'topping',          'name' => 'Thêm topping trân châu',    'reward_type' => 'free_item',       'points_required' => 80,   'value' => null,   'quantity_available' => 312, 'min_purchase' => null,   'category' => 'upgrade', 'display_order' => 4,  'is_featured' => false, 'age_days' => 60],
+            ['key' => 'upsize',           'name' => 'Upsize miễn phí mọi đơn',   'reward_type' => 'free_item',       'points_required' => 120,  'value' => null,   'quantity_available' => 358, 'min_purchase' => null,   'category' => 'upgrade', 'display_order' => 5,  'is_featured' => false, 'age_days' => 55],
+            ['key' => 'peach_tea',        'name' => 'Trà đào cam sả miễn phí',   'reward_type' => 'free_item',       'points_required' => 400,  'value' => 45000,  'quantity_available' => 12,  'min_purchase' => null,   'category' => 'drink',   'display_order' => 6,  'is_featured' => false, 'age_days' => 50],
+            ['key' => 'voucher_50k',      'name' => 'Voucher giảm 50.000đ',      'reward_type' => 'discount_voucher','points_required' => 500,  'value' => 50000,  'quantity_available' => 116, 'min_purchase' => 150000, 'category' => 'voucher', 'display_order' => 7,  'is_featured' => false, 'age_days' => 45],
+            ['key' => 'sticker',          'name' => 'Bộ sticker Laboong',        'reward_type' => 'other',           'points_required' => 200,  'value' => null,   'quantity_available' => 367, 'min_purchase' => null,   'category' => 'gift',    'display_order' => 8,  'is_featured' => false, 'age_days' => 5],
+            ['key' => 'macchiato_combo',  'name' => 'Combo 2 ly Macchiato',      'reward_type' => 'free_item',       'points_required' => 800,  'value' => 110000, 'quantity_available' => 104, 'min_purchase' => null,   'category' => 'drink',   'display_order' => 9,  'is_featured' => false, 'age_days' => 40],
+            ['key' => 'tote',             'name' => 'Túi tote canvas Laboong',   'reward_type' => 'other',           'points_required' => 1800, 'value' => null,   'quantity_available' => 73,  'min_purchase' => null,   'category' => 'gift',    'display_order' => 10, 'is_featured' => false, 'age_days' => 3],
+            ['key' => 'thermos',          'name' => 'Ly giữ nhiệt Laboong',      'reward_type' => 'other',           'points_required' => 2500, 'value' => null,   'quantity_available' => 8,   'min_purchase' => null,   'category' => 'gift',    'display_order' => 11, 'is_featured' => false, 'age_days' => 70],
+            ['key' => 'voucher_birthday', 'name' => 'Voucher sinh nhật 70.000đ', 'reward_type' => 'discount_voucher','points_required' => 700,  'value' => 70000,  'quantity_available' => 189, 'min_purchase' => 150000, 'category' => 'voucher', 'display_order' => 12, 'is_featured' => false, 'age_days' => 2],
+            ['key' => 'voucher_100k',     'name' => 'Voucher giảm 100.000đ',     'reward_type' => 'discount_voucher','points_required' => 1000, 'value' => 100000, 'quantity_available' => 6,   'min_purchase' => 300000, 'category' => 'voucher', 'display_order' => 13, 'is_featured' => true,  'age_days' => 35],
         ] as $r) {
             $createdAt = $now->copy()->subDays($r['age_days']);
 
-            DB::table('rewards')->insert([
+            $extraRewardIds[$r['key']] = DB::table('rewards')->insertGetId([
                 'name' => $r['name'],
                 'description' => $r['name'],
                 'reward_type' => $r['reward_type'],
@@ -489,5 +555,122 @@ class LaboongDemoSeeder extends Seeder
             'completed_at' => $now->copy()->subDays(10),
             'created_at' => $now->copy()->subDays(10), 'updated_at' => $now->copy()->subDays(10),
         ]);
+
+        /* ---------------- 12 months of transaction history (for admin dashboard charts) ---------------- */
+        $drinkMenu = [
+            ['name' => 'Trà sữa trân châu đường đen', 'code' => 'TS-001-L'],
+            ['name' => 'Macchiato kem phô mai', 'code' => 'MC-002-M'],
+            ['name' => 'Trà đào cam sả', 'code' => 'TD-003-L'],
+            ['name' => 'Cà phê sữa đá', 'code' => 'CF-004-M'],
+            ['name' => 'Hồng trà sữa nướng', 'code' => 'HT-005-L'],
+            ['name' => 'Matcha latte đá xay', 'code' => 'MT-006-L'],
+            ['name' => 'Sữa chua trân châu', 'code' => 'SC-007-M'],
+            ['name' => 'Cacao đá xay', 'code' => 'CC-008-L'],
+        ];
+        $paymentMethods = ['cash', 'qr_pay'];
+        $storeRotation = [$storeIds['vp'], $storeIds['ld']];
+
+        for ($monthsAgo = 11; $monthsAgo >= 0; $monthsAgo--) {
+            $m = 11 - $monthsAgo; // 0..11, 0 = oldest
+            $count = 6 + ($m % 4);
+
+            for ($i = 0; $i < $count; $i++) {
+                $amount = 35000 + (($m * 37 + $i * 53) % 12) * 10000;
+                $points = (int) round($amount / 1000);
+                $item = $drinkMenu[($m + $i) % count($drinkMenu)];
+                $storeId = $storeRotation[($m + $i) % 2];
+                $payment = $paymentMethods[($m + $i) % 2];
+                $customerId = $allCustomerIds[($m * 7 + $i) % count($allCustomerIds)];
+                $day = 2 + (($m * 5 + $i * 3) % 26);
+                $hour = 8 + (($m + $i) % 12);
+                $minute = ($i * 17) % 60;
+                $txDate = $dateInMonth($monthsAgo, $day, $hour, $minute);
+
+                $txId = DB::table('transactions')->insertGetId([
+                    'transaction_code' => 'TXN' . $txDate->format('Ymd') . str_pad((string) ($i + 10), 3, '0', STR_PAD_LEFT),
+                    'customer_id' => $customerId,
+                    'store_id' => $storeId,
+                    'staff_id' => $staffId,
+                    'total_amount' => $amount,
+                    'discount_amount' => 0,
+                    'points_earned' => $points,
+                    'point_multiplier' => 1.00,
+                    'payment_method' => $payment,
+                    'status' => 'completed',
+                    'notes' => null,
+                    'created_at' => $txDate, 'updated_at' => $txDate,
+                ]);
+
+                DB::table('transaction_details')->insert([
+                    'transaction_id' => $txId,
+                    'item_name' => $item['name'],
+                    'item_code' => $item['code'],
+                    'quantity' => 1,
+                    'unit_price' => $amount,
+                    'total_price' => $amount,
+                    'notes' => null,
+                    'created_at' => $txDate,
+                ]);
+
+                DB::table('customer_points')->insert([
+                    'customer_id' => $customerId,
+                    'transaction_id' => $txId,
+                    'point_type' => 'purchase',
+                    'points' => $points,
+                    'description' => $item['name'],
+                    'reference_id' => 'TXN' . $txDate->format('Ymd') . str_pad((string) ($i + 10), 3, '0', STR_PAD_LEFT),
+                    'expires_at' => $txDate->copy()->addYear()->toDateString(),
+                    'created_at' => $txDate, 'updated_at' => $txDate,
+                ]);
+            }
+        }
+
+        /* ---------------- 6 months of redemption history (for admin dashboard charts) ---------------- */
+        $redemptionRewardRotation = [
+            ['key' => 'voucher_30k', 'reward_id' => $rewardIds['voucher_30k'], 'points' => 300, 'name' => 'Voucher giảm 30.000đ'],
+            ['key' => 'topping', 'reward_id' => $extraRewardIds['topping'], 'points' => 80, 'name' => 'Thêm topping trân châu'],
+            ['key' => 'voucher_50k', 'reward_id' => $extraRewardIds['voucher_50k'], 'points' => 500, 'name' => 'Voucher giảm 50.000đ'],
+            ['key' => 'upsize', 'reward_id' => $extraRewardIds['upsize'], 'points' => 120, 'name' => 'Upsize miễn phí mọi đơn'],
+            ['key' => 'sticker', 'reward_id' => $extraRewardIds['sticker'], 'points' => 200, 'name' => 'Bộ sticker Laboong'],
+        ];
+
+        for ($monthsAgo = 5; $monthsAgo >= 0; $monthsAgo--) {
+            $m = 5 - $monthsAgo; // 0..5, 5 = this month
+            $count = 1 + ($m % 2);
+
+            for ($i = 0; $i < $count; $i++) {
+                $reward = $redemptionRewardRotation[($m + $i) % count($redemptionRewardRotation)];
+                $customerId = $allCustomerIds[($m * 5 + $i) % count($allCustomerIds)];
+                $day = 4 + (($m * 6 + $i * 5) % 22);
+                $hour = 13 + (($m + $i) % 8);
+                $minute = ($i * 23) % 60;
+                $rDate = $dateInMonth($monthsAgo, $day, $hour, $minute);
+
+                DB::table('redemptions')->insertGetId([
+                    'redemption_code' => 'RDMP' . $rDate->format('Ymd') . str_pad((string) ($i + 10), 3, '0', STR_PAD_LEFT),
+                    'customer_id' => $customerId,
+                    'reward_id' => $reward['reward_id'],
+                    'points_spent' => $reward['points'],
+                    'quantity' => 1,
+                    'status' => 'used',
+                    'redeemed_at' => $rDate,
+                    'used_at' => $rDate,
+                    'expires_at' => $rDate->copy()->addMonths(3)->toDateString(),
+                    'notes' => null,
+                    'created_at' => $rDate, 'updated_at' => $rDate,
+                ]);
+
+                DB::table('customer_points')->insert([
+                    'customer_id' => $customerId,
+                    'transaction_id' => null,
+                    'point_type' => 'redemption',
+                    'points' => -$reward['points'],
+                    'description' => 'Đổi ' . $reward['name'],
+                    'reference_id' => 'RDMP' . $rDate->format('Ymd') . str_pad((string) ($i + 10), 3, '0', STR_PAD_LEFT),
+                    'expires_at' => null,
+                    'created_at' => $rDate, 'updated_at' => $rDate,
+                ]);
+            }
+        }
     }
 }
