@@ -5,9 +5,13 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\RolePermission;
 use App\Models\Staff;
+use App\Models\Store;
+use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 
 class RolesController extends Controller
 {
@@ -69,46 +73,21 @@ class RolesController extends Controller
     {
         $admin = Auth::user();
 
-        $staffByRole = Staff::with('user')
-            ->whereIn('role', ['cashier', 'manager'])
-            ->where('status', 'active')
-            ->get()
-            ->groupBy('role');
-
         $saved = RolePermission::all()->keyBy(fn ($row) => $row->role . '.' . $row->permission_key);
 
         $perms = [];
-        $counts = ['cashier' => 0, 'manager' => 0];
         foreach (self::PERM_GROUPS as $group) {
             foreach ($group['perms'] as $p) {
                 $state = [];
                 foreach (['cashier', 'manager'] as $role) {
                     $key = $role . '.' . $p['id'];
                     $state[$role] = $saved->has($key) ? (bool) $saved[$key]->enabled : $p[$role];
-                    if ($state[$role]) {
-                        $counts[$role]++;
-                    }
                 }
                 $perms[$p['id']] = $state;
             }
         }
 
-        $roles = [];
-        foreach (self::ROLES as $key => $meta) {
-            $team = ($staffByRole[$key] ?? collect())->values();
-            $roles[$key] = [
-                'key' => $key,
-                'label' => $meta['label'],
-                'ic' => $meta['ic'],
-                'grad' => $meta['grad'],
-                'desc' => $meta['desc'],
-                'count' => $counts[$key],
-                'staff' => $team->map(fn ($s, $i) => [
-                    'name' => $s->user->name,
-                    'color' => self::AVATAR_COLORS[$i % count(self::AVATAR_COLORS)],
-                ])->all(),
-            ];
-        }
+        $roles = $this->buildRoles($perms);
 
         $permGroups = array_map(fn ($g) => [
             'title' => $g['title'],
@@ -171,6 +150,141 @@ class RolesController extends Controller
         }
 
         return response()->json(['message' => 'Đã lưu thay đổi phân quyền']);
+    }
+
+    /** Assign an existing user to a role (cashier/manager), creating their staff record if needed. */
+    public function assign(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'phone' => ['required', 'string'],
+            'role' => ['required', Rule::in(array_keys(self::ROLES))],
+        ]);
+
+        $user = User::where('phone', $data['phone'])->first();
+
+        if (!$user) {
+            throw ValidationException::withMessages([
+                'phone' => 'Không tìm thấy người dùng với số điện thoại này',
+            ]);
+        }
+
+        if ($user->user_type === 'admin') {
+            throw ValidationException::withMessages([
+                'phone' => 'Không thể gán vai trò cho quản trị viên',
+            ]);
+        }
+
+        $staff = Staff::where('user_id', $user->id)->first();
+
+        if ($staff) {
+            $staff->role = $data['role'];
+            $staff->status = 'active';
+            $staff->save();
+        } else {
+            Staff::create([
+                'user_id' => $user->id,
+                'store_id' => Store::orderBy('id')->value('id'),
+                'role' => $data['role'],
+                'employee_code' => $this->nextEmployeeCode(),
+                'pin' => (string) random_int(100000, 999999),
+                'status' => 'active',
+                'hired_date' => now(),
+            ]);
+        }
+
+        if ($user->user_type !== 'admin') {
+            $user->user_type = 'staff';
+            $user->save();
+        }
+
+        return response()->json([
+            'message' => "Đã gán \"{$user->name}\" vào vai trò " . self::ROLES[$data['role']]['label'],
+            'roles' => $this->buildRoles($this->currentPerms()),
+        ]);
+    }
+
+    /** Remove a staff member from their role (deactivates their staff record). */
+    public function removeStaff(Staff $staff): JsonResponse
+    {
+        $staff->status = 'inactive';
+        $staff->save();
+
+        return response()->json([
+            'message' => 'Đã gỡ nhân viên khỏi vai trò',
+            'roles' => $this->buildRoles($this->currentPerms()),
+        ]);
+    }
+
+    /** Current effective permission matrix (saved overrides applied over defaults). */
+    private function currentPerms(): array
+    {
+        $saved = RolePermission::all()->keyBy(fn ($row) => $row->role . '.' . $row->permission_key);
+
+        $perms = [];
+        foreach (self::PERM_GROUPS as $group) {
+            foreach ($group['perms'] as $p) {
+                $state = [];
+                foreach (['cashier', 'manager'] as $role) {
+                    $key = $role . '.' . $p['id'];
+                    $state[$role] = $saved->has($key) ? (bool) $saved[$key]->enabled : $p[$role];
+                }
+                $perms[$p['id']] = $state;
+            }
+        }
+
+        return $perms;
+    }
+
+    /** Builds the role cards data (counts, team avatars) from the current permission matrix. */
+    private function buildRoles(array $perms): array
+    {
+        $staffByRole = Staff::with('user')
+            ->whereIn('role', ['cashier', 'manager'])
+            ->where('status', 'active')
+            ->get()
+            ->groupBy('role');
+
+        $counts = ['cashier' => 0, 'manager' => 0];
+        foreach ($perms as $state) {
+            foreach (['cashier', 'manager'] as $role) {
+                if ($state[$role]) {
+                    $counts[$role]++;
+                }
+            }
+        }
+
+        $roles = [];
+        foreach (self::ROLES as $key => $meta) {
+            $team = ($staffByRole[$key] ?? collect())->values();
+            $roles[$key] = [
+                'key' => $key,
+                'label' => $meta['label'],
+                'ic' => $meta['ic'],
+                'grad' => $meta['grad'],
+                'desc' => $meta['desc'],
+                'count' => $counts[$key],
+                'staff' => $team->map(fn ($s, $i) => [
+                    'id' => $s->id,
+                    'name' => $s->user->name,
+                    'phone' => $s->user->phone,
+                    'color' => self::AVATAR_COLORS[$i % count(self::AVATAR_COLORS)],
+                ])->all(),
+            ];
+        }
+
+        return $roles;
+    }
+
+    /** Generates the next sequential "NVxxx" employee code. */
+    private function nextEmployeeCode(): string
+    {
+        $max = Staff::query()
+            ->where('employee_code', 'like', 'NV%')
+            ->get()
+            ->map(fn ($s) => (int) substr($s->employee_code, 2))
+            ->max();
+
+        return 'NV' . str_pad((string) (($max ?? 0) + 1), 3, '0', STR_PAD_LEFT);
     }
 
     private function initials(string $name): string

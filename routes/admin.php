@@ -26,4 +26,6 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
     Route::post('/campaigns/{campaign}/push', [CampaignsController::class, 'push'])->name('campaigns.push');
     Route::get('/roles', [RolesController::class, 'index'])->name('roles.index');
     Route::post('/roles', [RolesController::class, 'update'])->name('roles.update');
+    Route::post('/roles/assign', [RolesController::class, 'assign'])->name('roles.assign');
+    Route::delete('/roles/staff/{staff}', [RolesController::class, 'removeStaff'])->name('roles.staff.remove');
 });
