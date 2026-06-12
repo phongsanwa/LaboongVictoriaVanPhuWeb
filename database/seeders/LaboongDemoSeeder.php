@@ -154,6 +154,43 @@ class LaboongDemoSeeder extends Seeder
             'created_at' => $now, 'updated_at' => $now,
         ]);
 
+        /* extra staff (for the "Phân quyền" / roles page) */
+        $extraStaff = [
+            ['name' => 'Hoàng Thu Trang', 'phone' => '0900000010', 'email' => 'trang.hoang@laboong.vn', 'role' => 'manager', 'code' => 'NV002', 'pin' => '246810', 'store' => 'ld'],
+            ['name' => 'Phạm Gia Huy',    'phone' => '0900000011', 'email' => 'huy.pham@laboong.vn',    'role' => 'cashier', 'code' => 'NV003', 'pin' => '100001', 'store' => 'vp'],
+            ['name' => 'Đỗ Khánh Linh',   'phone' => '0900000012', 'email' => 'linh.do@laboong.vn',     'role' => 'cashier', 'code' => 'NV004', 'pin' => '100002', 'store' => 'vp'],
+            ['name' => 'Vũ Đức Thành',    'phone' => '0900000013', 'email' => 'thanh.vu@laboong.vn',    'role' => 'cashier', 'code' => 'NV005', 'pin' => '100003', 'store' => 'ld'],
+            ['name' => 'Ngô Hải Đăng',    'phone' => '0900000014', 'email' => 'dang.ngo@laboong.vn',    'role' => 'cashier', 'code' => 'NV006', 'pin' => '100004', 'store' => 'ld'],
+            ['name' => 'Lý Thanh Phong',  'phone' => '0900000015', 'email' => 'phong.ly@laboong.vn',    'role' => 'cashier', 'code' => 'NV007', 'pin' => '100005', 'store' => 'vp'],
+            ['name' => 'Cao Diệu My',     'phone' => '0900000016', 'email' => 'my.cao@laboong.vn',      'role' => 'cashier', 'code' => 'NV008', 'pin' => '100006', 'store' => 'ld'],
+        ];
+        foreach ($extraStaff as $s) {
+            $extraStaffUserId = DB::table('users')->insertGetId([
+                'name' => $s['name'],
+                'phone' => $s['phone'],
+                'email' => $s['email'],
+                'email_verified_at' => $now,
+                'phone_verified_at' => $now,
+                'password' => $password,
+                'user_type' => 'staff',
+                'status' => 'active',
+                'avatar_url' => null,
+                'last_login_at' => $now,
+                'created_at' => $now, 'updated_at' => $now,
+            ]);
+
+            DB::table('staff')->insert([
+                'user_id' => $extraStaffUserId,
+                'store_id' => $storeIds[$s['store']],
+                'role' => $s['role'],
+                'employee_code' => $s['code'],
+                'pin' => $s['pin'],
+                'status' => 'active',
+                'hired_date' => $now->copy()->subMonths(6),
+                'created_at' => $now, 'updated_at' => $now,
+            ]);
+        }
+
         /* ---------------- customers ---------------- */
         $customerIds = [];
         foreach ($customerUsers as $key => $c) {

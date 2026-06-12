@@ -148,7 +148,7 @@ const NAV_URLS = {
   adminPoints: "Laboong Points.html",
   adminRewards: "Laboong Rewards.html",
   adminCampaigns: "Laboong Campaigns.html",
-  adminRoles: "Laboong Roles.html",
+  adminRoles: "/admin/roles",
   adminSettings: "Laboong Admin Settings.html",
 };
 const ADMIN_NAV_HREF = {
