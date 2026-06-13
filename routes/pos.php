@@ -7,4 +7,6 @@ Route::middleware(['auth', 'staff'])->prefix('pos')->name('pos.')->group(functio
     Route::get('/points', [PosController::class, 'index'])->name('points');
     Route::post('/points/lookup', [PosController::class, 'lookup'])->name('points.lookup');
     Route::post('/points/charge', [PosController::class, 'charge'])->name('points.charge');
+    Route::post('/redeem/lookup', [PosController::class, 'lookupRedemption'])->name('redeem.lookup');
+    Route::post('/redeem/confirm', [PosController::class, 'confirmRedemption'])->name('redeem.confirm');
 });
