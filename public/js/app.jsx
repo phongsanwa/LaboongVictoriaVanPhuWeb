@@ -249,7 +249,7 @@ function App() {
               <p>Đưa mã này cho nhân viên để tích điểm</p>
             </div>
             <div className="qr-wrap">
-              <QRCanvas />
+              <QRCanvas value={MEMBER.id} />
               <div className="qr-logo">L</div>
             </div>
             <div className="qr-body">
