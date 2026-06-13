@@ -1,5 +1,5 @@
 /* global React */
-const { useState, useEffect, useRef } = React;
+const { useState, useEffect, useRef, useMemo } = React;
 
 /* ---------------- Icons (simple line set) ---------------- */
 function Icon({ name, size = 20, stroke = 2.1, color = "currentColor", fill = "none" }) {
@@ -114,8 +114,23 @@ function makeQR(seed = 7, n = 29) {
   return g;
 }
 
-function QRCanvas() {
-  const grid = useRef(makeQR(42)).current;
+/* real QR encoding when `value` is given, falls back to the pseudo-QR otherwise */
+function realQR(value) {
+  if (!window.qrcode) return null;
+  try {
+    const qr = window.qrcode(0, "H");
+    qr.addData(value);
+    qr.make();
+    const n = qr.getModuleCount();
+    return Array.from({ length: n }, (_, r) => Array.from({ length: n }, (_, c) => qr.isDark(r, c)));
+  } catch (e) {
+    return null;
+  }
+}
+
+function QRCanvas({ value }) {
+  const fallback = useRef(makeQR(42)).current;
+  const grid = useMemo(() => (value ? realQR(value) : null) || fallback, [value]);
   const n = grid.length;
   return (
     <div className="qr-canvas" style={{ gridTemplateColumns: `repeat(${n}, 1fr)`, gridTemplateRows: `repeat(${n}, 1fr)` }}>
