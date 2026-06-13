@@ -1,5 +1,5 @@
 /* global React, ReactDOM, Icon, QRCanvas, fmt, useTweaks, TweaksPanel, TweakSection, TweakColor, TweakToggle */
-const { useState, useEffect } = React;
+const { useState, useEffect, useRef } = React;
 
 const TW_DEFAULTS = /*EDITMODE-BEGIN*/{
   "brand": ["#0F623F", "#07432A"],
@@ -34,6 +34,72 @@ async function apiCall(method, url, body) {
   return { ok: res.ok, status: res.status, data };
 }
 
+function QRScanner({ active, onScan }) {
+  const videoRef = useRef(null);
+  const canvasRef = useRef(null);
+  const onScanRef = useRef(onScan);
+  const [error, setError] = useState("");
+
+  useEffect(() => { onScanRef.current = onScan; }, [onScan]);
+
+  useEffect(() => {
+    if (!active) return;
+    let stream = null;
+    let raf = null;
+    let stopped = false;
+
+    const tick = () => {
+      if (stopped) return;
+      const video = videoRef.current;
+      const canvas = canvasRef.current;
+      if (video && canvas && video.readyState === video.HAVE_ENOUGH_DATA && window.jsQR) {
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        const ctx = canvas.getContext("2d");
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        const img = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        const result = window.jsQR(img.data, img.width, img.height);
+        if (result && result.data) onScanRef.current(result.data);
+      }
+      raf = requestAnimationFrame(tick);
+    };
+
+    if (!navigator.mediaDevices?.getUserMedia) {
+      setError("Thiết bị không hỗ trợ camera. Vui lòng nhập mã thủ công.");
+      return;
+    }
+
+    navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } })
+      .then(s => {
+        if (stopped) { s.getTracks().forEach(t => t.stop()); return; }
+        stream = s;
+        if (videoRef.current) {
+          videoRef.current.srcObject = s;
+          videoRef.current.play().catch(() => {});
+        }
+        raf = requestAnimationFrame(tick);
+      })
+      .catch(() => setError("Không thể truy cập camera. Vui lòng nhập mã thủ công."));
+
+    return () => {
+      stopped = true;
+      if (raf) cancelAnimationFrame(raf);
+      if (stream) stream.getTracks().forEach(t => t.stop());
+    };
+  }, [active]);
+
+  if (error) {
+    return <div className="scanner-msg"><Icon name="close" size={14} color="#fff" /> {error}</div>;
+  }
+
+  return (
+    <>
+      <video ref={videoRef} className="scanner-video" muted playsInline />
+      <canvas ref={canvasRef} style={{ display: "none" }} />
+    </>
+  );
+}
+
 function MemberLookup({ code, setCode, onLookup, found, error, busy }) {
   return (
     <div className="member-lookup">
@@ -57,7 +123,7 @@ function MemberLookup({ code, setCode, onLookup, found, error, busy }) {
           </div>
         </div>
       )}
-      <button className="cta primary" disabled={!code.trim() || busy} onClick={onLookup}>
+      <button className="cta primary" disabled={!code.trim() || busy} onClick={() => onLookup()}>
         {busy ? "Đang tìm…" : found ? <><Icon name="check" size={18} color="#fff" /> Xác nhận tích điểm</> : <>Tìm khách hàng <Icon name="arrow" size={18} color="#fff" /></>}
       </button>
     </div>
@@ -93,24 +159,27 @@ function App() {
 
   const dotIndex = { 0: 0, 1: 1, 2: 2, 3: 2, 4: 3 }[step];
 
-  const resetLookup = () => { setCode(""); setFound(null); setError(""); };
+  const lastScanRef = useRef("");
+  const resetLookup = () => { setCode(""); setFound(null); setError(""); lastScanRef.current = ""; };
 
   const goStep = (s) => { resetLookup(); setStep(s); };
 
-  const lookupOrCharge = async () => {
-    if (!code.trim()) return;
+  const lookupOrCharge = async (codeOverride) => {
+    const c = (codeOverride ?? code).trim();
+    if (!c) return;
     setBusy(true);
     setError("");
 
     if (!found) {
-      const { ok, data } = await apiCall("POST", "/pos/points/lookup", { code: code.trim() });
+      const { ok, data } = await apiCall("POST", "/pos/points/lookup", { code: c });
       setBusy(false);
       if (!ok) { setError(data.message || "Không tìm thấy khách hàng"); return; }
+      setCode(c);
       setFound(data.customer);
       return;
     }
 
-    const { ok, data } = await apiCall("POST", "/pos/points/charge", { code: code.trim(), amount: bill });
+    const { ok, data } = await apiCall("POST", "/pos/points/charge", { code: c, amount: bill });
     setBusy(false);
     if (!ok) { setError(data.message || "Có lỗi xảy ra, vui lòng thử lại"); setFound(null); return; }
 
@@ -119,6 +188,14 @@ function App() {
     setPointsBefore(data.pointsBefore);
     setMultiplier(data.multiplier);
     setStep(4);
+  };
+
+  const scanLockRef = useRef(false);
+  const handleScan = (text) => {
+    if (scanLockRef.current || found || text === lastScanRef.current) return;
+    scanLockRef.current = true;
+    lastScanRef.current = text;
+    lookupOrCharge(text).finally(() => { scanLockRef.current = false; });
   };
 
   const restart = () => { setBill(0); setCust(null); resetLookup(); setStep(0); };
@@ -215,7 +292,7 @@ function App() {
               <div className="step-title">Quét mã khách</div>
               <div className="step-desc">Đưa mã QR của khách vào khung hình hoặc nhập mã thành viên</div>
               <div className="scanner">
-                <div className="cust-qr"><QRCanvas /></div>
+                <QRScanner active={step === 2} onScan={handleScan} />
                 <span className="scan-corner tl" /><span className="scan-corner tr" />
                 <span className="scan-corner bl" /><span className="scan-corner br" />
                 <span className="scan-line" />

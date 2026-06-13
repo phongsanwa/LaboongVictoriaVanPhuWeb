@@ -114,6 +114,8 @@ input { font-family: inherit; }
 /* ---------- scanner (staff scan) ---------- */
 .scanner { margin: 8px auto 0; width: 240px; height: 240px; border-radius: var(--r-lg); background: #0c1410; position: relative; overflow: hidden; display: grid; place-items: center; }
 .scanner .cust-qr { width: 170px; height: 170px; background: #fff; border-radius: 14px; padding: 11px; opacity: .92; }
+.scanner-video { width: 100%; height: 100%; object-fit: cover; }
+.scanner-msg { color: #fff; font-size: 13px; font-weight: 500; text-align: center; padding: 0 24px; display: flex; align-items: center; justify-content: center; gap: 8px; line-height: 1.5; }
 .scan-corner { position: absolute; width: 34px; height: 34px; border: 3px solid var(--yellow); }
 .scan-corner.tl { top: 16px; left: 16px; border-right: none; border-bottom: none; border-radius: 8px 0 0 0; }
 .scan-corner.tr { top: 16px; right: 16px; border-left: none; border-bottom: none; border-radius: 0 8px 0 0; }
