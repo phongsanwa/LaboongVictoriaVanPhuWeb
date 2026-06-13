@@ -104,6 +104,7 @@ input { font-family: inherit; }
 .method .mi { width: 52px; height: 52px; border-radius: 15px; display: grid; place-items: center; color: #fff; flex: none; }
 .method.scan .mi { background: linear-gradient(150deg, var(--brand), var(--brand-deep)); }
 .method.show .mi { background: linear-gradient(150deg, var(--teal), #4FC3D9); }
+.method.redeem .mi { background: linear-gradient(150deg, var(--peach), var(--pink)); }
 .method .mt { font-family: var(--display); font-weight: 800; font-size: 16px; }
 .method .md { font-size: 13px; color: var(--ink-2); margin-top: 3px; line-height: 1.4; font-weight: 500; }
 .method .mgo { margin-left: auto; color: var(--ink-3); flex: none; }

@@ -6,8 +6,10 @@ use App\Models\Campaign;
 use App\Models\Customer;
 use App\Models\CustomerPoint;
 use App\Models\CustomerTier;
+use App\Models\Redemption;
 use App\Models\Transaction;
 use App\Models\User;
+use App\Models\Voucher;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -126,6 +128,115 @@ class PosController extends Controller
             'multiplier' => $multiplier,
             'pointsBefore' => $pointsBefore,
         ]);
+    }
+
+    /** Look up a redemption/voucher code so staff can review it before confirming use. */
+    public function lookupRedemption(Request $request): JsonResponse
+    {
+        $request->validate(['code' => ['required', 'string']]);
+
+        $found = $this->findRedemption($request->string('code')->trim()->toString());
+
+        if (!$found) {
+            return response()->json(['message' => 'Không tìm thấy mã đổi quà này'], 404);
+        }
+
+        return response()->json($this->presentRedemption($found['redemption'], $found['voucher']));
+    }
+
+    /** Marks a redemption/voucher code as used by the current staff. */
+    public function confirmRedemption(Request $request): JsonResponse
+    {
+        $request->validate(['code' => ['required', 'string']]);
+
+        $found = $this->findRedemption($request->string('code')->trim()->toString());
+
+        if (!$found) {
+            return response()->json(['message' => 'Không tìm thấy mã đổi quà này'], 404);
+        }
+
+        $redemption = $found['redemption'];
+        $voucher = $found['voucher'];
+
+        if (!$this->redemptionUsable($redemption, $voucher)) {
+            return response()->json(['message' => 'Mã này không còn sử dụng được'], 422);
+        }
+
+        $staff = Auth::user()->staff;
+
+        DB::transaction(function () use ($redemption, $voucher, $staff) {
+            if ($voucher) {
+                $voucher->status = 'used';
+                $voucher->used_at = now();
+                $voucher->used_by_staff_id = $staff->id;
+                $voucher->usage_count += 1;
+                $voucher->save();
+            }
+
+            $redemption->status = 'used';
+            $redemption->used_at = now();
+            $redemption->save();
+        });
+
+        return response()->json($this->presentRedemption($redemption->refresh(), $voucher?->refresh()));
+    }
+
+    /** Resolves a redemption by voucher code or redemption code. */
+    private function findRedemption(string $code): ?array
+    {
+        if ($code === '') {
+            return null;
+        }
+
+        $voucher = Voucher::with(['customer.user', 'customer.tier', 'redemption.reward'])
+            ->where('voucher_code', $code)->first();
+
+        if ($voucher) {
+            return ['redemption' => $voucher->redemption, 'voucher' => $voucher];
+        }
+
+        $redemption = Redemption::with(['customer.user', 'customer.tier', 'reward', 'voucher'])
+            ->where('redemption_code', $code)->first();
+
+        return $redemption ? ['redemption' => $redemption, 'voucher' => $redemption->voucher] : null;
+    }
+
+    /** Whether a redemption/voucher is still eligible to be marked used. */
+    private function redemptionUsable(Redemption $redemption, ?Voucher $voucher): bool
+    {
+        if ($voucher) {
+            if ($voucher->status !== 'active') {
+                return false;
+            }
+
+            return !$voucher->valid_until || !$voucher->valid_until->isPast();
+        }
+
+        if (!in_array($redemption->status, ['approved', 'pending'], true)) {
+            return false;
+        }
+
+        return !$redemption->expires_at || !$redemption->expires_at->isPast();
+    }
+
+    private function presentRedemption(Redemption $redemption, ?Voucher $voucher): array
+    {
+        $reward = $redemption->reward;
+
+        return [
+            'customer' => $this->present($redemption->customer),
+            'reward' => [
+                'name' => $reward->name,
+                'type' => $reward->reward_type,
+                'category' => $reward->category,
+                'value' => $reward->value,
+                'minPurchase' => $reward->min_purchase,
+            ],
+            'code' => $voucher->voucher_code ?? $redemption->redemption_code,
+            'status' => $voucher->status ?? $redemption->status,
+            'expiresAt' => ($voucher->valid_until ?? $redemption->expires_at)?->toDateString(),
+            'usable' => $this->redemptionUsable($redemption, $voucher),
+        ];
     }
 
     /** Resolves a customer by referral code, "LBVP-XXXXX" id, or phone number. */

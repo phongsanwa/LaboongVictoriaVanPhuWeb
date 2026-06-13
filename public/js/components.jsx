@@ -152,7 +152,7 @@ const NAV_URLS = {
   home: "/",
   points: "/points",
   catalog: "/rewards",
-  wallet: "Laboong Redeem & Wallet.html",
+  wallet: "/rewards/wallet",
   history: "Laboong Transaction History.html",
   profile: "/profile",
   store: "/store",

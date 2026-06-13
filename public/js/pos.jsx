@@ -132,6 +132,7 @@ function MemberLookup({ code, setCode, onLookup, found, error, busy }) {
 
 function App() {
   const [tw, setTweak] = useTweaks(TW_DEFAULTS);
+  const [mode, setMode] = useState(null);        // null home · "points" · "redeem"
   const [step, setStep] = useState(0);          // 0 bill · 1 method · 2 scan · 3 counter-qr · 4 result
   const [bill, setBill] = useState(0);          // đồng
   const [cust, setCust] = useState(null);
@@ -200,6 +201,48 @@ function App() {
 
   const restart = () => { setBill(0); setCust(null); resetLookup(); setStep(0); };
 
+  const goHome = () => { setMode(null); restart(); resetRedeem(); };
+
+  /* ---- redeem (đổi quà) flow ---- */
+  const [rCode, setRCode] = useState("");
+  const [rFound, setRFound] = useState(null);
+  const [rDone, setRDone] = useState(null);
+  const [rError, setRError] = useState("");
+  const [rBusy, setRBusy] = useState(false);
+  const rLastScanRef = useRef("");
+  const rScanLockRef = useRef(false);
+
+  const resetRedeem = () => { setRCode(""); setRFound(null); setRDone(null); setRError(""); rLastScanRef.current = ""; };
+
+  const lookupRedeem = async (codeOverride) => {
+    const c = (codeOverride ?? rCode).trim();
+    if (!c) return;
+    setRBusy(true);
+    setRError("");
+    const { ok, data } = await apiCall("POST", "/pos/redeem/lookup", { code: c });
+    setRBusy(false);
+    if (!ok) { setRError(data.message || "Không tìm thấy mã đổi quà này"); return; }
+    setRCode(c);
+    setRFound(data);
+  };
+
+  const confirmRedeem = async () => {
+    if (!rFound) return;
+    setRBusy(true);
+    setRError("");
+    const { ok, data } = await apiCall("POST", "/pos/redeem/confirm", { code: rFound.code });
+    setRBusy(false);
+    if (!ok) { setRError(data.message || "Có lỗi xảy ra, vui lòng thử lại"); return; }
+    setRDone(data);
+  };
+
+  const handleRedeemScan = (text) => {
+    if (rScanLockRef.current || rFound || text === rLastScanRef.current) return;
+    rScanLockRef.current = true;
+    rLastScanRef.current = text;
+    lookupRedeem(text).finally(() => { rScanLockRef.current = false; });
+  };
+
   const logout = async (e) => {
     e.preventDefault();
     await apiCall("POST", "/logout");
@@ -222,14 +265,43 @@ function App() {
       </header>
 
       <main className="stage">
-        <div className="flow-steps">
-          {[0, 1, 2, 3].map(i => <span key={i} className={"fdot" + (i === dotIndex ? " on" : i < dotIndex ? " done" : "")} />)}
-        </div>
-
-        {/* STEP 0 — bill */}
-        {step === 0 && (
+        {/* HOME — choose function */}
+        {mode === null && (
           <div className="card">
             <div className="card-pad">
+              <div className="step-title">Chọn chức năng</div>
+              <div className="step-desc">Bạn muốn thực hiện thao tác gì cho khách?</div>
+              <div className="methods">
+                <button className="method scan" onClick={() => setMode("points")}>
+                  <div className="mi"><Icon name="coin" size={26} color="#fff" /></div>
+                  <div>
+                    <div className="mt">Tích điểm cho khách</div>
+                    <div className="md">Nhập hoá đơn rồi quét hoặc nhập mã thành viên để tích điểm</div>
+                  </div>
+                  <span className="mgo"><Icon name="chev" size={18} /></span>
+                </button>
+                <button className="method redeem" onClick={() => setMode("redeem")}>
+                  <div className="mi"><Icon name="gift" size={26} color="#fff" /></div>
+                  <div>
+                    <div className="mt">Đổi quà cho khách</div>
+                    <div className="md">Quét mã voucher / quà khách đã đổi để xác nhận sử dụng</div>
+                  </div>
+                  <span className="mgo"><Icon name="chev" size={18} /></span>
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {mode === "points" && <div className="flow-steps">
+          {[0, 1, 2, 3].map(i => <span key={i} className={"fdot" + (i === dotIndex ? " on" : i < dotIndex ? " done" : "")} />)}
+        </div>}
+
+        {/* STEP 0 — bill */}
+        {mode === "points" && step === 0 && (
+          <div className="card">
+            <div className="card-pad">
+              <button className="linkback" onClick={goHome}>← Trang chủ</button>
               <div className="step-title">Nhập tổng hoá đơn</div>
               <div className="bill-display">
                 <div className="bill-label">Tổng tiền hoá đơn</div>
@@ -253,7 +325,7 @@ function App() {
         )}
 
         {/* STEP 1 — method */}
-        {step === 1 && (
+        {mode === "points" && step === 1 && (
           <div className="card">
             <div className="card-pad">
               <div className="step-title">Chọn cách tích điểm</div>
@@ -286,13 +358,13 @@ function App() {
         )}
 
         {/* STEP 2 — staff scanning */}
-        {step === 2 && (
+        {mode === "points" && step === 2 && (
           <div className="card">
             <div className="card-pad">
               <div className="step-title">Quét mã khách</div>
               <div className="step-desc">Đưa mã QR của khách vào khung hình hoặc nhập mã thành viên</div>
               <div className="scanner">
-                <QRScanner active={step === 2} onScan={handleScan} />
+                <QRScanner active={mode === "points" && step === 2} onScan={handleScan} />
                 <span className="scan-corner tl" /><span className="scan-corner tr" />
                 <span className="scan-corner bl" /><span className="scan-corner br" />
                 <span className="scan-line" />
@@ -304,7 +376,7 @@ function App() {
         )}
 
         {/* STEP 3 — counter QR for customer to scan */}
-        {step === 3 && (
+        {mode === "points" && step === 3 && (
           <div className="card">
             <div className="card-pad">
               <div className="step-title">Khách quét mã này</div>
@@ -321,7 +393,7 @@ function App() {
         )}
 
         {/* STEP 4 — result */}
-        {step === 4 && cust && (
+        {mode === "points" && step === 4 && cust && (
           <div className="card">
             <div className="result-head">
               <div className="rh-check"><div className="ck"><Icon name="check" size={26} color="var(--brand)" /></div></div>
@@ -353,6 +425,100 @@ function App() {
               <div className="result-actions">
                 <button className="cta ghost" title="In biên nhận"><Icon name="print" size={18} /></button>
                 <button className="cta primary" onClick={restart}><Icon name="refresh" size={18} color="#fff" /> Tích cho khách khác</button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* REDEEM — scan voucher/redemption code */}
+        {mode === "redeem" && !rDone && (
+          <div className="card">
+            <div className="card-pad">
+              <button className="linkback" onClick={goHome}>← Trang chủ</button>
+              <div className="step-title">Quét mã đổi quà</div>
+              <div className="step-desc">Đưa mã QR voucher / quà của khách vào khung hình hoặc nhập mã thủ công</div>
+              <div className="scanner">
+                <QRScanner active={mode === "redeem" && !rFound} onScan={handleRedeemScan} />
+                <span className="scan-corner tl" /><span className="scan-corner tr" />
+                <span className="scan-corner bl" /><span className="scan-corner br" />
+                <span className="scan-line" />
+              </div>
+              <div className="member-lookup">
+                <div className="fld">
+                  <input
+                    className="inp"
+                    value={rCode}
+                    onChange={e => setRCode(e.target.value)}
+                    onKeyDown={e => { if (e.key === "Enter" && !rFound) lookupRedeem(); }}
+                    placeholder="Nhập mã voucher / mã đổi quà"
+                    autoFocus
+                  />
+                </div>
+                {rError && <div className="lookup-error"><Icon name="close" size={14} /> {rError}</div>}
+
+                {rFound && (
+                  <div className="cust-strip found">
+                    <div className="ca" style={{ background: rFound.customer.av }}>{initials(rFound.customer.name)}</div>
+                    <div style={{ minWidth: 0 }}>
+                      <div className="cn">{rFound.customer.name}</div>
+                      <div className="cm"><span className="cust-tier"><Icon name="star" size={11} color="#C99A2E" /> {rFound.customer.tier}</span> ID {rFound.customer.id}</div>
+                    </div>
+                  </div>
+                )}
+
+                {rFound && (
+                  <div className="bill-chip" style={{ display: "flex", marginTop: 12 }}>
+                    <Icon name="gift" size={16} color="var(--brand)" /> {rFound.reward.name} · {rFound.code}
+                  </div>
+                )}
+
+                {rFound && !rFound.usable && (
+                  <div className="lookup-error"><Icon name="close" size={14} /> Mã này {rFound.status === "used" ? "đã được sử dụng" : "đã hết hạn"}, không thể dùng lại.</div>
+                )}
+
+                {!rFound && (
+                  <button className="cta primary" disabled={!rCode.trim() || rBusy} onClick={() => lookupRedeem()}>
+                    {rBusy ? "Đang tra cứu…" : <>Tra cứu mã <Icon name="arrow" size={18} color="#fff" /></>}
+                  </button>
+                )}
+
+                {rFound && rFound.usable && (
+                  <button className="cta primary" disabled={rBusy} onClick={confirmRedeem}>
+                    {rBusy ? "Đang xác nhận…" : <><Icon name="check" size={18} color="#fff" /> Xác nhận sử dụng</>}
+                  </button>
+                )}
+
+                {rFound && (
+                  <button className="linkback" onClick={resetRedeem} style={{ display: "block", margin: "10px auto 0" }}>← Quét mã khác</button>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* REDEEM — done */}
+        {mode === "redeem" && rDone && (
+          <div className="card">
+            <div className="result-head">
+              <div className="rh-check"><div className="ck"><Icon name="check" size={26} color="var(--brand)" /></div></div>
+              <div className="rh-title">Đã dùng quà thành công!</div>
+            </div>
+            <div className="result-body">
+              <div className="cust-strip">
+                <div className="ca" style={{ background: rDone.customer.av }}>{initials(rDone.customer.name)}</div>
+                <div style={{ minWidth: 0 }}>
+                  <div className="cn">{rDone.customer.name}</div>
+                  <div className="cm"><span className="cust-tier"><Icon name="star" size={11} color="#C99A2E" /> {rDone.customer.tier}</span> ID {rDone.customer.id}</div>
+                </div>
+              </div>
+
+              <div className="total-row" style={{ marginTop: 18 }}>
+                <div className="ti"><Icon name="gift" size={22} color="#fff" /></div>
+                <div><div className="tl">Quà đã dùng</div><div className="cn" style={{ color: "#fff" }}>{rDone.reward.name}</div></div>
+              </div>
+
+              <div className="result-actions">
+                <button className="cta primary" onClick={resetRedeem}><Icon name="refresh" size={18} color="#fff" /> Quét mã khác</button>
               </div>
             </div>
           </div>

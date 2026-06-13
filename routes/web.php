@@ -15,6 +15,7 @@ Route::get('/store', [StoreController::class, 'index'])->middleware('auth')->nam
 
 Route::middleware('auth')->prefix('rewards')->name('rewards.')->group(function () {
     Route::get('/', [RewardsCatalogController::class, 'index'])->name('catalog');
+    Route::get('/wallet', [RewardsCatalogController::class, 'wallet'])->name('wallet');
     Route::post('/redeem', [RewardsCatalogController::class, 'redeem'])->name('redeem');
 });
 

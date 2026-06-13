@@ -35,6 +35,22 @@ class RewardsCatalogController extends Controller
         ]]);
     }
 
+    public function wallet()
+    {
+        $customer = Auth::user()->customer()->first();
+        abort_unless($customer, 403);
+
+        $redemptions = Redemption::with(['reward', 'voucher'])
+            ->where('customer_id', $customer->id)
+            ->orderByDesc('redeemed_at')
+            ->get();
+
+        return view('wallet', ['walletData' => [
+            'balance' => $customer->total_points,
+            'vouchers' => $redemptions->map(fn (Redemption $r) => $this->formatVoucher($r))->values()->all(),
+        ]]);
+    }
+
     public function redeem(Request $request): JsonResponse
     {
         $validated = $request->validate([
@@ -129,6 +145,25 @@ class RewardsCatalogController extends Controller
             'points' => $r->points_required,
             'stock' => $r->quantity_available,
             'tags' => $tags,
+        ];
+    }
+
+    private function formatVoucher(Redemption $r): array
+    {
+        $voucher = $r->voucher;
+        $reward = $r->reward;
+        $status = $voucher->status ?? $r->status;
+        $expiry = $voucher->valid_until ?? $r->expires_at;
+
+        return [
+            'id' => $r->id,
+            'name' => $reward->name,
+            'cat' => in_array($reward->category, self::CATEGORIES, true) ? $reward->category : 'gift',
+            'code' => $voucher->voucher_code ?? $r->redemption_code,
+            'fine' => $reward->description ?? '',
+            'created' => $r->redeemed_at?->toDateString(),
+            'expiry' => $expiry?->toDateString(),
+            'status' => $status === 'used' ? 'used' : (in_array($status, ['expired', 'cancelled'], true) ? 'expired' : 'active'),
         ];
     }
 }

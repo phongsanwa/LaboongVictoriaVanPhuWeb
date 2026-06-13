@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Redemption extends Model
 {
@@ -37,5 +38,10 @@ class Redemption extends Model
     public function reward(): BelongsTo
     {
         return $this->belongsTo(Reward::class);
+    }
+
+    public function voucher(): HasOne
+    {
+        return $this->hasOne(Voucher::class);
     }
 }
