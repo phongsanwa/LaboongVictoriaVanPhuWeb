@@ -1,12 +1,10 @@
 /* global React, ReactDOM, Icon, useTweaks, TweaksPanel, TweakSection, TweakColor, TweakToggle */
-const { useState, useEffect, useRef } = React;
+const { useState, useEffect } = React;
 
 const TW_DEFAULTS = /*EDITMODE-BEGIN*/{
   "brand": ["#0F623F", "#07432A"],
   "dark": false
 }/*EDITMODE-END*/;
-
-const OTP_TTL = 180;
 
 /* ---------------- backend API helpers ---------------- */
 function csrfToken() {
@@ -35,68 +33,7 @@ function validPhone(raw) {
   if (!/^(03|05|07|08|09)\d{8}$/.test(p)) return { ok: false, msg: "Số điện thoại không đúng định dạng" };
   return { ok: true };
 }
-function fmtTime(s) { const m = Math.floor(s / 60), ss = s % 60; return `${m}:${String(ss).padStart(2, "0")}`; }
 function prettyPhone(raw) { return normPhone(raw).replace(/^0/, "").replace(/(\d{3})(\d{3})(\d{3})/, "$1 $2 $3"); }
-
-/* ---------------- OTP entry (shared) ---------------- */
-function OtpStep({ phone, debugOtp, onBack, onVerify }) {
-  const [digits, setDigits] = useState(["", "", "", "", "", ""]);
-  const [left, setLeft] = useState(OTP_TTL);
-  const [bad, setBad] = useState(false);
-  const [shake, setShake] = useState(false);
-  const [errMsg, setErrMsg] = useState("");
-  const [loading, setLoading] = useState(false);
-  const refs = useRef([]);
-
-  useEffect(() => { refs.current[0]?.focus(); }, []);
-  useEffect(() => { if (left <= 0) return; const id = setInterval(() => setLeft(l => l - 1), 1000); return () => clearInterval(id); }, [left]);
-
-  const code = digits.join("");
-  const full = code.length === 6;
-  const expired = left <= 0;
-
-  const setAt = (i, v) => { if (!/^\d?$/.test(v)) return; setBad(false); const nd = [...digits]; nd[i] = v; setDigits(nd); if (v && i < 5) refs.current[i + 1]?.focus(); };
-  const onKey = (i, e) => { if (e.key === "Backspace" && !digits[i] && i > 0) refs.current[i - 1]?.focus(); };
-  const onPaste = (e) => { const t = (e.clipboardData.getData("text") || "").replace(/\D/g, "").slice(0, 6); if (!t) return; e.preventDefault(); const nd = ["", "", "", "", "", ""]; for (let i = 0; i < t.length; i++) nd[i] = t[i]; setDigits(nd); refs.current[Math.min(t.length, 5)]?.focus(); };
-  const verify = async () => {
-    if (expired || loading) return;
-    setLoading(true); setErrMsg("");
-    const { ok, data } = await apiPost("/login/verify", { phone: normPhone(phone), otp_code: code });
-    setLoading(false);
-    if (ok) return onVerify(data.redirect);
-    setErrMsg(data.message || "Mã không đúng. Vui lòng kiểm tra lại.");
-    setBad(true); setShake(true); setTimeout(() => setShake(false), 400);
-  };
-  const resend = async () => {
-    setDigits(["", "", "", "", "", ""]); setLeft(OTP_TTL); setBad(false); setErrMsg(""); refs.current[0]?.focus();
-    await apiPost("/login/otp", { phone: normPhone(phone) });
-  };
-
-  return (
-    <>
-      <div className="step-head"><h1>Nhập mã xác thực</h1><p>Mã gồm 6 số đã được gửi qua SMS để đăng nhập.</p></div>
-      <div className="otp-to">
-        <div className="pic"><Icon name="phone" size={18} color="#fff" /></div>
-        <div><div className="pn">+84 {prettyPhone(phone)}</div><div className="pl">Mã có hiệu lực trong 3 phút</div></div>
-        <button className="edit" onClick={onBack}>Đổi</button>
-      </div>
-      <div className="otp-inputs" onPaste={onPaste}>
-        {digits.map((d, i) => (
-          <input key={i} ref={el => refs.current[i] = el} className={"otp-box" + (d ? " filled" : "") + (bad && shake ? " bad" : "")} inputMode="numeric" maxLength={1} value={d} onChange={e => setAt(i, e.target.value)} onKeyDown={e => onKey(i, e)} />
-        ))}
-      </div>
-      {bad && <div className="otp-err" style={{ marginTop: 18 }}><Icon name="info" size={16} color="var(--danger)" /> {errMsg}</div>}
-      <div className="otp-meta">
-        <div className={"otp-timer" + (expired ? " expired" : "")}><Icon name="clock" size={15} color={expired ? "var(--danger)" : "var(--brand)"} />{expired ? "Mã đã hết hạn" : <>Còn lại <span className="tval">{fmtTime(left)}</span></>}</div>
-        <button className="otp-resend" disabled={left > OTP_TTL - 15 && !expired} onClick={resend}>{expired ? "Gửi lại mã" : "Gửi lại"}</button>
-      </div>
-      <button className="btn primary" disabled={!full || expired || loading} onClick={verify}>
-        {loading ? "Đang đăng nhập…" : <>Đăng nhập <Icon name="arrow" size={18} color={full && !expired ? "#fff" : "currentColor"} /></>}
-      </button>
-      {debugOtp && <div className="demo-hint"><Icon name="info" size={15} color="var(--ink-3)" /><span>Bản demo — mã OTP của bạn là <b>{debugOtp}</b></span></div>}
-    </>
-  );
-}
 
 /* ---------------- Success ---------------- */
 function SuccessStep({ redirect }) {
@@ -114,8 +51,7 @@ function SuccessStep({ redirect }) {
 /* ---------------- App ---------------- */
 function App() {
   const [tw, setTweak] = useTweaks(TW_DEFAULTS);
-  const [method, setMethod] = useState("otp");   // otp | password
-  const [phase, setPhase] = useState("login");   // login | otp | success
+  const [phase, setPhase] = useState("login");   // login | success
   const [phone, setPhone] = useState("");
   const [pw, setPw] = useState("");
   const [showPw, setShowPw] = useState(false);
@@ -123,7 +59,6 @@ function App() {
   const [touched, setTouched] = useState(false);
   const [pwErr, setPwErr] = useState("");
   const [notReg, setNotReg] = useState(false);
-  const [debugOtp, setDebugOtp] = useState(null);
   const [redirect, setRedirect] = useState(null);
   const [sending, setSending] = useState(false);
 
@@ -137,20 +72,6 @@ function App() {
 
   const pRes = validPhone(phone);
 
-  const sendOtp = async () => {
-    setTouched(true); setNotReg(false);
-    if (!pRes.ok || sending) return;
-    setSending(true);
-    const { ok, data } = await apiPost("/login/otp", { phone: normPhone(phone) });
-    setSending(false);
-    if (!ok) {
-      if (data.not_registered) { setNotReg(true); return; }
-      setNotReg(false);
-      return;
-    }
-    setDebugOtp(data.debug_otp || null);
-    setPhase("otp");
-  };
   const loginPw = async () => {
     setTouched(true); setNotReg(false); setPwErr("");
     if (!pRes.ok || sending) return;
@@ -180,11 +101,6 @@ function App() {
             <>
               <div className="step-head"><h1>Đăng nhập</h1><p>Chào mừng bạn quay lại! Đăng nhập để tích điểm và đổi quà.</p></div>
 
-              <div className="tabs">
-                <button className={method === "otp" ? "on" : ""} onClick={() => { setMethod("otp"); setNotReg(false); }}><Icon name="phone" size={16} color="currentColor" /> Mã OTP</button>
-                <button className={method === "password" ? "on" : ""} onClick={() => { setMethod("password"); setNotReg(false); }}><Icon name="lock" size={16} color="currentColor" /> Mật khẩu</button>
-              </div>
-
               <div className="fld">
                 <label>Số điện thoại</label>
                 <div className="inp-wrap has-prefix">
@@ -192,33 +108,29 @@ function App() {
                   <span className="pfx">+84</span>
                   <input className={"inp" + (touched && !pRes.ok ? " bad" : "")} inputMode="numeric" placeholder="9xx xxx xxx" value={phone}
                     onChange={e => { setPhone(e.target.value.replace(/[^\d\s.\-]/g, "")); setNotReg(false); }}
-                    onKeyDown={e => { if (e.key === "Enter" && method === "otp") sendOtp(); }} />
+                    onKeyDown={e => { if (e.key === "Enter") loginPw(); }} />
                 </div>
                 {touched && !pRes.ok && <div className="err"><Icon name="info" size={14} color="var(--danger)" /> {pRes.msg}</div>}
               </div>
 
-              {method === "password" && (
-                <div className="fld">
-                  <label>Mật khẩu</label>
-                  <div className="inp-wrap">
-                    <span className="lic"><Icon name="lock" size={18} /></span>
-                    <input className={"inp" + (pwErr ? " bad" : "")} type={showPw ? "text" : "password"} placeholder="Nhập mật khẩu" value={pw}
-                      style={{ paddingRight: 50 }} onChange={e => { setPw(e.target.value); setPwErr(""); }}
-                      onKeyDown={e => { if (e.key === "Enter") loginPw(); }} />
-                    <button className="eye" onClick={() => setShowPw(s => !s)} tabIndex={-1}><Icon name={showPw ? "eyeoff" : "eye"} size={18} /></button>
-                  </div>
-                  {pwErr && <div className="err"><Icon name="info" size={14} color="var(--danger)" /> {pwErr}</div>}
+              <div className="fld">
+                <label>Mật khẩu</label>
+                <div className="inp-wrap">
+                  <span className="lic"><Icon name="lock" size={18} /></span>
+                  <input className={"inp" + (pwErr ? " bad" : "")} type={showPw ? "text" : "password"} placeholder="Nhập mật khẩu" value={pw}
+                    style={{ paddingRight: 50 }} onChange={e => { setPw(e.target.value); setPwErr(""); }}
+                    onKeyDown={e => { if (e.key === "Enter") loginPw(); }} />
+                  <button className="eye" onClick={() => setShowPw(s => !s)} tabIndex={-1}><Icon name={showPw ? "eyeoff" : "eye"} size={18} /></button>
                 </div>
-              )}
+                {pwErr && <div className="err"><Icon name="info" size={14} color="var(--danger)" /> {pwErr}</div>}
+              </div>
 
-              {method === "password" && (
-                <div className="row-between">
-                  <button className="remember" onClick={() => setRemember(r => !r)}>
-                    <span className={"check" + (remember ? " on" : "")}>{remember && <Icon name="check" size={14} color="#fff" />}</span> Ghi nhớ đăng nhập
-                  </button>
-                  <button className="forgot">Quên mật khẩu?</button>
-                </div>
-              )}
+              <div className="row-between">
+                <button className="remember" onClick={() => setRemember(r => !r)}>
+                  <span className={"check" + (remember ? " on" : "")}>{remember && <Icon name="check" size={14} color="#fff" />}</span> Ghi nhớ đăng nhập
+                </button>
+                <button className="forgot">Quên mật khẩu?</button>
+              </div>
 
               {notReg && (
                 <div className="notice">
@@ -227,9 +139,7 @@ function App() {
                 </div>
               )}
 
-              {method === "otp"
-                ? <button className="btn primary" style={{ marginTop: 6 }} disabled={sending} onClick={sendOtp}>{sending ? "Đang gửi…" : <>Gửi mã đăng nhập <Icon name="arrow" size={18} color="#fff" /></>}</button>
-                : <button className="btn primary" style={{ marginTop: 6 }} disabled={sending} onClick={loginPw}>{sending ? "Đang đăng nhập…" : <>Đăng nhập <Icon name="arrow" size={18} color="#fff" /></>}</button>}
+              <button className="btn primary" style={{ marginTop: 6 }} disabled={sending} onClick={loginPw}>{sending ? "Đang đăng nhập…" : <>Đăng nhập <Icon name="arrow" size={18} color="#fff" /></>}</button>
 
               <div className="divider">hoặc tiếp tục với</div>
               <div className="socials">
@@ -241,7 +151,6 @@ function App() {
             </>
           )}
 
-          {phase === "otp" && <OtpStep phone={phone} debugOtp={debugOtp} onBack={() => setPhase("login")} onVerify={(redirectUrl) => { setRedirect(redirectUrl); setPhase("success"); }} />}
           {phase === "success" && <SuccessStep redirect={redirect} />}
         </div>
 
