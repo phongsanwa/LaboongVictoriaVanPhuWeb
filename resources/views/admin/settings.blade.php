@@ -2,12 +2,13 @@
 <html lang="vi">
 <head>
 <meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="csrf-token" content="{{ csrf_token() }}" />
 <title>Laboong Admin · Cài đặt</title>
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&family=Baloo+2:wght@600;700;800&display=swap" rel="stylesheet" />
-<link rel="stylesheet" href="css/admin.css" />
+<link rel="stylesheet" href="{{ asset('css/admin.css') }}" />
 </head>
 <body>
 <div id="root"></div>
@@ -16,8 +17,12 @@
 <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
 <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
 
-<script type="text/babel" src="js/tweaks-panel.jsx"></script>
-<script type="text/babel" src="js/components.jsx"></script>
-<script type="text/babel" src="js/admin-settings.jsx"></script>
+<script>
+  window.ADMIN_SETTINGS_DATA = @json($settingsData);
+</script>
+
+<script type="text/babel" src="{{ asset('js/tweaks-panel.jsx') }}"></script>
+<script type="text/babel" src="{{ asset('js/components.jsx') }}"></script>
+<script type="text/babel" src="{{ asset('js/admin-settings.jsx') }}"></script>
 </body>
 </html>

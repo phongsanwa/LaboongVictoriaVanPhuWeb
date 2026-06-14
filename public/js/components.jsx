@@ -164,7 +164,7 @@ const NAV_URLS = {
   adminRewards: "/admin/rewards",
   adminCampaigns: "/admin/campaigns",
   adminRoles: "/admin/roles",
-  adminSettings: "Laboong Admin Settings.html",
+  adminSettings: "/admin/settings",
 };
 const ADMIN_NAV_HREF = {
   "Tổng quan": NAV_URLS.adminHome,
