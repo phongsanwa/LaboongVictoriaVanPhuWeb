@@ -163,6 +163,7 @@ const NAV_URLS = {
   adminPoints: "/admin/points",
   adminRewards: "/admin/rewards",
   adminCampaigns: "/admin/campaigns",
+  adminStores: "/admin/stores",
   adminRoles: "/admin/roles",
   adminSettings: "/admin/settings",
 };
@@ -172,6 +173,7 @@ const ADMIN_NAV_HREF = {
   "Điểm & giao dịch": NAV_URLS.adminPoints,
   "Đổi quà": NAV_URLS.adminRewards,
   "Chiến dịch": NAV_URLS.adminCampaigns,
+  "Cửa hàng": NAV_URLS.adminStores,
   "Phân quyền": NAV_URLS.adminRoles,
   "Cài đặt": NAV_URLS.adminSettings,
 };
