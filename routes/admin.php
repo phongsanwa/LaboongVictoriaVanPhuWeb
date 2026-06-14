@@ -6,6 +6,7 @@ use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\PointsController;
 use App\Http\Controllers\Admin\RewardsController;
 use App\Http\Controllers\Admin\RolesController;
+use App\Http\Controllers\Admin\SettingsController;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(function () {
@@ -28,4 +29,6 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
     Route::post('/roles', [RolesController::class, 'update'])->name('roles.update');
     Route::post('/roles/assign', [RolesController::class, 'assign'])->name('roles.assign');
     Route::delete('/roles/staff/{staff}', [RolesController::class, 'removeStaff'])->name('roles.staff.remove');
+    Route::get('/settings', [SettingsController::class, 'index'])->name('settings.index');
+    Route::post('/settings', [SettingsController::class, 'update'])->name('settings.update');
 });
