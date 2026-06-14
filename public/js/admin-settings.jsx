@@ -72,6 +72,9 @@ function App() {
   const [logoUrl, setLogoUrl] = useState(DATA.general.logo_url || null);
   const [logoBusy, setLogoBusy] = useState(false);
   const logoInputRef = React.useRef(null);
+  const [faviconUrl, setFaviconUrl] = useState(DATA.general.favicon_url || null);
+  const [faviconBusy, setFaviconBusy] = useState(false);
+  const faviconInputRef = React.useRef(null);
 
   const dirty = useMemo(() => JSON.stringify(form) !== JSON.stringify(saved), [form, saved]);
 
@@ -109,35 +112,35 @@ function App() {
     setTimeout(() => setToast(null), 3000);
   };
 
-  const uploadLogo = async (file) => {
+  const uploadAsset = async (kind, file, setUrl, setBusy) => {
     if (!file) return;
-    setLogoBusy(true);
+    setBusy(true);
     const body = new FormData();
-    body.append("logo", file);
-    const res = await fetch("/admin/settings/logo", {
+    body.append(kind, file);
+    const res = await fetch(`/admin/settings/${kind}`, {
       method: "POST",
       headers: { "Accept": "application/json", "X-CSRF-TOKEN": csrfToken() },
       body,
     });
     let data = {};
     try { data = await res.json(); } catch (e) { /* no body */ }
-    setLogoBusy(false);
+    setBusy(false);
     if (res.ok) {
-      setLogoUrl(data.logo_url);
-      setToast(data.message || "Đã tải lên logo");
+      setUrl(data[`${kind}_url`]);
+      setToast(data.message || "Đã tải lên");
     } else {
-      setToast(data.errors?.logo?.[0] || data.message || "Có lỗi xảy ra, vui lòng thử lại");
+      setToast(data.errors?.[kind]?.[0] || data.message || "Có lỗi xảy ra, vui lòng thử lại");
     }
     setTimeout(() => setToast(null), 3000);
   };
 
-  const deleteLogo = async () => {
-    setLogoBusy(true);
-    const { ok, data } = await apiCall("DELETE", "/admin/settings/logo");
-    setLogoBusy(false);
+  const deleteAsset = async (kind, setUrl, setBusy) => {
+    setBusy(true);
+    const { ok, data } = await apiCall("DELETE", `/admin/settings/${kind}`);
+    setBusy(false);
     if (ok) {
-      setLogoUrl(null);
-      setToast(data.message || "Đã xoá logo");
+      setUrl(null);
+      setToast(data.message || "Đã xoá");
     } else {
       setToast(data.message || "Có lỗi xảy ra, vui lòng thử lại");
     }
@@ -224,10 +227,26 @@ function App() {
                             {logoUrl ? <img src={logoUrl} alt="Logo" style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: "inherit" }} /> : <span>{(form.brand || "L")[0]}</span>}
                           </div>
                           <input ref={logoInputRef} type="file" accept="image/png,image/jpeg,image/svg+xml,image/webp" style={{ display: "none" }}
-                            onChange={e => { uploadLogo(e.target.files[0]); e.target.value = ""; }} />
+                            onChange={e => { uploadAsset("logo", e.target.files[0], setLogoUrl, setLogoBusy); e.target.value = ""; }} />
                           <div className="logo-up-btns">
                             <button className="btn ghost sm" disabled={logoBusy} onClick={() => logoInputRef.current?.click()}><Icon name="image" size={15} /> Tải lên</button>
-                            <button className="btn ghost sm" disabled={logoBusy || !logoUrl} onClick={deleteLogo}><Icon name="trash" size={15} /> Xoá</button>
+                            <button className="btn ghost sm" disabled={logoBusy || !logoUrl} onClick={() => deleteAsset("logo", setLogoUrl, setLogoBusy)}><Icon name="trash" size={15} /> Xoá</button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="frow">
+                      <div className="flabel">Favicon<div className="fsub">Biểu tượng trên tab trình duyệt, hình vuông</div></div>
+                      <div className="fcontrol">
+                        <div className="logo-up">
+                          <div className="logo-prev" style={{ width: 40, height: 40, borderRadius: 10 }}>
+                            {faviconUrl ? <img src={faviconUrl} alt="Favicon" style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: "inherit" }} /> : <span style={{ fontSize: 18 }}>{(form.brand || "L")[0]}</span>}
+                          </div>
+                          <input ref={faviconInputRef} type="file" accept="image/png,image/x-icon,image/vnd.microsoft.icon,image/svg+xml,image/webp" style={{ display: "none" }}
+                            onChange={e => { uploadAsset("favicon", e.target.files[0], setFaviconUrl, setFaviconBusy); e.target.value = ""; }} />
+                          <div className="logo-up-btns">
+                            <button className="btn ghost sm" disabled={faviconBusy} onClick={() => faviconInputRef.current?.click()}><Icon name="image" size={15} /> Tải lên</button>
+                            <button className="btn ghost sm" disabled={faviconBusy || !faviconUrl} onClick={() => deleteAsset("favicon", setFaviconUrl, setFaviconBusy)}><Icon name="trash" size={15} /> Xoá</button>
                           </div>
                         </div>
                       </div>

@@ -33,4 +33,6 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
     Route::post('/settings', [SettingsController::class, 'update'])->name('settings.update');
     Route::post('/settings/logo', [SettingsController::class, 'uploadLogo'])->name('settings.logo.upload');
     Route::delete('/settings/logo', [SettingsController::class, 'deleteLogo'])->name('settings.logo.delete');
+    Route::post('/settings/favicon', [SettingsController::class, 'uploadFavicon'])->name('settings.favicon.upload');
+    Route::delete('/settings/favicon', [SettingsController::class, 'deleteFavicon'])->name('settings.favicon.delete');
 });
