@@ -19,6 +19,7 @@ class SettingsController extends Controller
         'email' => 'hello@laboong.vn',
         'hotline' => '1900 8386',
         'logo_url' => null,
+        'favicon_url' => null,
     ];
 
     private const POINTS_DEFAULTS = [
@@ -132,8 +133,10 @@ class SettingsController extends Controller
             'integrations.*.on' => ['required', 'boolean'],
         ]);
 
+        $current = AppSetting::get('general', self::GENERAL_DEFAULTS);
         $general = $data['general'];
-        $general['logo_url'] = AppSetting::get('general', self::GENERAL_DEFAULTS)['logo_url'] ?? null;
+        $general['logo_url'] = $current['logo_url'] ?? null;
+        $general['favicon_url'] = $current['favicon_url'] ?? null;
         AppSetting::set('general', $general);
         AppSetting::set('points', $data['points']);
         AppSetting::set('notifications', $data['notifications']);
@@ -162,33 +165,67 @@ class SettingsController extends Controller
             'logo.max' => 'Kích thước ảnh tối đa 2MB',
         ]);
 
-        $general = AppSetting::get('general', self::GENERAL_DEFAULTS);
+        $url = $this->replaceGeneralImage('logo_url', $request->file('logo'), 'branding');
 
-        if (!empty($general['logo_url'])) {
-            $oldPath = str_replace('/storage/', '', $general['logo_url']);
-            Storage::disk('public')->delete($oldPath);
-        }
-
-        $path = $request->file('logo')->store('branding', 'public');
-        $general['logo_url'] = Storage::url($path);
-        AppSetting::set('general', $general);
-
-        return response()->json(['message' => 'Đã tải lên logo', 'logo_url' => $general['logo_url']]);
+        return response()->json(['message' => 'Đã tải lên logo', 'logo_url' => $url]);
     }
 
     public function deleteLogo(): JsonResponse
     {
-        $general = AppSetting::get('general', self::GENERAL_DEFAULTS);
-
-        if (!empty($general['logo_url'])) {
-            $oldPath = str_replace('/storage/', '', $general['logo_url']);
-            Storage::disk('public')->delete($oldPath);
-        }
-
-        $general['logo_url'] = null;
-        AppSetting::set('general', $general);
+        $this->removeGeneralImage('logo_url');
 
         return response()->json(['message' => 'Đã xoá logo']);
+    }
+
+    public function uploadFavicon(Request $request): JsonResponse
+    {
+        $request->validate([
+            'favicon' => ['required', 'image', 'mimes:png,jpg,jpeg,ico,svg,webp', 'max:512'],
+        ], [
+            'favicon.required' => 'Vui lòng chọn một tệp hình ảnh',
+            'favicon.image' => 'Tệp phải là hình ảnh (PNG, ICO, SVG, WEBP)',
+            'favicon.mimes' => 'Tệp phải là hình ảnh (PNG, ICO, SVG, WEBP)',
+            'favicon.max' => 'Kích thước ảnh tối đa 512KB',
+        ]);
+
+        $url = $this->replaceGeneralImage('favicon_url', $request->file('favicon'), 'branding');
+
+        return response()->json(['message' => 'Đã tải lên favicon', 'favicon_url' => $url]);
+    }
+
+    public function deleteFavicon(): JsonResponse
+    {
+        $this->removeGeneralImage('favicon_url');
+
+        return response()->json(['message' => 'Đã xoá favicon']);
+    }
+
+    /** Stores a new image for a general-settings field, removing the previous file, and returns its public URL. */
+    private function replaceGeneralImage(string $field, \Illuminate\Http\UploadedFile $file, string $folder): string
+    {
+        $general = AppSetting::get('general', self::GENERAL_DEFAULTS);
+
+        if (!empty($general[$field])) {
+            Storage::disk('public')->delete(str_replace('/storage/', '', $general[$field]));
+        }
+
+        $general[$field] = Storage::url($file->store($folder, 'public'));
+        AppSetting::set('general', $general);
+
+        return $general[$field];
+    }
+
+    /** Removes a stored image for a general-settings field, if any. */
+    private function removeGeneralImage(string $field): void
+    {
+        $general = AppSetting::get('general', self::GENERAL_DEFAULTS);
+
+        if (!empty($general[$field])) {
+            Storage::disk('public')->delete(str_replace('/storage/', '', $general[$field]));
+        }
+
+        $general[$field] = null;
+        AppSetting::set('general', $general);
     }
 
     private function initials(string $name): string
