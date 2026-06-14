@@ -69,6 +69,9 @@ function App() {
 
   const [form, setForm] = useState(buildState);
   const [saved, setSaved] = useState(buildState);
+  const [logoUrl, setLogoUrl] = useState(DATA.general.logo_url || null);
+  const [logoBusy, setLogoBusy] = useState(false);
+  const logoInputRef = React.useRef(null);
 
   const dirty = useMemo(() => JSON.stringify(form) !== JSON.stringify(saved), [form, saved]);
 
@@ -100,6 +103,41 @@ function App() {
     if (ok) {
       setSaved(form);
       setToast(data.message || "Đã lưu thay đổi cài đặt");
+    } else {
+      setToast(data.message || "Có lỗi xảy ra, vui lòng thử lại");
+    }
+    setTimeout(() => setToast(null), 3000);
+  };
+
+  const uploadLogo = async (file) => {
+    if (!file) return;
+    setLogoBusy(true);
+    const body = new FormData();
+    body.append("logo", file);
+    const res = await fetch("/admin/settings/logo", {
+      method: "POST",
+      headers: { "Accept": "application/json", "X-CSRF-TOKEN": csrfToken() },
+      body,
+    });
+    let data = {};
+    try { data = await res.json(); } catch (e) { /* no body */ }
+    setLogoBusy(false);
+    if (res.ok) {
+      setLogoUrl(data.logo_url);
+      setToast(data.message || "Đã tải lên logo");
+    } else {
+      setToast(data.errors?.logo?.[0] || data.message || "Có lỗi xảy ra, vui lòng thử lại");
+    }
+    setTimeout(() => setToast(null), 3000);
+  };
+
+  const deleteLogo = async () => {
+    setLogoBusy(true);
+    const { ok, data } = await apiCall("DELETE", "/admin/settings/logo");
+    setLogoBusy(false);
+    if (ok) {
+      setLogoUrl(null);
+      setToast(data.message || "Đã xoá logo");
     } else {
       setToast(data.message || "Có lỗi xảy ra, vui lòng thử lại");
     }
@@ -182,10 +220,14 @@ function App() {
                       <div className="flabel">Logo<div className="fsub">PNG / SVG, tối thiểu 256px</div></div>
                       <div className="fcontrol">
                         <div className="logo-up">
-                          <div className="logo-prev"><span>L</span></div>
+                          <div className="logo-prev">
+                            {logoUrl ? <img src={logoUrl} alt="Logo" style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: "inherit" }} /> : <span>{(form.brand || "L")[0]}</span>}
+                          </div>
+                          <input ref={logoInputRef} type="file" accept="image/png,image/jpeg,image/svg+xml,image/webp" style={{ display: "none" }}
+                            onChange={e => { uploadLogo(e.target.files[0]); e.target.value = ""; }} />
                           <div className="logo-up-btns">
-                            <button className="btn ghost sm"><Icon name="image" size={15} /> Tải lên</button>
-                            <button className="btn ghost sm"><Icon name="trash" size={15} /> Xoá</button>
+                            <button className="btn ghost sm" disabled={logoBusy} onClick={() => logoInputRef.current?.click()}><Icon name="image" size={15} /> Tải lên</button>
+                            <button className="btn ghost sm" disabled={logoBusy || !logoUrl} onClick={deleteLogo}><Icon name="trash" size={15} /> Xoá</button>
                           </div>
                         </div>
                       </div>

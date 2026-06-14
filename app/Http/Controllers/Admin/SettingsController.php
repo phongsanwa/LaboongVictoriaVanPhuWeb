@@ -8,6 +8,7 @@ use App\Models\CustomerTier;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Storage;
 
 class SettingsController extends Controller
 {
@@ -17,6 +18,7 @@ class SettingsController extends Controller
         'tagline' => 'Victoria Văn Phú · Trà sữa & cà phê',
         'email' => 'hello@laboong.vn',
         'hotline' => '1900 8386',
+        'logo_url' => null,
     ];
 
     private const POINTS_DEFAULTS = [
@@ -130,7 +132,9 @@ class SettingsController extends Controller
             'integrations.*.on' => ['required', 'boolean'],
         ]);
 
-        AppSetting::set('general', $data['general']);
+        $general = $data['general'];
+        $general['logo_url'] = AppSetting::get('general', self::GENERAL_DEFAULTS)['logo_url'] ?? null;
+        AppSetting::set('general', $general);
         AppSetting::set('points', $data['points']);
         AppSetting::set('notifications', $data['notifications']);
 
@@ -145,6 +149,46 @@ class SettingsController extends Controller
         }
 
         return response()->json(['message' => 'Đã lưu thay đổi cài đặt']);
+    }
+
+    public function uploadLogo(Request $request): JsonResponse
+    {
+        $request->validate([
+            'logo' => ['required', 'image', 'mimes:png,jpg,jpeg,svg,webp', 'max:2048'],
+        ], [
+            'logo.required' => 'Vui lòng chọn một tệp hình ảnh',
+            'logo.image' => 'Tệp phải là hình ảnh (PNG, JPG, SVG, WEBP)',
+            'logo.mimes' => 'Tệp phải là hình ảnh (PNG, JPG, SVG, WEBP)',
+            'logo.max' => 'Kích thước ảnh tối đa 2MB',
+        ]);
+
+        $general = AppSetting::get('general', self::GENERAL_DEFAULTS);
+
+        if (!empty($general['logo_url'])) {
+            $oldPath = str_replace('/storage/', '', $general['logo_url']);
+            Storage::disk('public')->delete($oldPath);
+        }
+
+        $path = $request->file('logo')->store('branding', 'public');
+        $general['logo_url'] = Storage::url($path);
+        AppSetting::set('general', $general);
+
+        return response()->json(['message' => 'Đã tải lên logo', 'logo_url' => $general['logo_url']]);
+    }
+
+    public function deleteLogo(): JsonResponse
+    {
+        $general = AppSetting::get('general', self::GENERAL_DEFAULTS);
+
+        if (!empty($general['logo_url'])) {
+            $oldPath = str_replace('/storage/', '', $general['logo_url']);
+            Storage::disk('public')->delete($oldPath);
+        }
+
+        $general['logo_url'] = null;
+        AppSetting::set('general', $general);
+
+        return response()->json(['message' => 'Đã xoá logo']);
     }
 
     private function initials(string $name): string
