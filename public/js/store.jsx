@@ -29,7 +29,44 @@ function directionsHref(s) {
     : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(s.addr)}`;
 }
 
-/* stylized map background */
+/* embedded Google Map, falls back to a stylized map when coordinates are missing */
+function MapView({ store, sel, switchStore }) {
+  if (store.lat == null || store.lng == null) {
+    return (
+      <div className="map">
+        <MapBg />
+        <div className="map-grad" />
+        {STORES.filter(s => s.id !== sel).map(s => (
+          <button key={s.id} className="dot-branch" style={{ left: s.x + "%", top: s.y + "%" }} onClick={() => switchStore(s.id)} title={s.short} />
+        ))}
+        <div className="pin" style={{ left: store.x + "%", top: store.y + "%" }}>
+          <div className="pin-head"><span className="pi"><Icon name="cup" size={20} color="#fff" /></span></div>
+          <span className="pin-pulse" />
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="map">
+      <iframe
+        className="map-iframe"
+        src={`https://www.google.com/maps?q=${store.lat},${store.lng}&z=16&output=embed`}
+        loading="lazy"
+        referrerPolicy="no-referrer-when-downgrade"
+        title={`Bản đồ ${store.name}`}
+      />
+      <div className="map-grad" />
+      <div className="map-ctrls">
+        <a className="map-ctrl" href={directionsHref(store)} target="_blank" rel="noreferrer" title="Mở trong Google Maps">
+          <Icon name="nav" size={18} />
+        </a>
+      </div>
+    </div>
+  );
+}
+
+/* stylized map background, used as a fallback when a store has no coordinates */
 function MapBg() {
   return (
     <svg viewBox="0 0 400 300" preserveAspectRatio="xMidYMid slice">
@@ -103,24 +140,7 @@ function App() {
       </header>
 
       {/* map */}
-      <div className="map">
-        <MapBg />
-        <div className="map-grad" />
-        {STORES.filter(s => s.id !== sel).map(s => (
-          <button key={s.id} className="dot-branch" style={{ left: s.x + "%", top: s.y + "%" }} onClick={() => switchStore(s.id)} title={s.short} />
-        ))}
-        <div className="pin" style={{ left: store.x + "%", top: store.y + "%" }}>
-          <div className="pin-head"><span className="pi"><Icon name="cup" size={20} color="#fff" /></span></div>
-          <span className="pin-pulse" />
-        </div>
-        <div className="map-ctrls">
-          <div className="map-zoom">
-            <button style={{ fontSize: 21, fontWeight: 700, fontFamily: "var(--display)" }}>+</button>
-            <button style={{ fontSize: 21, fontWeight: 700, fontFamily: "var(--display)" }}>−</button>
-          </div>
-          <button className="map-ctrl" title="Vị trí của tôi"><Icon name="nav" size={18} /></button>
-        </div>
-      </div>
+      <MapView store={store} sel={sel} switchStore={switchStore} />
 
       <main className="app">
         <div className="body">
