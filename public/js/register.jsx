@@ -1,4 +1,4 @@
-/* global React, ReactDOM, Icon, useTweaks, TweaksPanel, TweakSection, TweakColor, TweakToggle */
+/* global React, ReactDOM, Icon, useTweaks, TweaksPanel, TweakSection, TweakColor, TweakToggle, NAV_URLS */
 const { useState, useEffect } = React;
 
 const TW_DEFAULTS = /*EDITMODE-BEGIN*/{
@@ -262,7 +262,7 @@ function App() {
           {step === 1 && <SuccessStep data={data} redirect={redirect} />}
         </div>
 
-        {step === 0 && <div className="foot-note">Đã có tài khoản? <a href="#">Đăng nhập</a></div>}
+        {step === 0 && <div className="foot-note">Đã có tài khoản? <a href={NAV_URLS.login}>Đăng nhập</a></div>}
       </div>
 
       {push && <PushDemo onClose={() => setPush(false)} />}

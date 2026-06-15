@@ -147,16 +147,16 @@ function fmt(n) { return n.toLocaleString("vi-VN"); }
 /* ---------------- Shared navigation map ---------------- */
 const NAV_URLS = {
   // customer
-  register: "Laboong Register.html",
-  login: "Laboong Login.html",
+  register: "/register",
+  login: "/login",
   home: "/",
   points: "/points",
   catalog: "/rewards",
   wallet: "/rewards/wallet",
-  history: "Laboong Transaction History.html",
+  history: "/points",
   profile: "/profile",
   store: "/store",
-  pos: "Laboong POS Tích điểm.html",
+  pos: "/pos/points",
   // admin
   adminHome: "/admin",
   adminCustomers: "/admin/customers",

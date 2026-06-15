@@ -1,4 +1,4 @@
-/* global React, ReactDOM, Icon, useTweaks, TweaksPanel, TweakSection, TweakColor, TweakToggle */
+/* global React, ReactDOM, Icon, useTweaks, TweaksPanel, TweakSection, TweakColor, TweakToggle, NAV_URLS */
 const { useState, useEffect } = React;
 
 const TW_DEFAULTS = /*EDITMODE-BEGIN*/{
@@ -135,7 +135,7 @@ function App() {
               {notReg && (
                 <div className="notice">
                   <Icon name="info" size={17} color="var(--brand)" />
-                  <span>Số <b>+84 {prettyPhone(phone)}</b> chưa có tài khoản. <a href="Laboong Register.html">Đăng ký ngay →</a></span>
+                  <span>Số <b>+84 {prettyPhone(phone)}</b> chưa có tài khoản. <a href={NAV_URLS.register}>Đăng ký ngay →</a></span>
                 </div>
               )}
 
@@ -154,7 +154,7 @@ function App() {
           {phase === "success" && <SuccessStep redirect={redirect} />}
         </div>
 
-        {phase === "login" && <div className="foot-note">Chưa có tài khoản? <a href="Laboong Register.html">Đăng ký</a></div>}
+        {phase === "login" && <div className="foot-note">Chưa có tài khoản? <a href={NAV_URLS.register}>Đăng ký</a></div>}
       </div>
 
       <TweaksPanel>
