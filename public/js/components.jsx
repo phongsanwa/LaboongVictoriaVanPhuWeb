@@ -147,22 +147,23 @@ function fmt(n) { return n.toLocaleString("vi-VN"); }
 /* ---------------- Shared navigation map ---------------- */
 const NAV_URLS = {
   // customer
-  register: "Laboong Register.html",
-  login: "Laboong Login.html",
+  register: "/register",
+  login: "/login",
   home: "/",
   points: "/points",
   catalog: "/rewards",
   wallet: "/rewards/wallet",
-  history: "Laboong Transaction History.html",
+  history: "/points",
   profile: "/profile",
   store: "/store",
-  pos: "Laboong POS Tích điểm.html",
+  pos: "/pos/points",
   // admin
   adminHome: "/admin",
   adminCustomers: "/admin/customers",
   adminPoints: "/admin/points",
   adminRewards: "/admin/rewards",
   adminCampaigns: "/admin/campaigns",
+  adminStores: "/admin/stores",
   adminRoles: "/admin/roles",
   adminSettings: "/admin/settings",
 };
@@ -172,6 +173,7 @@ const ADMIN_NAV_HREF = {
   "Điểm & giao dịch": NAV_URLS.adminPoints,
   "Đổi quà": NAV_URLS.adminRewards,
   "Chiến dịch": NAV_URLS.adminCampaigns,
+  "Cửa hàng": NAV_URLS.adminStores,
   "Phân quyền": NAV_URLS.adminRoles,
   "Cài đặt": NAV_URLS.adminSettings,
 };

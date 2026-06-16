@@ -7,6 +7,7 @@ use App\Http\Controllers\Admin\PointsController;
 use App\Http\Controllers\Admin\RewardsController;
 use App\Http\Controllers\Admin\RolesController;
 use App\Http\Controllers\Admin\SettingsController;
+use App\Http\Controllers\Admin\StoresController;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(function () {
@@ -35,4 +36,9 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
     Route::delete('/settings/logo', [SettingsController::class, 'deleteLogo'])->name('settings.logo.delete');
     Route::post('/settings/favicon', [SettingsController::class, 'uploadFavicon'])->name('settings.favicon.upload');
     Route::delete('/settings/favicon', [SettingsController::class, 'deleteFavicon'])->name('settings.favicon.delete');
+    Route::get('/stores', [StoresController::class, 'index'])->name('stores.index');
+    Route::post('/stores', [StoresController::class, 'store'])->name('stores.store');
+    Route::put('/stores/{store}', [StoresController::class, 'update'])->name('stores.update');
+    Route::post('/stores/{store}/toggle', [StoresController::class, 'toggle'])->name('stores.toggle');
+    Route::delete('/stores/{store}', [StoresController::class, 'destroy'])->name('stores.destroy');
 });

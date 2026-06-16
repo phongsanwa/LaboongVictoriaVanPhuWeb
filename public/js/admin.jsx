@@ -121,6 +121,7 @@ function App() {
     { ic: "receipt", label: "Điểm & giao dịch" },
     { ic: "gift", label: "Đổi quà" },
     { ic: "mega", label: "Chiến dịch" },
+    { ic: "pin", label: "Cửa hàng" },
     { ic: "shield", label: "Phân quyền" },
   ];
 

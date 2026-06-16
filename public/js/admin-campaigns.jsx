@@ -155,6 +155,7 @@ function CampaignsApp() {
     { ic: "receipt", label: "Điểm & giao dịch" },
     { ic: "gift", label: "Đổi quà" },
     { ic: "mega", label: "Chiến dịch", on: true, badge: String(items.length) },
+    { ic: "pin", label: "Cửa hàng" },
     { ic: "shield", label: "Phân quyền" },
   ];
 
