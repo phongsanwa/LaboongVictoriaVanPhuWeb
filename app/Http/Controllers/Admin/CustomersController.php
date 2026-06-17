@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Customer;
 use App\Models\CustomerTier;
 use App\Models\Store;
+use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
 
@@ -91,11 +92,15 @@ class CustomersController extends Controller
 
             return [
                 'id' => 'KH' . (1000 + $c->id),
+                'customerId' => $c->id,
                 'name' => $c->user->name,
                 'phone' => $c->user->phone,
                 'email' => $c->user->email,
                 'points' => $c->total_points,
                 'store' => $c->store->name ?? '—',
+                'store_id' => $c->store_id,
+                'date_of_birth' => $c->date_of_birth?->toDateString(),
+                'gender' => $c->gender,
                 'status' => $c->user->status === 'active' ? 'on' : 'off',
                 'visits' => $c->transactions_count,
                 'tier' => $tierMeta[$c->tier_id]['key'] ?? 'bac',
@@ -120,11 +125,81 @@ class CustomersController extends Controller
                     'initials' => $this->initials($admin->name),
                 ],
                 'tiers' => $tierMeta->values(),
-                'stores' => $stores->pluck('name'),
+                'stores' => $stores->map(fn ($s) => ['id' => $s->id, 'name' => $s->name])->values(),
                 'customers' => $customerRows,
                 'stats' => $stats,
             ],
         ]);
+    }
+
+    public function update(Request $request, Customer $customer)
+    {
+        $data = $request->validate([
+            'name'          => ['required', 'string', 'max:255'],
+            'email'         => ['nullable', 'email', 'max:255'],
+            'phone'         => ['required', 'string', 'max:20'],
+            'store_id'      => ['nullable', 'integer', 'exists:stores,id'],
+            'date_of_birth' => ['nullable', 'date'],
+            'gender'        => ['nullable', 'in:male,female,other'],
+            'status'        => ['required', 'in:active,inactive'],
+        ], [
+            'name.required'  => 'Vui lòng nhập tên',
+            'phone.required' => 'Vui lòng nhập số điện thoại',
+            'email.email'    => 'Email không hợp lệ',
+        ]);
+
+        $customer->user->update([
+            'name'   => $data['name'],
+            'email'  => $data['email'] ?? null,
+            'phone'  => $data['phone'],
+            'status' => $data['status'],
+        ]);
+
+        $customer->update([
+            'store_id'      => $data['store_id'] ?? $customer->store_id,
+            'date_of_birth' => $data['date_of_birth'] ?? null,
+            'gender'        => $data['gender'] ?? null,
+        ]);
+
+        return response()->json(['customer' => $this->present($customer->fresh(['user', 'store', 'tier']))]);
+    }
+
+    public function toggle(Customer $customer)
+    {
+        $user = $customer->user;
+        $user->status = $user->status === 'active' ? 'inactive' : 'active';
+        $user->save();
+
+        return response()->json(['customer' => $this->present($customer->fresh(['user', 'store', 'tier']))]);
+    }
+
+    private function present(Customer $c): array
+    {
+        $tiers = CustomerTier::orderBy('level')->get();
+        $tierMeta = $tiers->mapWithKeys(function ($t) {
+            $cls = self::TIER_CLASSES[$t->level] ?? ['key' => 'tier' . $t->level, 'cls' => 'tier-dong'];
+
+            return [$t->id => ['key' => $cls['key'], 'label' => preg_replace('/^Hạng\s+/u', '', $t->name)]];
+        });
+
+        return [
+            'id'         => 'KH' . (1000 + $c->id),
+            'customerId' => $c->id,
+            'name'       => $c->user->name,
+            'phone'      => $c->user->phone,
+            'email'      => $c->user->email ?? '',
+            'points'     => $c->total_points,
+            'store'      => $c->store->name ?? '—',
+            'store_id'   => $c->store_id,
+            'status'     => $c->user->status === 'active' ? 'on' : 'off',
+            'visits'     => $c->transactions_count ?? 0,
+            'tier'       => $tierMeta[$c->tier_id]['key'] ?? 'bac',
+            'joined'     => $c->created_at->toDateString(),
+            'spent'      => (float) $c->total_spent,
+            'date_of_birth' => $c->date_of_birth?->toDateString(),
+            'gender'     => $c->gender,
+            'tx'         => [],
+        ];
     }
 
     private function daysAgo(Carbon $ts, Carbon $now): string

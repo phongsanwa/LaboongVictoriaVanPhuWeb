@@ -13,6 +13,8 @@ use Illuminate\Support\Facades\Route;
 Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(function () {
     Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
     Route::get('/customers', [CustomersController::class, 'index'])->name('customers.index');
+    Route::put('/customers/{customer}', [CustomersController::class, 'update'])->name('customers.update');
+    Route::post('/customers/{customer}/toggle', [CustomersController::class, 'toggle'])->name('customers.toggle');
     Route::get('/points', [PointsController::class, 'index'])->name('points.index');
     Route::post('/points/adjust', [PointsController::class, 'adjust'])->name('points.adjust');
     Route::get('/rewards', [RewardsController::class, 'index'])->name('rewards.index');
