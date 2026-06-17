@@ -7,6 +7,7 @@ use App\Models\Staff;
 use App\Models\Store;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Storage;
 
 class StoresController extends Controller
 {
@@ -60,9 +61,48 @@ class StoresController extends Controller
             ], 422);
         }
 
+        foreach ($store->photos ?? [] as $url) {
+            $this->deletePhotoFile($url);
+        }
+
         $store->delete();
 
         return response()->json(['message' => 'Đã xoá cửa hàng']);
+    }
+
+    public function uploadPhoto(Request $request, Store $store)
+    {
+        $request->validate([
+            'photo' => ['required', 'image', 'max:4096', 'mimes:jpg,jpeg,png,webp'],
+        ], [
+            'photo.image' => 'File phải là hình ảnh',
+            'photo.max'   => 'Ảnh tối đa 4MB',
+            'photo.mimes' => 'Định dạng hỗ trợ: JPG, PNG, WebP',
+        ]);
+
+        $path  = $request->file('photo')->store("stores/{$store->id}", 'public');
+        $url   = '/storage/' . $path;
+        $photos = array_values(array_merge($store->photos ?? [], [$url]));
+        $store->update(['photos' => $photos]);
+
+        return response()->json(['store' => $this->present($store)]);
+    }
+
+    public function deletePhoto(Request $request, Store $store)
+    {
+        $url    = $request->input('url');
+        $photos = array_values(array_filter($store->photos ?? [], fn ($p) => $p !== $url));
+        $store->update(['photos' => $photos]);
+        $this->deletePhotoFile($url);
+
+        return response()->json(['store' => $this->present($store)]);
+    }
+
+    private function deletePhotoFile(string $url): void
+    {
+        if (str_starts_with($url, '/storage/')) {
+            Storage::disk('public')->delete(ltrim(substr($url, strlen('/storage')), '/'));
+        }
     }
 
     private function validated(Request $request): array
@@ -129,9 +169,10 @@ class StoresController extends Controller
             'opening_time' => substr((string) $store->opening_time, 0, 5),
             'closing_time' => substr((string) $store->closing_time, 0, 5),
             'operating_days' => $store->operating_days ?? [],
-            'status' => $store->status,
-            'staffCount' => $store->staff_count,
-            'customerCount' => $store->customers_count,
+            'photos'         => $store->photos ?? [],
+            'status'         => $store->status,
+            'staffCount'     => $store->staff_count,
+            'customerCount'  => $store->customers_count,
         ];
     }
 

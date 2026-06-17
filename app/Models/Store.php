@@ -19,6 +19,7 @@ class Store extends Model
         'closing_time',
         'operating_days',
         'qr_code_url',
+        'photos',
         'status',
     ];
 
@@ -26,8 +27,9 @@ class Store extends Model
     {
         return [
             'operating_days' => 'array',
-            'latitude' => 'decimal:8',
-            'longitude' => 'decimal:8',
+            'photos'         => 'array',
+            'latitude'       => 'decimal:8',
+            'longitude'      => 'decimal:8',
         ];
     }
 

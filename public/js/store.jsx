@@ -230,13 +230,30 @@ function App() {
           <section className="sec">
             <div className="sec-t">Hình ảnh cửa hàng</div>
             <div className="photos">
-              {PHOTO_GRADS.map((g, i) => (
-                <div className="photo" key={i} style={{ background: g }}>
-                  <Icon name={i === 1 ? "cup" : i === 2 ? "gift" : "image"} size={i === 0 ? 36 : 26} color="rgba(255,255,255,.85)" />
-                  <span className="pl">{PHOTO_LABELS[i]}</span>
-                  {i === 3 && <div className="more">+12</div>}
-                </div>
-              ))}
+              {store.photos && store.photos.length > 0 ? (
+                <>
+                  {store.photos.slice(0, 4).map((url, i) => (
+                    <div className="photo" key={i} style={{ backgroundImage: `url(${url})`, backgroundSize: "cover", backgroundPosition: "center" }}>
+                      {i === 3 && store.photos.length > 4 && (
+                        <div className="more">+{store.photos.length - 4}</div>
+                      )}
+                    </div>
+                  ))}
+                  {store.photos.length < 4 && PHOTO_GRADS.slice(store.photos.length, 4).map((g, i) => (
+                    <div className="photo" key={"ph-" + i} style={{ background: g }}>
+                      <Icon name="image" size={26} color="rgba(255,255,255,.85)" />
+                      <span className="pl">{PHOTO_LABELS[store.photos.length + i]}</span>
+                    </div>
+                  ))}
+                </>
+              ) : (
+                PHOTO_GRADS.map((g, i) => (
+                  <div className="photo" key={i} style={{ background: g }}>
+                    <Icon name={i === 1 ? "cup" : i === 2 ? "gift" : "image"} size={i === 0 ? 36 : 26} color="rgba(255,255,255,.85)" />
+                    <span className="pl">{PHOTO_LABELS[i]}</span>
+                  </div>
+                ))
+              )}
             </div>
           </section>
 

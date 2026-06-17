@@ -523,6 +523,15 @@ table.tbl { width: 100%; border-collapse: collapse; min-width: 840px; table-layo
 .switch::after { content: ""; position: absolute; top: 3px; left: 3px; width: 21px; height: 21px; border-radius: 50%; background: #fff; transition: .18s; box-shadow: 0 1px 3px rgba(0,0,0,.2); }
 .switch.on { background: var(--brand); } .switch.on::after { transform: translateX(19px); }
 
+/* ---- store photo grid ---- */
+.photo-grid { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 6px; }
+.photo-thumb { width: 80px; height: 80px; border-radius: var(--r-sm); background-size: cover; background-position: center; position: relative; border: 1px solid var(--line); }
+.photo-del { position: absolute; top: 3px; right: 3px; width: 20px; height: 20px; border-radius: 50%; background: rgba(0,0,0,.55); border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; padding: 0; opacity: 0; transition: opacity .15s; }
+.photo-thumb:hover .photo-del { opacity: 1; }
+.photo-add { width: 80px; height: 80px; border-radius: var(--r-sm); border: 1.5px dashed var(--line); background: var(--bg-2); cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; color: var(--ink-2); font-size: 11px; transition: border-color .15s, color .15s; }
+.photo-add:hover:not(:disabled) { border-color: var(--brand); color: var(--brand); }
+.photo-add:disabled { opacity: .5; cursor: not-allowed; }
+
 /* ---- confirm dialog ---- */
 .confirm { max-width: 400px; text-align: center; padding: 26px 24px 22px; }
 .confirm .ci { width: 56px; height: 56px; border-radius: 50%; background: color-mix(in srgb,var(--danger) 12%, var(--panel)); color: var(--danger); display: grid; place-items: center; margin: 0 auto 14px; }

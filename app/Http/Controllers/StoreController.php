@@ -64,10 +64,11 @@ class StoreController extends Controller
                 'operatingDays' => $days,
                 'isOpenNow' => $isOpen,
                 'km' => $km,
-                'rating' => round(4.5 + ($store->id % 5) * 0.1, 1),
+                'photos'  => $store->photos ?? [],
+                'rating'  => round(4.5 + ($store->id % 5) * 0.1, 1),
                 'reviews' => 180 + ($store->id * 71) % 400,
-                'x' => $x,
-                'y' => $y,
+                'x'       => $x,
+                'y'       => $y,
             ];
         })->all();
 

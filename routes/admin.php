@@ -41,4 +41,6 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
     Route::put('/stores/{store}', [StoresController::class, 'update'])->name('stores.update');
     Route::post('/stores/{store}/toggle', [StoresController::class, 'toggle'])->name('stores.toggle');
     Route::delete('/stores/{store}', [StoresController::class, 'destroy'])->name('stores.destroy');
+    Route::post('/stores/{store}/photos', [StoresController::class, 'uploadPhoto'])->name('stores.photos.upload');
+    Route::delete('/stores/{store}/photos', [StoresController::class, 'deletePhoto'])->name('stores.photos.delete');
 });

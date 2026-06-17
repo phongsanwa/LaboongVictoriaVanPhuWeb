@@ -1,5 +1,9 @@
 /* global React, Icon */
-const { useState: useStateSt, useEffect: useEffectSt } = React;
+const { useState: useStateSt, useEffect: useEffectSt, useRef: useRefSt } = React;
+
+function csrfTokenSt() {
+  return document.querySelector('meta[name="csrf-token"]')?.content || "";
+}
 
 const STORE_DAYS = ["Thứ 2", "Thứ 3", "Thứ 4", "Thứ 5", "Thứ 6", "Thứ 7", "Chủ nhật"];
 
@@ -16,6 +20,9 @@ function StoreEditor({ initial, onClose, onSave }) {
   const [closingTime, setClosingTime] = useStateSt(initial?.closing_time || "22:00");
   const [days, setDays] = useStateSt(initial?.operating_days ?? [0, 1, 2, 3, 4, 5, 6]);
   const [status, setStatus] = useStateSt(initial ? initial.status === "active" : true);
+  const [photos, setPhotos] = useStateSt(initial?.photos ?? []);
+  const [photoUploading, setPhotoUploading] = useStateSt(false);
+  const photoRef = useRefSt(null);
 
   useEffectSt(() => {
     const h = (e) => { if (e.key === "Escape") onClose(); };
@@ -25,6 +32,31 @@ function StoreEditor({ initial, onClose, onSave }) {
 
   const toggleDay = (i) => {
     setDays(d => d.includes(i) ? d.filter(x => x !== i) : [...d, i].sort());
+  };
+
+  const uploadPhoto = async (e) => {
+    const f = e.target.files?.[0]; if (!f) return;
+    e.target.value = "";
+    setPhotoUploading(true);
+    const form = new FormData();
+    form.append("photo", f);
+    form.append("_token", csrfTokenSt());
+    const res = await fetch(`/admin/stores/${initial.id}/photos`, {
+      method: "POST", body: form, headers: { "Accept": "application/json", "X-CSRF-TOKEN": csrfTokenSt() },
+    });
+    const body = await res.json().catch(() => ({}));
+    if (res.ok) setPhotos(body.store?.photos ?? []);
+    setPhotoUploading(false);
+  };
+
+  const deletePhoto = async (url) => {
+    const res = await fetch(`/admin/stores/${initial.id}/photos`, {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json", "Accept": "application/json", "X-CSRF-TOKEN": csrfTokenSt() },
+      body: JSON.stringify({ url }),
+    });
+    const body = await res.json().catch(() => ({}));
+    if (res.ok) setPhotos(body.store?.photos ?? []);
   };
 
   const valid = name.trim() && address.trim() && city.trim() && phone.trim()
@@ -114,6 +146,28 @@ function StoreEditor({ initial, onClose, onSave }) {
               ))}
             </div>
           </div>
+
+          {isEdit && (
+            <div className="fld">
+              <label>Hình ảnh cửa hàng</label>
+              <div className="photo-grid">
+                {photos.map((url, i) => (
+                  <div className="photo-thumb" key={i} style={{ backgroundImage: `url(${url})` }}>
+                    <button className="photo-del" onClick={() => deletePhoto(url)} title="Xoá ảnh">
+                      <Icon name="close" size={13} color="#fff" />
+                    </button>
+                  </div>
+                ))}
+                <button className="photo-add" onClick={() => photoRef.current?.click()} disabled={photoUploading} title="Thêm ảnh">
+                  {photoUploading
+                    ? <span className="spin" style={{ width: 20, height: 20, borderWidth: 2 }} />
+                    : <><Icon name="plus" size={20} /><span>Thêm ảnh</span></>}
+                </button>
+                <input ref={photoRef} type="file" accept="image/jpeg,image/png,image/webp" hidden onChange={uploadPhoto} />
+              </div>
+              <div style={{ fontSize: 12, color: "var(--ink-3)", marginTop: 6 }}>JPG, PNG, WebP — tối đa 4MB mỗi ảnh</div>
+            </div>
+          )}
 
           <div className="switch-row" onClick={() => setStatus(s => !s)} style={{ cursor: "pointer" }}>
             <div>
