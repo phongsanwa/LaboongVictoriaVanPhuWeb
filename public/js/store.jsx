@@ -103,6 +103,8 @@ function App() {
   const [fav, setFav] = useState(false);
   const [hoursOpen, setHoursOpen] = useState(false);
 
+  const [toast, setToast] = useState(null);
+
   useEffect(() => {
     const r = document.documentElement;
     const [b, d] = Array.isArray(tw.brand) ? tw.brand : [tw.brand, tw.brand];
@@ -113,6 +115,22 @@ function App() {
 
   const store = STORES.find(s => s.id === sel);
   const switchStore = (id) => { setSel(id); setHoursOpen(false); window.scrollTo({ top: 0, behavior: "smooth" }); };
+
+  const flash = (msg) => { setToast(msg); setTimeout(() => setToast(null), 2500); };
+
+  const shareStore = async (s) => {
+    const url = window.location.href;
+    const text = `${s.name} — ${s.addr}`;
+    if (navigator.share) {
+      try { await navigator.share({ title: s.name, text, url }); return; } catch (e) { if (e.name === "AbortError") return; }
+    }
+    try {
+      await navigator.clipboard.writeText(url);
+      flash("Đã sao chép liên kết cửa hàng");
+    } catch {
+      flash("Không thể sao chép, vui lòng copy thủ công");
+    }
+  };
 
   if (!store) {
     return (
@@ -135,7 +153,7 @@ function App() {
           <button className={"hbtn" + (fav ? " on" : "")} onClick={() => setFav(f => !f)} title="Lưu cửa hàng">
             <Icon name={fav ? "heartfill" : "heart"} size={19} color={fav ? "var(--pink)" : "currentColor"} />
           </button>
-          <button className="hbtn"><Icon name="share" size={18} /></button>
+          <button className="hbtn" onClick={() => shareStore(store)} title="Chia sẻ cửa hàng"><Icon name="share" size={18} /></button>
         </div>
       </header>
 
@@ -161,7 +179,7 @@ function App() {
                 <Icon name="nav" size={18} color="#fff" /> Chỉ đường{store.km != null ? ` · ${store.km} km` : ""}
               </a>
               <a className="act ghost" href={"tel:" + store.phone.replace(/\s/g, "")}><Icon name="phone" size={19} /> Gọi</a>
-              <button className="act ghost"><Icon name="share" size={18} /> Chia sẻ</button>
+              <button className="act ghost" onClick={() => shareStore(store)}><Icon name="share" size={18} /> Chia sẻ</button>
             </div>
           </section>
 
@@ -212,13 +230,30 @@ function App() {
           <section className="sec">
             <div className="sec-t">Hình ảnh cửa hàng</div>
             <div className="photos">
-              {PHOTO_GRADS.map((g, i) => (
-                <div className="photo" key={i} style={{ background: g }}>
-                  <Icon name={i === 1 ? "cup" : i === 2 ? "gift" : "image"} size={i === 0 ? 36 : 26} color="rgba(255,255,255,.85)" />
-                  <span className="pl">{PHOTO_LABELS[i]}</span>
-                  {i === 3 && <div className="more">+12</div>}
-                </div>
-              ))}
+              {store.photos && store.photos.length > 0 ? (
+                <>
+                  {store.photos.slice(0, 4).map((url, i) => (
+                    <div className="photo" key={i} style={{ backgroundImage: `url(${url})`, backgroundSize: "cover", backgroundPosition: "center" }}>
+                      {i === 3 && store.photos.length > 4 && (
+                        <div className="more">+{store.photos.length - 4}</div>
+                      )}
+                    </div>
+                  ))}
+                  {store.photos.length < 4 && PHOTO_GRADS.slice(store.photos.length, 4).map((g, i) => (
+                    <div className="photo" key={"ph-" + i} style={{ background: g }}>
+                      <Icon name="image" size={26} color="rgba(255,255,255,.85)" />
+                      <span className="pl">{PHOTO_LABELS[store.photos.length + i]}</span>
+                    </div>
+                  ))}
+                </>
+              ) : (
+                PHOTO_GRADS.map((g, i) => (
+                  <div className="photo" key={i} style={{ background: g }}>
+                    <Icon name={i === 1 ? "cup" : i === 2 ? "gift" : "image"} size={i === 0 ? 36 : 26} color="rgba(255,255,255,.85)" />
+                    <span className="pl">{PHOTO_LABELS[i]}</span>
+                  </div>
+                ))
+              )}
             </div>
           </section>
 
@@ -247,6 +282,8 @@ function App() {
           )}
         </div>
       </main>
+
+      {toast && <div className="toast"><span className="tc"><Icon name="check" size={15} color="#fff" /></span>{toast}</div>}
 
       <TweaksPanel>
         <TweakSection label="Giao diện" />

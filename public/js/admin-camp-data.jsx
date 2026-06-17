@@ -14,8 +14,9 @@ const CAMP_STATUS = {
   draft:     { label: "Bản nháp",    cls: "cs-draft" },
 };
 
-const ADMIN_CAMPAIGNS_DATA = window.ADMIN_CAMPAIGNS_DATA || { admin: null, campaigns: [], audiences: {} };
+const ADMIN_CAMPAIGNS_DATA = window.ADMIN_CAMPAIGNS_DATA || { admin: null, campaigns: [], audiences: {}, rewards: [] };
 const CAMPAIGNS = ADMIN_CAMPAIGNS_DATA.campaigns;
 const AUDIENCES = ADMIN_CAMPAIGNS_DATA.audiences;
+const CAMP_REWARDS = ADMIN_CAMPAIGNS_DATA.rewards;
 
-Object.assign(window, { CAMP_TYPES, AUDIENCES, CAMP_STATUS, CAMPAIGNS, ADMIN_CAMPAIGNS_DATA });
+Object.assign(window, { CAMP_TYPES, AUDIENCES, CAMP_STATUS, CAMPAIGNS, CAMP_REWARDS, ADMIN_CAMPAIGNS_DATA });

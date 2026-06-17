@@ -42,6 +42,7 @@ function App() {
   const [sort, setSort] = useState({ key: "points", dir: "desc" });
   const [page, setPage] = useState(1);
   const [sel, setSel] = useState(null);
+  const [customers, setCustomers] = useState(CUSTOMERS);
   const [sideOpen, setSideOpen] = useState(false);
   const [exp, setExp] = useState(false);
 
@@ -56,7 +57,7 @@ function App() {
 
   // filtering
   const filtered = useMemo(() => {
-    let rows = CUSTOMERS.filter(c => {
+    let rows = customers.filter(c => {
       if (tier !== "all" && c.tier !== tier) return false;
       if (store !== "all" && c.store !== store) return false;
       if (status !== "all" && c.status !== status) return false;
@@ -74,7 +75,7 @@ function App() {
       return 0;
     });
     return rows;
-  }, [q, tier, store, status, sort]);
+  }, [q, tier, store, status, sort, customers]);
 
   useEffect(() => { setPage(1); }, [q, tier, store, status]);
 
@@ -210,7 +211,7 @@ function App() {
                 <span className="flbl">Cửa hàng</span>
                 <select className="select" value={store} onChange={e => setStore(e.target.value)}>
                   <option value="all">Tất cả cửa hàng</option>
-                  {STORES.map(s => <option key={s} value={s}>{s}</option>)}
+                  {STORES.map(s => <option key={s.id ?? s} value={s.name ?? s}>{s.name ?? s}</option>)}
                 </select>
                 <span className="chev"><Icon name="chevdown" size={16} /></span>
               </div>
@@ -290,7 +291,10 @@ function App() {
       </div>
 
       {/* ---------- Detail drawer ---------- */}
-      {sel && <Drawer c={sel} onClose={() => setSel(null)} />}
+      {sel && <Drawer c={sel} onClose={() => setSel(null)} onCustomerUpdated={updated => {
+        setCustomers(cs => cs.map(c => c.customerId === updated.customerId ? { ...c, ...updated } : c));
+        setSel(prev => prev?.customerId === updated.customerId ? { ...prev, ...updated } : prev);
+      }} />}
 
       {/* ---------- Tweaks ---------- */}
       <TweaksPanel>

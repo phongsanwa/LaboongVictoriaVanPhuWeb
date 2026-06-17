@@ -44,7 +44,7 @@ const INITIAL = {
   name: PROFILE.member?.name || "",
   email: PROFILE.member?.email || "",
   dob: PROFILE.member?.dob || "",
-  avatar: null, // dataURL
+  avatar: PROFILE.member?.avatar_url || null,
   addresses: PROFILE.addresses || [],
   favorites: PROFILE.favorites || [],
 };
@@ -58,6 +58,7 @@ function App() {
   const [saved, setSaved] = useState(INITIAL);
   const [toast, setToast] = useState(null);
   const [addrModal, setAddrModal] = useState(null); // {edit?, label, name, text, def}
+  const [avatarUploading, setAvatarUploading] = useState(false);
   const fileRef = useRef(null);
 
   useEffect(() => {
@@ -80,12 +81,34 @@ function App() {
     location.href = NAV_URLS.login;
   };
 
-  const onAvatar = (e) => {
+  const onAvatar = async (e) => {
     const f = e.target.files?.[0]; if (!f) return;
+    e.target.value = "";
+    // preview locally first
     const reader = new FileReader();
     reader.onload = () => setData(d => ({ ...d, avatar: reader.result }));
     reader.readAsDataURL(f);
-    e.target.value = "";
+    // upload to server
+    setAvatarUploading(true);
+    const form = new FormData();
+    form.append("avatar", f);
+    form.append("_token", document.querySelector('meta[name="csrf-token"]')?.content || "");
+    try {
+      const res = await fetch("/profile/avatar", { method: "POST", body: form, headers: { "Accept": "application/json", "X-CSRF-TOKEN": document.querySelector('meta[name="csrf-token"]')?.content || "" } });
+      const body = await res.json().catch(() => ({}));
+      if (res.ok) {
+        setData(d => ({ ...d, avatar: body.avatar_url }));
+        setSaved(s => ({ ...s, avatar: body.avatar_url }));
+        flash("Đã cập nhật ảnh đại diện");
+      } else {
+        flash(body.message || "Không thể tải ảnh lên, vui lòng thử lại");
+        setData(d => ({ ...d, avatar: saved.avatar }));
+      }
+    } catch {
+      flash("Lỗi kết nối, vui lòng thử lại");
+      setData(d => ({ ...d, avatar: saved.avatar }));
+    }
+    setAvatarUploading(false);
   };
 
   const save = async () => {
@@ -151,7 +174,9 @@ function App() {
             <div className="avatar" style={data.avatar ? { backgroundImage: `url(${data.avatar})` } : { background: MEMBER.av }}>
               {!data.avatar && initials(data.name)}
             </div>
-            <button className="avatar-edit" onClick={() => fileRef.current?.click()} title="Đổi ảnh đại diện"><Icon name="camera" size={17} color="#fff" /></button>
+            <button className="avatar-edit" onClick={() => !avatarUploading && fileRef.current?.click()} title="Đổi ảnh đại diện" disabled={avatarUploading} style={avatarUploading ? { opacity: 0.6, cursor: "wait" } : {}}>
+              {avatarUploading ? <span className="spin" style={{ width: 17, height: 17, borderWidth: 2 }} /> : <Icon name="camera" size={17} color="#fff" />}
+            </button>
             <input ref={fileRef} type="file" accept="image/*" hidden onChange={onAvatar} />
           </div>
           <div className="pname">{data.name}</div>

@@ -1,12 +1,15 @@
-/* global React, Icon, CAMP_TYPES, AUDIENCES, fmt */
+/* global React, Icon, CAMP_TYPES, AUDIENCES, CAMP_REWARDS, fmt */
 const { useState: useStateW, useEffect: useEffectW } = React;
+
+const REWARD_CAT_LABEL = { drink: "Đồ uống", voucher: "Voucher", gift: "Quà tặng", upgrade: "Nâng cấp", tier_benefit: "Hạng thành viên" };
 
 function CampaignWizard({ initial, onClose, onSave }) {
   const isEdit = !!initial;
   const [step, setStep] = useStateW(0);
   const [name, setName] = useStateW(initial?.name || "");
   const [type, setType] = useStateW(initial?.type || "x2");
-  const [value, setValue] = useStateW(initial?.value || 25);
+  const [value, setValue] = useStateW(initial?.value || 2);
+  const [rewardId, setRewardId] = useStateW(initial?.reward_id ?? null);
   const [start, setStart] = useStateW(initial?.start || "2026-06-10");
   const [end, setEnd] = useStateW(initial?.end || "2026-06-30");
   const [condition, setCondition] = useStateW(initial?.condition || "");
@@ -22,17 +25,32 @@ function CampaignWizard({ initial, onClose, onSave }) {
   const t = CAMP_TYPES[type];
   const aud = AUDIENCES[audience];
 
-  const canNext = step === 0 ? name.trim() && start && end : true;
+  const selectedReward = CAMP_REWARDS.find(r => r.id === rewardId);
+
+  const canNext = step === 0
+    ? name.trim() && start && end
+    : step === 1 && type === "voucher"
+      ? rewardId !== null
+      : true;
+
   const fmtD = (iso) => { if (!iso) return "—"; const [y, m, d] = iso.split("-"); return `${d}/${m}/${y}`; };
 
   const submit = () => {
     onSave({
       ...(initial || {}),
-      name: name.trim(), type, value: type === "discount" ? Number(value) : undefined,
+      name: name.trim(), type,
+      value: (type === "discount" || type === "x2") ? Number(value) : undefined,
+      reward_id: type === "voucher" ? rewardId : undefined,
       start, end, condition: condition.trim() || CAMP_TYPES[type].label,
       audience, reach: AUDIENCES[audience].size,
     });
   };
+
+  /* group rewards by category for display */
+  const rewardsByCategory = CAMP_REWARDS.reduce((acc, r) => {
+    (acc[r.category] = acc[r.category] || []).push(r);
+    return acc;
+  }, {});
 
   return (
     <div className="modal-scrim" onClick={onClose}>
@@ -77,13 +95,18 @@ function CampaignWizard({ initial, onClose, onSave }) {
               <label>Loại chiến dịch</label>
               <div className="type-pick">
                 {Object.entries(CAMP_TYPES).map(([k, m]) => (
-                  <div key={k} className={"type-opt" + (type === k ? " on" : "")} onClick={() => setType(k)}>
+                  <div key={k} className={"type-opt" + (type === k ? " on" : "")} onClick={() => {
+                    setType(k);
+                    if (k === "x2") setValue(v => (v > 10 || v < 1) ? 2 : v);
+                    if (k === "discount") setValue(v => (v > 100 || v < 1) ? 25 : v);
+                  }}>
                     <div className="toi" style={{ background: m.grad }}><Icon name={m.ic} size={22} color="#fff" /></div>
                     <div className="tol">{m.label}</div>
                   </div>
                 ))}
               </div>
             </div>
+
             {type === "discount" && (
               <div className="fld">
                 <label>Mức giảm (%)</label>
@@ -91,16 +114,70 @@ function CampaignWizard({ initial, onClose, onSave }) {
                 <div className="chips">{[10, 15, 20, 25, 30, 40].map(v => <button key={v} className={"chip" + (Number(value) === v ? " on" : "")} onClick={() => setValue(v)}>{v}%</button>)}</div>
               </div>
             )}
+
             {type === "x2" && (
-              <div className="preview" style={{ marginTop: 4 }}>
-                <div className="pav" style={{ background: t.grad }}><Icon name="multiply" size={20} color="#fff" /></div>
-                <div><div className="pl">Cơ chế</div><div className="pcalc">Khách nhận <span className="to">gấp đôi điểm</span> mỗi giao dịch trong thời gian chiến dịch</div></div>
+              <div className="fld">
+                <label>Hệ số nhân điểm</label>
+                <div className="amt-row">
+                  <input className="inp" type="number" min="1.1" max="10" step="0.5" value={value}
+                    onChange={e => setValue(e.target.value.replace(/[^0-9.]/g, ""))} />
+                  <span style={{ marginLeft: 10, fontWeight: 700, color: "var(--brand)", fontSize: 15, whiteSpace: "nowrap" }}>× điểm</span>
+                </div>
+                <div className="chips">
+                  {[1.5, 2, 3, 4, 5].map(v => (
+                    <button key={v} className={"chip" + (Number(value) === v ? " on" : "")} onClick={() => setValue(v)}>{v}×</button>
+                  ))}
+                </div>
+                <div className="preview" style={{ marginTop: 12 }}>
+                  <div className="pav" style={{ background: t.grad }}><Icon name="multiply" size={20} color="#fff" /></div>
+                  <div>
+                    <div className="pl">Cơ chế</div>
+                    <div className="pcalc">Khách nhận <span className="to">{Number(value) === 2 ? "gấp đôi" : `gấp ${value} lần`} điểm</span> mỗi giao dịch trong thời gian chiến dịch</div>
+                  </div>
+                </div>
               </div>
             )}
+
             {type === "voucher" && (
-              <div className="preview" style={{ marginTop: 4 }}>
-                <div className="pav" style={{ background: t.grad }}><Icon name="ticket" size={20} color="#fff" /></div>
-                <div><div className="pl">Cơ chế</div><div className="pcalc">Tự động <span className="to">tặng voucher</span> cho khách thuộc đối tượng mục tiêu</div></div>
+              <div className="fld">
+                <label>Chọn voucher / phần thưởng tặng kèm <span style={{ color: "var(--danger, #E53935)", fontWeight: 700 }}>*</span></label>
+                {CAMP_REWARDS.length === 0
+                  ? <div className="preview" style={{ marginTop: 4 }}>
+                      <div className="pav" style={{ background: t.grad }}><Icon name="ticket" size={20} color="#fff" /></div>
+                      <div><div className="pl">Chưa có phần thưởng</div><div className="pcalc">Vui lòng tạo phần thưởng trong mục <b>Đổi quà</b> trước.</div></div>
+                    </div>
+                  : <>
+                      <div className="reward-pick">
+                        {Object.entries(rewardsByCategory).map(([cat, rewards]) => (
+                          <div key={cat}>
+                            <div className="reward-cat-hd">{REWARD_CAT_LABEL[cat] || cat}</div>
+                            {rewards.map(r => (
+                              <div key={r.id} className={"reward-opt" + (rewardId === r.id ? " on" : "")} onClick={() => setRewardId(r.id)}>
+                                <div className="reward-ic" style={{ background: "linear-gradient(135deg,#C99A2E,#E0B84A)" }}>
+                                  {r.image
+                                    ? <img src={r.image} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: 8 }} />
+                                    : <Icon name="ticket" size={18} color="#fff" />}
+                                </div>
+                                <div style={{ minWidth: 0, flex: 1 }}>
+                                  <div className="reward-name">{r.name}</div>
+                                  <div className="reward-pts">{fmt(r.points)} điểm</div>
+                                </div>
+                                <span className="radio" />
+                              </div>
+                            ))}
+                          </div>
+                        ))}
+                      </div>
+                      {selectedReward && (
+                        <div className="preview" style={{ marginTop: 10 }}>
+                          <div className="pav" style={{ background: t.grad }}><Icon name="ticket" size={20} color="#fff" /></div>
+                          <div>
+                            <div className="pl">Đã chọn</div>
+                            <div className="pcalc">Khách thuộc đối tượng sẽ nhận <span className="to">{selectedReward.name}</span> tự động trong thời gian chiến dịch</div>
+                          </div>
+                        </div>
+                      )}
+                    </>}
               </div>
             )}
           </>)}
@@ -124,7 +201,16 @@ function CampaignWizard({ initial, onClose, onSave }) {
             </div>
             <div className="review-box">
               <div className="rr"><span className="rk">Chiến dịch</span><span className="rv">{name || "—"}</span></div>
-              <div className="rr"><span className="rk">Loại</span><span className="rv">{t.label}{type === "discount" ? ` · ${value}%` : ""}</span></div>
+              <div className="rr">
+                <span className="rk">Loại</span>
+                <span className="rv">
+                  {t.label}
+                  {type === "discount" ? ` · ${value}%` : type === "x2" ? ` · ×${value}` : ""}
+                </span>
+              </div>
+              {type === "voucher" && selectedReward && (
+                <div className="rr"><span className="rk">Voucher</span><span className="rv">{selectedReward.name}</span></div>
+              )}
               <div className="rr"><span className="rk">Thời gian</span><span className="rv">{fmtD(start)} → {fmtD(end)}</span></div>
               <div className="rr"><span className="rk">Đối tượng</span><span className="rv">{aud.label} · {fmt(aud.size)} người</span></div>
             </div>

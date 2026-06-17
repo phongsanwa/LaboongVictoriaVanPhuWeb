@@ -13,6 +13,8 @@ use Illuminate\Support\Facades\Route;
 Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(function () {
     Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
     Route::get('/customers', [CustomersController::class, 'index'])->name('customers.index');
+    Route::put('/customers/{customer}', [CustomersController::class, 'update'])->name('customers.update');
+    Route::post('/customers/{customer}/toggle', [CustomersController::class, 'toggle'])->name('customers.toggle');
     Route::get('/points', [PointsController::class, 'index'])->name('points.index');
     Route::post('/points/adjust', [PointsController::class, 'adjust'])->name('points.adjust');
     Route::get('/rewards', [RewardsController::class, 'index'])->name('rewards.index');
@@ -41,4 +43,6 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
     Route::put('/stores/{store}', [StoresController::class, 'update'])->name('stores.update');
     Route::post('/stores/{store}/toggle', [StoresController::class, 'toggle'])->name('stores.toggle');
     Route::delete('/stores/{store}', [StoresController::class, 'destroy'])->name('stores.destroy');
+    Route::post('/stores/{store}/photos', [StoresController::class, 'uploadPhoto'])->name('stores.photos.upload');
+    Route::delete('/stores/{store}/photos', [StoresController::class, 'deletePhoto'])->name('stores.photos.delete');
 });
