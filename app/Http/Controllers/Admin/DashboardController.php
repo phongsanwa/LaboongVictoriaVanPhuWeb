@@ -341,7 +341,7 @@ class DashboardController extends Controller
 
     private function timeAgo(Carbon $ts, Carbon $now): string
     {
-        $minutes = $ts->diffInMinutes($now);
+        $minutes = (int) $ts->diffInMinutes($now);
         if ($minutes < 1) {
             return 'Vừa xong';
         }
@@ -349,7 +349,7 @@ class DashboardController extends Controller
             return $minutes . ' phút trước';
         }
 
-        $hours = $ts->diffInHours($now);
+        $hours = (int) $ts->diffInHours($now);
         if ($hours < 24) {
             return $hours . ' giờ trước';
         }
@@ -357,7 +357,7 @@ class DashboardController extends Controller
             return 'Hôm qua';
         }
 
-        return $ts->diffInDays($now) . ' ngày trước';
+        return (int) $ts->diffInDays($now) . ' ngày trước';
     }
 
     private function formatNumber($n): string
