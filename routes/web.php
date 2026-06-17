@@ -23,6 +23,7 @@ Route::middleware('auth')->prefix('rewards')->name('rewards.')->group(function (
 Route::middleware('auth')->prefix('profile')->name('profile.')->group(function () {
     Route::get('/', [ProfileController::class, 'show'])->name('show');
     Route::put('/', [ProfileController::class, 'update'])->name('update');
+    Route::post('/avatar', [ProfileController::class, 'uploadAvatar'])->name('avatar');
     Route::post('/addresses', [ProfileController::class, 'storeAddress'])->name('addresses.store');
     Route::put('/addresses/{address}', [ProfileController::class, 'updateAddress'])->name('addresses.update');
     Route::delete('/addresses/{address}', [ProfileController::class, 'destroyAddress'])->name('addresses.destroy');

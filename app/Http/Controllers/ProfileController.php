@@ -6,6 +6,7 @@ use App\Models\CustomerAddress;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 
 class ProfileController extends Controller
@@ -16,12 +17,13 @@ class ProfileController extends Controller
         $customer = $user->customer()->with(['tier', 'addresses'])->first();
 
         $member = [
-            'name' => $user->name,
-            'email' => $user->email,
-            'dob' => $customer?->date_of_birth?->toDateString(),
-            'phone' => $user->phone,
-            'tier' => $customer?->tier->name ?? '',
-            'id' => $customer?->referral_code ?? ('LBVP-' . str_pad((string) ($customer?->id ?? 0), 5, '0', STR_PAD_LEFT)),
+            'name'       => $user->name,
+            'email'      => $user->email,
+            'dob'        => $customer?->date_of_birth?->toDateString(),
+            'phone'      => $user->phone,
+            'tier'       => $customer?->tier->name ?? '',
+            'id'         => $customer?->referral_code ?? ('LBVP-' . str_pad((string) ($customer?->id ?? 0), 5, '0', STR_PAD_LEFT)),
+            'avatar_url' => $user->avatar_url,
         ];
 
         $addresses = ($customer?->addresses ?? collect())->map(fn (CustomerAddress $a) => [
@@ -71,6 +73,30 @@ class ProfileController extends Controller
         }
 
         return response()->json(['message' => 'Đã lưu thông tin cá nhân']);
+    }
+
+    public function uploadAvatar(Request $request): JsonResponse
+    {
+        $request->validate([
+            'avatar' => ['required', 'image', 'max:2048', 'mimes:jpg,jpeg,png,webp,gif'],
+        ], [
+            'avatar.image'  => 'File phải là hình ảnh',
+            'avatar.max'    => 'Ảnh tối đa 2MB',
+            'avatar.mimes'  => 'Định dạng hỗ trợ: JPG, PNG, WebP, GIF',
+        ]);
+
+        $user = Auth::user();
+
+        if ($user->avatar_url && str_starts_with($user->avatar_url, '/storage/avatars/')) {
+            Storage::disk('public')->delete('avatars/' . basename($user->avatar_url));
+        }
+
+        $path = $request->file('avatar')->store('avatars', 'public');
+        $url  = '/storage/' . $path;
+
+        $user->forceFill(['avatar_url' => $url])->save();
+
+        return response()->json(['avatar_url' => $url]);
     }
 
     public function storeAddress(Request $request): JsonResponse
