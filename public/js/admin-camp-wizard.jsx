@@ -6,7 +6,7 @@ function CampaignWizard({ initial, onClose, onSave }) {
   const [step, setStep] = useStateW(0);
   const [name, setName] = useStateW(initial?.name || "");
   const [type, setType] = useStateW(initial?.type || "x2");
-  const [value, setValue] = useStateW(initial?.value || 25);
+  const [value, setValue] = useStateW(initial?.value || 2);
   const [start, setStart] = useStateW(initial?.start || "2026-06-10");
   const [end, setEnd] = useStateW(initial?.end || "2026-06-30");
   const [condition, setCondition] = useStateW(initial?.condition || "");
@@ -28,7 +28,7 @@ function CampaignWizard({ initial, onClose, onSave }) {
   const submit = () => {
     onSave({
       ...(initial || {}),
-      name: name.trim(), type, value: type === "discount" ? Number(value) : undefined,
+      name: name.trim(), type, value: (type === "discount" || type === "x2") ? Number(value) : undefined,
       start, end, condition: condition.trim() || CAMP_TYPES[type].label,
       audience, reach: AUDIENCES[audience].size,
     });
@@ -77,7 +77,7 @@ function CampaignWizard({ initial, onClose, onSave }) {
               <label>Loại chiến dịch</label>
               <div className="type-pick">
                 {Object.entries(CAMP_TYPES).map(([k, m]) => (
-                  <div key={k} className={"type-opt" + (type === k ? " on" : "")} onClick={() => setType(k)}>
+                  <div key={k} className={"type-opt" + (type === k ? " on" : "")} onClick={() => { setType(k); if (k === "x2") setValue(v => (v > 10 || v < 1) ? 2 : v); if (k === "discount") setValue(v => (v > 100 || v < 1) ? 25 : v); }}>
                     <div className="toi" style={{ background: m.grad }}><Icon name={m.ic} size={22} color="#fff" /></div>
                     <div className="tol">{m.label}</div>
                   </div>
@@ -92,9 +92,29 @@ function CampaignWizard({ initial, onClose, onSave }) {
               </div>
             )}
             {type === "x2" && (
-              <div className="preview" style={{ marginTop: 4 }}>
-                <div className="pav" style={{ background: t.grad }}><Icon name="multiply" size={20} color="#fff" /></div>
-                <div><div className="pl">Cơ chế</div><div className="pcalc">Khách nhận <span className="to">gấp đôi điểm</span> mỗi giao dịch trong thời gian chiến dịch</div></div>
+              <div className="fld">
+                <label>Hệ số nhân điểm</label>
+                <div className="amt-row">
+                  <input className="inp" type="number" min="1.1" max="10" step="0.5" value={value}
+                    onChange={e => setValue(e.target.value.replace(/[^0-9.]/g, ""))} />
+                  <span style={{ marginLeft: 10, fontWeight: 700, color: "var(--brand)", fontSize: 15, whiteSpace: "nowrap" }}>× điểm</span>
+                </div>
+                <div className="chips">
+                  {[1.5, 2, 3, 4, 5].map(v => (
+                    <button key={v} className={"chip" + (Number(value) === v ? " on" : "")} onClick={() => setValue(v)}>
+                      {v}×
+                    </button>
+                  ))}
+                </div>
+                <div className="preview" style={{ marginTop: 12 }}>
+                  <div className="pav" style={{ background: t.grad }}><Icon name="multiply" size={20} color="#fff" /></div>
+                  <div>
+                    <div className="pl">Cơ chế</div>
+                    <div className="pcalc">
+                      Khách nhận <span className="to">{Number(value) === 2 ? "gấp đôi" : `gấp ${value} lần`} điểm</span> mỗi giao dịch trong thời gian chiến dịch
+                    </div>
+                  </div>
+                </div>
               </div>
             )}
             {type === "voucher" && (
@@ -124,7 +144,7 @@ function CampaignWizard({ initial, onClose, onSave }) {
             </div>
             <div className="review-box">
               <div className="rr"><span className="rk">Chiến dịch</span><span className="rv">{name || "—"}</span></div>
-              <div className="rr"><span className="rk">Loại</span><span className="rv">{t.label}{type === "discount" ? ` · ${value}%` : ""}</span></div>
+              <div className="rr"><span className="rk">Loại</span><span className="rv">{t.label}{type === "discount" ? ` · ${value}%` : type === "x2" ? ` · ×${value}` : ""}</span></div>
               <div className="rr"><span className="rk">Thời gian</span><span className="rv">{fmtD(start)} → {fmtD(end)}</span></div>
               <div className="rr"><span className="rk">Đối tượng</span><span className="rv">{aud.label} · {fmt(aud.size)} người</span></div>
             </div>

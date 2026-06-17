@@ -101,7 +101,7 @@ class CampaignsController extends Controller
         $data = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'type' => ['required', Rule::in(array_keys(self::TYPE_MAP))],
-            'value' => ['nullable', 'integer', 'min:1', 'max:100'],
+            'value' => ['nullable', 'numeric', 'min:1', 'max:100'],
             'start' => ['required', 'date'],
             'end' => ['required', 'date', 'after_or_equal:start'],
             'condition' => ['nullable', 'string', 'max:500'],
@@ -118,7 +118,7 @@ class CampaignsController extends Controller
             'tier_id' => $tierId,
             'start_date' => $data['start'],
             'end_date' => $data['end'],
-            'multiplier' => $data['type'] === 'x2' ? 2.00 : null,
+            'multiplier' => $data['type'] === 'x2' ? (float) ($data['value'] ?? 2) : null,
             'discount_percent' => $data['type'] === 'discount' ? $data['value'] : null,
         ];
     }
@@ -182,7 +182,9 @@ class CampaignsController extends Controller
             'dbId' => $campaign->id,
             'name' => $campaign->name,
             'type' => array_flip(self::TYPE_MAP)[$campaign->campaign_type] ?? 'voucher',
-            'value' => $campaign->discount_percent !== null ? (int) $campaign->discount_percent : null,
+            'value' => $campaign->discount_percent !== null
+                ? (int) $campaign->discount_percent
+                : ($campaign->multiplier !== null ? (float) $campaign->multiplier : null),
             'audience' => $audienceKey,
             'start' => $campaign->start_date->toDateString(),
             'end' => $campaign->end_date->toDateString(),
