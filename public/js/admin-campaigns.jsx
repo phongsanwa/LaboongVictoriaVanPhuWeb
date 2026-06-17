@@ -1,4 +1,4 @@
-/* global React, ReactDOM, Icon, fmt, CAMPAIGNS, CAMP_TYPES, AUDIENCES, CAMP_STATUS, CampaignWizard, PushComposer, useTweaks, TweaksPanel, TweakSection, TweakColor, TweakToggle, ADMIN_CAMPAIGNS_DATA, NAV_URLS, adminHref */
+/* global React, ReactDOM, Icon, fmt, CAMPAIGNS, CAMP_TYPES, AUDIENCES, CAMP_STATUS, CAMP_REWARDS, CampaignWizard, PushComposer, useTweaks, TweaksPanel, TweakSection, TweakColor, TweakToggle, ADMIN_CAMPAIGNS_DATA, NAV_URLS, adminHref */
 const { useState, useEffect, useMemo } = React;
 
 const CM_DEFAULTS = /*EDITMODE-BEGIN*/{

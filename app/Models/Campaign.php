@@ -19,6 +19,7 @@ class Campaign extends Model
         'bonus_points',
         'multiplier',
         'discount_percent',
+        'reward_id',
         'min_purchase',
         'max_participants',
         'current_participants',
@@ -43,5 +44,10 @@ class Campaign extends Model
     public function tier(): BelongsTo
     {
         return $this->belongsTo(CustomerTier::class, 'tier_id');
+    }
+
+    public function reward(): BelongsTo
+    {
+        return $this->belongsTo(Reward::class);
     }
 }

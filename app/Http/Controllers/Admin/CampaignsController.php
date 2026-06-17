@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Campaign;
 use App\Models\Customer;
 use App\Models\CustomerTier;
+use App\Models\Reward;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
@@ -33,10 +34,22 @@ class CampaignsController extends Controller
         $admin = Auth::user();
         $audiences = $this->audiences();
 
-        $campaigns = Campaign::orderByDesc('id')
+        $campaigns = Campaign::with('reward')->orderByDesc('id')
             ->get()
             ->map(fn (Campaign $c) => $this->present($c, $audiences))
             ->values();
+
+        $rewards = Reward::where('status', 'active')
+            ->orderBy('category')
+            ->orderBy('name')
+            ->get(['id', 'name', 'points_required', 'category', 'image_url'])
+            ->map(fn ($r) => [
+                'id'       => $r->id,
+                'name'     => $r->name,
+                'points'   => $r->points_required,
+                'category' => $r->category,
+                'image'    => $r->image_url,
+            ])->values();
 
         return view('admin.campaigns', [
             'campaignsData' => [
@@ -47,6 +60,7 @@ class CampaignsController extends Controller
                 ],
                 'campaigns' => $campaigns,
                 'audiences' => $audiences,
+                'rewards'   => $rewards,
             ],
         ]);
     }
@@ -101,11 +115,12 @@ class CampaignsController extends Controller
         $data = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'type' => ['required', Rule::in(array_keys(self::TYPE_MAP))],
-            'value' => ['nullable', 'numeric', 'min:1', 'max:100'],
-            'start' => ['required', 'date'],
-            'end' => ['required', 'date', 'after_or_equal:start'],
+            'value'     => ['nullable', 'numeric', 'min:1', 'max:100'],
+            'reward_id' => ['nullable', 'integer', 'exists:rewards,id'],
+            'start'     => ['required', 'date'],
+            'end'       => ['required', 'date', 'after_or_equal:start'],
             'condition' => ['nullable', 'string', 'max:500'],
-            'audience' => ['required', Rule::in($audienceKeys)],
+            'audience'  => ['required', Rule::in($audienceKeys)],
         ]);
 
         [$targetAudience, $tierId] = $this->resolveAudience($data['audience']);
@@ -118,8 +133,9 @@ class CampaignsController extends Controller
             'tier_id' => $tierId,
             'start_date' => $data['start'],
             'end_date' => $data['end'],
-            'multiplier' => $data['type'] === 'x2' ? (float) ($data['value'] ?? 2) : null,
+            'multiplier'       => $data['type'] === 'x2' ? (float) ($data['value'] ?? 2) : null,
             'discount_percent' => $data['type'] === 'discount' ? $data['value'] : null,
+            'reward_id'        => $data['type'] === 'voucher' ? ($data['reward_id'] ?? null) : null,
         ];
     }
 
@@ -176,16 +192,20 @@ class CampaignsController extends Controller
     private function present(Campaign $campaign, array $audiences): array
     {
         $audienceKey = $this->audienceKey($campaign);
+        $reward = $campaign->reward;
 
         return [
-            'id' => 'CMP' . (700 + $campaign->id),
+            'id'   => 'CMP' . (700 + $campaign->id),
             'dbId' => $campaign->id,
             'name' => $campaign->name,
             'type' => array_flip(self::TYPE_MAP)[$campaign->campaign_type] ?? 'voucher',
             'value' => $campaign->discount_percent !== null
                 ? (int) $campaign->discount_percent
                 : ($campaign->multiplier !== null ? (float) $campaign->multiplier : null),
-            'audience' => $audienceKey,
+            'reward_id'   => $campaign->reward_id,
+            'rewardName'  => $reward?->name,
+            'rewardImage' => $reward?->image_url,
+            'audience'    => $audienceKey,
             'start' => $campaign->start_date->toDateString(),
             'end' => $campaign->end_date->toDateString(),
             'condition' => $campaign->description ?? '',
