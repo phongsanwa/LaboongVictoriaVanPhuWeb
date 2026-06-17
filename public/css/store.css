@@ -156,3 +156,8 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
   .photos { height: 180px; }
   .amen { grid-template-columns: repeat(auto-fill, minmax(76px, 1fr)); }
 }
+
+/* toast notification */
+.toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); z-index: 120; background: var(--ink); color: var(--bg); padding: 13px 20px; border-radius: 999px; font-size: 14px; font-weight: 600; box-shadow: var(--shadow-lg); display: flex; align-items: center; gap: 10px; white-space: nowrap; animation: tin .3s cubic-bezier(.2,.8,.2,1); }
+.toast .tc { width: 24px; height: 24px; border-radius: 50%; background: var(--brand); display: grid; place-items: center; flex: none; }
+@keyframes tin { from { opacity: 0; transform: translateX(-50%) translateY(10px); } to { opacity: 1; transform: translateX(-50%) translateY(0); } }
