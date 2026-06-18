@@ -19,6 +19,8 @@ class Customer extends Model
         'total_points',
         'lifetime_points',
         'total_spent',
+        'total_orders',
+        'favorite_product_id',
         'referral_code',
         'referred_by_id',
         'last_purchase_at',
@@ -71,5 +73,15 @@ class Customer extends Model
     public function birthdayAwards(): HasMany
     {
         return $this->hasMany(BirthdayAward::class);
+    }
+
+    public function orders(): HasMany
+    {
+        return $this->hasMany(Order::class);
+    }
+
+    public function favoriteProduct(): BelongsTo
+    {
+        return $this->belongsTo(Product::class, 'favorite_product_id');
     }
 }
