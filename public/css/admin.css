@@ -644,6 +644,8 @@ table.tbl { width: 100%; border-collapse: collapse; min-width: 840px; table-layo
 .reward-opt .radio { width: 18px; height: 18px; border-radius: 50%; border: 2px solid var(--line); flex: none; display: grid; place-items: center; margin-left: auto; }
 .reward-opt.on .radio { border-color: var(--brand); } .reward-opt.on .radio::after { content:""; width: 8px; height: 8px; border-radius: 50%; background: var(--brand); }
 
+.birthday-note { display: flex; align-items: flex-start; gap: 8px; background: var(--brand-soft, #e8f5ef); border-radius: var(--r-sm); padding: 10px 12px; font-size: 12.5px; color: var(--ink-2); margin-bottom: 10px; line-height: 1.5; }
+
 .review-box { background: var(--hover); border: 1px solid var(--line-2); border-radius: var(--r-md); padding: 4px 16px; }
 .review-box .rr { display: flex; align-items: center; gap: 12px; padding: 12px 0; }
 .review-box .rr + .rr { border-top: 1px solid var(--line-2); }
