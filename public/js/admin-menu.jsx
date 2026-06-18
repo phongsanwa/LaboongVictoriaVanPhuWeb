@@ -1,10 +1,38 @@
-/* global React, ReactDOM, Icon, fmt, CATS, MENU, TAG_META, SIZE_OPTS, adminHref, useTweaks, TweaksPanel, TweakSection, TweakColor, TweakToggle */
+/* global React, ReactDOM, Icon, fmt, adminHref, useTweaks, TweaksPanel, TweakSection, TweakColor, TweakToggle */
+/* global CATS, MENU, TAG_META */
 const { useState, useEffect, useMemo, useRef } = React;
 
-const MM_DEFAULTS = /*EDITMODE-BEGIN*/{
-  "brand": ["#0F623F", "#07432A"],
-  "dark": false
-}/*EDITMODE-END*/;
+// LIVE mode detection
+const LIVE = !!window.ADMIN_MENU_DATA;
+const LIVE_URLS = window.ADMIN_MENU_DATA?.urls || {};
+
+function csrfToken() {
+  return document.querySelector('meta[name="csrf-token"]')?.content ?? '';
+}
+
+async function apiFetch(method, url, body) {
+  const res = await fetch(url, {
+    method,
+    headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrfToken(), 'Accept': 'application/json' },
+    body: body ? JSON.stringify(body) : undefined,
+  });
+  const json = await res.json();
+  if (!res.ok) throw new Error(json.message || 'Có lỗi xảy ra');
+  return json;
+}
+
+async function apiFetchForm(url, formData) {
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: { 'X-CSRF-TOKEN': csrfToken(), 'Accept': 'application/json' },
+    body: formData,
+  });
+  const json = await res.json();
+  if (!res.ok) throw new Error(json.message || 'Có lỗi xảy ra');
+  return json;
+}
+
+const MM_DEFAULTS = /*EDITMODE-BEGIN*/{"brand": ["#0F623F", "#07432A"], "dark": false}/*EDITMODE-END*/;
 
 const SWATCHES = [
   "linear-gradient(150deg,#6B4A2B,#9B7150)", "linear-gradient(150deg,#0F623F,#1AA86A)",
@@ -13,6 +41,7 @@ const SWATCHES = [
   "linear-gradient(150deg,#3E9B5F,#6FBF8A)", "linear-gradient(150deg,#E8973A,#F2B96B)",
 ];
 const ALL_TAGS = [["hot", "Best"], ["veg", "Healthy"], ["new", "Mới"]];
+const TAG_ICON_MAP = { hot: "flame", veg: "plant", new: "sparkle2" };
 const GROUP_ICONS = ["cup", "plant", "coin", "flame", "plus", "star", "gift", "cart", "bag", "spark"];
 
 /* tuỳ chỉnh mặc định: món topping không có tuỳ chỉnh, món nước có đủ */
@@ -27,18 +56,31 @@ const OPT_META = [
   { key: "topping", ic: "plus", label: "Thêm topping", desc: "Trân châu, kem phô mai, pudding…" },
 ];
 
-/* seed availability + sold counts */
-const seedItems = MENU.map((m, i) => ({ ...m, available: !(i % 9 === 4), sold: 40 + (i * 53) % 380, opts: defaultOpts(m.cat) }));
+// Guard: seedItems only if MENU is available (not in blade/LIVE mode)
+const seedItems = typeof MENU !== 'undefined'
+  ? MENU.map((m, i) => ({ ...m, available: !(i % 9 === 4), sold: 40 + (i * 53) % 380, opts: defaultOpts(m.cat) }))
+  : [];
+
+function makeInitialGroups() {
+  if (LIVE) return window.ADMIN_MENU_DATA.categories.map(c => ({ ...c }));
+  return (typeof CATS !== 'undefined' ? CATS : []).map(c => ({ ...c }));
+}
+
+function makeInitialItems() {
+  if (LIVE) return window.ADMIN_MENU_DATA.products.map(p => ({ ...p }));
+  return seedItems.map(m => ({ ...m }));
+}
 
 /* ---- editor modal ---- */
-function MenuEditor({ initial, groups, onClose, onSave }) {
+function MenuEditor({ initial, groups, onClose, onSave, saving }) {
   const isEdit = !!initial.id;
   const [name, setName] = useState(initial.name || "");
   const [cat, setCat] = useState(initial.cat || groups[0].key);
   const [price, setPrice] = useState(initial.price || "");
   const [desc, setDesc] = useState(initial.desc || "");
   const [grad, setGrad] = useState(initial.grad || SWATCHES[0]);
-  const [img, setImg] = useState(initial.img || null);
+  const [imgPrev, setImgPrev] = useState(initial.img || null);
+  const [imgFile, setImgFile] = useState(null);
   const [tags, setTags] = useState(initial.tags || []);
   const [available, setAvailable] = useState(initial.available !== false);
   const [opts, setOpts] = useState(initial.opts || defaultOpts(initial.cat || groups[0].key));
@@ -51,17 +93,24 @@ function MenuEditor({ initial, groups, onClose, onSave }) {
 
   const grpIcon = (groups.find(g => g.key === cat) || groups[0]).ic;
   const toggleTag = (t) => setTags(ts => ts.includes(t) ? ts.filter(x => x !== t) : [...ts, t]);
-  const toggleOpt = (k) => setOpts(o => ({ ...o, [k]: !o[k] }));
   const valid = name.trim() && Number(price) > 0;
-  const submit = () => { if (!valid) return; onSave({ ...initial, id: initial.id || ("new" + Date.now()), name: name.trim(), cat, price: Number(price), desc: desc.trim(), grad, img, tags, available, opts, sold: initial.sold || 0 }); };
+  const submit = () => {
+    if (!valid) return;
+    onSave({ ...initial, id: initial.id || ("new" + Date.now()), name: name.trim(), cat, price: Number(price), desc: desc.trim(), grad, img: imgPrev, imgFile, hadImg: !!initial.img, tags, available, opts, sold: initial.sold || 0 });
+  };
 
   const onFile = (e) => {
     const f = e.target.files && e.target.files[0];
     if (!f) return;
     if (!f.type.startsWith("image/")) return;
-    const reader = new FileReader();
-    reader.onload = () => setImg(reader.result);
-    reader.readAsDataURL(f);
+    if (LIVE) {
+      setImgFile(f);
+      setImgPrev(URL.createObjectURL(f));
+    } else {
+      const reader = new FileReader();
+      reader.onload = () => setImgPrev(reader.result);
+      reader.readAsDataURL(f);
+    }
   };
 
   return (
@@ -76,10 +125,10 @@ function MenuEditor({ initial, groups, onClose, onSave }) {
           {/* image upload */}
           <div className="me-thumb-row">
             <div className="me-img" onClick={() => fileRef.current && fileRef.current.click()}>
-              {img
-                ? <><img src={img} alt="" /><button className="me-img-clear" onClick={e => { e.stopPropagation(); setImg(null); }}><Icon name="close" size={13} color="#fff" /></button></>
+              {imgPrev
+                ? <><img src={imgPrev} alt="" /><button className="me-img-clear" onClick={e => { e.stopPropagation(); setImgPrev(null); setImgFile(null); }}><Icon name="close" size={13} color="#fff" /></button></>
                 : <div className="me-img-ph" style={{ background: grad }}><Icon name={grpIcon} size={32} color="#fff" /></div>}
-              <div className="me-img-over"><Icon name="camera" size={18} color="#fff" /><span>{img ? "Đổi ảnh" : "Tải ảnh"}</span></div>
+              <div className="me-img-over"><Icon name="camera" size={18} color="#fff" /><span>{imgPrev ? "Đổi ảnh" : "Tải ảnh"}</span></div>
             </div>
             <div className="me-img-side">
               <button className="me-upload-btn" onClick={() => fileRef.current && fileRef.current.click()}><Icon name="download" size={15} color="currentColor" style={{ transform: "rotate(180deg)" }} /> Tải ảnh món</button>
@@ -88,7 +137,7 @@ function MenuEditor({ initial, groups, onClose, onSave }) {
             </div>
           </div>
 
-          {!img && (<>
+          {!imgPrev && (<>
             <div className="me-sub">Màu nền (khi chưa có ảnh)</div>
             <div className="me-swatches" style={{ marginTop: 0, marginBottom: 4 }}>
               {SWATCHES.map(s => <button key={s} className={"me-sw" + (grad === s ? " on" : "")} style={{ background: s }} onClick={() => setGrad(s)} />)}
@@ -126,7 +175,7 @@ function MenuEditor({ initial, groups, onClose, onSave }) {
             <div className="me-tags">
               {ALL_TAGS.map(([k, l]) => (
                 <button key={k} className={"me-tag" + (tags.includes(k) ? " on" : "")} onClick={() => toggleTag(k)}>
-                  <Icon name={TAG_META[k].ic} size={13} color="currentColor" /> {l}
+                  <Icon name={TAG_ICON_MAP[k] || "star"} size={13} color="currentColor" /> {l}
                 </button>
               ))}
             </div>
@@ -139,7 +188,7 @@ function MenuEditor({ initial, groups, onClose, onSave }) {
         </div>
         <div className="modal-f">
           <button className="btn ghost" onClick={onClose}>Huỷ</button>
-          <button className="btn primary" disabled={!valid} onClick={submit}><Icon name="check" size={17} color="#fff" /> {isEdit ? "Lưu" : "Thêm món"}</button>
+          <button className="btn primary" disabled={!valid || saving} onClick={submit}><Icon name="check" size={17} color="#fff" /> {isEdit ? "Lưu" : "Thêm món"}</button>
         </div>
       </div>
     </div>
@@ -164,7 +213,7 @@ function GroupManager({ groups, counts, onClose, onSave }) {
     if (!draftName.trim()) return;
     if (editing === "new") {
       const key = "g" + Date.now();
-      setList(l => [...l, { key, label: draftName.trim(), ic: draftIc }]);
+      setList(l => [...l, { key, id: null, label: draftName.trim(), ic: draftIc }]);
     } else {
       setList(l => l.map(g => g.key === editing ? { ...g, label: draftName.trim(), ic: draftIc } : g));
     }
@@ -237,14 +286,15 @@ function GroupManager({ groups, counts, onClose, onSave }) {
 
 function App() {
   const [tw, setTweak] = useTweaks(MM_DEFAULTS);
-  const [groups, setGroups] = useState(() => CATS.map(c => ({ ...c })));
-  const [items, setItems] = useState(() => seedItems.map(m => ({ ...m })));
+  const [groups, setGroups] = useState(() => makeInitialGroups());
+  const [items, setItems] = useState(() => makeInitialItems());
   const [cat, setCat] = useState("all");
   const [q, setQ] = useState("");
   const [editor, setEditor] = useState(null);
   const [groupMgr, setGroupMgr] = useState(false);
   const [sideOpen, setSideOpen] = useState(false);
   const [toast, setToast] = useState(null);
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     const r = document.documentElement;
@@ -271,19 +321,124 @@ function App() {
     off: items.filter(m => !m.available).length,
   }), [items]);
 
-  const toggleAvail = (id) => setItems(list => list.map(m => m.id === id ? { ...m, available: !m.available } : m));
-  const save = (item) => {
-    setItems(list => list.some(m => m.id === item.id) ? list.map(m => m.id === item.id ? item : m) : [item, ...list]);
-    flash(items.some(m => m.id === item.id) ? `Đã cập nhật "${item.name}"` : `Đã thêm "${item.name}"`);
-    setEditor(null);
+  const toggleAvail = async (id) => {
+    if (LIVE) {
+      try {
+        const url = LIVE_URLS.toggleProduct.replace('__ID__', id);
+        const json = await apiFetch('POST', url, null);
+        setItems(list => list.map(m => m.id === id ? { ...m, available: json.product.available } : m));
+      } catch (err) {
+        flash({ type: 'err', msg: err.message });
+      }
+    } else {
+      setItems(list => list.map(m => m.id === id ? { ...m, available: !m.available } : m));
+    }
   };
-  const remove = (m) => { if (confirm(`Xoá món "${m.name}" khỏi thực đơn?`)) { setItems(list => list.filter(x => x.id !== m.id)); flash(`Đã xoá "${m.name}"`); } };
-  const saveGroups = (list) => {
-    setGroups(list);
-    if (cat !== "all" && !list.some(g => g.key === cat)) setCat("all");
-    flash("Đã lưu nhóm món");
+
+  const save = async (item) => {
+    if (LIVE) {
+      const isEdit = !!item.id;
+      const form = new FormData();
+      form.append('name', item.name);
+      form.append('category_slug', item.cat);
+      form.append('description', item.desc || '');
+      form.append('base_price', String(item.price));
+      form.append('color', item.grad || '');
+      form.append('tags', JSON.stringify(item.tags || []));
+      form.append('is_available', item.available ? '1' : '0');
+      if (item.imgFile) form.append('image', item.imgFile);
+      else if (item.hadImg && !item.img) form.append('remove_image', '1');
+
+      const url = isEdit
+        ? LIVE_URLS.updateProduct.replace('__ID__', item.id)
+        : LIVE_URLS.storeProduct;
+      try {
+        setSaving(true);
+        const json = await apiFetchForm(url, form);
+        setItems(list => isEdit
+          ? list.map(m => m.id === json.product.id ? json.product : m)
+          : [json.product, ...list]);
+        flash({ type: 'ok', msg: isEdit ? `Đã cập nhật "${item.name}"` : `Đã thêm "${item.name}"` });
+        setEditor(null);
+      } catch (err) {
+        flash({ type: 'err', msg: err.message });
+      } finally {
+        setSaving(false);
+      }
+    } else {
+      const isEdit = items.some(m => m.id === item.id);
+      setItems(list => isEdit ? list.map(m => m.id === item.id ? item : m) : [item, ...list]);
+      flash({ type: 'ok', msg: isEdit ? `Đã cập nhật "${item.name}"` : `Đã thêm "${item.name}"` });
+      setEditor(null);
+    }
+  };
+
+  const remove = async (m) => {
+    if (!confirm(`Xoá món "${m.name}" khỏi thực đơn?`)) return;
+    if (LIVE) {
+      try {
+        await apiFetch('DELETE', LIVE_URLS.deleteProduct.replace('__ID__', m.id), null);
+        setItems(list => list.filter(x => x.id !== m.id));
+        flash({ type: 'ok', msg: `Đã xoá "${m.name}"` });
+      } catch (err) {
+        flash({ type: 'err', msg: err.message });
+      }
+    } else {
+      setItems(list => list.filter(x => x.id !== m.id));
+      flash({ type: 'ok', msg: `Đã xoá "${m.name}"` });
+    }
+  };
+
+  const saveGroups = async (newList) => {
+    if (LIVE) {
+      const origMap = Object.fromEntries(groups.filter(g => g.id).map(g => [g.id, g]));
+      const newMap = Object.fromEntries(newList.filter(g => g.id).map(g => [g.id, g]));
+      let finalList = [...newList];
+      let hadError = false;
+
+      // Deletes
+      for (const g of groups) {
+        if (g.id && !newMap[g.id]) {
+          try { await apiFetch('DELETE', LIVE_URLS.deleteCategory.replace('__ID__', g.id), null); }
+          catch (err) { flash({ type: 'err', msg: err.message }); hadError = true; }
+        }
+      }
+      // Updates
+      for (const g of newList) {
+        if (g.id) {
+          const orig = origMap[g.id];
+          if (orig && (orig.label !== g.label || orig.ic !== g.ic)) {
+            try { await apiFetch('POST', LIVE_URLS.updateCategory.replace('__ID__', g.id), { name: g.label, icon: g.ic }); }
+            catch (err) { flash({ type: 'err', msg: err.message }); hadError = true; }
+          }
+        }
+      }
+      // Creates
+      const resultList = [];
+      for (const g of finalList) {
+        if (!g.id) {
+          try {
+            const json = await apiFetch('POST', LIVE_URLS.storeCategory, { name: g.label, icon: g.ic });
+            resultList.push(json.category);
+          } catch (err) { flash({ type: 'err', msg: err.message }); hadError = true; resultList.push(g); }
+        } else {
+          resultList.push(g);
+        }
+      }
+      if (!hadError) flash({ type: 'ok', msg: 'Đã lưu nhóm món' });
+      setGroups(resultList);
+      if (cat !== 'all' && !resultList.some(g => g.key === cat)) setCat('all');
+    } else {
+      setGroups(newList);
+      if (cat !== "all" && !newList.some(g => g.key === cat)) setCat("all");
+      flash({ type: 'ok', msg: 'Đã lưu nhóm món' });
+    }
     setGroupMgr(false);
   };
+
+  const adminName = LIVE ? window.ADMIN_MENU_DATA.admin.name : 'Quản trị viên';
+  const adminEmail = LIVE ? window.ADMIN_MENU_DATA.admin.email : 'admin@laboong.vn';
+  const adminInitials = LIVE ? window.ADMIN_MENU_DATA.admin.initials : 'QT';
 
   const NAV = [
     { ic: "chart", label: "Tổng quan" },
@@ -319,8 +474,8 @@ function App() {
         </nav>
         <div className="side-foot">
           <div className="side-user">
-            <div className="side-av">QT</div>
-            <div style={{ minWidth: 0 }}><div className="un">Quản trị viên</div><div className="ur">admin@laboong.vn</div></div>
+            <div className="side-av">{adminInitials}</div>
+            <div style={{ minWidth: 0 }}><div className="un">{adminName}</div><div className="ur">{adminEmail}</div></div>
             <button className="icon-btn" style={{ width: 32, height: 32, marginLeft: "auto" }}><Icon name="logout" size={16} /></button>
           </div>
         </div>
@@ -334,6 +489,7 @@ function App() {
             <h1>Quản lý thực đơn</h1>
           </div>
           <div className="topbar-spacer" />
+          {LIVE && <span className="live-badge">Kết nối cơ sở dữ liệu</span>}
           <div className="searchbox">
             <Icon name="search" size={18} color="var(--ink-3)" />
             <input placeholder="Tìm món…" value={q} onChange={e => setQ(e.target.value)} />
@@ -382,9 +538,13 @@ function App() {
                   {m.img ? <img src={m.img} alt="" /> : <span className="ti"><Icon name={grpIcon(m.cat)} size={30} color="#fff" /></span>}
                 </div>
                 <div className="mcard-body">
-                  {m.tags.length > 0 && (
+                  {m.tags && m.tags.length > 0 && (
                     <div className="mcard-tags">
-                      {m.tags.map(t => <span key={t} className={"mtag " + t}>{TAG_META[t].l}</span>)}
+                      {m.tags.map(t => {
+                        const tagLabels = { hot: "Best", veg: "Healthy", new: "Mới" };
+                        const tagLabel = (typeof TAG_META !== 'undefined' && TAG_META[t]) ? TAG_META[t].l : (tagLabels[t] || t);
+                        return <span key={t} className={"mtag " + t}>{tagLabel}</span>;
+                      })}
                     </div>
                   )}
                   <div className="mcard-name">{m.name}</div>
@@ -403,9 +563,14 @@ function App() {
         </div>
       </div>
 
-      {editor && <MenuEditor initial={editor} groups={groups} onClose={() => setEditor(null)} onSave={save} />}
+      {editor && <MenuEditor initial={editor} groups={groups} onClose={() => setEditor(null)} onSave={save} saving={saving} />}
       {groupMgr && <GroupManager groups={groups} counts={counts} onClose={() => setGroupMgr(false)} onSave={saveGroups} />}
-      {toast && <div className="toast"><span className="tc"><Icon name="check" size={15} color="#fff" /></span>{toast}</div>}
+      {toast && (
+        <div className={"toast" + (toast.type === 'err' ? ' err' : '')}>
+          <span className="tc"><Icon name={toast.type === 'err' ? 'close' : 'check'} size={15} color="#fff" /></span>
+          {toast.msg}
+        </div>
+      )}
 
       <TweaksPanel>
         <TweakSection label="Giao diện" />

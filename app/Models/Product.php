@@ -14,6 +14,8 @@ class Product extends Model
         'slug',
         'description',
         'base_price',
+        'color',
+        'tags',
         'image_url',
         'is_available',
         'sort_order',
@@ -23,6 +25,7 @@ class Product extends Model
     {
         return [
             'is_available' => 'boolean',
+            'tags'         => 'array',
         ];
     }
 
