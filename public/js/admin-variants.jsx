@@ -10,13 +10,48 @@ const TYPE_LABEL = { level: "Mức %", size: "Có phụ phí", addon: "Topping" 
 
 const TYPE_OPTS = [
   { value: "level",  label: "Mức % (không phụ phí)", desc: "VD: lượng đường, lượng đá" },
-  { value: "size",   label: "Có phụ phí", desc: "VD: size cốc, cỡ phần" },
-  { value: "addon",  label: "Topping (chọn nhiều)", desc: "VD: topping thêm, sauce" },
+  { value: "size",   label: "Có phụ phí",             desc: "VD: size cốc, cỡ phần" },
+  { value: "addon",  label: "Topping (chọn nhiều)",   desc: "VD: topping thêm, sauce" },
 ];
 
 const GROUP_ICONS = ["cup", "coin", "flame", "plus", "star", "gift", "grid", "receipt", "bell", "heart", "globe", "rocket", "cake", "bike"];
 
-/* ─── GroupEditor modal ─── */
+/* ─── Live-mode globals ──────────────────────────────────────────────── */
+const LIVE      = !!window.ADMIN_VARIANTS_DATA;
+const LIVE_URLS = window.ADMIN_VARIANTS_DATA?.urls || {};
+
+function csrfToken() {
+  return document.querySelector('meta[name="csrf-token"]')?.content || '';
+}
+
+async function apiFetch(method, url, body) {
+  const opts = {
+    method,
+    headers: {
+      'Content-Type':  'application/json',
+      'X-CSRF-TOKEN':  csrfToken(),
+      'Accept':        'application/json',
+    },
+  };
+  if (body !== undefined) opts.body = JSON.stringify(body);
+  const res  = await fetch(url, opts);
+  const json = await res.json();
+  if (!res.ok) throw new Error(json.message || 'Có lỗi xảy ra');
+  return json;
+}
+
+/* ─── Initial groups: DB data (live) or static data (demo) ──────────── */
+function makeInitialGroups() {
+  if (LIVE) {
+    return window.ADMIN_VARIANTS_DATA.groups.map(g => ({
+      ...g, options: g.options.map(o => ({ ...o })),
+    }));
+  }
+  const src = typeof VARIANT_GROUPS !== 'undefined' ? VARIANT_GROUPS : [];
+  return src.map(g => ({ ...g, options: g.options.map(o => ({ ...o })) }));
+}
+
+/* ─── GroupEditor modal (demo mode only) ────────────────────────────── */
 function GroupEditor({ initial, onClose, onSave }) {
   const isEdit = !!(initial.key);
   const [label,    setLabel]    = useState(initial.label    || "");
@@ -30,7 +65,7 @@ function GroupEditor({ initial, onClose, onSave }) {
     return () => window.removeEventListener("keydown", h);
   }, [onClose]);
 
-  const valid = label.trim().length > 0;
+  const valid  = label.trim().length > 0;
   const submit = () => { if (!valid) return; onSave({ ...initial, label: label.trim(), type, required, ic }); };
 
   return (
@@ -40,7 +75,7 @@ function GroupEditor({ initial, onClose, onSave }) {
           <div className="mh-ic"><Icon name={isEdit ? "edit" : "plus"} size={20} /></div>
           <div>
             <h3>{isEdit ? "Sửa nhóm variant" : "Thêm nhóm variant"}</h3>
-            <p>{isEdit ? `Đang sửa "${initial.label}"` : "Tạo nhóm tuỳ chọn mới cho thực đơn"}</p>
+            <p>{isEdit ? `Đang sửa "${initial.label}"` : "Tạo nhóm tuỳ chọn mới"}</p>
           </div>
           <button className="x" onClick={onClose}><Icon name="close" size={18} /></button>
         </div>
@@ -62,8 +97,7 @@ function GroupEditor({ initial, onClose, onSave }) {
                   padding: "11px 13px",
                   border: `1.5px solid ${type === t.value ? "var(--brand)" : "var(--line)"}`,
                   borderRadius: "var(--r-sm)", cursor: "pointer",
-                  background: type === t.value ? "var(--brand-soft)" : "transparent",
-                  transition: ".14s"
+                  background: type === t.value ? "var(--brand-soft)" : "transparent", transition: ".14s",
                 }}>
                   <input type="radio" name="vtype" value={t.value} checked={type === t.value}
                     onChange={() => setType(t.value)} style={{ accentColor: "var(--brand)", flexShrink: 0 }} />
@@ -107,16 +141,17 @@ function GroupEditor({ initial, onClose, onSave }) {
   );
 }
 
-/* ─── Main App ─── */
+/* ─── Main App ───────────────────────────────────────────────────────── */
 function App() {
   const [tw, setTweak] = useTweaks(VG_DEFAULTS);
-  const [groups,      setGroups]      = useState(() => VARIANT_GROUPS.map(g => ({ ...g, options: g.options.map(o => ({ ...o })) })));
+  const [groups,      setGroups]      = useState(makeInitialGroups);
   const [sideOpen,    setSideOpen]    = useState(false);
-  const [editing,     setEditing]     = useState(null);   // {gKey, oId} or {gKey, oId:"new"}
+  const [editing,     setEditing]     = useState(null);
   const [draftName,   setDraftName]   = useState("");
   const [draftPrice,  setDraftPrice]  = useState("");
-  const [groupEditor, setGroupEditor] = useState(null);   // group object (edit) | {} (new) | null (closed)
+  const [groupEditor, setGroupEditor] = useState(null);
   const [search,      setSearch]      = useState("");
+  const [saving,      setSaving]      = useState(false);
   const [toast,       setToast]       = useState(null);
 
   useEffect(() => {
@@ -127,14 +162,16 @@ function App() {
     r.setAttribute("data-theme", tw.dark ? "dark" : "light");
   }, [tw.brand, tw.dark]);
 
-  const flash = (m) => { setToast(m); setTimeout(() => setToast(null), 2600); };
+  const flash = (m, ok = true) => {
+    setToast({ msg: m, ok });
+    setTimeout(() => setToast(null), 2800);
+  };
 
   const stats = useMemo(() => {
     const all = groups.flatMap(g => g.options);
     return { groups: groups.length, total: all.length, off: all.filter(o => !o.available).length };
   }, [groups]);
 
-  /* filter groups/options by search query */
   const filteredGroups = useMemo(() => {
     if (!search.trim()) return groups;
     const q = search.toLowerCase();
@@ -150,35 +187,80 @@ function App() {
 
   const setGroup = (gKey, fn) => setGroups(gs => gs.map(g => g.key === gKey ? fn(g) : g));
 
-  /* toggle single option */
-  const toggleAvail = (gKey, oId) => {
+  /* ── Toggle single option ─── */
+  const toggleAvail = async (gKey, oId) => {
     const g = groups.find(x => x.key === gKey);
-    const o = g.options.find(x => x.id === oId);
-    setGroup(gKey, g => ({ ...g, options: g.options.map(x => x.id === oId ? { ...x, available: !x.available } : x) }));
-    flash(o.available ? `Đã tắt "${o.label}" (báo hết)` : `Đã bật lại "${o.label}"`);
+    const o = g?.options.find(x => x.id === oId);
+    if (!o) return;
+
+    if (LIVE) {
+      setSaving(true);
+      try {
+        const data = await apiFetch('POST', LIVE_URLS.toggleOption, { group_key: gKey, name: oId });
+        setGroup(gKey, g => ({ ...g, options: g.options.map(x => x.id === oId ? { ...x, available: data.available } : x) }));
+        flash(data.available ? `Đã bật lại "${o.label}"` : `Đã tắt "${o.label}" (báo hết)`);
+      } catch (e) {
+        flash(e.message, false);
+      } finally {
+        setSaving(false);
+      }
+    } else {
+      setGroup(gKey, g => ({ ...g, options: g.options.map(x => x.id === oId ? { ...x, available: !x.available } : x) }));
+      flash(o.available ? `Đã tắt "${o.label}" (báo hết)` : `Đã bật lại "${o.label}"`);
+    }
   };
 
-  /* bulk toggle all options in a group */
-  const toggleAllAvail = (gKey) => {
+  /* ── Toggle all options in a group ─── */
+  const toggleAllAvail = async (gKey) => {
     const g = groups.find(x => x.key === gKey);
-    const allOn = g.options.every(o => o.available);
-    setGroup(gKey, g => ({ ...g, options: g.options.map(o => ({ ...o, available: !allOn })) }));
-    flash(allOn ? `Đã báo hết toàn bộ "${g.label}"` : `Đã bật lại toàn bộ "${g.label}"`);
+    if (!g) return;
+    const allOn = g.options.length > 0 && g.options.every(o => o.available);
+
+    if (LIVE) {
+      setSaving(true);
+      try {
+        const data = await apiFetch('POST', LIVE_URLS.toggleAll, { group_key: gKey });
+        setGroup(gKey, g => ({ ...g, options: g.options.map(o => ({ ...o, available: data.available })) }));
+        flash(data.available ? `Đã bật lại toàn bộ "${g.label}"` : `Đã báo hết toàn bộ "${g.label}"`);
+      } catch (e) {
+        flash(e.message, false);
+      } finally {
+        setSaving(false);
+      }
+    } else {
+      setGroup(gKey, g => ({ ...g, options: g.options.map(o => ({ ...o, available: !allOn })) }));
+      flash(allOn ? `Đã báo hết toàn bộ "${g.label}"` : `Đã bật lại toàn bộ "${g.label}"`);
+    }
   };
 
   const setDefault = (gKey, oId) =>
     setGroup(gKey, g => ({ ...g, options: g.options.map(o => ({ ...o, def: o.id === oId })) }));
 
-  /* delete single option */
-  const del = (gKey, oId) => {
+  /* ── Delete single option ─── */
+  const del = async (gKey, oId) => {
     const g = groups.find(x => x.key === gKey);
-    const o = g.options.find(x => x.id === oId);
-    if (confirm(`Xoá lựa chọn "${o.label}"?`))
+    const o = g?.options.find(x => x.id === oId);
+    if (!o || !confirm(`Xoá lựa chọn "${o.label}"?`)) return;
+
+    if (LIVE) {
+      setSaving(true);
+      try {
+        await apiFetch('DELETE', LIVE_URLS.deleteOption, { group_key: gKey, name: oId });
+        setGroup(gKey, g => ({ ...g, options: g.options.filter(x => x.id !== oId) }));
+        flash(`Đã xoá "${o.label}"`);
+      } catch (e) {
+        flash(e.message, false);
+      } finally {
+        setSaving(false);
+      }
+    } else {
       setGroup(gKey, g => ({ ...g, options: g.options.filter(x => x.id !== oId) }));
+    }
   };
 
-  /* delete entire group */
+  /* ── Delete entire group (demo only) ─── */
   const delGroup = (gKey) => {
+    if (LIVE) { flash("Nhóm SIZE/TOPPING được quản lý bởi DB — không thể xoá.", false); return; }
     const g = groups.find(x => x.key === gKey);
     if (confirm(`Xoá nhóm "${g.label}" và tất cả ${g.options.length} lựa chọn bên trong?`)) {
       setGroups(gs => gs.filter(x => x.key !== gKey));
@@ -186,11 +268,11 @@ function App() {
     }
   };
 
-  /* save from GroupEditor modal */
+  /* ── Save group (demo only) ─── */
   const saveGroup = (updated) => {
+    if (LIVE) { flash("Nhóm SIZE/TOPPING được quản lý bởi DB.", false); setGroupEditor(null); return; }
     if (!updated.key) {
-      const newGroup = { ...updated, key: "vg" + Date.now(), options: [] };
-      setGroups(gs => [...gs, newGroup]);
+      setGroups(gs => [...gs, { ...updated, key: "vg" + Date.now(), options: [] }]);
       flash(`Đã thêm nhóm "${updated.label}"`);
     } else {
       setGroups(gs => gs.map(g => g.key === updated.key ? { ...g, ...updated } : g));
@@ -199,21 +281,43 @@ function App() {
     setGroupEditor(null);
   };
 
-  /* inline option edit / add */
+  /* ── Inline option edit / add ─── */
   const startEdit = (gKey, o) => { setEditing({ gKey, oId: o.id }); setDraftName(o.label); setDraftPrice(o.extra ? String(o.extra) : ""); };
   const startAdd  = (gKey)    => { setEditing({ gKey, oId: "new" }); setDraftName(""); setDraftPrice(""); };
-  const commit = () => {
-    if (!draftName.trim()) return;
+
+  const commit = async () => {
+    if (!draftName.trim() || saving) return;
     const { gKey, oId } = editing;
     const extra = parseInt(draftPrice.replace(/[^\d]/g, ""), 10) || 0;
-    if (oId === "new") {
-      setGroup(gKey, g => ({ ...g, options: [...g.options, { id: "o" + Date.now(), label: draftName.trim(), extra, available: true, def: false }] }));
-      flash("Đã thêm lựa chọn");
+
+    if (LIVE) {
+      setSaving(true);
+      try {
+        if (oId === "new") {
+          const data = await apiFetch('POST', LIVE_URLS.storeOption, { group_key: gKey, name: draftName.trim(), extra_price: extra });
+          setGroup(gKey, g => ({ ...g, options: [...g.options, data.option] }));
+          flash("Đã thêm lựa chọn");
+        } else {
+          const data = await apiFetch('PUT', LIVE_URLS.updateOption, { group_key: gKey, old_name: oId, name: draftName.trim(), extra_price: extra });
+          setGroup(gKey, g => ({ ...g, options: g.options.map(o => o.id === oId ? data.option : o) }));
+          flash("Đã cập nhật lựa chọn");
+        }
+        setEditing(null);
+      } catch (e) {
+        flash(e.message, false);
+      } finally {
+        setSaving(false);
+      }
     } else {
-      setGroup(gKey, g => ({ ...g, options: g.options.map(o => o.id === oId ? { ...o, label: draftName.trim(), extra } : o) }));
-      flash("Đã cập nhật lựa chọn");
+      if (oId === "new") {
+        setGroup(gKey, g => ({ ...g, options: [...g.options, { id: "o" + Date.now(), label: draftName.trim(), extra, available: true, def: false }] }));
+        flash("Đã thêm lựa chọn");
+      } else {
+        setGroup(gKey, g => ({ ...g, options: g.options.map(o => o.id === oId ? { ...o, label: draftName.trim(), extra } : o) }));
+        flash("Đã cập nhật lựa chọn");
+      }
+      setEditing(null);
     }
-    setEditing(null);
   };
 
   const NAV = [
@@ -251,13 +355,34 @@ function App() {
         </nav>
         <div className="side-sec">Hệ thống</div>
         <nav className="side-nav">
-          {NAV.slice(7).map(n => <a key={n.label} className="side-link" href={adminHref(n.label)}><Icon name={n.ic} size={19} /> {n.label}</a>)}
+          {NAV.slice(7).map(n => (
+            <a key={n.label} className="side-link" href={adminHref(n.label)}>
+              <Icon name={n.ic} size={19} /> {n.label}
+            </a>
+          ))}
         </nav>
         <div className="side-foot">
           <div className="side-user">
-            <div className="side-av">QT</div>
-            <div style={{ minWidth: 0 }}><div className="un">Quản trị viên</div><div className="ur">admin@laboong.vn</div></div>
-            <button className="icon-btn" style={{ width: 32, height: 32, marginLeft: "auto" }}><Icon name="logout" size={16} /></button>
+            {window.ADMIN_VARIANTS_DATA?.admin ? (
+              <>
+                <div className="side-av">{window.ADMIN_VARIANTS_DATA.admin.initials}</div>
+                <div style={{ minWidth: 0 }}>
+                  <div className="un">{window.ADMIN_VARIANTS_DATA.admin.name}</div>
+                  <div className="ur">{window.ADMIN_VARIANTS_DATA.admin.email}</div>
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="side-av">QT</div>
+                <div style={{ minWidth: 0 }}>
+                  <div className="un">Quản trị viên</div>
+                  <div className="ur">admin@laboong.vn</div>
+                </div>
+              </>
+            )}
+            <button className="icon-btn" style={{ width: 32, height: 32, marginLeft: "auto" }}>
+              <Icon name="logout" size={16} />
+            </button>
           </div>
         </div>
       </aside>
@@ -274,21 +399,36 @@ function App() {
             <Icon name="search" size={18} color="var(--ink-3)" />
             <input placeholder="Tìm nhóm, lựa chọn…" value={search} onChange={e => setSearch(e.target.value)} />
           </div>
-          <button className="btn primary" onClick={() => setGroupEditor({})}>
-            <Icon name="plus" size={16} color="#fff" /> Thêm nhóm
-          </button>
+          {!LIVE && (
+            <button className="btn primary" onClick={() => setGroupEditor({})}>
+              <Icon name="plus" size={16} color="#fff" /> Thêm nhóm
+            </button>
+          )}
+          {LIVE && (
+            <div style={{ display: "flex", alignItems: "center", gap: 7, padding: "7px 14px", borderRadius: "var(--r-sm)", background: "var(--ok-bg)", color: "var(--ok)", fontSize: 13, fontWeight: 700 }}>
+              <Icon name="check" size={15} color="var(--ok)" /> Kết nối cơ sở dữ liệu
+            </div>
+          )}
         </header>
 
         <div className="content">
           <div className="stats" style={{ marginBottom: 20 }}>
-            <div className="stat"><div className="stat-ic g"><Icon name="plus" size={22} /></div>
-              <div><div className="lbl">Nhóm variant</div><div className="val tnum">{stats.groups}</div></div></div>
-            <div className="stat"><div className="stat-ic b"><Icon name="grid" size={20} /></div>
-              <div><div className="lbl">Tổng lựa chọn</div><div className="val tnum">{stats.total}</div></div></div>
-            <div className="stat"><div className="stat-ic p"><Icon name="eyeoff" size={20} /></div>
-              <div><div className="lbl">Đang báo hết</div><div className="val tnum">{stats.off}</div></div></div>
-            <div className="stat"><div className="stat-ic a"><Icon name="check" size={22} /></div>
-              <div><div className="lbl">Đang bán</div><div className="val tnum">{stats.total - stats.off}</div></div></div>
+            <div className="stat">
+              <div className="stat-ic g"><Icon name="plus" size={22} /></div>
+              <div><div className="lbl">Nhóm variant</div><div className="val tnum">{stats.groups}</div></div>
+            </div>
+            <div className="stat">
+              <div className="stat-ic b"><Icon name="grid" size={20} /></div>
+              <div><div className="lbl">Tổng lựa chọn</div><div className="val tnum">{stats.total}</div></div>
+            </div>
+            <div className="stat">
+              <div className="stat-ic p"><Icon name="eyeoff" size={20} /></div>
+              <div><div className="lbl">Đang báo hết</div><div className="val tnum">{stats.off}</div></div>
+            </div>
+            <div className="stat">
+              <div className="stat-ic a"><Icon name="check" size={22} /></div>
+              <div><div className="lbl">Đang bán</div><div className="val tnum">{stats.total - stats.off}</div></div>
+            </div>
           </div>
 
           {filteredGroups.length === 0 && (
@@ -311,15 +451,20 @@ function App() {
                   <span className="vgcount">{g.options.filter(o => o.available).length}/{g.options.length} đang bán</span>
                   <div style={{ display: "flex", gap: 6, marginLeft: 8 }}>
                     <button className="vopt-edit" title={allOn ? "Báo hết cả nhóm" : "Bật lại cả nhóm"}
+                      disabled={saving || g.options.length === 0}
                       onClick={() => toggleAllAvail(g.key)}>
                       <Icon name={allOn ? "eyeoff" : "eye"} size={15} />
                     </button>
-                    <button className="vopt-edit" title="Sửa nhóm" onClick={() => setGroupEditor(g)}>
-                      <Icon name="edit" size={15} />
-                    </button>
-                    <button className="vopt-edit del" title="Xoá nhóm" onClick={() => delGroup(g.key)}>
-                      <Icon name="trash" size={15} />
-                    </button>
+                    {!LIVE && (
+                      <>
+                        <button className="vopt-edit" title="Sửa nhóm" onClick={() => setGroupEditor(g)}>
+                          <Icon name="edit" size={15} />
+                        </button>
+                        <button className="vopt-edit del" title="Xoá nhóm" onClick={() => delGroup(g.key)}>
+                          <Icon name="trash" size={15} />
+                        </button>
+                      </>
+                    )}
                   </div>
                 </div>
 
@@ -335,8 +480,10 @@ function App() {
                             onChange={e => setDraftPrice(e.target.value.replace(/[^\d]/g, ""))}
                             placeholder="Phụ phí (đ)" />
                         )}
-                        <button className="btn primary tiny" onClick={commit}>Lưu</button>
-                        <button className="btn ghost tiny" onClick={() => setEditing(null)}>Huỷ</button>
+                        <button className="btn primary tiny" onClick={commit} disabled={saving}>
+                          {saving ? "…" : "Lưu"}
+                        </button>
+                        <button className="btn ghost tiny" onClick={() => setEditing(null)} disabled={saving}>Huỷ</button>
                       </div>
                     ) : (
                       <div className={"vopt-row" + (o.available ? "" : " off")} key={o.id}>
@@ -346,7 +493,9 @@ function App() {
                           {o.def && <span className="vdef">Mặc định</span>}
                           {!o.available && <span className="soldout">Hết</span>}
                         </span>
-                        {priceText(g, o) && <span className={"vopt-extra" + (o.extra > 0 ? "" : " free")}>{priceText(g, o)}</span>}
+                        {priceText(g, o) && (
+                          <span className={"vopt-extra" + (o.extra > 0 ? "" : " free")}>{priceText(g, o)}</span>
+                        )}
                         <div className="vopt-acts">
                           {g.required && !o.def && (
                             <button className="vopt-edit" title="Đặt mặc định" onClick={() => setDefault(g.key, o.id)}>
@@ -361,6 +510,7 @@ function App() {
                           </button>
                           <button className={"switch" + (o.available ? " on" : "")}
                             title={o.available ? "Đang bán — bấm để báo hết" : "Đang hết — bấm để bật lại"}
+                            disabled={saving}
                             onClick={() => toggleAvail(g.key, o.id)} />
                         </div>
                       </div>
@@ -377,8 +527,10 @@ function App() {
                           onChange={e => setDraftPrice(e.target.value.replace(/[^\d]/g, ""))}
                           placeholder="Phụ phí (đ)" />
                       )}
-                      <button className="btn primary tiny" onClick={commit}>Thêm</button>
-                      <button className="btn ghost tiny" onClick={() => setEditing(null)}>Huỷ</button>
+                      <button className="btn primary tiny" onClick={commit} disabled={saving}>
+                        {saving ? "…" : "Thêm"}
+                      </button>
+                      <button className="btn ghost tiny" onClick={() => setEditing(null)} disabled={saving}>Huỷ</button>
                     </div>
                   ) : (
                     <button className="vopt-add" onClick={() => startAdd(g.key)}>
@@ -392,7 +544,14 @@ function App() {
         </div>
       </div>
 
-      {toast && <div className="toast"><span className="tc"><Icon name="check" size={15} color="#fff" /></span>{toast}</div>}
+      {toast && (
+        <div className="toast">
+          <span className="tc" style={{ background: toast.ok ? "var(--ok)" : "var(--danger)" }}>
+            <Icon name={toast.ok ? "check" : "close"} size={15} color="#fff" />
+          </span>
+          {toast.msg}
+        </div>
+      )}
 
       {groupEditor !== null && (
         <GroupEditor initial={groupEditor} onClose={() => setGroupEditor(null)} onSave={saveGroup} />

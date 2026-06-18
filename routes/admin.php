@@ -8,6 +8,7 @@ use App\Http\Controllers\Admin\RewardsController;
 use App\Http\Controllers\Admin\RolesController;
 use App\Http\Controllers\Admin\SettingsController;
 use App\Http\Controllers\Admin\StoresController;
+use App\Http\Controllers\Admin\VariantsController;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(function () {
@@ -45,4 +46,10 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
     Route::delete('/stores/{store}', [StoresController::class, 'destroy'])->name('stores.destroy');
     Route::post('/stores/{store}/photos', [StoresController::class, 'uploadPhoto'])->name('stores.photos.upload');
     Route::delete('/stores/{store}/photos', [StoresController::class, 'deletePhoto'])->name('stores.photos.delete');
+    Route::get('/variants', [VariantsController::class, 'index'])->name('variants.index');
+    Route::post('/variants/options', [VariantsController::class, 'storeOption'])->name('variants.options.store');
+    Route::put('/variants/options', [VariantsController::class, 'updateOption'])->name('variants.options.update');
+    Route::delete('/variants/options', [VariantsController::class, 'destroyOption'])->name('variants.options.destroy');
+    Route::post('/variants/options/toggle', [VariantsController::class, 'toggleOption'])->name('variants.options.toggle');
+    Route::post('/variants/options/toggle-all', [VariantsController::class, 'toggleAllOptions'])->name('variants.options.toggle-all');
 });
