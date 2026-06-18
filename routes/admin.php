@@ -8,6 +8,7 @@ use App\Http\Controllers\Admin\RewardsController;
 use App\Http\Controllers\Admin\RolesController;
 use App\Http\Controllers\Admin\SettingsController;
 use App\Http\Controllers\Admin\StoresController;
+use App\Http\Controllers\Admin\MenuController;
 use App\Http\Controllers\Admin\VariantsController;
 use Illuminate\Support\Facades\Route;
 
@@ -52,4 +53,12 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
     Route::delete('/variants/options', [VariantsController::class, 'destroyOption'])->name('variants.options.destroy');
     Route::post('/variants/options/toggle', [VariantsController::class, 'toggleOption'])->name('variants.options.toggle');
     Route::post('/variants/options/toggle-all', [VariantsController::class, 'toggleAllOptions'])->name('variants.options.toggle-all');
+    Route::get('/menu', [MenuController::class, 'index'])->name('menu.index');
+    Route::post('/menu/products', [MenuController::class, 'storeProduct'])->name('menu.products.store');
+    Route::post('/menu/products/{product}', [MenuController::class, 'updateProduct'])->name('menu.products.update');
+    Route::delete('/menu/products/{product}', [MenuController::class, 'destroyProduct'])->name('menu.products.destroy');
+    Route::post('/menu/products/{product}/toggle', [MenuController::class, 'toggleProduct'])->name('menu.products.toggle');
+    Route::post('/menu/categories', [MenuController::class, 'storeCategory'])->name('menu.categories.store');
+    Route::post('/menu/categories/{category}', [MenuController::class, 'updateCategory'])->name('menu.categories.update');
+    Route::delete('/menu/categories/{category}', [MenuController::class, 'destroyCategory'])->name('menu.categories.destroy');
 });
