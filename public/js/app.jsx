@@ -234,7 +234,7 @@ function App() {
       <nav className="tabbar">
         <button className={"tab " + (tab==="home"?"on":"")} onClick={()=>setTab("home")}><span className="ti"><Icon name="home" size={22}/></span>Trang chủ</button>
         <a className="tab" href={NAV_URLS.catalog}><span className="ti"><Icon name="gift" size={22}/></span>Đổi quà</a>
-        <button className="tab tab-qr" onClick={openQR}><span className="ti"><Icon name="qr" size={26} color="#fff"/></span>Quét QR</button>
+          <button className="tab tab-qr" onClick={openQR}><span className="ti"><Icon name="qr" size={26} color="#fff"/></span><span className="text-qr">Quét QR</span></button>
         <a className="tab" href={NAV_URLS.store}><span className="ti"><Icon name="pin" size={22}/></span>Cửa hàng</a>
         <a className="tab" href={NAV_URLS.profile}><span className="ti"><Icon name="user" size={22}/></span>Tài khoản</a>
       </nav>

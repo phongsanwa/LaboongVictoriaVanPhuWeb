@@ -146,6 +146,6 @@ a { color: inherit; text-decoration: none; }
 
 @media (max-width: 560px) {
   .grid { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; }
-  .gift-thumb { height: 110px; }
+  .gift-thumb { height: 170px; }
   .hdr-sub { display: none; }
 }

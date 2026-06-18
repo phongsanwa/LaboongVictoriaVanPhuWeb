@@ -75,7 +75,7 @@ input { font-family: inherit; }
 
 /* account quick links */
 .acct-menu { background: var(--card); border: 1px solid var(--line-2); border-radius: var(--r-lg); box-shadow: var(--shadow-sm); overflow: hidden; margin-top: 18px; }
-.acct-link { display: flex; align-items: center; gap: 13px; padding: 14px 16px; width: 100%; text-align: left; transition: background .12s; color: var(--ink); }
+.acct-link { text-decoration: none;display: flex; align-items: center; gap: 13px; padding: 14px 16px; width: 100%; text-align: left; transition: background .12s; color: var(--ink); }
 .acct-link + .acct-link { border-top: 1px solid var(--line-2); }
 .acct-link:hover { background: var(--bg-2); }
 .acct-link .ali { width: 38px; height: 38px; border-radius: 11px; background: var(--brand-soft); color: var(--brand); display: grid; place-items: center; flex: none; }
@@ -132,7 +132,7 @@ input { font-family: inherit; }
 .savebar .note { font-size: 13px; color: var(--ink-2); font-weight: 600; display: flex; align-items: center; gap: 8px; }
 .savebar .note .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--yellow); }
 .savebar .acts { margin-left: auto; display: flex; gap: 10px; }
-.btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 12px 20px; border-radius: var(--r-sm); font-weight: 700; font-size: 14.5px; transition: .15s; }
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 12px 15px; border-radius: var(--r-sm); font-weight: 700; font-size: 14.5px; transition: .15s; }
 .btn.primary { background: var(--brand); color: #fff; box-shadow: 0 8px 18px rgba(15,98,63,.22); }
 .btn.primary:hover { background: var(--brand-deep); }
 .btn.ghost { background: var(--bg-2); color: var(--ink); }
