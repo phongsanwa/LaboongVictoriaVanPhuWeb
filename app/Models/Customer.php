@@ -67,4 +67,9 @@ class Customer extends Model
     {
         return $this->hasMany(Redemption::class);
     }
+
+    public function birthdayAwards(): HasMany
+    {
+        return $this->hasMany(BirthdayAward::class);
+    }
 }

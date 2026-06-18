@@ -17,6 +17,7 @@ class Campaign extends Model
         'start_date',
         'end_date',
         'bonus_points',
+        'birthday_window_days',
         'multiplier',
         'discount_percent',
         'reward_id',

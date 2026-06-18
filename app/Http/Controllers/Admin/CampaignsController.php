@@ -16,9 +16,10 @@ class CampaignsController extends Controller
 {
     /** Maps the editor's campaign "type" to campaigns.campaign_type. */
     private const TYPE_MAP = [
-        'x2' => 'double_points',
+        'x2'       => 'double_points',
         'discount' => 'discount_promotion',
-        'voucher' => 'free_item',
+        'voucher'  => 'free_item',
+        'birthday' => 'birthday',
     ];
 
     /** Maps campaigns.status to the UI's status keys. */
@@ -113,29 +114,33 @@ class CampaignsController extends Controller
         $audienceKeys = array_keys($this->audiences());
 
         $data = $request->validate([
-            'name' => ['required', 'string', 'max:255'],
-            'type' => ['required', Rule::in(array_keys(self::TYPE_MAP))],
-            'value'     => ['nullable', 'numeric', 'min:1', 'max:100'],
-            'reward_id' => ['nullable', 'integer', 'exists:rewards,id'],
-            'start'     => ['required', 'date'],
-            'end'       => ['required', 'date', 'after_or_equal:start'],
-            'condition' => ['nullable', 'string', 'max:500'],
-            'audience'  => ['required', Rule::in($audienceKeys)],
+            'name'          => ['required', 'string', 'max:255'],
+            'type'          => ['required', Rule::in(array_keys(self::TYPE_MAP))],
+            'value'         => ['nullable', 'numeric', 'min:1', 'max:100'],
+            'bonus_points'  => ['nullable', 'integer', 'min:0'],
+            'reward_id'     => ['nullable', 'integer', 'exists:rewards,id'],
+            'window_days'   => ['nullable', 'integer', 'min:0', 'max:30'],
+            'start'         => ['required', 'date'],
+            'end'           => ['required', 'date', 'after_or_equal:start'],
+            'condition'     => ['nullable', 'string', 'max:500'],
+            'audience'      => ['required', Rule::in($audienceKeys)],
         ]);
 
         [$targetAudience, $tierId] = $this->resolveAudience($data['audience']);
 
         return [
-            'name' => $data['name'],
-            'description' => $data['condition'] ?: null,
+            'name'          => $data['name'],
+            'description'   => $data['condition'] ?: null,
             'campaign_type' => self::TYPE_MAP[$data['type']],
             'target_audience' => $targetAudience,
-            'tier_id' => $tierId,
-            'start_date' => $data['start'],
-            'end_date' => $data['end'],
-            'multiplier'       => $data['type'] === 'x2' ? (float) ($data['value'] ?? 2) : null,
-            'discount_percent' => $data['type'] === 'discount' ? $data['value'] : null,
-            'reward_id'        => $data['type'] === 'voucher' ? ($data['reward_id'] ?? null) : null,
+            'tier_id'       => $tierId,
+            'start_date'    => $data['start'],
+            'end_date'      => $data['end'],
+            'multiplier'           => $data['type'] === 'x2' ? (float) ($data['value'] ?? 2) : null,
+            'discount_percent'     => $data['type'] === 'discount' ? $data['value'] : null,
+            'reward_id'            => in_array($data['type'], ['voucher', 'birthday']) ? ($data['reward_id'] ?? null) : null,
+            'bonus_points'         => $data['type'] === 'birthday' ? (int) ($data['bonus_points'] ?? 0) : 0,
+            'birthday_window_days' => $data['type'] === 'birthday' ? (int) ($data['window_days'] ?? 0) : 0,
         ];
     }
 
@@ -202,9 +207,11 @@ class CampaignsController extends Controller
             'value' => $campaign->discount_percent !== null
                 ? (int) $campaign->discount_percent
                 : ($campaign->multiplier !== null ? (float) $campaign->multiplier : null),
-            'reward_id'   => $campaign->reward_id,
-            'rewardName'  => $reward?->name,
-            'rewardImage' => $reward?->image_url,
+            'bonus_points'   => (int) ($campaign->bonus_points ?? 0),
+            'window_days'    => (int) ($campaign->birthday_window_days ?? 0),
+            'reward_id'      => $campaign->reward_id,
+            'rewardName'     => $reward?->name,
+            'rewardImage'    => $reward?->image_url,
             'audience'    => $audienceKey,
             'start' => $campaign->start_date->toDateString(),
             'end' => $campaign->end_date->toDateString(),

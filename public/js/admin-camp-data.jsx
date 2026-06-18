@@ -2,9 +2,10 @@
 /* FR-020 · Campaigns & promotions */
 
 const CAMP_TYPES = {
-  x2:      { label: "Tích x2 điểm",   short: "x2 điểm",   ic: "coin",      grad: "linear-gradient(135deg,#0F623F,#1AA86A)", color: "#0F623F" },
-  discount:{ label: "Giảm giá %",     short: "Giảm %",    ic: "percent",   grad: "linear-gradient(135deg,#FF8A5B,#FF6FA5)", color: "#E0518A" },
-  voucher: { label: "Tặng voucher",   short: "Voucher",   ic: "ticket",    grad: "linear-gradient(135deg,#C99A2E,#E0B84A)", color: "#C99A2E" },
+  x2:       { label: "Tích x2 điểm",  short: "x2 điểm",   ic: "coin",     grad: "linear-gradient(135deg,#0F623F,#1AA86A)", color: "#0F623F" },
+  discount: { label: "Giảm giá %",    short: "Giảm %",    ic: "percent",  grad: "linear-gradient(135deg,#FF8A5B,#FF6FA5)", color: "#E0518A" },
+  voucher:  { label: "Tặng voucher",  short: "Voucher",   ic: "ticket",   grad: "linear-gradient(135deg,#C99A2E,#E0B84A)", color: "#C99A2E" },
+  birthday: { label: "Sinh nhật",     short: "Sinh nhật", ic: "cake",     grad: "linear-gradient(135deg,#E91E8C,#FF6B6B)",  color: "#E91E8C" },
 };
 
 const CAMP_STATUS = {

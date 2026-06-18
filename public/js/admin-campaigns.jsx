@@ -41,7 +41,7 @@ function CampaignRow({ c, onEdit, onPush, onToggle }) {
         <div className="camp-name">{c.name}</div>
         <div className="camp-cond">{c.condition}</div>
         <div className="camp-tags">
-          <span className="ctag type" style={{ background: t.color }}><Icon name={t.ic} size={11} color="#fff" /> {t.short}{c.type === "discount" && c.value ? ` ${c.value}%` : c.type === "x2" && c.value && c.value !== 2 ? ` ×${c.value}` : ""}</span>
+          <span className="ctag type" style={{ background: t.color }}><Icon name={t.ic} size={11} color="#fff" /> {t.short}{c.type === "discount" && c.value ? ` ${c.value}%` : c.type === "x2" && c.value && c.value !== 2 ? ` ×${c.value}` : c.type === "birthday" && c.bonus_points ? ` +${fmt(c.bonus_points)}đ` : ""}</span>
           <span className="ctag"><Icon name={aud.ic} size={11} /> {aud.label}</span>
           {c.pushSent && <span className="ctag push"><Icon name="bellpush" size={11} /> Đã gửi push</span>}
         </div>
