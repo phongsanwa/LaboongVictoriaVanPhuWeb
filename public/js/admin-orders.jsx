@@ -1,35 +1,64 @@
 /* global React, ReactDOM, Icon, fmt, adminHref, useTweaks, TweaksPanel, TweakSection, TweakColor, TweakToggle */
-const { useState, useEffect, useMemo } = React;
+const { useState, useEffect, useMemo, useCallback } = React;
 
 const OM_DEFAULTS = /*EDITMODE-BEGIN*/{
   "brand": ["#0F623F", "#07432A"],
   "dark": false
 }/*EDITMODE-END*/;
 
-/* status flow */
+/* ─── LIVE / demo mode ───────────────────────────────────────────── */
+const LIVE   = !!window.ADMIN_ORDERS_DATA;
+const LIVE_D = window.ADMIN_ORDERS_DATA || {};
+
+/* status config */
 const STATUS = {
-  new:    { label: "Đơn mới", cls: "os-new", ic: "receipt" },
-  making: { label: "Đang pha", cls: "os-making", ic: "flame" },
-  ready:  { label: "Sẵn sàng", cls: "os-ready", ic: "check" },
-  done:   { label: "Hoàn tất", cls: "os-done", ic: "bag" },
-  cancel: { label: "Đã huỷ", cls: "os-cancel", ic: "close" },
+  new:    { label: "Đơn mới",   cls: "os-new",    ic: "receipt" },
+  making: { label: "Đang pha",  cls: "os-making", ic: "flame"   },
+  ready:  { label: "Sẵn sàng", cls: "os-ready",  ic: "check"   },
+  done:   { label: "Hoàn tất", cls: "os-done",   ic: "bag"     },
+  cancel: { label: "Đã huỷ",   cls: "os-cancel", ic: "close"   },
 };
-const FLOW = ["new", "making", "ready", "done"];
-const NEXT = { new: "making", making: "ready", ready: "done" };
+const FLOW       = ["new", "making", "ready", "done"];
+const NEXT       = { new: "making", making: "ready", ready: "done" };
 const NEXT_LABEL = { new: "Nhận pha chế", making: "Đã pha xong", ready: "Hoàn tất đơn" };
 
-const AV = ["linear-gradient(140deg,#0F623F,#1AA86A)", "linear-gradient(140deg,#FF8A5B,#FF6FA5)", "linear-gradient(140deg,#1E8FA8,#4FC3D9)", "linear-gradient(140deg,#C99A2E,#E0B84A)", "linear-gradient(140deg,#6B4FA0,#9B7FD4)"];
+const AV = [
+  "linear-gradient(140deg,#0F623F,#1AA86A)",
+  "linear-gradient(140deg,#FF8A5B,#FF6FA5)",
+  "linear-gradient(140deg,#1E8FA8,#4FC3D9)",
+  "linear-gradient(140deg,#C99A2E,#E0B84A)",
+  "linear-gradient(140deg,#6B4FA0,#9B7FD4)",
+];
 function avc(n) { let h = 0; for (let i = 0; i < n.length; i++) h = (h * 31 + n.charCodeAt(i)) >>> 0; return AV[h % AV.length]; }
 function initials(n) { const p = n.trim().split(/\s+/); return ((p[0]?.[0] || "") + (p[p.length - 1]?.[0] || "")).toUpperCase(); }
 
-/* seed orders */
+function minsAgo(iso) {
+  return Math.max(0, Math.floor((Date.now() - new Date(iso).getTime()) / 60000));
+}
+
+function csrfToken() {
+  return document.querySelector('meta[name="csrf-token"]')?.content || '';
+}
+
+async function apiPost(url, body) {
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrfToken(), 'Accept': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  const json = await res.json();
+  if (!res.ok) throw new Error(json.message || 'Có lỗi xảy ra');
+  return json;
+}
+
+/* ─── Demo seed data ─────────────────────────────────────────────── */
 function mk(id, mins, status, cust, phone, type, addr, items, discount) {
   const sub = items.reduce((s, it) => s + it.unit * it.qty, 0);
-  return { id, mins, status, cust, phone, type, addr, items, discount: discount || 0, sub, total: sub - (discount || 0), pay: ["Tiền mặt", "VNPAY QR", "Chuyển khoản"][id.charCodeAt(4) % 3] };
+  return { id, dbId: null, mins, status, cust, phone, type, addr, items, discount: discount || 0, sub, total: sub - (discount || 0), pay: ["Tiền mặt", "VNPAY QR", "Chuyển khoản"][id.charCodeAt(4) % 3], note: "" };
 }
 const ORDERS_SEED = [
   mk("LB-2418", 2, "new", "Nguyễn Minh Anh", "0912 845 207", "ship", "S2.03 KĐT Văn Phú, Hà Đông, Hà Nội",
-    [{ name: "Trà sữa trân châu đường đen", opt: "Size L · Đường 70% · Đá 70% · Trân châu", unit: 53000, qty: 2 }, { name: "Macchiato kem phô mai", opt: "Size M · Đường 50%", unit: 48000, qty: 1 }], 0),
+    [{ name: "Trà sữa trân châu đường đen", opt: "Size L · Đường 70% · Đá 70%", unit: 53000, qty: 2 }, { name: "Macchiato kem phô mai", opt: "Size M · Đường 50%", unit: 48000, qty: 1 }], 0),
   mk("LB-2417", 5, "new", "Trần Quốc Bảo", "0987 213 668", "pickup", null,
     [{ name: "Trà đào cam sả", opt: "Size L · ít đá", unit: 39000, qty: 1 }], 0),
   mk("LB-2416", 9, "making", "Đỗ Khánh Linh", "0978 332 905", "ship", "Tầng 12 Keangnam, Phạm Hùng, Hà Nội",
@@ -48,13 +77,22 @@ const ORDERS_SEED = [
     [{ name: "Cà phê sữa đá", opt: "", unit: 29000, qty: 1 }], 0),
 ];
 
+/* ─── App ────────────────────────────────────────────────────────── */
 function App() {
   const [tw, setTweak] = useTweaks(OM_DEFAULTS);
-  const [orders, setOrders] = useState(() => ORDERS_SEED.map(o => ({ ...o })));
-  const [tab, setTab] = useState("active");
-  const [sel, setSel] = useState(null);
+
+  const [orders, setOrders] = useState(() => {
+    if (LIVE) {
+      return (LIVE_D.orders || []).map(o => ({ ...o, mins: minsAgo(o.createdAt) }));
+    }
+    return ORDERS_SEED.map(o => ({ ...o }));
+  });
+
+  const [tab,      setTab]     = useState("active");
+  const [sel,      setSel]     = useState(null);
   const [sideOpen, setSideOpen] = useState(false);
-  const [toast, setToast] = useState(null);
+  const [toast,    setToast]   = useState(null);
+  const [saving,   setSaving]  = useState(false);
 
   useEffect(() => {
     const r = document.documentElement;
@@ -64,50 +102,117 @@ function App() {
     r.setAttribute("data-theme", tw.dark ? "dark" : "light");
   }, [tw.brand, tw.dark]);
 
+  /* update mins every 30s */
+  useEffect(() => {
+    if (!LIVE) return;
+    const id = setInterval(() => {
+      setOrders(list => list.map(o => ({ ...o, mins: minsAgo(o.createdAt) })));
+    }, 30000);
+    return () => clearInterval(id);
+  }, []);
+
+  /* auto-refresh orders from server every 20s in LIVE mode */
+  const refreshOrders = useCallback(async () => {
+    if (!LIVE) return;
+    try {
+      const res = await fetch(LIVE_D.urls?.refresh, { headers: { 'Accept': 'application/json' } });
+      const json = await res.json();
+      if (json.orders) {
+        setOrders(json.orders.map(o => ({ ...o, mins: minsAgo(o.createdAt) })));
+      }
+    } catch { /* silent */ }
+  }, []);
+
+  useEffect(() => {
+    if (!LIVE) return;
+    const id = setInterval(refreshOrders, 20000);
+    return () => clearInterval(id);
+  }, [refreshOrders]);
+
   const flash = (m) => { setToast(m); setTimeout(() => setToast(null), 2600); };
 
   const counts = useMemo(() => {
     const c = { active: 0 };
-    orders.forEach(o => { c[o.status] = (c[o.status] || 0) + 1; if (o.status !== "done" && o.status !== "cancel") c.active++; });
+    orders.forEach(o => {
+      c[o.status] = (c[o.status] || 0) + 1;
+      if (o.status !== "done" && o.status !== "cancel") c.active++;
+    });
     return c;
   }, [orders]);
 
   const TABS = [
     { key: "active", label: "Đang xử lý", n: counts.active || 0 },
-    { key: "new", label: "Đơn mới", n: counts.new || 0 },
-    { key: "making", label: "Đang pha", n: counts.making || 0 },
-    { key: "ready", label: "Sẵn sàng", n: counts.ready || 0 },
-    { key: "done", label: "Hoàn tất", n: counts.done || 0 },
-    { key: "cancel", label: "Đã huỷ", n: counts.cancel || 0 },
+    { key: "new",    label: "Đơn mới",    n: counts.new    || 0 },
+    { key: "making", label: "Đang pha",   n: counts.making || 0 },
+    { key: "ready",  label: "Sẵn sàng",  n: counts.ready  || 0 },
+    { key: "done",   label: "Hoàn tất",  n: counts.done   || 0 },
+    { key: "cancel", label: "Đã huỷ",    n: counts.cancel || 0 },
   ];
 
   const filtered = useMemo(() => orders.filter(o =>
     tab === "active" ? (o.status !== "done" && o.status !== "cancel") : o.status === tab
   ), [orders, tab]);
 
-  const advance = (o) => {
-    const nx = NEXT[o.status]; if (!nx) return;
-    setOrders(list => list.map(x => x.id === o.id ? { ...x, status: nx } : x));
-    setSel(s => s && s.id === o.id ? { ...s, status: nx } : s);
-    flash(`${o.id} → ${STATUS[nx].label}`);
-  };
-  const cancel = (o) => {
-    if (!confirm(`Huỷ đơn ${o.id}?`)) return;
-    setOrders(list => list.map(x => x.id === o.id ? { ...x, status: "cancel" } : x));
-    setSel(null); flash(`Đã huỷ ${o.id}`);
+  const updateOrder = (updated) => {
+    setOrders(list => list.map(x => x.dbId === updated.dbId ? { ...updated, mins: minsAgo(updated.createdAt) } : x));
+    setSel(s => s && s.dbId === updated.dbId ? { ...updated, mins: minsAgo(updated.createdAt) } : s);
   };
 
+  const advance = async (o) => {
+    const nx = NEXT[o.status];
+    if (!nx) return;
+
+    if (LIVE && o.dbId) {
+      if (saving) return;
+      setSaving(true);
+      try {
+        const url = LIVE_D.urls.advance.replace('__ID__', o.dbId);
+        const json = await apiPost(url, {});
+        updateOrder(json.order);
+        flash(`${o.id} → ${STATUS[nx].label}`);
+      } catch (e) { flash('Lỗi: ' + e.message); }
+      finally { setSaving(false); }
+    } else {
+      setOrders(list => list.map(x => x.id === o.id ? { ...x, status: nx } : x));
+      setSel(s => s && s.id === o.id ? { ...s, status: nx } : s);
+      flash(`${o.id} → ${STATUS[nx].label}`);
+    }
+  };
+
+  const cancel = async (o) => {
+    if (!confirm(`Huỷ đơn ${o.id}?`)) return;
+
+    if (LIVE && o.dbId) {
+      if (saving) return;
+      setSaving(true);
+      try {
+        const url = LIVE_D.urls.cancel.replace('__ID__', o.dbId);
+        const json = await apiPost(url, {});
+        updateOrder(json.order);
+        setSel(null);
+        flash(`Đã huỷ ${o.id}`);
+      } catch (e) { flash('Lỗi: ' + e.message); }
+      finally { setSaving(false); }
+    } else {
+      setOrders(list => list.map(x => x.id === o.id ? { ...x, status: "cancel" } : x));
+      setSel(null);
+      flash(`Đã huỷ ${o.id}`);
+    }
+  };
+
+  const adminInfo = LIVE ? LIVE_D.admin : { name: "Quản trị viên", email: "admin@laboong.vn", initials: "QT" };
+
   const NAV = [
-    { ic: "chart", label: "Tổng quan" },
-    { ic: "users", label: "Khách hàng" },
+    { ic: "chart",   label: "Tổng quan" },
+    { ic: "users",   label: "Khách hàng" },
     { ic: "receipt", label: "Điểm & giao dịch" },
-    { ic: "bag", label: "Đơn hàng", on: true, badge: String(counts.active || 0) },
-    { ic: "gift", label: "Đổi quà" },
-    { ic: "mega", label: "Chiến dịch" },
-    { ic: "cup", label: "Thực đơn" },
-    { ic: "plus", label: "Variant / Tuỳ chọn" },
-    { ic: "shield", label: "Phân quyền" },
-    { ic: "gear", label: "Cài đặt" },
+    { ic: "bag",     label: "Đơn hàng", on: true, badge: String(counts.active || 0) },
+    { ic: "gift",    label: "Đổi quà" },
+    { ic: "mega",    label: "Chiến dịch" },
+    { ic: "cup",     label: "Thực đơn" },
+    { ic: "plus",    label: "Variant / Tuỳ chọn" },
+    { ic: "shield",  label: "Phân quyền" },
+    { ic: "gear",    label: "Cài đặt" },
   ];
 
   return (
@@ -132,8 +237,13 @@ function App() {
         </nav>
         <div className="side-foot">
           <div className="side-user">
-            <div className="side-av">QT</div>
-            <div style={{ minWidth: 0 }}><div className="un">Quản trị viên</div><div className="ur">admin@laboong.vn</div></div>
+            <div className="side-av" style={{ background: avc(adminInfo.name || "A") }}>
+              {adminInfo.initials || initials(adminInfo.name || "A")}
+            </div>
+            <div style={{ minWidth: 0 }}>
+              <div className="un">{adminInfo.name}</div>
+              <div className="ur">{adminInfo.email}</div>
+            </div>
             <button className="icon-btn" style={{ width: 32, height: 32, marginLeft: "auto" }}><Icon name="logout" size={16} /></button>
           </div>
         </div>
@@ -147,7 +257,14 @@ function App() {
             <h1>Quản lý đơn hàng</h1>
           </div>
           <div className="topbar-spacer" />
-          <span className="otype ship" style={{ fontSize: 12.5, padding: "7px 13px" }}><Icon name="pin" size={14} color="currentColor" /> Victoria Văn Phú</span>
+          {LIVE && (
+            <button className="icon-btn" title="Tải lại" onClick={refreshOrders} style={{ marginRight: 8 }}>
+              <Icon name="refresh" size={18} />
+            </button>
+          )}
+          <span className="otype ship" style={{ fontSize: 12.5, padding: "7px 13px" }}>
+            <Icon name="pin" size={14} color="currentColor" /> Victoria Văn Phú
+          </span>
         </header>
 
         <div className="content">
@@ -171,17 +288,23 @@ function App() {
           </div>
 
           <div className="ord-grid">
-            {filtered.length === 0 && <div style={{ gridColumn: "1/-1", textAlign: "center", padding: 48, color: "var(--ink-3)", fontWeight: 500 }}>Không có đơn nào.</div>}
+            {filtered.length === 0 && (
+              <div style={{ gridColumn: "1/-1", textAlign: "center", padding: 48, color: "var(--ink-3)", fontWeight: 500 }}>
+                {LIVE ? "Không có đơn nào." : "Không có đơn nào."}
+              </div>
+            )}
             {filtered.map(o => {
-              const st = STATUS[o.status];
-              const late = o.status !== "done" && o.status !== "cancel" && o.mins >= 20;
+              const st       = STATUS[o.status];
+              const late     = o.status !== "done" && o.status !== "cancel" && o.mins >= 20;
               const totalQty = o.items.reduce((s, it) => s + it.qty, 0);
               return (
-                <div className={"ocard" + (late ? " urgent" : "")} key={o.id} onClick={() => setSel(o)}>
+                <div className={"ocard" + (late ? " urgent" : "")} key={o.id || o.dbId} onClick={() => setSel(o)}>
                   <div className="ocard-top">
                     <div style={{ minWidth: 0 }}>
                       <div className="ocard-code">{o.id}</div>
-                      <div className={"ocard-time" + (late ? " late" : "")}><Icon name="clock" size={12} color="currentColor" /> {o.mins} phút trước</div>
+                      <div className={"ocard-time" + (late ? " late" : "")}>
+                        <Icon name="clock" size={12} color="currentColor" /> {o.mins} phút trước
+                      </div>
                     </div>
                     <span className={"ostatus " + st.cls}>{st.label}</span>
                   </div>
@@ -195,7 +318,10 @@ function App() {
                     <div className="ocard-cust">
                       <div className="ocn">{o.cust}</div>
                       <div className="ocm">
-                        <span className={"otype " + (o.type === "ship" ? "ship" : "pickup")}><Icon name={o.type === "ship" ? "truck" : "bag"} size={11} color="currentColor" /> {o.type === "ship" ? "Giao đi" : "Tại quầy"}</span>
+                        <span className={"otype " + (o.type === "ship" ? "ship" : "pickup")}>
+                          <Icon name={o.type === "ship" ? "truck" : "bag"} size={11} color="currentColor" />
+                          {o.type === "ship" ? " Giao đi" : " Tại quầy"}
+                        </span>
                         {totalQty} món
                       </div>
                     </div>
@@ -208,7 +334,7 @@ function App() {
         </div>
       </div>
 
-      {sel && <OrderDrawer o={sel} onClose={() => setSel(null)} onAdvance={advance} onCancel={cancel} />}
+      {sel && <OrderDrawer o={sel} saving={saving} onClose={() => setSel(null)} onAdvance={advance} onCancel={cancel} />}
       {toast && <div className="toast"><span className="tc"><Icon name="check" size={15} color="#fff" /></span>{toast}</div>}
 
       <TweaksPanel>
@@ -222,13 +348,14 @@ function App() {
   );
 }
 
-function OrderDrawer({ o, onClose, onAdvance, onCancel }) {
+function OrderDrawer({ o, saving, onClose, onAdvance, onCancel }) {
   useEffect(() => {
     const h = e => { if (e.key === "Escape") onClose(); };
     window.addEventListener("keydown", h); return () => window.removeEventListener("keydown", h);
   }, [onClose]);
-  const st = STATUS[o.status];
-  const ended = o.status === "done" || o.status === "cancel";
+
+  const st     = STATUS[o.status];
+  const ended  = o.status === "done" || o.status === "cancel";
   const curIdx = FLOW.indexOf(o.status);
 
   return (
@@ -258,17 +385,38 @@ function OrderDrawer({ o, onClose, onAdvance, onCancel }) {
 
           <div className="od-sec">Khách hàng</div>
           <div className="od-info">
-            <div className="od-ir"><span className="odi"><Icon name="user" size={16} /></span><div><div className="odk">Tên khách</div><div className="odv">{o.cust}</div></div></div>
-            <div className="od-ir"><span className="odi"><Icon name="phone" size={16} /></span><div><div className="odk">Số điện thoại</div><div className="odv">{o.phone}</div></div></div>
-            <div className="od-ir"><span className="odi"><Icon name={o.type === "ship" ? "truck" : "bag"} size={16} /></span><div style={{ minWidth: 0 }}><div className="odk">{o.type === "ship" ? "Giao đến" : "Hình thức"}</div><div className="odv">{o.type === "ship" ? o.addr : "Nhận tại quầy · Victoria Văn Phú"}</div></div></div>
+            <div className="od-ir"><span className="odi"><Icon name="user" size={16} /></span>
+              <div><div className="odk">Tên khách</div><div className="odv">{o.cust}</div></div>
+            </div>
+            {o.phone && (
+              <div className="od-ir"><span className="odi"><Icon name="phone" size={16} /></span>
+                <div><div className="odk">Số điện thoại</div><div className="odv">{o.phone}</div></div>
+              </div>
+            )}
+            <div className="od-ir"><span className="odi"><Icon name={o.type === "ship" ? "truck" : "bag"} size={16} /></span>
+              <div style={{ minWidth: 0 }}>
+                <div className="odk">{o.type === "ship" ? "Giao đến" : "Hình thức"}</div>
+                <div className="odv">{o.type === "ship" ? o.addr : "Nhận tại quầy · Victoria Văn Phú"}</div>
+              </div>
+            </div>
           </div>
+
+          {o.note && (
+            <>
+              <div className="od-sec">Ghi chú</div>
+              <div className="od-note">{o.note}</div>
+            </>
+          )}
 
           <div className="od-sec">Món ({o.items.reduce((s, it) => s + it.qty, 0)})</div>
           <div className="od-items">
             {o.items.map((it, i) => (
               <div className="od-item" key={i}>
                 <span className="oq">{it.qty}×</span>
-                <div style={{ minWidth: 0, flex: 1 }}><div className="onm">{it.name}</div>{it.opt && <div className="oopt">{it.opt}</div>}</div>
+                <div style={{ minWidth: 0, flex: 1 }}>
+                  <div className="onm">{it.name}</div>
+                  {it.opt && <div className="oopt">{it.opt}</div>}
+                </div>
                 <span className="op">{fmt(it.unit * it.qty)}đ</span>
               </div>
             ))}
@@ -282,8 +430,12 @@ function OrderDrawer({ o, onClose, onAdvance, onCancel }) {
         </div>
         {!ended && (
           <div className="od-foot">
-            <button className="btn ghost" style={{ flex: ".5" }} onClick={() => onCancel(o)}>Huỷ đơn</button>
-            {NEXT[o.status] && <button className="btn primary" onClick={() => onAdvance(o)}><Icon name="check" size={17} color="#fff" /> {NEXT_LABEL[o.status]}</button>}
+            <button className="btn ghost" style={{ flex: ".5" }} disabled={saving} onClick={() => onCancel(o)}>Huỷ đơn</button>
+            {NEXT[o.status] && (
+              <button className="btn primary" disabled={saving} onClick={() => onAdvance(o)}>
+                {saving ? <span>Đang lưu…</span> : <><Icon name="check" size={17} color="#fff" /> {NEXT_LABEL[o.status]}</>}
+              </button>
+            )}
           </div>
         )}
       </aside>
