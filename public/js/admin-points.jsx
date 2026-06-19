@@ -105,6 +105,7 @@ function PointsApp() {
     { ic: "chart", label: "Tổng quan" },
     { ic: "users", label: "Khách hàng", badge: String(custs.length) },
     { ic: "receipt", label: "Điểm & giao dịch", on: true },
+    { ic: "bag", label: "Đơn hàng" },
     { ic: "gift", label: "Đổi quà" },
     { ic: "mega", label: "Chiến dịch" },
     { ic: "cup", label: "Thực đơn" },
