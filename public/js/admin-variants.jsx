@@ -258,27 +258,63 @@ function App() {
     }
   };
 
-  /* ── Delete entire group (demo only) ─── */
-  const delGroup = (gKey) => {
-    if (LIVE) { flash("Nhóm SIZE/TOPPING được quản lý bởi DB — không thể xoá.", false); return; }
+  /* ── Delete entire group ─── */
+  const delGroup = async (gKey) => {
     const g = groups.find(x => x.key === gKey);
-    if (confirm(`Xoá nhóm "${g.label}" và tất cả ${g.options.length} lựa chọn bên trong?`)) {
+    if (!confirm(`Xoá nhóm "${g.label}" và tất cả ${g.options.length} lựa chọn bên trong?`)) return;
+
+    if (LIVE) {
+      setSaving(true);
+      try {
+        const url = LIVE_URLS.destroyGroup.replace('__ID__', g.id);
+        await apiFetch('DELETE', url);
+        setGroups(gs => gs.filter(x => x.key !== gKey));
+        flash(`Đã xoá nhóm "${g.label}"`);
+      } catch (e) {
+        flash(e.message, false);
+      } finally {
+        setSaving(false);
+      }
+    } else {
       setGroups(gs => gs.filter(x => x.key !== gKey));
       flash(`Đã xoá nhóm "${g.label}"`);
     }
   };
 
-  /* ── Save group (demo only) ─── */
-  const saveGroup = (updated) => {
-    if (LIVE) { flash("Nhóm SIZE/TOPPING được quản lý bởi DB.", false); setGroupEditor(null); return; }
-    if (!updated.key) {
-      setGroups(gs => [...gs, { ...updated, key: "vg" + Date.now(), options: [] }]);
-      flash(`Đã thêm nhóm "${updated.label}"`);
+  /* ── Save group (create or update) ─── */
+  const saveGroup = async (updated) => {
+    if (LIVE) {
+      setSaving(true);
+      try {
+        const isEdit = !!(updated.key);
+        const body   = { label: updated.label, ic: updated.ic, type: updated.type, required: updated.required };
+        let result;
+        if (isEdit) {
+          const url = LIVE_URLS.updateGroup.replace('__ID__', updated.id);
+          result = await apiFetch('POST', url, body);
+          setGroups(gs => gs.map(g => g.key === updated.key ? result.group : g));
+          flash(`Đã cập nhật nhóm "${updated.label}"`);
+        } else {
+          result = await apiFetch('POST', LIVE_URLS.storeGroup, body);
+          setGroups(gs => [...gs, result.group]);
+          flash(`Đã thêm nhóm "${updated.label}"`);
+        }
+      } catch (e) {
+        flash(e.message, false);
+      } finally {
+        setSaving(false);
+      }
+      setGroupEditor(null);
     } else {
-      setGroups(gs => gs.map(g => g.key === updated.key ? { ...g, ...updated } : g));
-      flash(`Đã cập nhật nhóm "${updated.label}"`);
+      if (!updated.key) {
+        setGroups(gs => [...gs, { ...updated, key: "vg" + Date.now(), options: [] }]);
+        flash(`Đã thêm nhóm "${updated.label}"`);
+      } else {
+        setGroups(gs => gs.map(g => g.key === updated.key ? { ...g, ...updated } : g));
+        flash(`Đã cập nhật nhóm "${updated.label}"`);
+      }
+      setGroupEditor(null);
     }
-    setGroupEditor(null);
   };
 
   /* ── Inline option edit / add ─── */
@@ -399,11 +435,9 @@ function App() {
             <Icon name="search" size={18} color="var(--ink-3)" />
             <input placeholder="Tìm nhóm, lựa chọn…" value={search} onChange={e => setSearch(e.target.value)} />
           </div>
-          {!LIVE && (
-            <button className="btn primary" onClick={() => setGroupEditor({})}>
-              <Icon name="plus" size={16} color="#fff" /> Thêm nhóm
-            </button>
-          )}
+          <button className="btn primary" onClick={() => setGroupEditor({})} disabled={saving}>
+            <Icon name="plus" size={16} color="#fff" /> Thêm nhóm
+          </button>
           {LIVE && (
             <div style={{ display: "flex", alignItems: "center", gap: 7, padding: "7px 14px", borderRadius: "var(--r-sm)", background: "var(--ok-bg)", color: "var(--ok)", fontSize: 13, fontWeight: 700 }}>
               <Icon name="check" size={15} color="var(--ok)" /> Kết nối cơ sở dữ liệu
@@ -455,16 +489,14 @@ function App() {
                       onClick={() => toggleAllAvail(g.key)}>
                       <Icon name={allOn ? "eyeoff" : "eye"} size={15} />
                     </button>
-                    {!LIVE && (
-                      <>
-                        <button className="vopt-edit" title="Sửa nhóm" onClick={() => setGroupEditor(g)}>
-                          <Icon name="edit" size={15} />
-                        </button>
-                        <button className="vopt-edit del" title="Xoá nhóm" onClick={() => delGroup(g.key)}>
-                          <Icon name="trash" size={15} />
-                        </button>
-                      </>
-                    )}
+                    <>
+                      <button className="vopt-edit" title="Sửa nhóm" disabled={saving} onClick={() => setGroupEditor(g)}>
+                        <Icon name="edit" size={15} />
+                      </button>
+                      <button className="vopt-edit del" title="Xoá nhóm" disabled={saving} onClick={() => delGroup(g.key)}>
+                        <Icon name="trash" size={15} />
+                      </button>
+                    </>
                   </div>
                 </div>
 
