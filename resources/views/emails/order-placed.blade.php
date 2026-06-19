@@ -24,7 +24,7 @@
 
   $adminUrl = url('/admin/orders');
 
-  function fmtVnd(int $n): string { return number_format($n, 0, ',', '.'); }
+  $fmtVnd = fn(int $n): string => number_format($n, 0, ',', '.');
 @endphp
 
 <table width="100%" cellpadding="0" cellspacing="0" style="background:#F4F6F3;padding:32px 0;">
@@ -101,7 +101,7 @@
                 @endif
               </td>
               <td style="padding:8px 0;border-bottom:1px solid #F3F4F6;vertical-align:top;text-align:right;white-space:nowrap;">
-                <div style="font-size:14px;font-weight:600;color:#1A1A1A;">{{ fmtVnd((int)($item->unit_price * $item->quantity)) }}đ</div>
+                <div style="font-size:14px;font-weight:600;color:#1A1A1A;">{{ $fmtVnd((int)($item->unit_price * $item->quantity)) }}đ</div>
               </td>
             </tr>
             @endforeach
@@ -118,17 +118,17 @@
         <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:24px;">
           <tr>
             <td style="padding:5px 0;font-size:13.5px;color:#6B7280;">Tạm tính</td>
-            <td style="padding:5px 0;font-size:13.5px;color:#1A1A1A;text-align:right;font-weight:600;">{{ fmtVnd($sub) }}đ</td>
+            <td style="padding:5px 0;font-size:13.5px;color:#1A1A1A;text-align:right;font-weight:600;">{{ $fmtVnd($sub) }}đ</td>
           </tr>
           @if ($disc > 0)
           <tr>
             <td style="padding:5px 0;font-size:13.5px;color:#E0518A;">Giảm giá</td>
-            <td style="padding:5px 0;font-size:13.5px;color:#E0518A;text-align:right;font-weight:600;">−{{ fmtVnd($disc) }}đ</td>
+            <td style="padding:5px 0;font-size:13.5px;color:#E0518A;text-align:right;font-weight:600;">−{{ $fmtVnd($disc) }}đ</td>
           </tr>
           @endif
           <tr>
             <td style="padding:12px 0 0;border-top:2px solid #E5E7EB;font-size:16px;font-weight:800;color:#1A1A1A;">Tổng cộng</td>
-            <td style="padding:12px 0 0;border-top:2px solid #E5E7EB;font-size:20px;font-weight:800;color:#0F623F;text-align:right;">{{ fmtVnd($total) }}đ</td>
+            <td style="padding:12px 0 0;border-top:2px solid #E5E7EB;font-size:20px;font-weight:800;color:#0F623F;text-align:right;">{{ $fmtVnd($total) }}đ</td>
           </tr>
         </table>
 
