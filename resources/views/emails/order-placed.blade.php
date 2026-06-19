@@ -84,10 +84,10 @@
             @foreach ($items as $item)
             @php
               $parts = [];
-              if ($item->size_name)                                      $parts[] = "Size {$item->size_name}";
-              if ($item->sugar_level && $item->sugar_level !== '100')    $parts[] = "Đường {$item->sugar_level}%";
-              if ($item->ice_level   && $item->ice_level   !== '100')    $parts[] = "Đá {$item->ice_level}%";
-              foreach ($item->toppings as $t)                            $parts[] = $t->topping_name;
+              if ($item->size_name)          $parts[] = "Size {$item->size_name}";
+              if ($item->sugar_level !== null) $parts[] = "Đường {$item->sugar_level}%";
+              if ($item->ice_level   !== null) $parts[] = "Đá {$item->ice_level}%";
+              foreach ($item->toppings as $t) $parts[] = $t->topping_name;
               $opts = implode(' · ', $parts);
             @endphp
             <tr>
