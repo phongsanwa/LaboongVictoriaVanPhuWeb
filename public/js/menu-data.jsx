@@ -93,4 +93,7 @@ function calcDiscount(c, subtotal) {
   return 0;
 }
 
-Object.assign(window, { CATS, MENU, TAG_META, STORE, PER_POINT, SUGAR_OPTS, ICE_OPTS, DEFAULT_SUGAR, DEFAULT_ICE, SIZE_OPTS, DEFAULT_SIZE, TOPPING_ADDONS, VARIANT_GROUPS, PROMOS, parseVoucherDiscount, calcDiscount });
+/* stub for demo mode — in LIVE mode, addresses come from PHP data */
+function loadAddresses() { return []; }
+
+Object.assign(window, { CATS, MENU, TAG_META, STORE, PER_POINT, SUGAR_OPTS, ICE_OPTS, DEFAULT_SUGAR, DEFAULT_ICE, SIZE_OPTS, DEFAULT_SIZE, TOPPING_ADDONS, VARIANT_GROUPS, PROMOS, parseVoucherDiscount, calcDiscount, loadAddresses });
