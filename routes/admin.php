@@ -3,6 +3,7 @@
 use App\Http\Controllers\Admin\CampaignsController;
 use App\Http\Controllers\Admin\CustomersController;
 use App\Http\Controllers\Admin\DashboardController;
+use App\Http\Controllers\Admin\OrdersController;
 use App\Http\Controllers\Admin\PointsController;
 use App\Http\Controllers\Admin\RewardsController;
 use App\Http\Controllers\Admin\RolesController;
@@ -17,6 +18,10 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
     Route::get('/customers', [CustomersController::class, 'index'])->name('customers.index');
     Route::put('/customers/{customer}', [CustomersController::class, 'update'])->name('customers.update');
     Route::post('/customers/{customer}/toggle', [CustomersController::class, 'toggle'])->name('customers.toggle');
+    Route::get('/orders', [OrdersController::class, 'index'])->name('orders.index');
+    Route::get('/orders/refresh', [OrdersController::class, 'refresh'])->name('orders.refresh');
+    Route::post('/orders/{order}/advance', [OrdersController::class, 'advance'])->name('orders.advance');
+    Route::post('/orders/{order}/cancel', [OrdersController::class, 'cancel'])->name('orders.cancel');
     Route::get('/points', [PointsController::class, 'index'])->name('points.index');
     Route::post('/points/adjust', [PointsController::class, 'adjust'])->name('points.adjust');
     Route::get('/rewards', [RewardsController::class, 'index'])->name('rewards.index');
