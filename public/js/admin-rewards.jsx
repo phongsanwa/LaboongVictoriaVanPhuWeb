@@ -167,6 +167,8 @@ function RewardsApp() {
     { ic: "receipt", label: "Điểm & giao dịch" },
     { ic: "gift", label: "Đổi quà", on: true, badge: String(items.length) },
     { ic: "mega", label: "Chiến dịch" },
+    { ic: "cup", label: "Thực đơn" },
+    { ic: "plus", label: "Variant / Tuỳ chọn" },
     { ic: "pin", label: "Cửa hàng" },
     { ic: "shield", label: "Phân quyền" },
   ];
