@@ -1,18 +1,67 @@
 /* global React, ReactDOM, Icon, fmt, CATS, MENU, TAG_META, STORE, PER_POINT, CustomizeSheet, NAV_URLS, PROMOS, parseVoucherDiscount, calcDiscount, loadAddresses, useTweaks, TweaksPanel, TweakSection, TweakColor, TweakToggle */
 const { useState, useEffect, useMemo, useRef } = React;
 
-const TODAY_ISO = "2026-06-15";
+const TODAY_ISO = new Date().toISOString().slice(0, 10);
 
 const TW_DEFAULTS = /*EDITMODE-BEGIN*/{
   "brand": ["#0F623F", "#07432A"],
   "dark": false
 }/*EDITMODE-END*/;
 
+/* ─── LIVE / demo mode ─────────────────────────────────────────── */
+const LIVE     = !!window.MENU_PAGE_DATA;
+const LIVE_D   = window.MENU_PAGE_DATA || {};
+
+function getLiveCats()      { return LIVE ? LIVE_D.cats          : (typeof CATS !== 'undefined' ? CATS : []); }
+function getLiveMenu()      { return LIVE ? LIVE_D.menu          : (typeof MENU !== 'undefined' ? MENU : []); }
+function getLiveTagMeta()   { return LIVE ? LIVE_D.tagMeta       : (typeof TAG_META !== 'undefined' ? TAG_META : {}); }
+function getLiveStore()     { return LIVE ? LIVE_D.store         : (typeof STORE !== 'undefined' ? STORE : 'Laboong'); }
+function getLivePerPoint()  { return LIVE ? LIVE_D.perPoint      : (typeof PER_POINT !== 'undefined' ? PER_POINT : 10000); }
+function getLivePromos()    { return LIVE ? LIVE_D.promos        : (typeof PROMOS !== 'undefined' ? PROMOS : {}); }
+function getLiveAddresses() { return LIVE ? (LIVE_D.addresses || []) : (typeof loadAddresses !== 'undefined' ? loadAddresses() : []); }
+
+/* In LIVE mode, build variant groups from PHP data.
+   In demo mode, derive from static VARIANT_GROUPS if defined, else use an
+   empty array (the customize sheet is hidden for demo-mode topping items). */
+function getLiveVariantGroups() {
+  if (LIVE) return LIVE_D.variantGroups || [];
+  return typeof VARIANT_GROUPS !== 'undefined' ? VARIANT_GROUPS : [];
+}
+
+/* ─── Line item helpers ─────────────────────────────────────────── */
 function lineKey(l) {
+  if (l.selections) {
+    const parts = Object.entries(l.selections)
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([k, v]) => `${k}:${Array.isArray(v) ? [...v].sort().join(',') : (v ?? '-')}`)
+      .join('|');
+    return `${l.id}|${parts}`;
+  }
+  /* legacy demo line format */
   const tops = (l.toppings || []).map(t => t.id).sort().join(",");
   return `${l.id}|z${l.size || "-"}|s${l.sugar || "-"}|i${l.ice || "-"}|t${tops}`;
 }
-function optsText(l) {
+
+function optsText(l, variantGroups) {
+  if (l.selections && variantGroups && variantGroups.length) {
+    const parts = [];
+    variantGroups.forEach(g => {
+      const val = l.selections[g.key];
+      if (val === undefined || val === null) return;
+      if (Array.isArray(val)) {
+        if (val.length) {
+          const names = val.map(id => g.options.find(o => o.id === id)?.label || id);
+          parts.push(names.join(', '));
+        }
+      } else {
+        const opt     = g.options.find(o => o.id === val);
+        const defOpt  = g.options.find(o => o.def);
+        if (opt && opt.id !== defOpt?.id) parts.push(`${g.label}: ${opt.label}`);
+      }
+    });
+    return parts.join(' · ');
+  }
+  /* legacy demo */
   const parts = [];
   if (l.size && l.size !== "M") parts.push(`Size ${l.size}`);
   if (l.sugar) parts.push(`Đường ${l.sugar}`);
@@ -23,20 +72,29 @@ function optsText(l) {
 
 function App() {
   const [tw, setTweak] = useTweaks(TW_DEFAULTS);
+
+  const [liveCats,          ] = useState(getLiveCats);
+  const [liveMenu,          ] = useState(getLiveMenu);
+  const [liveTagMeta,       ] = useState(getLiveTagMeta);
+  const [liveStore,         ] = useState(getLiveStore);
+  const [livePerPoint,      ] = useState(getLivePerPoint);
+  const [livePromos,        ] = useState(getLivePromos);
+  const [variantGroups,     ] = useState(getLiveVariantGroups);
+
   const [q, setQ] = useState("");
-  const [activeCat, setActiveCat] = useState(CATS[0].key);
-  const [lines, setLines] = useState([]);     // array of line items
+  const [activeCat, setActiveCat] = useState(() => liveCats[0]?.key || "");
+  const [lines, setLines] = useState([]);
   const [customize, setCustomize] = useState(null);
   const [drawer, setDrawer] = useState(false);
   const [placed, setPlaced] = useState(false);
   const [note, setNote] = useState("");
-  const [coupon, setCoupon] = useState(null);       // applied discount {code,name,type,value,min,...}
+  const [coupon, setCoupon] = useState(null);
   const [couponView, setCouponView] = useState(false);
   const [couponInput, setCouponInput] = useState("");
   const [couponErr, setCouponErr] = useState("");
-  const [myVouchers, setMyVouchers] = useState([]); // from wallet localStorage
-  const [addresses, setAddresses] = useState([]);   // delivery addresses (from Profile)
-  const [addrId, setAddrId] = useState(null);        // selected address id, or "pickup"
+  const [myVouchers, setMyVouchers] = useState([]);
+  const [addresses, setAddresses] = useState(getLiveAddresses);
+  const [addrId, setAddrId] = useState(null);
   const [addrView, setAddrView] = useState(false);
   const grpRefs = useRef({});
 
@@ -48,7 +106,7 @@ function App() {
     r.setAttribute("data-theme", tw.dark ? "dark" : "light");
   }, [tw.brand, tw.dark]);
 
-  // load redeemed discount vouchers from the wallet (Đổi quà page)
+  /* load vouchers from wallet (demo mode) */
   useEffect(() => {
     try {
       const raw = localStorage.getItem("laboong_vouchers_v1");
@@ -56,13 +114,11 @@ function App() {
     } catch (e) { /* ignore */ }
   }, []);
 
-  // load delivery addresses (from Profile / FR-010), default to the default one
+  /* set default address */
   useEffect(() => {
-    const list = loadAddresses();
-    setAddresses(list);
-    const def = list.find(a => a.def) || list[0];
+    const def = addresses.find(a => a.def) || addresses[0];
     setAddrId(def ? def.id : "pickup");
-  }, []);
+  }, []);  // eslint-disable-line
 
   useEffect(() => {
     const h = e => { if (e.key === "Escape") { setCustomize(null); setDrawer(false); } };
@@ -78,52 +134,82 @@ function App() {
     });
     setCustomize(null);
   };
+
   const changeQty = (key, delta) => setLines(ls => ls.flatMap(l => {
     if (l.key !== key) return [l];
     const nq = l.qty + delta;
     return nq <= 0 ? [] : [{ ...l, qty: nq }];
   }));
 
-  // simple add for toppings (no options)
+  /* simple add for topping-category items (no customize sheet) */
   const addSimple = (m, delta) => {
-    const key = `${m.id}|s-|i-|t`;
+    const key = `${m.id}|simple`;
     setLines(ls => {
       const i = ls.findIndex(l => l.key === key);
-      if (i >= 0) { const nq = ls[i].qty + delta; const next = [...ls]; if (nq <= 0) { next.splice(i, 1); return next; } next[i] = { ...next[i], qty: nq }; return next; }
+      if (i >= 0) {
+        const nq = ls[i].qty + delta;
+        const next = [...ls];
+        if (nq <= 0) { next.splice(i, 1); return next; }
+        next[i] = { ...next[i], qty: nq };
+        return next;
+      }
       if (delta <= 0) return ls;
-      return [...ls, { key, id: m.id, name: m.name, base: m.price, grad: m.grad, cat: m.cat, unit: m.price, qty: delta, sugar: null, ice: null, toppings: [] }];
+      return [...ls, { key, id: m.id, name: m.name, base: m.price, grad: m.grad, img: m.img || null, cat: m.cat, unit: m.price, qty: delta }];
     });
   };
 
   const filtered = useMemo(() => {
-    if (!q.trim()) return MENU;
+    if (!q.trim()) return liveMenu;
     const s = q.toLowerCase();
-    return MENU.filter(m => m.name.toLowerCase().includes(s) || m.desc.toLowerCase().includes(s));
-  }, [q]);
-  const byCat = useMemo(() => CATS.map(c => ({ ...c, items: filtered.filter(m => m.cat === c.key) })).filter(c => c.items.length), [filtered]);
+    return liveMenu.filter(m => m.name.toLowerCase().includes(s) || (m.desc || '').toLowerCase().includes(s));
+  }, [q, liveMenu]);
+
+  const byCat = useMemo(() =>
+    liveCats.map(c => ({ ...c, items: filtered.filter(m => m.cat === c.key) })).filter(c => c.items.length),
+  [filtered, liveCats]);
 
   const qtyOfItem = (id) => lines.filter(l => l.id === id).reduce((s, l) => s + l.qty, 0);
-  const count = lines.reduce((s, l) => s + l.qty, 0);
+  const count    = lines.reduce((s, l) => s + l.qty, 0);
   const subtotal = lines.reduce((s, l) => s + l.unit * l.qty, 0);
-  const discount = calcDiscount(coupon, subtotal);
-  const payable = Math.max(0, subtotal - discount);
-  const earnPts = Math.floor(payable / PER_POINT);
 
-  // discount vouchers owned (from wallet) that are still usable
-  const usableVouchers = useMemo(() => myVouchers
-    .filter(v => v.status !== "used" && (!v.expiry || v.expiry >= TODAY_ISO))
-    .map(parseVoucherDiscount)
-    .filter(Boolean), [myVouchers]);
+  const calcCouponDiscount = (c, sub) => {
+    if (!c) return 0;
+    if (sub < (c.min || 0)) return 0;
+    if (c.type === "amount") return Math.min(c.value, sub);
+    if (c.type === "percent") { let d = Math.floor(sub * c.value / 100); if (c.max) d = Math.min(d, c.max); return d; }
+    return 0;
+  };
 
-  // drop coupon if order no longer meets its minimum
+  const discount = calcCouponDiscount(coupon, subtotal);
+  const payable  = Math.max(0, subtotal - discount);
+  const earnPts  = Math.floor(payable / livePerPoint);
+
+  /* parse voucher discount from wallet */
+  const parseWalletVoucher = (v) => {
+    if (typeof parseVoucherDiscount !== 'undefined') return parseVoucherDiscount(v);
+    const m = (v.name || "").match(/giảm\s+([\d.]+)\s*đ/i);
+    if (!m) return null;
+    const value = parseInt(m[1].replace(/\./g, ""), 10);
+    const minM  = (v.fine || "").match(/Đơn từ\s+([\d.]+)/i);
+    const min   = minM ? parseInt(minM[1].replace(/\./g, ""), 10) : 0;
+    return { code: v.code, name: v.name, type: "amount", value, min, source: "voucher" };
+  };
+
+  const usableVouchers = useMemo(() =>
+    myVouchers
+      .filter(v => v.status !== "used" && (!v.expiry || v.expiry >= TODAY_ISO))
+      .map(parseWalletVoucher)
+      .filter(Boolean),
+  [myVouchers]); // eslint-disable-line
+
   useEffect(() => {
-    if (coupon && subtotal < (coupon.min || 0)) { setCoupon(null); }
+    if (coupon && subtotal < (coupon.min || 0)) setCoupon(null);
   }, [subtotal]); // eslint-disable-line
 
   const applyCode = (raw) => {
     const code = (raw || "").trim().toUpperCase();
     if (!code) return;
-    let c = PROMOS[code] ? { ...PROMOS[code], code, source: "promo" } : null;
+    let c = livePromos[code] ? { ...livePromos[code], code, source: "promo" } : null;
     if (!c) { const v = usableVouchers.find(v => v.code.toUpperCase() === code); if (v) c = v; }
     if (!c) {
       const used = myVouchers.find(v => v.code.toUpperCase() === code);
@@ -133,6 +219,7 @@ function App() {
     if (subtotal < (c.min || 0)) { setCouponErr(`Áp dụng cho đơn từ ${fmt(c.min)}đ`); return; }
     setCoupon(c); setCouponErr(""); setCouponInput(""); setCouponView(false);
   };
+
   const applyVoucher = (c) => {
     if (subtotal < (c.min || 0)) { setCouponErr(`Áp dụng cho đơn từ ${fmt(c.min)}đ`); return; }
     setCoupon(c); setCouponErr(""); setCouponView(false);
@@ -158,14 +245,14 @@ function App() {
             <div className="hdr-title">Thực đơn</div>
             <div className="hdr-sub">Đặt món & tích điểm ngay</div>
           </div>
-          <a className="hdr-store" href={NAV_URLS.store}><span className="pin"><Icon name="pin" size={15} color="currentColor" /></span> {STORE}</a>
+          <a className="hdr-store" href={NAV_URLS.store}><span className="pin"><Icon name="pin" size={15} color="currentColor" /></span> {liveStore}</a>
         </div>
       </header>
 
       <main className="app">
         <div className="intro">
           <h1>Hôm nay uống gì? 🧋</h1>
-          <p>Chọn món yêu thích — mỗi 10.000đ tích 1 điểm.</p>
+          <p>Chọn món yêu thích — mỗi {fmt(livePerPoint)}đ tích 1 điểm.</p>
         </div>
 
         <div className="searchbar">
@@ -174,8 +261,8 @@ function App() {
         </div>
 
         <div className="cats">
-          {CATS.map(c => {
-            const n = MENU.filter(m => m.cat === c.key).length;
+          {liveCats.map(c => {
+            const n = liveMenu.filter(m => m.cat === c.key).length;
             return (
               <button key={c.key} className={"cat" + (activeCat === c.key ? " on" : "")} onClick={() => jumpCat(c.key)}>
                 <Icon name={c.ic} size={15} color="currentColor" /> {c.label} <span className="cc">{n}</span>
@@ -193,18 +280,25 @@ function App() {
             <div className="grp-h"><span className="gi"><Icon name={c.ic} size={18} color="currentColor" /></span> {c.label}</div>
             <div className="items">
               {c.items.map(m => {
-                const qty = qtyOfItem(m.id);
+                const qty       = qtyOfItem(m.id);
                 const isTopping = m.cat === "topping";
                 return (
                   <div className="item" key={m.id}>
                     <div className="item-thumb" style={{ background: m.grad }}>
-                      <span className="ti"><Icon name="cup" size={34} color="#fff" /></span>
+                      {m.img
+                        ? <img src={m.img} alt={m.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                        : <span className="ti"><Icon name="cup" size={34} color="#fff" /></span>
+                      }
                       {qty > 0 && <span className="item-qty-badge">{qty}</span>}
                     </div>
                     <div className="item-body">
-                      {m.tags.length > 0 && (
+                      {m.tags && m.tags.length > 0 && (
                         <div className="item-tags">
-                          {m.tags.map(t => <span key={t} className={"tg " + t}><Icon name={TAG_META[t].ic} size={10} color="currentColor" /> {TAG_META[t].l}</span>)}
+                          {m.tags.map(t => {
+                            const meta = liveTagMeta[t];
+                            if (!meta) return null;
+                            return <span key={t} className={"tg " + t}><Icon name={meta.ic} size={10} color="currentColor" /> {meta.l}</span>;
+                          })}
                         </div>
                       )}
                       <div className="item-name">{m.name}</div>
@@ -231,7 +325,14 @@ function App() {
       </main>
 
       {/* customize sheet */}
-      {customize && <CustomizeSheet item={customize} onClose={() => setCustomize(null)} onAdd={addLine} />}
+      {customize && (
+        <CustomizeSheet
+          item={customize}
+          variantGroups={variantGroups}
+          onClose={() => setCustomize(null)}
+          onAdd={addLine}
+        />
+      )}
 
       {/* sticky cart bar */}
       {count > 0 && !drawer && !customize && (
@@ -253,7 +354,7 @@ function App() {
               <div className="ok-wrap">
                 <div className="ok-ring"><div className="ck"><Icon name="check" size={28} color="#fff" /></div></div>
                 <h3>Đặt hàng thành công! 🎉</h3>
-                <p>{selectedAddr ? <>Đơn của bạn sẽ được giao đến<br /><b>{selectedAddr.text}</b></> : <>Đơn của bạn đang được pha chế tại<br />Laboong {STORE}.</>}</p>
+                <p>{selectedAddr ? <>Đơn của bạn sẽ được giao đến<br /><b>{selectedAddr.text}</b></> : <>Đơn của bạn đang được pha chế tại<br />Laboong {liveStore}.</>}</p>
                 <div className="ok-earn">
                   <span className="oi"><Icon name="coin" size={22} color="#fff" /></span>
                   <div><div className="ot">Bạn vừa tích được</div><div className="ov">+{fmt(earnPts)} điểm</div></div>
@@ -297,7 +398,7 @@ function App() {
                     </div>
                   )}
 
-                  <div className="cp-hint"><Icon name="info" size={13} color="var(--ink-3)" /> Mã demo có thể thử: <b>LABOONG10</b> (giảm 10%), <b>WELCOME20</b> (giảm 20k cho đơn từ 50k), <b>FREESHIP</b> (giảm 15k).</div>
+                  <div className="cp-hint"><Icon name="info" size={13} color="var(--ink-3)" /> Mã thử: <b>LABOONG10</b> (giảm 10%), <b>WELCOME20</b> (giảm 20k / đơn từ 50k), <b>FREESHIP</b> (giảm 15k).</div>
                 </div>
               </>
             ) : addrView ? (
@@ -327,7 +428,7 @@ function App() {
                     <span className="ai"><Icon name="bag" size={19} color="currentColor" /></span>
                     <div style={{ minWidth: 0, flex: 1 }}>
                       <div className="albl"><span className="atag">Nhận tại quầy</span></div>
-                      <div className="atext">Laboong {STORE}</div>
+                      <div className="atext">Laboong {liveStore}</div>
                     </div>
                     <span className="aradio" />
                   </button>
@@ -339,7 +440,7 @@ function App() {
               <div className="cart-h">
                 <div>
                   <h3>Giỏ hàng</h3>
-                  <div className="ch-sub">{STORE} · {count} món</div>
+                  <div className="ch-sub">{liveStore} · {count} món</div>
                 </div>
                 <button className="cart-x" onClick={() => setDrawer(false)}><Icon name="close" size={18} /></button>
               </div>
@@ -355,17 +456,22 @@ function App() {
                         <div className="dt">{selectedAddr.text}</div>
                       </>) : (<>
                         <div className="dl">Hình thức nhận</div>
-                        <div className="dt">Nhận tại quầy · Laboong {STORE}</div>
+                        <div className="dt">Nhận tại quầy · Laboong {liveStore}</div>
                       </>)}
                     </div>
                     <span className="dchev"><Icon name="chev" size={18} /></span>
                   </button>
                   {lines.map(l => (
                     <div className="crow" key={l.key}>
-                      <div className="cthumb" style={{ background: l.grad }}><Icon name="cup" size={22} color="#fff" /></div>
+                      <div className="cthumb" style={{ background: l.grad }}>
+                        {l.img
+                          ? <img src={l.img} alt={l.name} style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: "inherit" }} />
+                          : <Icon name="cup" size={22} color="#fff" />
+                        }
+                      </div>
                       <div style={{ minWidth: 0, flex: 1 }}>
                         <div className="cn">{l.name}</div>
-                        {optsText(l) && <div className="copts">{optsText(l)}</div>}
+                        {optsText(l, variantGroups) && <div className="copts">{optsText(l, variantGroups)}</div>}
                         <div className="cp">{fmt(l.unit)}đ</div>
                       </div>
                       <div className="cstep">

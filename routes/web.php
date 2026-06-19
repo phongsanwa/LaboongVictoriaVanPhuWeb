@@ -4,6 +4,7 @@ use App\Http\Controllers\Auth\ForgotPasswordController;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Auth\RegisterController;
 use App\Http\Controllers\HomeController;
+use App\Http\Controllers\MenuPageController;
 use App\Http\Controllers\PointsController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\RewardsCatalogController;
@@ -11,6 +12,7 @@ use App\Http\Controllers\StoreController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', [HomeController::class, 'index'])->middleware('auth')->name('home');
+Route::get('/menu', [MenuPageController::class, 'index'])->middleware('auth')->name('menu');
 Route::get('/points', [PointsController::class, 'index'])->middleware('auth')->name('points');
 Route::get('/store', [StoreController::class, 'index'])->middleware('auth')->name('store');
 

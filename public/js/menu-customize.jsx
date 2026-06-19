@@ -1,25 +1,57 @@
-/* global React, Icon, fmt, SUGAR_OPTS, ICE_OPTS, DEFAULT_SUGAR, DEFAULT_ICE, SIZE_OPTS, DEFAULT_SIZE, TOPPING_ADDONS */
+/* global React, Icon, fmt */
 const { useState: useStateCz } = React;
 
-function CustomizeSheet({ item, onClose, onAdd }) {
-  const [sugar, setSugar] = useStateCz(DEFAULT_SUGAR);
-  const [ice, setIce] = useStateCz(DEFAULT_ICE);
-  const [size, setSize] = useStateCz(DEFAULT_SIZE);
-  const [tops, setTops] = useStateCz([]);   // array of topping ids
+/* Build default selections from variantGroups array */
+function makeDefaultSelections(variantGroups) {
+  const sel = {};
+  variantGroups.forEach(g => {
+    if (g.type === 'addon') {
+      sel[g.key] = [];
+    } else {
+      const availOpts = g.options.filter(o => o.available !== false);
+      const def = availOpts.find(o => o.def) || availOpts[0];
+      sel[g.key] = def ? def.id : null;
+    }
+  });
+  return sel;
+}
+
+/* Calculate unit price from base price + variant selections */
+function calcUnit(basePrice, variantGroups, selections) {
+  let extra = 0;
+  variantGroups.forEach(g => {
+    const val = selections[g.key];
+    if (g.type === 'size' && val) {
+      const opt = g.options.find(o => o.id === val);
+      extra += opt?.extra || 0;
+    } else if (g.type === 'addon' && Array.isArray(val)) {
+      val.forEach(id => {
+        const opt = g.options.find(o => o.id === id);
+        extra += opt?.extra || 0;
+      });
+    }
+  });
+  return basePrice + extra;
+}
+
+function CustomizeSheet({ item, variantGroups, onClose, onAdd }) {
+  const [selections, setSelections] = useStateCz(() => makeDefaultSelections(variantGroups));
   const [qty, setQty] = useStateCz(1);
 
-  const toggleTop = (id) => setTops(t => t.includes(id) ? t.filter(x => x !== id) : [...t, id]);
-  const chosen = TOPPING_ADDONS.filter(t => tops.includes(t.id));
-  const addonTotal = chosen.reduce((s, t) => s + t.price, 0);
-  const sizeObj = SIZE_OPTS.find(s => s.key === size) || SIZE_OPTS[0];
-  const unit = item.price + sizeObj.extra + addonTotal;
+  const unit  = calcUnit(item.price, variantGroups, selections);
   const total = unit * qty;
+
+  const selectSingle = (gKey, optId) => setSelections(s => ({ ...s, [gKey]: optId }));
+  const toggleAddon  = (gKey, optId) => setSelections(s => {
+    const curr = s[gKey] || [];
+    return { ...s, [gKey]: curr.includes(optId) ? curr.filter(x => x !== optId) : [...curr, optId] };
+  });
 
   const submit = () => {
     onAdd({
-      id: item.id, name: item.name, base: item.price, grad: item.grad, cat: item.cat,
-      sugar, ice, size, toppings: chosen.map(t => ({ id: t.id, name: t.name, price: t.price })),
-      unit, qty,
+      id: item.id, name: item.name, base: item.price,
+      grad: item.grad, img: item.img || null, cat: item.cat,
+      selections: { ...selections }, unit, qty,
     });
   };
 
@@ -27,7 +59,14 @@ function CustomizeSheet({ item, onClose, onAdd }) {
     <div className="scrim" onClick={onClose}>
       <div className="cart" onClick={e => e.stopPropagation()}>
         <div className="cz-h">
-          <div className="cz-thumb" style={{ background: item.grad }}><Icon name="cup" size={28} color="#fff" /></div>
+          {item.img
+            ? <div className="cz-thumb" style={{ background: item.grad, overflow: "hidden", padding: 0 }}>
+                <img src={item.img} alt={item.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+              </div>
+            : <div className="cz-thumb" style={{ background: item.grad }}>
+                <Icon name="cup" size={28} color="#fff" />
+              </div>
+          }
           <div style={{ minWidth: 0, flex: 1 }}>
             <h3>{item.name}</h3>
             <div className="cz-desc">{item.desc}</div>
@@ -37,43 +76,46 @@ function CustomizeSheet({ item, onClose, onAdd }) {
         </div>
 
         <div className="cz-b">
-          {/* size */}
-          <div className="cz-sec">
-            <div className="cz-sec-h"><span className="cz-sec-ic"><Icon name="cup" size={15} color="currentColor" /></span><span className="cz-sec-t">Size cốc</span></div>
-            <div className="cz-chips">
-              {SIZE_OPTS.map(s => <button key={s.key} className={"cz-chip" + (size === s.key ? " on" : "")} onClick={() => setSize(s.key)}>{s.label}{s.extra > 0 ? ` +${fmt(s.extra)}đ` : ""}</button>)}
-            </div>
-          </div>
-          {/* sugar */}
-          <div className="cz-sec">
-            <div className="cz-sec-h"><span className="cz-sec-ic"><Icon name="coin" size={15} color="currentColor" /></span><span className="cz-sec-t">Lượng đường</span></div>
-            <div className="cz-chips">
-              {SUGAR_OPTS.map(s => <button key={s} className={"cz-chip" + (sugar === s ? " on" : "")} onClick={() => setSugar(s)}>{s}</button>)}
-            </div>
-          </div>
-          {/* ice */}
-          <div className="cz-sec">
-            <div className="cz-sec-h"><span className="cz-sec-ic"><Icon name="flame" size={15} color="currentColor" /></span><span className="cz-sec-t">Lượng đá</span></div>
-            <div className="cz-chips">
-              {ICE_OPTS.map(s => <button key={s} className={"cz-chip" + (ice === s ? " on" : "")} onClick={() => setIce(s)}>{s}</button>)}
-            </div>
-          </div>
-          {/* toppings */}
-          <div className="cz-sec">
-            <div className="cz-sec-h"><span className="cz-sec-ic"><Icon name="plus" size={15} color="currentColor" /></span><span className="cz-sec-t">Topping<span className="req">· chọn nhiều</span></span></div>
-            <div className="cz-tops">
-              {TOPPING_ADDONS.map(t => {
-                const on = tops.includes(t.id);
-                return (
-                  <button key={t.id} className={"cz-top" + (on ? " on" : "")} onClick={() => toggleTop(t.id)}>
-                    <span className="box">{on && <Icon name="check" size={14} color="#fff" />}</span>
-                    <span className="tn">{t.name}</span>
-                    <span className="tp">+{fmt(t.price)}đ</span>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
+          {variantGroups.map(g => {
+            const availOpts = g.options.filter(o => o.available !== false);
+            if (availOpts.length === 0) return null;
+            return (
+              <div key={g.key} className="cz-sec">
+                <div className="cz-sec-h">
+                  <span className="cz-sec-ic"><Icon name={g.ic} size={15} color="currentColor" /></span>
+                  <span className="cz-sec-t">
+                    {g.label}
+                    {!g.required && <span className="req">· chọn nhiều</span>}
+                  </span>
+                </div>
+                {g.type === 'addon'
+                  ? (
+                    <div className="cz-tops">
+                      {availOpts.map(o => {
+                        const on = (selections[g.key] || []).includes(o.id);
+                        return (
+                          <button key={o.id} className={"cz-top" + (on ? " on" : "")} onClick={() => toggleAddon(g.key, o.id)}>
+                            <span className="box">{on && <Icon name="check" size={14} color="#fff" />}</span>
+                            <span className="tn">{o.label}</span>
+                            <span className="tp">+{fmt(o.extra)}đ</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <div className="cz-chips">
+                      {availOpts.map(o => (
+                        <button key={o.id} className={"cz-chip" + (selections[g.key] === o.id ? " on" : "")}
+                          onClick={() => selectSingle(g.key, o.id)}>
+                          {o.label}{o.extra > 0 ? ` +${fmt(o.extra)}đ` : ""}
+                        </button>
+                      ))}
+                    </div>
+                  )
+                }
+              </div>
+            );
+          })}
         </div>
 
         <div className="cz-f">

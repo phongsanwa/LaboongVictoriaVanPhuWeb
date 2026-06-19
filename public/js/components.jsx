@@ -151,6 +151,7 @@ const NAV_URLS = {
   register: "/register",
   login: "/login",
   home: "/",
+  menu: "/menu",
   points: "/points",
   catalog: "/rewards",
   wallet: "/rewards/wallet",
