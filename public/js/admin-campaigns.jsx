@@ -153,6 +153,7 @@ function CampaignsApp() {
     { ic: "chart", label: "Tổng quan" },
     { ic: "users", label: "Khách hàng" },
     { ic: "receipt", label: "Điểm & giao dịch" },
+    { ic: "bag", label: "Đơn hàng" },
     { ic: "gift", label: "Đổi quà" },
     { ic: "mega", label: "Chiến dịch", on: true, badge: String(items.length) },
     { ic: "cup", label: "Thực đơn" },
