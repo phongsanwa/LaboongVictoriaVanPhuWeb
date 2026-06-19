@@ -9,7 +9,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&family=Baloo+2:wght@600;700;800&display=swap" rel="stylesheet" />
-<link rel="stylesheet" href="{{ asset('css/admin.css') }}" />
+<link rel="stylesheet" href="{{ asset('css/admin.css') }}?v={{ time() }}" />
 </head>
 <body>
 <div id="root"></div>
@@ -22,11 +22,11 @@
   window.ADMIN_CAMPAIGNS_DATA = @json($campaignsData);
 </script>
 
-<script type="text/babel" src="{{ asset('js/tweaks-panel.jsx') }}"></script>
-<script type="text/babel" src="{{ asset('js/components.jsx') }}"></script>
-<script type="text/babel" src="{{ asset('js/admin-camp-data.jsx') }}"></script>
-<script type="text/babel" src="{{ asset('js/admin-camp-wizard.jsx') }}"></script>
-<script type="text/babel" src="{{ asset('js/admin-push.jsx') }}"></script>
-<script type="text/babel" src="{{ asset('js/admin-campaigns.jsx') }}"></script>
+<script type="text/babel" src="{{ asset('js/tweaks-panel.jsx') }}?v={{ time() }}"></script>
+<script type="text/babel" src="{{ asset('js/components.jsx') }}?v={{ time() }}"></script>
+<script type="text/babel" src="{{ asset('js/admin-camp-data.jsx') }}?v={{ time() }}"></script>
+<script type="text/babel" src="{{ asset('js/admin-camp-wizard.jsx') }}?v={{ time() }}"></script>
+<script type="text/babel" src="{{ asset('js/admin-push.jsx') }}?v={{ time() }}"></script>
+<script type="text/babel" src="{{ asset('js/admin-campaigns.jsx') }}?v={{ time() }}"></script>
 </body>
 </html>

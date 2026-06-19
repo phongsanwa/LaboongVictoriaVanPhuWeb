@@ -9,7 +9,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&family=Baloo+2:wght@600;700;800&display=swap" rel="stylesheet" />
-<link rel="stylesheet" href="{{ asset('css/admin.css') }}" />
+<link rel="stylesheet" href="{{ asset('css/admin.css') }}?v={{ time() }}" />
 </head>
 <body>
 <div id="root"></div>
@@ -22,9 +22,9 @@
   window.ADMIN_DASHBOARD_DATA = @json($dashboardData);
 </script>
 
-<script type="text/babel" src="{{ asset('js/tweaks-panel.jsx') }}"></script>
-<script type="text/babel" src="{{ asset('js/components.jsx') }}"></script>
-<script type="text/babel" src="{{ asset('js/admin-charts.jsx') }}"></script>
-<script type="text/babel" src="{{ asset('js/admin-dashboard.jsx') }}"></script>
+<script type="text/babel" src="{{ asset('js/tweaks-panel.jsx') }}?v={{ time() }}"></script>
+<script type="text/babel" src="{{ asset('js/components.jsx') }}?v={{ time() }}"></script>
+<script type="text/babel" src="{{ asset('js/admin-charts.jsx') }}?v={{ time() }}"></script>
+<script type="text/babel" src="{{ asset('js/admin-dashboard.jsx') }}?v={{ time() }}"></script>
 </body>
 </html>
