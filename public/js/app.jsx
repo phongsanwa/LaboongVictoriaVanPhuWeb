@@ -85,6 +85,7 @@ function App() {
           </div>
           <nav className="nav">
             <a className="on" href={NAV_URLS.home}>Trang chủ</a>
+            <a href={NAV_URLS.menu}>Đặt món</a>
             <a href={NAV_URLS.catalog}>Đổi quà</a>
             <a href={NAV_URLS.store}>Cửa hàng</a>
             <a href={NAV_URLS.history}>Lịch sử</a>
@@ -233,9 +234,9 @@ function App() {
       {/* ---------- Mobile bottom nav ---------- */}
       <nav className="tabbar">
         <button className={"tab " + (tab==="home"?"on":"")} onClick={()=>setTab("home")}><span className="ti"><Icon name="home" size={22}/></span>Trang chủ</button>
-        <a className="tab" href={NAV_URLS.catalog}><span className="ti"><Icon name="gift" size={22}/></span>Đổi quà</a>
+        <a className="tab" href={NAV_URLS.menu}><span className="ti"><Icon name="cup" size={22}/></span>Đặt món</a>
           <button className="tab tab-qr" onClick={openQR}><span className="ti"><Icon name="qr" size={26} color="#fff"/></span><span className="text-qr">Quét QR</span></button>
-        <a className="tab" href={NAV_URLS.store}><span className="ti"><Icon name="pin" size={22}/></span>Cửa hàng</a>
+        <a className="tab" href={NAV_URLS.catalog}><span className="ti"><Icon name="gift" size={22}/></span>Đổi quà</a>
         <a className="tab" href={NAV_URLS.profile}><span className="ti"><Icon name="user" size={22}/></span>Tài khoản</a>
       </nav>
 
