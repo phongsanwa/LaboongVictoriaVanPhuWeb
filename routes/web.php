@@ -5,6 +5,7 @@ use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Auth\RegisterController;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\MenuPageController;
+use App\Http\Controllers\OrderController;
 use App\Http\Controllers\PointsController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\RewardsCatalogController;
@@ -13,6 +14,7 @@ use Illuminate\Support\Facades\Route;
 
 Route::get('/', [HomeController::class, 'index'])->middleware('auth')->name('home');
 Route::get('/menu', [MenuPageController::class, 'index'])->middleware('auth')->name('menu');
+Route::post('/orders', [OrderController::class, 'place'])->middleware('auth')->name('orders.place');
 Route::get('/points', [PointsController::class, 'index'])->middleware('auth')->name('points');
 Route::get('/store', [StoreController::class, 'index'])->middleware('auth')->name('store');
 

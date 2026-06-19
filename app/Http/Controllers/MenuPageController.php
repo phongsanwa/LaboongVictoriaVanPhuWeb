@@ -148,6 +148,9 @@ class MenuPageController extends Controller
                 'FREESHIP'  => ['name' => 'Miễn phí giao hàng',              'type' => 'amount',  'value' => 15000, 'min' => 0],
             ],
             'addresses'     => $addresses,
+            'urls'          => [
+                'placeOrder' => route('orders.place'),
+            ],
             'tagMeta'       => [
                 'hot' => ['l' => 'Best',   'ic' => 'flame'],
                 'veg' => ['l' => 'Healthy', 'ic' => 'plant'],
