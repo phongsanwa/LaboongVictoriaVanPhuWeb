@@ -107,6 +107,8 @@ function PointsApp() {
     { ic: "receipt", label: "Điểm & giao dịch", on: true },
     { ic: "gift", label: "Đổi quà" },
     { ic: "mega", label: "Chiến dịch" },
+    { ic: "cup", label: "Thực đơn" },
+    { ic: "plus", label: "Variant / Tuỳ chọn" },
     { ic: "pin", label: "Cửa hàng" },
     { ic: "shield", label: "Phân quyền" },
   ];
