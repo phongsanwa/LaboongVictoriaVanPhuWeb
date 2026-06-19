@@ -96,7 +96,7 @@ function MenuEditor({ initial, groups, onClose, onSave, saving }) {
   const valid = name.trim() && Number(price) > 0;
   const submit = () => {
     if (!valid) return;
-    onSave({ ...initial, id: initial.id || ("new" + Date.now()), name: name.trim(), cat, price: Number(price), desc: desc.trim(), grad, img: imgPrev, imgFile, hadImg: !!initial.img, tags, available, opts, sold: initial.sold || 0 });
+    onSave({ ...initial, id: initial.id || (LIVE ? null : ("new" + Date.now())), name: name.trim(), cat, price: Number(price), desc: desc.trim(), grad, img: imgPrev, imgFile, hadImg: !!initial.img, tags, available, opts, sold: initial.sold || 0 });
   };
 
   const onFile = (e) => {
