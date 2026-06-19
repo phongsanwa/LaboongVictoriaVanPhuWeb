@@ -31,10 +31,10 @@ MON DAT
 @foreach ($items as $item)
 @php
   $parts = [];
-  if ($item->size_name)                                   $parts[] = "Size {$item->size_name}";
-  if ($item->sugar_level && $item->sugar_level !== '100') $parts[] = "Duong {$item->sugar_level}%";
-  if ($item->ice_level   && $item->ice_level   !== '100') $parts[] = "Da {$item->ice_level}%";
-  foreach ($item->toppings as $t)                         $parts[] = $t->topping_name;
+  if ($item->size_name)           $parts[] = "Size {$item->size_name}";
+  if ($item->sugar_level !== null) $parts[] = "Duong {$item->sugar_level}%";
+  if ($item->ice_level   !== null) $parts[] = "Da {$item->ice_level}%";
+  foreach ($item->toppings as $t) $parts[] = $t->topping_name;
 @endphp
 {{ $item->quantity }}x {{ $item->product?->name ?? "San pham #{$item->product_id}" }}
 @if (count($parts))
