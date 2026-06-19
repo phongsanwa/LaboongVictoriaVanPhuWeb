@@ -87,6 +87,9 @@ function App() {
   const [customize, setCustomize] = useState(null);
   const [drawer, setDrawer] = useState(false);
   const [placed, setPlaced] = useState(false);
+  const [placing, setPlacing] = useState(false);
+  const [orderErr, setOrderErr] = useState("");
+  const [actualPts, setActualPts] = useState(0);
   const [note, setNote] = useState("");
   const [coupon, setCoupon] = useState(null);
   const [couponView, setCouponView] = useState(false);
@@ -231,7 +234,44 @@ function App() {
     if (el) { const y = el.getBoundingClientRect().top + window.scrollY - 124; window.scrollTo({ top: y, behavior: "smooth" }); }
   };
 
-  const reset = () => { setLines([]); setPlaced(false); setDrawer(false); setNote(""); setCoupon(null); setCouponView(false); setCouponInput(""); setCouponErr(""); };
+  const reset = () => {
+    setLines([]); setPlaced(false); setDrawer(false); setNote(""); setOrderErr("");
+    setCoupon(null); setCouponView(false); setCouponInput(""); setCouponErr("");
+    setActualPts(0);
+  };
+
+  const checkout = async () => {
+    if (placing) return;
+    setOrderErr("");
+
+    if (!LIVE) { setActualPts(earnPts); setPlaced(true); return; }
+
+    setPlacing(true);
+    try {
+      const res = await fetch(LIVE_D.urls?.placeOrder, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || '',
+          'Accept': 'application/json',
+        },
+        body: JSON.stringify({
+          lines: lines.map(l => ({ id: l.id, qty: l.qty, selections: l.selections || null })),
+          note: note || null,
+          coupon_code: coupon?.code || null,
+          discount: discount,
+        }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.message || 'Có lỗi xảy ra');
+      setActualPts(json.points_earned ?? earnPts);
+      setPlaced(true);
+    } catch (e) {
+      setOrderErr(e.message);
+    } finally {
+      setPlacing(false);
+    }
+  };
 
   const selectedAddr = addrId === "pickup" ? null : addresses.find(a => a.id === addrId);
   const addrIcon = (label) => label === "Công ty" ? "building" : label === "Khác" ? "pin" : "home";
@@ -357,7 +397,7 @@ function App() {
                 <p>{selectedAddr ? <>Đơn của bạn sẽ được giao đến<br /><b>{selectedAddr.text}</b></> : <>Đơn của bạn đang được pha chế tại<br />Laboong {liveStore}.</>}</p>
                 <div className="ok-earn">
                   <span className="oi"><Icon name="coin" size={22} color="#fff" /></span>
-                  <div><div className="ot">Bạn vừa tích được</div><div className="ov">+{fmt(earnPts)} điểm</div></div>
+                  <div><div className="ot">Bạn vừa tích được</div><div className="ov">+{fmt(actualPts)} điểm</div></div>
                 </div>
                 <button className="ok-btn" onClick={reset}>Đặt thêm món khác</button>
               </div>
@@ -507,7 +547,10 @@ function App() {
                   {discount > 0 && <div className="csum" style={{ color: "var(--pink)" }}><span>Giảm giá</span><span className="v tnum" style={{ color: "var(--pink)" }}>−{fmt(discount)}đ</span></div>}
                   <div className="csum earn"><span>Điểm tích được</span><span className="v">+{fmt(earnPts)} điểm</span></div>
                   <div className="csum total"><span>Tổng cộng</span><span className="v tnum">{fmt(payable)}đ</span></div>
-                  <button className="checkout" onClick={() => setPlaced(true)}><Icon name="check" size={18} color="#fff" /> Đặt hàng · {fmt(payable)}đ</button>
+                  {orderErr && <div className="cp-err" style={{ marginBottom: 6 }}><Icon name="alert" size={14} color="var(--hot)" /> {orderErr}</div>}
+                  <button className="checkout" disabled={placing} onClick={checkout}>
+                    {placing ? <span>Đang đặt…</span> : <><Icon name="check" size={18} color="#fff" /> Đặt hàng · {fmt(payable)}đ</>}
+                  </button>
                 </div>
               </>)}
             </>)}
