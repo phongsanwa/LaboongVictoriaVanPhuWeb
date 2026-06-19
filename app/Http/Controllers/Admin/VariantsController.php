@@ -5,30 +5,14 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Product;
 use App\Models\ProductVariant;
+use App\Models\VariantGroup;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Validation\Rule;
 
 class VariantsController extends Controller
 {
-    /** Fixed variant groups backed by the DB enum. */
-    private const GROUPS = [
-        'SIZE' => [
-            'key'      => 'SIZE',
-            'label'    => 'Size cốc',
-            'ic'       => 'cup',
-            'type'     => 'size',
-            'required' => true,
-        ],
-        'TOPPING' => [
-            'key'      => 'TOPPING',
-            'label'    => 'Topping',
-            'ic'       => 'plus',
-            'type'     => 'addon',
-            'required' => false,
-        ],
-    ];
-
     /* ─── Pages ─── */
 
     public function index()
@@ -49,9 +33,71 @@ class VariantsController extends Controller
                     'deleteOption' => route('admin.variants.options.destroy'),
                     'toggleOption' => route('admin.variants.options.toggle'),
                     'toggleAll'    => route('admin.variants.options.toggle-all'),
+                    'storeGroup'   => route('admin.variants.groups.store'),
+                    'updateGroup'  => route('admin.variants.groups.update', ['group' => '__ID__']),
+                    'destroyGroup' => route('admin.variants.groups.destroy', ['group' => '__ID__']),
                 ],
             ],
         ]);
+    }
+
+    /* ─── API: group CRUD ─── */
+
+    /** POST /admin/variants/groups */
+    public function storeGroup(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'label'    => ['required', 'string', 'max:100'],
+            'ic'       => ['required', 'string', 'max:50'],
+            'type'     => ['required', Rule::in(['size', 'addon', 'level'])],
+            'required' => ['required', 'boolean'],
+        ]);
+
+        $key   = strtoupper(preg_replace('/[^a-zA-Z0-9_]/', '_', $data['label']));
+        $base  = $key;
+        $count = 0;
+        while (VariantGroup::where('key', $key)->exists()) {
+            $key = $base . '_' . (++$count);
+        }
+
+        $order = VariantGroup::max('sort_order') + 1;
+
+        $group = VariantGroup::create([
+            'key'        => $key,
+            'label'      => $data['label'],
+            'ic'         => $data['ic'],
+            'type'       => $data['type'],
+            'required'   => $data['required'],
+            'sort_order' => $order,
+        ]);
+
+        return response()->json(['group' => $this->presentGroup($group, [])], 201);
+    }
+
+    /** POST /admin/variants/groups/{group} */
+    public function updateGroup(Request $request, VariantGroup $group): JsonResponse
+    {
+        $data = $request->validate([
+            'label'    => ['required', 'string', 'max:100'],
+            'ic'       => ['required', 'string', 'max:50'],
+            'type'     => ['required', Rule::in(['size', 'addon', 'level'])],
+            'required' => ['required', 'boolean'],
+        ]);
+
+        $group->update($data);
+
+        $options = $this->buildOptionsForGroup($group->key);
+
+        return response()->json(['group' => $this->presentGroup($group->fresh(), $options)]);
+    }
+
+    /** DELETE /admin/variants/groups/{group} */
+    public function destroyGroup(VariantGroup $group): JsonResponse
+    {
+        ProductVariant::where('variant_type', $group->key)->delete();
+        $group->delete();
+
+        return response()->json(['message' => 'Đã xoá nhóm']);
     }
 
     /* ─── API: option CRUD ─── */
@@ -60,7 +106,7 @@ class VariantsController extends Controller
     public function storeOption(Request $request): JsonResponse
     {
         $data = $request->validate([
-            'group_key'   => ['required', 'in:SIZE,TOPPING'],
+            'group_key'   => ['required', 'string', Rule::exists('variant_groups', 'key')],
             'name'        => ['required', 'string', 'max:100'],
             'extra_price' => ['required', 'integer', 'min:0'],
         ], [
@@ -78,7 +124,7 @@ class VariantsController extends Controller
             ], 422);
         }
 
-        $products  = $this->relevantProducts($type);
+        $products  = Product::orderBy('id')->get();
         $sortOrder = ProductVariant::where('variant_type', $type)->max('sort_order') + 1;
 
         foreach ($products as $product) {
@@ -101,7 +147,7 @@ class VariantsController extends Controller
     public function updateOption(Request $request): JsonResponse
     {
         $data = $request->validate([
-            'group_key'   => ['required', 'in:SIZE,TOPPING'],
+            'group_key'   => ['required', 'string', Rule::exists('variant_groups', 'key')],
             'old_name'    => ['required', 'string', 'max:100'],
             'name'        => ['required', 'string', 'max:100'],
             'extra_price' => ['required', 'integer', 'min:0'],
@@ -139,7 +185,7 @@ class VariantsController extends Controller
     public function destroyOption(Request $request): JsonResponse
     {
         $data = $request->validate([
-            'group_key' => ['required', 'in:SIZE,TOPPING'],
+            'group_key' => ['required', 'string', Rule::exists('variant_groups', 'key')],
             'name'      => ['required', 'string', 'max:100'],
         ]);
 
@@ -154,14 +200,13 @@ class VariantsController extends Controller
     public function toggleOption(Request $request): JsonResponse
     {
         $data = $request->validate([
-            'group_key' => ['required', 'in:SIZE,TOPPING'],
+            'group_key' => ['required', 'string', Rule::exists('variant_groups', 'key')],
             'name'      => ['required', 'string', 'max:100'],
         ]);
 
         $type = $data['group_key'];
         $name = $data['name'];
 
-        // If ANY record is available → mark all unavailable; if ALL unavailable → mark all available.
         $anyAvail = ProductVariant::where('variant_type', $type)
             ->where('name', $name)
             ->where('is_available', true)
@@ -178,12 +223,11 @@ class VariantsController extends Controller
     public function toggleAllOptions(Request $request): JsonResponse
     {
         $data = $request->validate([
-            'group_key' => ['required', 'in:SIZE,TOPPING'],
+            'group_key' => ['required', 'string', Rule::exists('variant_groups', 'key')],
         ]);
 
         $type = $data['group_key'];
 
-        // If ALL records in the group are available → make all unavailable; else → all available.
         $allAvail = !ProductVariant::where('variant_type', $type)
             ->where('is_available', false)
             ->exists();
@@ -196,50 +240,69 @@ class VariantsController extends Controller
 
     /* ─── Helpers ─── */
 
-    /** Build VARIANT_GROUPS-compatible data from the DB. */
     private function buildGroups(): array
     {
-        $all = ProductVariant::orderBy('sort_order')->orderBy('name')->get()->groupBy('variant_type');
+        $dbGroups = VariantGroup::orderBy('sort_order')->orderBy('id')->get();
+        $all      = ProductVariant::orderBy('sort_order')->orderBy('name')->get()->groupBy('variant_type');
 
         $groups = [];
 
-        foreach (self::GROUPS as $type => $meta) {
-            $byName = ($all[$type] ?? collect())->groupBy('name');
-
-            $options = $byName->map(function ($records, $name) {
-                $allAvail = $records->every(fn (ProductVariant $v) => $v->is_available);
-                $extra    = (int) $records->first()->extra_price;
-
-                return [
-                    'id'        => $name,      // name is the stable unique key within a type
-                    'label'     => $name,
-                    'extra'     => $extra,
-                    'available' => $allAvail,
-                    'def'       => false,
-                ];
-            })
-            ->sortBy(fn ($o) => $o['extra'])
-            ->values()
-            ->toArray();
-
-            // First option in a required group is the default (cheapest / base price).
-            if ($meta['required'] && !empty($options)) {
-                $options[0]['def'] = true;
-            }
-
-            $groups[] = array_merge($meta, ['options' => $options]);
+        foreach ($dbGroups as $meta) {
+            $options = $this->buildOptionsForGroupFromCollection($meta->key, $meta->required, $all);
+            $groups[] = $this->presentGroup($meta, $options);
         }
 
         return $groups;
     }
 
-    /**
-     * Products that should receive a new variant of the given type.
-     * SIZE and TOPPING variants are created for all products.
-     */
-    private function relevantProducts(string $type): \Illuminate\Database\Eloquent\Collection
+    private function buildOptionsForGroup(string $key): array
     {
-        return Product::orderBy('id')->get();
+        $group = VariantGroup::where('key', $key)->firstOrFail();
+        $all   = ProductVariant::where('variant_type', $key)
+            ->orderBy('sort_order')->orderBy('name')
+            ->get()->groupBy('variant_type');
+
+        return $this->buildOptionsForGroupFromCollection($key, $group->required, $all);
+    }
+
+    private function buildOptionsForGroupFromCollection(string $key, bool $required, $all): array
+    {
+        $byName = ($all[$key] ?? collect())->groupBy('name');
+
+        $options = $byName->map(function ($records, $name) {
+            $allAvail = $records->every(fn (ProductVariant $v) => $v->is_available);
+            $extra    = (int) $records->first()->extra_price;
+
+            return [
+                'id'        => $name,
+                'label'     => $name,
+                'extra'     => $extra,
+                'available' => $allAvail,
+                'def'       => false,
+            ];
+        })
+        ->sortBy(fn ($o) => $o['extra'])
+        ->values()
+        ->toArray();
+
+        if ($required && !empty($options)) {
+            $options[0]['def'] = true;
+        }
+
+        return $options;
+    }
+
+    private function presentGroup(VariantGroup $group, array $options): array
+    {
+        return [
+            'id'       => $group->id,
+            'key'      => $group->key,
+            'label'    => $group->label,
+            'ic'       => $group->ic,
+            'type'     => $group->type,
+            'required' => $group->required,
+            'options'  => $options,
+        ];
     }
 
     private function presentOption(string $name, int $extra, bool $available): array
