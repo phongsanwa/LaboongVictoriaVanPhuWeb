@@ -8,7 +8,6 @@ use App\Models\ProductVariant;
 use App\Models\Store;
 use App\Models\VariantGroup;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Storage;
 
 class MenuPageController extends Controller
 {
@@ -65,7 +64,7 @@ class MenuPageController extends Controller
                 'desc'      => $p->description ?? '',
                 'price'     => (int) $p->base_price,
                 'grad'      => $grad,
-                'img'       => $p->image_url ? Storage::url($p->image_url) : null,
+                'img'       => $p->image_url ?: null,
                 'tags'      => $tags,
                 'available' => (bool) $p->is_available,
             ];
