@@ -22,8 +22,8 @@
 window.ADMIN_VARIANTS_DATA = @json($variantsData);
 </script>
 
-<script type="text/babel" src="{{ asset('js/tweaks-panel.jsx') }}"></script>
-<script type="text/babel" src="{{ asset('js/components.jsx') }}"></script>
-<script type="text/babel" src="{{ asset('js/admin-variants.jsx') }}"></script>
+<script type="text/babel" src="{{ asset('js/tweaks-panel.jsx') }}?v={{ filemtime(public_path('js/tweaks-panel.jsx')) }}"></script>
+<script type="text/babel" src="{{ asset('js/components.jsx') }}?v={{ filemtime(public_path('js/components.jsx')) }}"></script>
+<script type="text/babel" src="{{ asset('js/admin-variants.jsx') }}?v={{ filemtime(public_path('js/admin-variants.jsx')) }}"></script>
 </body>
 </html>
