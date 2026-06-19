@@ -2,22 +2,19 @@
 
 namespace App\Http\Controllers;
 
-use App\Mail\OrderPlaced;
+use App\Jobs\SendOrderNotification;
 use App\Models\Customer;
 use App\Models\CustomerPoint;
 use App\Models\Order;
 use App\Models\Product;
 use App\Models\ProductVariant;
-use App\Models\Staff;
 use App\Models\Store;
-use App\Models\User;
 use App\Models\VariantGroup;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Mail;
 
 class OrderController extends Controller
 {
@@ -154,30 +151,9 @@ class OrderController extends Controller
     private function notifyStaff(int $orderId): void
     {
         try {
-            $order = Order::with(['customer.user', 'items.product', 'items.toppings'])
-                ->findOrFail($orderId);
-
-            // Admin users
-            $adminEmails = User::where('user_type', 'admin')
-                ->whereNotNull('email')
-                ->where('email', '!=', '')
-                ->pluck('email');
-
-            // Active managers and cashiers who have an email
-            $staffEmails = Staff::with('user')
-                ->whereIn('role', ['manager', 'cashier'])
-                ->where('status', 'active')
-                ->get()
-                ->map(fn ($s) => $s->user?->email)
-                ->filter(fn ($e) => $e && $e !== '');
-
-            $recipients = $adminEmails->merge($staffEmails)->unique()->values();
-
-            foreach ($recipients as $email) {
-                Mail::to($email)->send(new OrderPlaced($order));
-            }
+            SendOrderNotification::dispatch($orderId);
         } catch (\Throwable $e) {
-            Log::error('OrderPlaced email failed', ['order_id' => $orderId, 'error' => $e->getMessage()]);
+            Log::error('Failed to dispatch SendOrderNotification', ['order_id' => $orderId, 'error' => $e->getMessage()]);
         }
     }
 
