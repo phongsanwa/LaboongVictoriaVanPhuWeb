@@ -314,6 +314,17 @@ function App() {
   );
 }
 
+async function reverseGeocode(lat, lng) {
+  try {
+    const r = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json&accept-language=vi`, {
+      headers: { "Accept-Language": "vi" },
+    });
+    const d = await r.json();
+    if (!d.display_name) return null;
+    return d.display_name.replace(/,\s*Việt Nam$/i, "").trim();
+  } catch { return null; }
+}
+
 async function smartNominatimSearch(text) {
   const headers = { "Accept-Language": "vi" };
   const base = "https://nominatim.openstreetmap.org/search";
@@ -411,6 +422,9 @@ function AddrModal({ init, onClose, onSave }) {
       } else {
         markerRef.current = L.marker([lat, lng]).addTo(map);
       }
+      reverseGeocode(lat, lng).then(addr => {
+        if (addr) setF(prev => ({ ...prev, text: addr }));
+      });
     });
 
     mapRef.current = map;
