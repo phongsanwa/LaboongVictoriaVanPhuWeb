@@ -255,6 +255,30 @@ function App() {
     }
   };
 
+  /* ── Move group up / down ─── */
+  const moveGroup = async (gKey, dir) => {
+    const idx = groups.findIndex(x => x.key === gKey);
+    if (idx < 0) return;
+    const newIdx = idx + dir;
+    if (newIdx < 0 || newIdx >= groups.length) return;
+
+    const reordered = [...groups];
+    [reordered[idx], reordered[newIdx]] = [reordered[newIdx], reordered[idx]];
+    setGroups(reordered);
+
+    if (LIVE) {
+      setSaving(true);
+      try {
+        await apiFetch('POST', LIVE_URLS.reorderGroups, { ids: reordered.map(g => g.id) });
+      } catch (e) {
+        flash(e.message, false);
+        setGroups(groups);
+      } finally {
+        setSaving(false);
+      }
+    }
+  };
+
   /* ── Delete single option ─── */
   const del = async (gKey, oId) => {
     const g = groups.find(x => x.key === gKey);
@@ -493,7 +517,11 @@ function App() {
           )}
 
           {filteredGroups.map(g => {
-            const allOn = g.options.length > 0 && g.options.every(o => o.available);
+            const allOn  = g.options.length > 0 && g.options.every(o => o.available);
+            const gIdx   = groups.findIndex(x => x.key === g.key);
+            const isFirst = gIdx === 0;
+            const isLast  = gIdx === groups.length - 1;
+            const searching = !!search.trim();
             return (
               <div className="vgroup" key={g.key}>
                 <div className="vgroup-h">
@@ -505,6 +533,16 @@ function App() {
                   <span className="vgtype">{TYPE_LABEL[g.type]}</span>
                   <span className="vgcount">{g.options.filter(o => o.available).length}/{g.options.length} đang bán</span>
                   <div style={{ display: "flex", gap: 6, marginLeft: 8 }}>
+                    {!searching && (
+                      <>
+                        <button className="vopt-edit" title="Di chuyển lên" disabled={saving || isFirst} onClick={() => moveGroup(g.key, -1)}>
+                          <Icon name="chevup" size={15} />
+                        </button>
+                        <button className="vopt-edit" title="Di chuyển xuống" disabled={saving || isLast} onClick={() => moveGroup(g.key, 1)}>
+                          <Icon name="chevdown" size={15} />
+                        </button>
+                      </>
+                    )}
                     <button className="vopt-edit" title={allOn ? "Báo hết cả nhóm" : "Bật lại cả nhóm"}
                       disabled={saving || g.options.length === 0}
                       onClick={() => toggleAllAvail(g.key)}>

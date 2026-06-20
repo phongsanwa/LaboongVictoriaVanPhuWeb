@@ -60,6 +60,7 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
     Route::post('/shipping/reorder', [ShippingController::class, 'reorder'])->name('shipping.reorder');
     Route::get('/variants', [VariantsController::class, 'index'])->name('variants.index');
     Route::post('/variants/groups', [VariantsController::class, 'storeGroup'])->name('variants.groups.store');
+    Route::post('/variants/groups/reorder', [VariantsController::class, 'reorderGroups'])->name('variants.groups.reorder');
     Route::post('/variants/groups/{group}', [VariantsController::class, 'updateGroup'])->name('variants.groups.update');
     Route::delete('/variants/groups/{group}', [VariantsController::class, 'destroyGroup'])->name('variants.groups.destroy');
     Route::post('/variants/options', [VariantsController::class, 'storeOption'])->name('variants.options.store');
