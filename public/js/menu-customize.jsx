@@ -9,7 +9,7 @@ function makeDefaultSelections(variantGroups) {
       sel[g.key] = [];
     } else {
       const availOpts = g.options.filter(o => o.available !== false);
-      const def = availOpts.find(o => o.def) || availOpts[0];
+      const def = availOpts.find(o => o.def) || availOpts[0] || g.options[0];
       sel[g.key] = def ? def.id : null;
     }
   });
@@ -77,8 +77,7 @@ function CustomizeSheet({ item, variantGroups, onClose, onAdd }) {
 
         <div className="cz-b">
           {variantGroups.map(g => {
-            const availOpts = g.options.filter(o => o.available !== false);
-            if (availOpts.length === 0) return null;
+            if (g.options.length === 0) return null;
             return (
               <div key={g.key} className="cz-sec">
                 <div className="cz-sec-h">
@@ -91,25 +90,36 @@ function CustomizeSheet({ item, variantGroups, onClose, onAdd }) {
                 {g.type === 'addon'
                   ? (
                     <div className="cz-tops">
-                      {availOpts.map(o => {
-                        const on = (selections[g.key] || []).includes(o.id);
+                      {g.options.map(o => {
+                        const avail = o.available !== false;
+                        const on = avail && (selections[g.key] || []).includes(o.id);
                         return (
-                          <button key={o.id} className={"cz-top" + (on ? " on" : "")} onClick={() => toggleAddon(g.key, o.id)}>
+                          <button key={o.id} className={"cz-top" + (on ? " on" : "")}
+                            onClick={() => avail && toggleAddon(g.key, o.id)}
+                            disabled={!avail}
+                            style={!avail ? { opacity: 0.45, cursor: "not-allowed" } : {}}>
                             <span className="box">{on && <Icon name="check" size={14} color="#fff" />}</span>
-                            <span className="tn">{o.label}</span>
-                            <span className="tp">+{fmt(o.extra)}đ</span>
+                            <span className="tn" style={!avail ? { textDecoration: "line-through" } : {}}>{o.label}</span>
+                            <span className="tp">{avail ? `+${fmt(o.extra)}đ` : "Hết"}</span>
                           </button>
                         );
                       })}
                     </div>
                   ) : (
                     <div className="cz-chips">
-                      {availOpts.map(o => (
-                        <button key={o.id} className={"cz-chip" + (selections[g.key] === o.id ? " on" : "")}
-                          onClick={() => selectSingle(g.key, o.id)}>
-                          {o.label}{o.extra > 0 ? ` +${fmt(o.extra)}đ` : ""}
-                        </button>
-                      ))}
+                      {g.options.map(o => {
+                        const avail = o.available !== false;
+                        return (
+                          <button key={o.id}
+                            className={"cz-chip" + (selections[g.key] === o.id ? " on" : "")}
+                            onClick={() => avail && selectSingle(g.key, o.id)}
+                            disabled={!avail}
+                            style={!avail ? { opacity: 0.45, cursor: "not-allowed", textDecoration: "line-through" } : {}}>
+                            {o.label}{o.extra > 0 ? ` +${fmt(o.extra)}đ` : ""}
+                            {!avail && <span style={{ fontSize: 10, marginLeft: 4, fontWeight: 700, color: "var(--hot, #e53)" }}>Hết</span>}
+                          </button>
+                        );
+                      })}
                     </div>
                   )
                 }
