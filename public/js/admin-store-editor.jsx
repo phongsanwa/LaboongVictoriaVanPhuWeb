@@ -14,8 +14,8 @@ function StoreEditor({ initial, onClose, onSave }) {
   const [city, setCity] = useStateSt(initial?.city || "Hà Nội");
   const [phone, setPhone] = useStateSt(initial?.phone || "");
   const [email, setEmail] = useStateSt(initial?.email || "");
-  const [latitude, setLatitude] = useStateSt(initial?.latitude ?? "");
-  const [longitude, setLongitude] = useStateSt(initial?.longitude ?? "");
+  const [latitude, setLatitude] = useStateSt(initial?.latitude ?? null);
+  const [longitude, setLongitude] = useStateSt(initial?.longitude ?? null);
   const [openingTime, setOpeningTime] = useStateSt(initial?.opening_time || "07:00");
   const [closingTime, setClosingTime] = useStateSt(initial?.closing_time || "22:00");
   const [days, setDays] = useStateSt(initial?.operating_days ?? [0, 1, 2, 3, 4, 5, 6]);
@@ -24,11 +24,95 @@ function StoreEditor({ initial, onClose, onSave }) {
   const [photoUploading, setPhotoUploading] = useStateSt(false);
   const photoRef = useRefSt(null);
 
+  const [sugg, setSugg] = useStateSt([]);
+  const [searching, setSearching] = useStateSt(false);
+  const debRef = useRefSt(null);
+  const mapDivRef = useRefSt(null);
+  const mapRef = useRefSt(null);
+  const markerRef = useRefSt(null);
+
   useEffectSt(() => {
     const h = (e) => { if (e.key === "Escape") onClose(); };
     window.addEventListener("keydown", h);
     return () => window.removeEventListener("keydown", h);
   }, [onClose]);
+
+  // Init Leaflet map
+  useEffectSt(() => {
+    const L = window.L;
+    if (!L || !mapDivRef.current || mapRef.current) return;
+
+    delete L.Icon.Default.prototype._getIconUrl;
+    L.Icon.Default.mergeOptions({
+      iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
+      iconRetinaUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
+      shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
+    });
+
+    const hasCoords = latitude != null && longitude != null;
+    const center = hasCoords ? [latitude, longitude] : [20.9833, 105.8412];
+    const map = L.map(mapDivRef.current, { zoomControl: true }).setView(center, hasCoords ? 16 : 11);
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      attribution: "© OpenStreetMap",
+    }).addTo(map);
+
+    if (hasCoords) {
+      markerRef.current = L.marker([latitude, longitude]).addTo(map);
+    }
+
+    map.on("click", e => {
+      const { lat, lng } = e.latlng;
+      setLatitude(lat);
+      setLongitude(lng);
+      if (markerRef.current) {
+        markerRef.current.setLatLng([lat, lng]);
+      } else {
+        markerRef.current = L.marker([lat, lng]).addTo(map);
+      }
+    });
+
+    mapRef.current = map;
+    return () => { map.remove(); mapRef.current = null; markerRef.current = null; };
+  }, []);
+
+  // Pan + update marker when lat/lng change from suggestion
+  useEffectSt(() => {
+    const map = mapRef.current;
+    const L = window.L;
+    if (!map || !L || latitude == null || longitude == null) return;
+    if (markerRef.current) {
+      markerRef.current.setLatLng([latitude, longitude]);
+    } else {
+      markerRef.current = L.marker([latitude, longitude]).addTo(map);
+    }
+    map.setView([latitude, longitude], 16, { animate: true });
+  }, [latitude, longitude]);
+
+  const onAddressChange = e => {
+    const val = e.target.value;
+    setAddress(val);
+    if (debRef.current) clearTimeout(debRef.current);
+    if (val.trim().length < 5) { setSugg([]); setSearching(false); return; }
+    setSearching(true);
+    debRef.current = setTimeout(async () => {
+      try {
+        const q = encodeURIComponent(val.trim() + ", Việt Nam");
+        const r = await fetch(`https://nominatim.openstreetmap.org/search?q=${q}&format=json&limit=5&countrycodes=vn`, {
+          headers: { "Accept-Language": "vi" },
+        });
+        const items = await r.json();
+        setSugg(items.map(d => ({ text: d.display_name, lat: parseFloat(d.lat), lng: parseFloat(d.lon) })));
+      } catch { setSugg([]); }
+      setSearching(false);
+    }, 500);
+  };
+
+  const pickSugg = s => {
+    setAddress(s.text);
+    setLatitude(s.lat);
+    setLongitude(s.lng);
+    setSugg([]);
+  };
 
   const toggleDay = (i) => {
     setDays(d => d.includes(i) ? d.filter(x => x !== i) : [...d, i].sort());
@@ -68,8 +152,8 @@ function StoreEditor({ initial, onClose, onSave }) {
       ...(initial || {}),
       name: name.trim(), address: address.trim(), city: city.trim(), phone: phone.trim(),
       email: email.trim() || null,
-      latitude: latitude === "" ? null : Number(latitude),
-      longitude: longitude === "" ? null : Number(longitude),
+      latitude: latitude ?? null,
+      longitude: longitude ?? null,
       opening_time: openingTime, closing_time: closingTime,
       operating_days: days, status: status ? "active" : "inactive",
     });
@@ -77,7 +161,7 @@ function StoreEditor({ initial, onClose, onSave }) {
 
   return (
     <div className="modal-scrim" onClick={onClose}>
-      <div className="modal wide" onClick={e => e.stopPropagation()}>
+      <div className="modal wide" onClick={e => e.stopPropagation()} style={{ maxHeight: "92vh", display: "flex", flexDirection: "column" }}>
         <div className="modal-h">
           <div className="mh-ic"><Icon name={isEdit ? "edit" : "plus"} size={20} /></div>
           <div>
@@ -87,15 +171,28 @@ function StoreEditor({ initial, onClose, onSave }) {
           <button className="x" onClick={onClose}><Icon name="close" size={18} /></button>
         </div>
 
-        <div className="modal-b">
+        <div className="modal-b" style={{ overflowY: "auto", flex: 1 }}>
           <div className="fld">
             <label>Tên cửa hàng</label>
             <input className="inp" value={name} onChange={e => setName(e.target.value)} placeholder="VD: Laboong Victoria Văn Phú" autoFocus />
           </div>
 
-          <div className="fld">
-            <label>Địa chỉ</label>
-            <input className="inp" value={address} onChange={e => setAddress(e.target.value)} placeholder="Số nhà, đường, phường/xã, quận/huyện" />
+          <div className="fld" style={{ position: "relative" }}>
+            <label style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+              <span>Địa chỉ</span>
+              {searching && <span style={{ fontWeight: 400, color: "var(--ink-3)", fontSize: 12 }}>Đang tìm…</span>}
+            </label>
+            <input className="inp" value={address} onChange={onAddressChange} placeholder="Số nhà, đường, phường/xã, quận/huyện" autoComplete="off" />
+            {sugg.length > 0 && (
+              <div style={{ position: "absolute", top: "100%", left: 0, right: 0, background: "var(--card)", border: "1.5px solid var(--brand)", borderRadius: 8, zIndex: 9999, boxShadow: "0 8px 24px rgba(0,0,0,.15)", marginTop: 4 }}>
+                {sugg.map((s, i) => (
+                  <button key={i} onMouseDown={() => pickSugg(s)} style={{ display: "flex", alignItems: "flex-start", gap: 8, width: "100%", padding: "9px 14px", textAlign: "left", fontSize: 13, borderBottom: i < sugg.length - 1 ? "1px solid var(--line)" : "none", color: "var(--ink)", lineHeight: 1.4 }}>
+                    <span style={{ flexShrink: 0, marginTop: 2 }}><Icon name="pin" size={13} color="var(--brand)" /></span>
+                    <span>{s.text}</span>
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
 
           <div className="two-col">
@@ -114,15 +211,14 @@ function StoreEditor({ initial, onClose, onSave }) {
             <input className="inp" type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="vanphu@laboong.vn" />
           </div>
 
-          <div className="two-col">
-            <div className="fld">
-              <label>Vĩ độ (latitude)</label>
-              <input className="inp" type="number" step="any" value={latitude} onChange={e => setLatitude(e.target.value)} placeholder="VD: 20.96523" />
-            </div>
-            <div className="fld">
-              <label>Kinh độ (longitude)</label>
-              <input className="inp" type="number" step="any" value={longitude} onChange={e => setLongitude(e.target.value)} placeholder="VD: 105.76488" />
-            </div>
+          <div className="fld">
+            <label style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+              <span>Vị trí trên bản đồ</span>
+              {latitude != null && longitude != null
+                ? <span style={{ fontWeight: 600, color: "var(--brand)", fontSize: 12 }}>✓ {Number(latitude).toFixed(5)}, {Number(longitude).toFixed(5)}</span>
+                : <span style={{ fontWeight: 400, color: "var(--ink-3)", fontSize: 12 }}>Nhấp bản đồ hoặc chọn địa chỉ để xác định</span>}
+            </label>
+            <div ref={mapDivRef} style={{ height: 220, borderRadius: 8, overflow: "hidden", border: "1.5px solid var(--line)", isolation: "isolate" }} />
           </div>
 
           <div className="two-col">
