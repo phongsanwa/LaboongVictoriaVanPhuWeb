@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Category;
 use App\Models\Product;
 use App\Models\ProductVariant;
+use App\Models\ShippingTier;
 use App\Models\Store;
 use App\Models\VariantGroup;
 use Illuminate\Support\Facades\Auth;
@@ -159,6 +160,18 @@ class MenuPageController extends Controller
             'store'         => $storeName,
             'storeId'       => $store?->id,
             'stores'        => $stores,
+            'shippingTiers' => ShippingTier::where('is_active', true)
+                ->orderBy('sort_order')->orderBy('min_km')
+                ->get()
+                ->map(fn ($t) => [
+                    'id'     => $t->id,
+                    'label'  => $t->label,
+                    'min_km' => (float) $t->min_km,
+                    'max_km' => $t->max_km !== null ? (float) $t->max_km : null,
+                    'fee'    => (int) $t->fee,
+                ])
+                ->values()
+                ->toArray(),
             'perPoint'      => 10000,
             'promos'        => [
                 'LABOONG10' => ['name' => 'Giảm 10% toàn đơn',               'type' => 'percent', 'value' => 10,    'min' => 0,     'max' => 30000],

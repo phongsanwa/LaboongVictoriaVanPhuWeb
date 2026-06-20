@@ -154,6 +154,7 @@ function CampaignsApp() {
     { ic: "users", label: "Khách hàng" },
     { ic: "receipt", label: "Điểm & giao dịch" },
     { ic: "bag", label: "Đơn hàng" },
+    { ic: "truck", label: "Phí ship" },
     { ic: "gift", label: "Đổi quà" },
     { ic: "mega", label: "Chiến dịch", on: true, badge: String(items.length) },
     { ic: "cup", label: "Thực đơn" },

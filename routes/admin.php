@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Admin\CampaignsController;
+use App\Http\Controllers\Admin\ShippingController;
 use App\Http\Controllers\Admin\CustomersController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\OrdersController;
@@ -52,6 +53,11 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
     Route::delete('/stores/{store}', [StoresController::class, 'destroy'])->name('stores.destroy');
     Route::post('/stores/{store}/photos', [StoresController::class, 'uploadPhoto'])->name('stores.photos.upload');
     Route::delete('/stores/{store}/photos', [StoresController::class, 'deletePhoto'])->name('stores.photos.delete');
+    Route::get('/shipping', [ShippingController::class, 'index'])->name('shipping.index');
+    Route::post('/shipping', [ShippingController::class, 'store'])->name('shipping.store');
+    Route::put('/shipping/{shipping}', [ShippingController::class, 'update'])->name('shipping.update');
+    Route::delete('/shipping/{shipping}', [ShippingController::class, 'destroy'])->name('shipping.destroy');
+    Route::post('/shipping/reorder', [ShippingController::class, 'reorder'])->name('shipping.reorder');
     Route::get('/variants', [VariantsController::class, 'index'])->name('variants.index');
     Route::post('/variants/groups', [VariantsController::class, 'storeGroup'])->name('variants.groups.store');
     Route::post('/variants/groups/{group}', [VariantsController::class, 'updateGroup'])->name('variants.groups.update');

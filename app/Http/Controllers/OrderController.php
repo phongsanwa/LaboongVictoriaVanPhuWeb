@@ -31,6 +31,7 @@ class OrderController extends Controller
             'coupon_code'        => ['nullable', 'string', 'max:50'],
             'discount'           => ['nullable', 'numeric', 'min:0'],
             'store_id'           => ['nullable', 'integer'],
+            'shipping_fee'       => ['nullable', 'integer', 'min:0'],
         ]);
 
         $user     = Auth::user();
@@ -94,14 +95,15 @@ class OrderController extends Controller
 
         $subtotal     = round(array_sum(array_column($itemData, 'item_total')), 2);
         $discountAmt  = 0;
-        $totalAmount  = max(0.0, round($subtotal - $discountAmt, 2));
+        $shippingFee  = (int) ($data['shipping_fee'] ?? 0);
+        $totalAmount  = max(0.0, round($subtotal - $discountAmt + $shippingFee, 2));
         $pointsEarned = (int) floor($totalAmount / self::PER_POINT);
 
         $orderId = null;
 
         DB::transaction(function () use (
             $customer, $store, $data, $itemData,
-            $subtotal, $discountAmt, $totalAmount, $pointsEarned, &$orderId
+            $subtotal, $discountAmt, $shippingFee, $totalAmount, $pointsEarned, &$orderId
         ) {
             $order = Order::create([
                 'customer_id'     => $customer->id,
@@ -109,6 +111,7 @@ class OrderController extends Controller
                 'status'          => 'PENDING',
                 'subtotal'        => $subtotal,
                 'discount_amount' => $discountAmt,
+                'shipping_fee'    => $shippingFee,
                 'total_amount'    => $totalAmount,
                 'points_earned'   => $pointsEarned,
                 'note'            => $data['note'] ?? null,
