@@ -261,7 +261,8 @@ function App() {
         return next;
       }
       if (delta <= 0) return ls;
-      return [...ls, { key, id: m.id, name: m.name, base: m.price, grad: m.grad, img: m.img || null, cat: m.cat, unit: m.price, qty: delta }];
+      const effectivePrice = m.salePrice != null ? m.salePrice : m.price;
+      return [...ls, { key, id: m.id, name: m.name, base: effectivePrice, origPrice: m.salePrice != null ? m.price : null, grad: m.grad, img: m.img || null, cat: m.cat, unit: effectivePrice, qty: delta }];
     });
   };
 
@@ -477,7 +478,17 @@ function App() {
                       <div className="item-name">{m.name}</div>
                       <div className="item-desc">{m.desc}</div>
                       <div className="item-foot">
-                        <span className="item-price tnum">{fmt(m.price)}đ</span>
+                        <div className="item-price-wrap">
+                          {m.salePrice != null ? (
+                            <>
+                              <span className="item-price tnum" style={{ textDecoration: "line-through", color: "var(--ink-3)", fontSize: 12, fontWeight: 500 }}>{fmt(m.price)}đ</span>
+                              <span className="item-price tnum" style={{ color: "var(--danger)", fontWeight: 800 }}>{fmt(m.salePrice)}đ</span>
+                              <span style={{ fontSize: 11, fontWeight: 800, background: "var(--danger)", color: "#fff", borderRadius: 5, padding: "1px 6px", marginLeft: 2 }}>{m.promoLabel}</span>
+                            </>
+                          ) : (
+                            <span className="item-price tnum">{fmt(m.price)}đ</span>
+                          )}
+                        </div>
                         {isTopping
                           ? (qty === 0
                               ? <button className="add-btn" onClick={() => addSimple(m, 1)} aria-label="Thêm"><Icon name="plus" size={18} color="#fff" /></button>
@@ -486,7 +497,7 @@ function App() {
                                   <span className="qn">{qty}</span>
                                   <button onClick={() => addSimple(m, 1)}><Icon name="plus" size={16} color="currentColor" /></button>
                                 </div>)
-                          : <button className="add-btn" onClick={() => setCustomize(m)} aria-label="Tuỳ chỉnh & thêm"><Icon name="plus" size={18} color="#fff" /></button>}
+                          : <button className="add-btn" onClick={() => setCustomize(m.salePrice != null ? { ...m, price: m.salePrice, origPrice: m.price } : m)} aria-label="Tuỳ chỉnh & thêm"><Icon name="plus" size={18} color="#fff" /></button>}
                       </div>
                     </div>
                   </div>
@@ -699,7 +710,12 @@ function App() {
                       <div style={{ minWidth: 0, flex: 1 }}>
                         <div className="cn">{l.name}</div>
                         {optsText(l, variantGroups) && <div className="copts">{optsText(l, variantGroups)}</div>}
-                        <div className="cp">{fmt(l.unit)}đ</div>
+                        <div className="cp">
+                          {l.origPrice != null && (
+                            <span style={{ textDecoration: "line-through", color: "var(--ink-3)", fontSize: 11, marginRight: 5 }}>{fmt(l.origPrice)}đ</span>
+                          )}
+                          {fmt(l.unit)}đ
+                        </div>
                       </div>
                       <div className="cstep">
                         <button onClick={() => changeQty(l.key, -1)}><Icon name="minus" size={15} color="currentColor" /></button>

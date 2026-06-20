@@ -70,7 +70,15 @@ function CustomizeSheet({ item, variantGroups, onClose, onAdd }) {
           <div style={{ minWidth: 0, flex: 1 }}>
             <h3>{item.name}</h3>
             <div className="cz-desc">{item.desc}</div>
-            <div className="cz-base">{fmt(item.price)}đ</div>
+            <div className="cz-base">
+              {item.origPrice != null && (
+                <span style={{ textDecoration: "line-through", color: "var(--ink-3)", fontSize: 13, fontWeight: 500, marginRight: 6 }}>{fmt(item.origPrice)}đ</span>
+              )}
+              <span style={item.origPrice != null ? { color: "var(--danger)", fontWeight: 800 } : {}}>{fmt(item.price)}đ</span>
+              {item.promoLabel && (
+                <span style={{ fontSize: 11, fontWeight: 800, background: "var(--danger)", color: "#fff", borderRadius: 5, padding: "1px 6px", marginLeft: 6 }}>{item.promoLabel}</span>
+              )}
+            </div>
           </div>
           <button className="cz-x" onClick={onClose}><Icon name="close" size={18} /></button>
         </div>

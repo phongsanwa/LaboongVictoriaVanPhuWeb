@@ -11,6 +11,7 @@ use App\Http\Controllers\Admin\RolesController;
 use App\Http\Controllers\Admin\SettingsController;
 use App\Http\Controllers\Admin\StoresController;
 use App\Http\Controllers\Admin\MenuController;
+use App\Http\Controllers\Admin\PromotionsController;
 use App\Http\Controllers\Admin\VariantsController;
 use Illuminate\Support\Facades\Route;
 
@@ -53,6 +54,11 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
     Route::delete('/stores/{store}', [StoresController::class, 'destroy'])->name('stores.destroy');
     Route::post('/stores/{store}/photos', [StoresController::class, 'uploadPhoto'])->name('stores.photos.upload');
     Route::delete('/stores/{store}/photos', [StoresController::class, 'deletePhoto'])->name('stores.photos.delete');
+    Route::get('/promotions', [PromotionsController::class, 'index'])->name('promotions.index');
+    Route::post('/promotions', [PromotionsController::class, 'store'])->name('promotions.store');
+    Route::post('/promotions/{promotion}', [PromotionsController::class, 'update'])->name('promotions.update');
+    Route::delete('/promotions/{promotion}', [PromotionsController::class, 'destroy'])->name('promotions.destroy');
+    Route::post('/promotions/{promotion}/toggle', [PromotionsController::class, 'toggle'])->name('promotions.toggle');
     Route::get('/shipping', [ShippingController::class, 'index'])->name('shipping.index');
     Route::post('/shipping', [ShippingController::class, 'store'])->name('shipping.store');
     Route::put('/shipping/{shipping}', [ShippingController::class, 'update'])->name('shipping.update');

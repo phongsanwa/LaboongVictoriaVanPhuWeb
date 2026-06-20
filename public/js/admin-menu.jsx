@@ -449,6 +449,7 @@ function App() {
     { ic: "gift", label: "Đổi quà" },
     { ic: "mega", label: "Chiến dịch" },
     { ic: "cup", label: "Thực đơn", on: true, badge: String(items.length) },
+    { ic: "percent", label: "Khuyến mãi" },
     { ic: "plus", label: "Variant / Tuỳ chọn" },
     { ic: "shield", label: "Phân quyền" },
     { ic: "gear", label: "Cài đặt" },
