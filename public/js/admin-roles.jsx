@@ -170,6 +170,7 @@ function App() {
     { ic: "gift", label: "Đổi quà" },
     { ic: "mega", label: "Chiến dịch" },
     { ic: "cup", label: "Thực đơn" },
+    { ic: "percent", label: "Khuyến mãi" },
     { ic: "plus", label: "Variant / Tuỳ chọn" },
     { ic: "pin", label: "Cửa hàng" },
     { ic: "shield", label: "Phân quyền", on: true },

@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Category;
 use App\Models\Product;
 use App\Models\ProductVariant;
+use App\Models\Promotion;
 use App\Models\ShippingTier;
 use App\Models\Store;
 use App\Models\VariantGroup;
@@ -48,8 +49,27 @@ class MenuPageController extends Controller
             'ic'    => $c->icon ?? 'cup',
         ])->values()->toArray();
 
+        // --- Active promotions (keyed for fast lookup) ---
+        $activePromos = Promotion::where('is_active', true)
+            ->orderBy('sort_order')
+            ->with('products:id')
+            ->get();
+
+        // Build set of product IDs covered by specific-scope promos
+        $specificPromoMap = []; // product_id => Promotion
+        foreach ($activePromos as $promo) {
+            if ($promo->scope === 'specific') {
+                foreach ($promo->products as $prod) {
+                    if (!isset($specificPromoMap[$prod->id])) {
+                        $specificPromoMap[$prod->id] = $promo;
+                    }
+                }
+            }
+        }
+        $allScopePromo = $activePromos->firstWhere('scope', 'all');
+
         // --- Menu items ---
-        $menu = $products->map(function (Product $p) {
+        $menu = $products->map(function (Product $p) use ($allScopePromo, $specificPromoMap) {
             $catSlug = $p->category?->slug ?? '';
             $grad    = $p->color ?? (self::GRAD_FALLBACKS[$catSlug] ?? self::DEFAULT_GRAD);
 
@@ -58,16 +78,22 @@ class MenuPageController extends Controller
                 $tags = is_array($p->tags) ? $p->tags : (json_decode($p->tags, true) ?? []);
             }
 
+            $basePrice = (int) $p->base_price;
+            $promo     = $specificPromoMap[$p->id] ?? $allScopePromo;
+            $salePrice = $promo ? $promo->calcSalePrice($basePrice) : null;
+
             return [
-                'id'        => 'p' . $p->id,
-                'cat'       => $catSlug,
-                'name'      => $p->name,
-                'desc'      => $p->description ?? '',
-                'price'     => (int) $p->base_price,
-                'grad'      => $grad,
-                'img'       => $p->image_url ?: null,
-                'tags'      => $tags,
-                'available' => (bool) $p->is_available,
+                'id'         => 'p' . $p->id,
+                'cat'        => $catSlug,
+                'name'       => $p->name,
+                'desc'       => $p->description ?? '',
+                'price'      => $basePrice,
+                'salePrice'  => $salePrice,
+                'promoLabel' => $promo ? $promo->badgeLabel() : null,
+                'grad'       => $grad,
+                'img'        => $p->image_url ?: null,
+                'tags'       => $tags,
+                'available'  => (bool) $p->is_available,
             ];
         })->values()->toArray();
 

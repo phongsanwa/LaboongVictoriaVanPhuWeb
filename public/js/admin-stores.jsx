@@ -121,6 +121,7 @@ function StoresApp() {
     { ic: "gift", label: "Đổi quà" },
     { ic: "mega", label: "Chiến dịch" },
     { ic: "cup", label: "Thực đơn" },
+    { ic: "percent", label: "Khuyến mãi" },
     { ic: "plus", label: "Variant / Tuỳ chọn" },
     { ic: "pin", label: "Cửa hàng", on: true, badge: String(items.length) },
     { ic: "shield", label: "Phân quyền" },
