@@ -1,6 +1,17 @@
 /* global React, Icon */
 const { useState: useStateSt, useEffect: useEffectSt, useRef: useRefSt } = React;
 
+async function reverseGeocodeSt(lat, lng) {
+  try {
+    const r = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json&accept-language=vi`, {
+      headers: { "Accept-Language": "vi" },
+    });
+    const d = await r.json();
+    if (!d.display_name) return null;
+    return d.display_name.replace(/,\s*Việt Nam$/i, "").trim();
+  } catch { return null; }
+}
+
 async function smartNominatimSearchSt(text) {
   const headers = { "Accept-Language": "vi" };
   const base = "https://nominatim.openstreetmap.org/search";
@@ -117,6 +128,9 @@ function StoreEditor({ initial, onClose, onSave }) {
       } else {
         markerRef.current = L.marker([lat, lng]).addTo(map);
       }
+      reverseGeocodeSt(lat, lng).then(addr => {
+        if (addr) setAddress(addr);
+      });
     });
 
     mapRef.current = map;
