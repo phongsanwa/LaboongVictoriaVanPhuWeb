@@ -26,13 +26,7 @@ class ProfileController extends Controller
             'avatar_url' => $user->avatar_url,
         ];
 
-        $addresses = ($customer?->addresses ?? collect())->map(fn (CustomerAddress $a) => [
-            'id' => $a->id,
-            'label' => $a->label,
-            'name' => $a->recipient_name,
-            'text' => $a->address_text,
-            'def' => $a->is_default,
-        ])->values()->all();
+        $addresses = ($customer?->addresses ?? collect())->map(fn (CustomerAddress $a) => $this->formatAddress($a))->values()->all();
 
         return view('profile', ['profileData' => [
             'member' => $member,
@@ -108,6 +102,8 @@ class ProfileController extends Controller
             'name' => ['required', 'string', 'min:2', 'max:150'],
             'text' => ['required', 'string', 'min:6'],
             'def' => ['boolean'],
+            'lat' => ['nullable', 'numeric', 'between:-90,90'],
+            'lng' => ['nullable', 'numeric', 'between:-180,180'],
         ]);
 
         $address = $customer->addresses()->create([
@@ -115,6 +111,8 @@ class ProfileController extends Controller
             'recipient_name' => $validated['name'],
             'address_text' => $validated['text'],
             'is_default' => (bool) ($validated['def'] ?? false) || $customer->addresses()->count() === 0,
+            'latitude' => $validated['lat'] ?? null,
+            'longitude' => $validated['lng'] ?? null,
         ]);
 
         if ($address->is_default) {
@@ -133,6 +131,8 @@ class ProfileController extends Controller
             'name' => ['required', 'string', 'min:2', 'max:150'],
             'text' => ['required', 'string', 'min:6'],
             'def' => ['boolean'],
+            'lat' => ['nullable', 'numeric', 'between:-90,90'],
+            'lng' => ['nullable', 'numeric', 'between:-180,180'],
         ]);
 
         $address->update([
@@ -140,6 +140,8 @@ class ProfileController extends Controller
             'recipient_name' => $validated['name'],
             'address_text' => $validated['text'],
             'is_default' => (bool) ($validated['def'] ?? false),
+            'latitude' => $validated['lat'] ?? null,
+            'longitude' => $validated['lng'] ?? null,
         ]);
 
         if ($address->is_default) {
@@ -189,6 +191,8 @@ class ProfileController extends Controller
             'name' => $address->recipient_name,
             'text' => $address->address_text,
             'def' => $address->is_default,
+            'lat' => $address->latitude ? (float) $address->latitude : null,
+            'lng' => $address->longitude ? (float) $address->longitude : null,
         ];
     }
 }
