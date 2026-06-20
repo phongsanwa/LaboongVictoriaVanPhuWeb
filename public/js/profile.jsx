@@ -437,7 +437,7 @@ function AddrModal({ init, onClose, onSave }) {
             </label>
             <input className="inp2" placeholder="Số nhà, đường, phường/xã, quận/huyện, tỉnh/TP" value={f.text} onChange={onTextChange} autoComplete="off" />
             {sugg.length > 0 && (
-              <div style={{ position: "absolute", top: "100%", left: 0, right: 0, background: "var(--card)", border: "1.5px solid var(--brand)", borderRadius: "var(--r-sm)", zIndex: 20, boxShadow: "0 8px 24px rgba(0,0,0,.15)", marginTop: 4 }}>
+              <div style={{ position: "absolute", top: "100%", left: 0, right: 0, background: "var(--card)", border: "1.5px solid var(--brand)", borderRadius: "var(--r-sm)", zIndex: 9999, boxShadow: "0 8px 24px rgba(0,0,0,.15)", marginTop: 4 }}>
                 {sugg.map((s, i) => (
                   <button key={i} onMouseDown={() => pickSugg(s)} style={{ display: "flex", alignItems: "flex-start", gap: 8, width: "100%", padding: "9px 12px", textAlign: "left", fontSize: 13, borderBottom: i < sugg.length - 1 ? "1px solid var(--line)" : "none", color: "var(--ink)", lineHeight: 1.4 }}>
                     <span style={{ flexShrink: 0, marginTop: 2 }}><Icon name="pin" size={13} color="var(--brand)" /></span>
@@ -454,7 +454,7 @@ function AddrModal({ init, onClose, onSave }) {
                 ? <span style={{ fontWeight: 600, color: "var(--brand)", fontSize: 12 }}>✓ Đã xác định</span>
                 : <span style={{ fontWeight: 400, color: "var(--ink-3)", fontSize: 12 }}>Nhấp bản đồ để chỉnh vị trí</span>}
             </label>
-            <div ref={mapDivRef} style={{ height: 190, borderRadius: "var(--r-sm)", overflow: "hidden", border: "1.5px solid var(--line)" }} />
+            <div ref={mapDivRef} style={{ height: 190, borderRadius: "var(--r-sm)", overflow: "hidden", border: "1.5px solid var(--line)", isolation: "isolate" }} />
           </div>
           <div className="fld">
             <button className="label-pick" style={{ width: "100%" }} onClick={() => setF({ ...f, def: !f.def })}>
