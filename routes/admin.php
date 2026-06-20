@@ -67,6 +67,7 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
     Route::delete('/variants/options', [VariantsController::class, 'destroyOption'])->name('variants.options.destroy');
     Route::post('/variants/options/toggle', [VariantsController::class, 'toggleOption'])->name('variants.options.toggle');
     Route::post('/variants/options/toggle-all', [VariantsController::class, 'toggleAllOptions'])->name('variants.options.toggle-all');
+    Route::post('/variants/groups/{group}/set-default', [VariantsController::class, 'setDefault'])->name('variants.groups.setDefault');
     Route::get('/menu', [MenuController::class, 'index'])->name('menu.index');
     Route::post('/menu/products', [MenuController::class, 'storeProduct'])->name('menu.products.store');
     Route::post('/menu/products/{product}', [MenuController::class, 'updateProduct'])->name('menu.products.update');

@@ -233,8 +233,27 @@ function App() {
     }
   };
 
-  const setDefault = (gKey, oId) =>
-    setGroup(gKey, g => ({ ...g, options: g.options.map(o => ({ ...o, def: o.id === oId })) }));
+  const setDefault = async (gKey, oId) => {
+    const g = groups.find(x => x.key === gKey);
+    if (!g) return;
+
+    if (LIVE) {
+      setSaving(true);
+      try {
+        const url = LIVE_URLS.setDefault.replace('__ID__', g.id);
+        await apiFetch('POST', url, { option_id: oId });
+        setGroup(gKey, gr => ({ ...gr, default_option: oId, options: gr.options.map(o => ({ ...o, def: o.id === oId })) }));
+        const o = g.options.find(x => x.id === oId);
+        flash(`Đã đặt mặc định: "${o?.label || oId}"`);
+      } catch (e) {
+        flash(e.message, false);
+      } finally {
+        setSaving(false);
+      }
+    } else {
+      setGroup(gKey, gr => ({ ...gr, default_option: oId, options: gr.options.map(o => ({ ...o, def: o.id === oId })) }));
+    }
+  };
 
   /* ── Delete single option ─── */
   const del = async (gKey, oId) => {

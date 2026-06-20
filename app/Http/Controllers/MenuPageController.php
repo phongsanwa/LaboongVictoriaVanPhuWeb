@@ -92,12 +92,15 @@ class MenuPageController extends Controller
                     'label'     => $name,
                     'extra'     => $extraPrice,
                     'available' => $allAvail,
-                    'def'       => false, // will be set below for required groups
+                    'def'       => false,
                 ];
             })->values()->toArray();
 
-            // For required groups, mark the first option as default
-            if ($group->required && count($options) > 0) {
+            if ($group->default_option !== null) {
+                foreach ($options as &$opt) {
+                    $opt['def'] = ($opt['id'] === $group->default_option);
+                }
+            } elseif ($group->required && count($options) > 0) {
                 $options[0]['def'] = true;
             }
 

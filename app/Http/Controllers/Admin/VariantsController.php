@@ -36,6 +36,7 @@ class VariantsController extends Controller
                     'storeGroup'   => route('admin.variants.groups.store'),
                     'updateGroup'  => route('admin.variants.groups.update', ['group' => '__ID__']),
                     'destroyGroup' => route('admin.variants.groups.destroy', ['group' => '__ID__']),
+                    'setDefault'   => route('admin.variants.groups.setDefault', ['group' => '__ID__']),
                 ],
             ],
         ]);
@@ -219,6 +220,30 @@ class VariantsController extends Controller
         return response()->json(['available' => !$anyAvail]);
     }
 
+    /** POST /admin/variants/groups/{group}/set-default  (option_id or null) */
+    public function setDefault(Request $request, VariantGroup $group): JsonResponse
+    {
+        $data = $request->validate([
+            'option_id' => ['nullable', 'string', 'max:100'],
+        ]);
+
+        $optionId = $data['option_id'] ?? null;
+
+        if ($optionId !== null) {
+            $exists = ProductVariant::where('variant_type', $group->key)
+                ->where('name', $optionId)
+                ->exists();
+
+            if (!$exists) {
+                return response()->json(['message' => 'Lựa chọn không tồn tại'], 422);
+            }
+        }
+
+        $group->update(['default_option' => $optionId]);
+
+        return response()->json(['default_option' => $optionId]);
+    }
+
     /** POST /admin/variants/options/toggle-all  (group_key) */
     public function toggleAllOptions(Request $request): JsonResponse
     {
@@ -248,7 +273,7 @@ class VariantsController extends Controller
         $groups = [];
 
         foreach ($dbGroups as $meta) {
-            $options = $this->buildOptionsForGroupFromCollection($meta->key, $meta->required, $all);
+            $options = $this->buildOptionsForGroupFromCollection($meta->key, $meta->required, $meta->default_option, $all);
             $groups[] = $this->presentGroup($meta, $options);
         }
 
@@ -262,10 +287,10 @@ class VariantsController extends Controller
             ->orderBy('sort_order')->orderBy('name')
             ->get()->groupBy('variant_type');
 
-        return $this->buildOptionsForGroupFromCollection($key, $group->required, $all);
+        return $this->buildOptionsForGroupFromCollection($key, $group->required, $group->default_option, $all);
     }
 
-    private function buildOptionsForGroupFromCollection(string $key, bool $required, $all): array
+    private function buildOptionsForGroupFromCollection(string $key, bool $required, ?string $defaultOption, $all): array
     {
         $byName = ($all[$key] ?? collect())->groupBy('name');
 
@@ -285,7 +310,11 @@ class VariantsController extends Controller
         ->values()
         ->toArray();
 
-        if ($required && !empty($options)) {
+        if ($defaultOption !== null) {
+            foreach ($options as &$opt) {
+                $opt['def'] = ($opt['id'] === $defaultOption);
+            }
+        } elseif ($required && !empty($options)) {
             $options[0]['def'] = true;
         }
 
@@ -295,13 +324,14 @@ class VariantsController extends Controller
     private function presentGroup(VariantGroup $group, array $options): array
     {
         return [
-            'id'       => $group->id,
-            'key'      => $group->key,
-            'label'    => $group->label,
-            'ic'       => $group->ic,
-            'type'     => $group->type,
-            'required' => $group->required,
-            'options'  => $options,
+            'id'             => $group->id,
+            'key'            => $group->key,
+            'label'          => $group->label,
+            'ic'             => $group->ic,
+            'type'           => $group->type,
+            'required'       => $group->required,
+            'default_option' => $group->default_option,
+            'options'        => $options,
         ];
     }
 
