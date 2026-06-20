@@ -25,6 +25,26 @@ async function smartNominatimSearchSt(text) {
   return results.slice(0, 6);
 }
 
+async function cascadeGeocodeSt(text) {
+  const headers = { "Accept-Language": "vi" };
+  const base = "https://nominatim.openstreetmap.org/search";
+  const parts = text.split(",").map(p => p.trim()).filter(Boolean);
+  const noNum = text.replace(/^[A-Za-zÀ-ỹ]?\d+[A-Za-zÀ-ỹ]?\s+/, "").trim();
+  const queries = [text];
+  if (noNum !== text) queries.push(noNum);
+  for (let i = 1; i < parts.length; i++) queries.push(parts.slice(i).join(", "));
+
+  for (const q of queries) {
+    if (q.trim().length < 3) continue;
+    try {
+      const r = await fetch(`${base}?q=${encodeURIComponent(q + ", Việt Nam")}&format=json&limit=1&countrycodes=vn`, { headers });
+      const items = await r.json();
+      if (items.length) return { lat: parseFloat(items[0].lat), lng: parseFloat(items[0].lon) };
+    } catch { /* continue */ }
+  }
+  return null;
+}
+
 function csrfTokenSt() {
   return document.querySelector('meta[name="csrf-token"]')?.content || "";
 }
@@ -224,7 +244,12 @@ function StoreEditor({ initial, onClose, onSave }) {
               <span>Địa chỉ</span>
               {searching && <span style={{ fontWeight: 400, color: "var(--ink-3)", fontSize: 12 }}>Đang tìm…</span>}
             </label>
-            <input className="inp" value={address} onChange={onAddressChange} placeholder="Số nhà, đường, phường/xã, quận/huyện" autoComplete="off" />
+            <input className="inp" value={address} onChange={onAddressChange} placeholder="Số nhà, đường, phường/xã, quận/huyện" autoComplete="off"
+              onBlur={async () => {
+                if (latitude != null || !address.trim()) return;
+                const loc = await cascadeGeocodeSt(address.trim());
+                if (loc) { setLatitude(loc.lat); setLongitude(loc.lng); }
+              }} />
             {sugg.length > 0 && (
               <div style={{ position: "absolute", top: "100%", left: 0, right: 0, background: "var(--card)", border: "1.5px solid var(--brand)", borderRadius: 8, zIndex: 9999, boxShadow: "0 8px 24px rgba(0,0,0,.15)", marginTop: 4 }}>
                 {sugg.map((s, i) => (
