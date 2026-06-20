@@ -19,6 +19,16 @@ function getLiveStore()     { return LIVE ? LIVE_D.store         : (typeof STORE
 function getLivePerPoint()  { return LIVE ? LIVE_D.perPoint      : (typeof PER_POINT !== 'undefined' ? PER_POINT : 10000); }
 function getLivePromos()    { return LIVE ? LIVE_D.promos        : (typeof PROMOS !== 'undefined' ? PROMOS : {}); }
 function getLiveAddresses() { return LIVE ? (LIVE_D.addresses || []) : (typeof loadAddresses !== 'undefined' ? loadAddresses() : []); }
+function getLiveStores()   { return LIVE ? (LIVE_D.stores   || []) : []; }
+function getLiveStoreId()  { return LIVE ? (LIVE_D.storeId  ?? null) : null; }
+
+function haversineDist(lat1, lon1, lat2, lon2) {
+  const R = 6371;
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lon2 - lon1) * Math.PI / 180;
+  const a = Math.sin(dLat/2)**2 + Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLon/2)**2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+}
 
 /* In LIVE mode, build variant groups from PHP data.
    In demo mode, derive from static VARIANT_GROUPS if defined, else use an
@@ -99,6 +109,10 @@ function App() {
   const [addresses, setAddresses] = useState(getLiveAddresses);
   const [addrId, setAddrId] = useState(null);
   const [addrView, setAddrView] = useState(false);
+  const [liveStores,        ] = useState(getLiveStores);
+  const [selectedStoreId, setSelectedStoreId] = useState(getLiveStoreId);
+  const [storeView,  setStoreView]  = useState(false);
+  const [userLoc,    setUserLoc]    = useState(null);
   const grpRefs = useRef({});
 
   useEffect(() => {
@@ -127,6 +141,16 @@ function App() {
     const h = e => { if (e.key === "Escape") { setCustomize(null); setDrawer(false); } };
     window.addEventListener("keydown", h); return () => window.removeEventListener("keydown", h);
   }, []);
+
+  /* request geolocation once storeView opens */
+  useEffect(() => {
+    if (!storeView || userLoc || !navigator.geolocation) return;
+    navigator.geolocation.getCurrentPosition(
+      pos => setUserLoc({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+      () => {},
+      { enableHighAccuracy: false, timeout: 6000 }
+    );
+  }, [storeView]); // eslint-disable-line
 
   const addLine = (line) => {
     const key = lineKey(line);
@@ -237,6 +261,7 @@ function App() {
   const reset = () => {
     setLines([]); setPlaced(false); setDrawer(false); setNote(""); setOrderErr("");
     setCoupon(null); setCouponView(false); setCouponInput(""); setCouponErr("");
+    setStoreView(false); setAddrView(false);
     setActualPts(0);
   };
 
@@ -260,6 +285,7 @@ function App() {
           note: note || null,
           coupon_code: coupon?.code || null,
           discount: discount,
+          store_id: selectedStoreId || null,
         }),
       });
       const json = await res.json();
@@ -273,8 +299,19 @@ function App() {
     }
   };
 
-  const selectedAddr = addrId === "pickup" ? null : addresses.find(a => a.id === addrId);
+  const selectedAddr  = addrId === "pickup" ? null : addresses.find(a => a.id === addrId);
   const addrIcon = (label) => label === "Công ty" ? "building" : label === "Khác" ? "pin" : "home";
+  const selectedStore = liveStores.find(s => s.id === selectedStoreId) || liveStores[0] || null;
+  const pickupLabel   = selectedStore ? selectedStore.name : ('Laboong ' + liveStore);
+
+  const sortedStores = useMemo(() => {
+    if (!userLoc) return liveStores;
+    return [...liveStores].sort((a, b) => {
+      const da = (a.lat && a.lng) ? haversineDist(userLoc.lat, userLoc.lng, a.lat, a.lng) : Infinity;
+      const db = (b.lat && b.lng) ? haversineDist(userLoc.lat, userLoc.lng, b.lat, b.lng) : Infinity;
+      return da - db;
+    });
+  }, [liveStores, userLoc]); // eslint-disable-line
 
   return (
     <>
@@ -394,7 +431,7 @@ function App() {
               <div className="ok-wrap">
                 <div className="ok-ring"><div className="ck"><Icon name="check" size={28} color="#fff" /></div></div>
                 <h3>Đặt hàng thành công! 🎉</h3>
-                <p>{selectedAddr ? <>Đơn của bạn sẽ được giao đến<br /><b>{selectedAddr.text}</b></> : <>Đơn của bạn đang được pha chế tại<br />Laboong {liveStore}.</>}</p>
+                <p>{selectedAddr ? <>Đơn của bạn sẽ được giao đến<br /><b>{selectedAddr.text}</b></> : <>Đơn của bạn đang được pha chế tại<br /><b>{pickupLabel}</b>.</>}</p>
                 <div className="ok-earn">
                   <span className="oi"><Icon name="coin" size={22} color="#fff" /></span>
                   <div><div className="ot">Bạn vừa tích được</div><div className="ov">+{fmt(actualPts)} điểm</div></div>
@@ -441,6 +478,50 @@ function App() {
                   <div className="cp-hint"><Icon name="info" size={13} color="var(--ink-3)" /> Mã thử: <b>LABOONG10</b> (giảm 10%), <b>WELCOME20</b> (giảm 20k / đơn từ 50k), <b>FREESHIP</b> (giảm 15k).</div>
                 </div>
               </>
+            ) : storeView ? (
+              <>
+                <div className="cp-h">
+                  <button className="cp-back" onClick={() => setStoreView(false)}><Icon name="arrowleft" size={18} /></button>
+                  <h3>Chọn chi nhánh</h3>
+                </div>
+                <div className="cp-b">
+                  {!userLoc && (
+                    <div style={{ display: "flex", alignItems: "center", gap: 7, background: "var(--bg-2)", borderRadius: 10, padding: "10px 14px", marginBottom: 14, fontSize: 13, color: "var(--ink-3)" }}>
+                      <Icon name="pin" size={14} color="currentColor" />
+                      Cho phép vị trí để xem khoảng cách tới từng chi nhánh.
+                    </div>
+                  )}
+                  <div className="vlist">
+                    {sortedStores.map(s => {
+                      const dist = (userLoc && s.lat && s.lng)
+                        ? haversineDist(userLoc.lat, userLoc.lng, s.lat, s.lng)
+                        : null;
+                      const distLabel = dist !== null
+                        ? (dist < 1 ? `${Math.round(dist * 1000)} m` : `${dist.toFixed(1)} km`)
+                        : null;
+                      return (
+                        <button key={s.id}
+                          className={"aopt" + (selectedStoreId === s.id ? " on" : "")}
+                          onClick={() => { setSelectedStoreId(s.id); setAddrId("pickup"); setStoreView(false); }}>
+                          <span className="ai"><Icon name="pin" size={19} color="currentColor" /></span>
+                          <div style={{ minWidth: 0, flex: 1 }}>
+                            <div className="albl">
+                              <span className="atag">{s.name}</span>
+                              {distLabel && <span className="adef" style={{ color: "var(--brand)" }}>{distLabel}</span>}
+                            </div>
+                            <div className="atext">{s.address}</div>
+                            <div className="atext" style={{ color: "var(--ink-3)" }}>{s.open?.slice(0,5)} – {s.close?.slice(0,5)}</div>
+                          </div>
+                          <span className="aradio" />
+                        </button>
+                      );
+                    })}
+                    {sortedStores.length === 0 && (
+                      <div className="cp-empty">Không có chi nhánh nào đang hoạt động.</div>
+                    )}
+                  </div>
+                </div>
+              </>
             ) : addrView ? (
               <>
                 <div className="cp-h">
@@ -464,11 +545,12 @@ function App() {
                   </div>
 
                   <div className="cp-sec">Hoặc</div>
-                  <button className={"aopt pickup" + (addrId === "pickup" ? " on" : "")} onClick={() => { setAddrId("pickup"); setAddrView(false); }}>
+                  <button className={"aopt pickup" + (addrId === "pickup" ? " on" : "")}
+                    onClick={() => { setAddrId("pickup"); setAddrView(false); if (liveStores.length > 1) setStoreView(true); }}>
                     <span className="ai"><Icon name="bag" size={19} color="currentColor" /></span>
                     <div style={{ minWidth: 0, flex: 1 }}>
                       <div className="albl"><span className="atag">Nhận tại quầy</span></div>
-                      <div className="atext">Laboong {liveStore}</div>
+                      <div className="atext">{pickupLabel}</div>
                     </div>
                     <span className="aradio" />
                   </button>
@@ -488,15 +570,15 @@ function App() {
                 <div className="cart-empty"><div className="cei"><Icon name="bag" size={26} /></div>Giỏ hàng trống. Hãy chọn món bạn thích nhé!</div>
               ) : (<>
                 <div className="cart-b">
-                  <button className="deliv" onClick={() => setAddrView(true)}>
+                  <button className="deliv" onClick={() => selectedAddr ? setAddrView(true) : (liveStores.length > 1 ? setStoreView(true) : setAddrView(true))}>
                     <span className="di"><Icon name={selectedAddr ? addrIcon(selectedAddr.label) : "pin"} size={19} color="currentColor" /></span>
                     <div style={{ minWidth: 0, flex: 1 }}>
                       {selectedAddr ? (<>
                         <div className="dl">Giao đến <span className="dtag">{selectedAddr.label}</span>{selectedAddr.def && <span className="dtag" style={{ background: "var(--bg-2)", color: "var(--ink-2)" }}>Mặc định</span>}</div>
                         <div className="dt">{selectedAddr.text}</div>
                       </>) : (<>
-                        <div className="dl">Hình thức nhận</div>
-                        <div className="dt">Nhận tại quầy · Laboong {liveStore}</div>
+                        <div className="dl">Nhận tại quầy</div>
+                        <div className="dt">{pickupLabel}</div>
                       </>)}
                     </div>
                     <span className="dchev"><Icon name="chev" size={18} /></span>

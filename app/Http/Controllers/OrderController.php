@@ -30,6 +30,7 @@ class OrderController extends Controller
             'note'               => ['nullable', 'string', 'max:500'],
             'coupon_code'        => ['nullable', 'string', 'max:50'],
             'discount'           => ['nullable', 'numeric', 'min:0'],
+            'store_id'           => ['nullable', 'integer'],
         ]);
 
         $user     = Auth::user();
@@ -39,9 +40,16 @@ class OrderController extends Controller
             return response()->json(['message' => 'Khách hàng chưa được đăng ký'], 422);
         }
 
-        $store = ($customer->store?->status === 'active')
-            ? $customer->store
-            : Store::where('status', 'active')->first();
+        // Use store chosen by customer, falling back to customer's assigned store or any active store
+        $storeId = isset($data['store_id']) ? (int) $data['store_id'] : null;
+        if ($storeId) {
+            $store = Store::where('id', $storeId)->where('status', 'active')->first();
+        }
+        if (empty($store)) {
+            $store = ($customer->store?->status === 'active')
+                ? $customer->store
+                : Store::where('status', 'active')->first();
+        }
 
         if (!$store) {
             return response()->json(['message' => 'Không tìm thấy cửa hàng'], 422);

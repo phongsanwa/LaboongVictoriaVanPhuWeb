@@ -127,6 +127,22 @@ class MenuPageController extends Controller
 
         $storeName = $store?->name ?? 'Laboong';
 
+        $stores = Store::where('status', 'active')
+            ->orderBy('name')
+            ->get()
+            ->map(fn ($s) => [
+                'id'      => $s->id,
+                'name'    => $s->name,
+                'address' => $s->address,
+                'lat'     => $s->latitude  ? (float) $s->latitude  : null,
+                'lng'     => $s->longitude ? (float) $s->longitude : null,
+                'phone'   => $s->phone,
+                'open'    => $s->opening_time,
+                'close'   => $s->closing_time,
+            ])
+            ->values()
+            ->toArray();
+
         if ($customer) {
             $addresses = $customer->addresses->map(fn ($a) => [
                 'id'    => $a->id,
@@ -141,6 +157,8 @@ class MenuPageController extends Controller
             'menu'          => $menu,
             'variantGroups' => $variantGroupsData,
             'store'         => $storeName,
+            'storeId'       => $store?->id,
+            'stores'        => $stores,
             'perPoint'      => 10000,
             'promos'        => [
                 'LABOONG10' => ['name' => 'Giảm 10% toàn đơn',               'type' => 'percent', 'value' => 10,    'min' => 0,     'max' => 30000],
