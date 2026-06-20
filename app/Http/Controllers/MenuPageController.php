@@ -150,6 +150,8 @@ class MenuPageController extends Controller
                 'label' => $a->label,
                 'text'  => $a->address_text,
                 'def'   => (bool) $a->is_default,
+                'lat'   => $a->latitude  ? (float) $a->latitude  : null,
+                'lng'   => $a->longitude ? (float) $a->longitude : null,
             ])->values()->toArray();
         }
 
