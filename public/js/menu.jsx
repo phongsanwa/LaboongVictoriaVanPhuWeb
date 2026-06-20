@@ -23,7 +23,26 @@ function getLiveStores()        { return LIVE ? (LIVE_D.stores        || []) : [
 function getLiveStoreId()       { return LIVE ? (LIVE_D.storeId       ?? null) : null; }
 function getLiveShippingTiers() { return LIVE ? (LIVE_D.shippingTiers || []) : []; }
 
-const GEO_CACHE_KEY = 'laboong_geo_v1';
+const GEO_CACHE_KEY  = 'laboong_geo_v1';
+const CART_STATE_KEY = 'laboong_cart_v2';
+
+function loadCartState() {
+  try {
+    const raw = localStorage.getItem(CART_STATE_KEY);
+    if (!raw) return null;
+    return JSON.parse(raw);
+  } catch (e) { return null; }
+}
+
+function saveCartState(lines, note, coupon) {
+  try {
+    localStorage.setItem(CART_STATE_KEY, JSON.stringify({ lines, note, coupon }));
+  } catch (e) { /* ignore */ }
+}
+
+function clearCartState() {
+  try { localStorage.removeItem(CART_STATE_KEY); } catch (e) { /* ignore */ }
+}
 
 async function geocodeAddress(text) {
   try {
@@ -126,15 +145,15 @@ function App() {
 
   const [q, setQ] = useState("");
   const [activeCat, setActiveCat] = useState(() => liveCats[0]?.key || "");
-  const [lines, setLines] = useState([]);
+  const [lines, setLines] = useState(() => loadCartState()?.lines || []);
   const [customize, setCustomize] = useState(null);
   const [drawer, setDrawer] = useState(false);
   const [placed, setPlaced] = useState(false);
   const [placing, setPlacing] = useState(false);
   const [orderErr, setOrderErr] = useState("");
   const [actualPts, setActualPts] = useState(0);
-  const [note, setNote] = useState("");
-  const [coupon, setCoupon] = useState(null);
+  const [note, setNote] = useState(() => loadCartState()?.note || "");
+  const [coupon, setCoupon] = useState(() => loadCartState()?.coupon || null);
   const [couponView, setCouponView] = useState(false);
   const [couponInput, setCouponInput] = useState("");
   const [couponErr, setCouponErr] = useState("");
@@ -158,6 +177,15 @@ function App() {
     r.style.setProperty("--brand-deep", d);
     r.setAttribute("data-theme", tw.dark ? "dark" : "light");
   }, [tw.brand, tw.dark]);
+
+  /* persist cart to localStorage */
+  useEffect(() => {
+    if (lines.length === 0 && !note && !coupon) {
+      clearCartState();
+    } else {
+      saveCartState(lines, note, coupon);
+    }
+  }, [lines, note, coupon]);
 
   /* load vouchers from wallet (demo mode) */
   useEffect(() => {
@@ -327,6 +355,7 @@ function App() {
   };
 
   const reset = () => {
+    clearCartState();
     setLines([]); setPlaced(false); setDrawer(false); setNote(""); setOrderErr("");
     setCoupon(null); setCouponView(false); setCouponInput(""); setCouponErr("");
     setStoreView(false); setAddrView(false);
