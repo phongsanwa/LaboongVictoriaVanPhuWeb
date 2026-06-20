@@ -340,6 +340,28 @@ async function smartNominatimSearch(text) {
   return results.slice(0, 6);
 }
 
+async function cascadeGeocode(text) {
+  const headers = { "Accept-Language": "vi" };
+  const base = "https://nominatim.openstreetmap.org/search";
+  // Build cascade: full → no house-number → progressively drop front parts
+  const parts = text.split(",").map(p => p.trim()).filter(Boolean);
+  const noNum = text.replace(/^[A-Za-zÀ-ỹ]?\d+[A-Za-zÀ-ỹ]?\s+/, "").trim();
+  const queries = [text];
+  if (noNum !== text) queries.push(noNum);
+  // Drop leading parts one by one: [street+district+city] → [district+city] → [city]
+  for (let i = 1; i < parts.length; i++) queries.push(parts.slice(i).join(", "));
+
+  for (const q of queries) {
+    if (q.trim().length < 3) continue;
+    try {
+      const r = await fetch(`${base}?q=${encodeURIComponent(q + ", Việt Nam")}&format=json&limit=1&countrycodes=vn`, { headers });
+      const items = await r.json();
+      if (items.length) return { lat: parseFloat(items[0].lat), lng: parseFloat(items[0].lon) };
+    } catch { /* continue */ }
+  }
+  return null;
+}
+
 function AddrModal({ init, onClose, onSave }) {
   const [f, setF] = useState({
     id: init.id, label: init.label || "Nhà", name: init.name || "",
@@ -455,7 +477,12 @@ function AddrModal({ init, onClose, onSave }) {
               <span>Địa chỉ chi tiết</span>
               {searching && <span style={{ fontWeight: 400, color: "var(--ink-3)", fontSize: 12 }}>Đang tìm…</span>}
             </label>
-            <input className="inp2" placeholder="Số nhà, đường, phường/xã, quận/huyện, tỉnh/TP" value={f.text} onChange={onTextChange} autoComplete="off" />
+            <input className="inp2" placeholder="Số nhà, đường, phường/xã, quận/huyện, tỉnh/TP" value={f.text} onChange={onTextChange} autoComplete="off"
+              onBlur={async () => {
+                if (f.lat || !f.text.trim()) return;
+                const loc = await cascadeGeocode(f.text.trim());
+                if (loc) setF(prev => ({ ...prev, lat: loc.lat, lng: loc.lng }));
+              }} />
             {sugg.length > 0 && (
               <div style={{ position: "absolute", top: "100%", left: 0, right: 0, background: "var(--card)", border: "1.5px solid var(--brand)", borderRadius: "var(--r-sm)", zIndex: 9999, boxShadow: "0 8px 24px rgba(0,0,0,.15)", marginTop: 4 }}>
                 {sugg.map((s, i) => (
