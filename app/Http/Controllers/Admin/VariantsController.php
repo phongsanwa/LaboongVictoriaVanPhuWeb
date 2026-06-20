@@ -37,6 +37,7 @@ class VariantsController extends Controller
                     'updateGroup'  => route('admin.variants.groups.update', ['group' => '__ID__']),
                     'destroyGroup' => route('admin.variants.groups.destroy', ['group' => '__ID__']),
                     'setDefault'   => route('admin.variants.groups.setDefault', ['group' => '__ID__']),
+                    'reorderGroups' => route('admin.variants.groups.reorder'),
                 ],
             ],
         ]);
@@ -218,6 +219,21 @@ class VariantsController extends Controller
             ->update(['is_available' => !$anyAvail]);
 
         return response()->json(['available' => !$anyAvail]);
+    }
+
+    /** POST /admin/variants/groups/reorder  (ids: [id, id, ...]) */
+    public function reorderGroups(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'ids'   => ['required', 'array'],
+            'ids.*' => ['required', 'integer', Rule::exists('variant_groups', 'id')],
+        ]);
+
+        foreach ($data['ids'] as $order => $id) {
+            VariantGroup::where('id', $id)->update(['sort_order' => $order + 1]);
+        }
+
+        return response()->json(['message' => 'Đã cập nhật thứ tự']);
     }
 
     /** POST /admin/variants/groups/{group}/set-default  (option_id or null) */

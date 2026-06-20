@@ -28,6 +28,7 @@ function Icon({ name, size = 20, stroke = 2.1, color = "currentColor", fill = "n
     download: <><path d="M12 4v11M7.5 10.5 12 15l4.5-4.5"/><path d="M5 19.5h14"/></>,
     sort: <path d="M8 4v16M8 20l-3-3M8 4l3 3M16 20V4M16 4l3 3M16 20l-3-3"/>,
     chevdown: <path d="m6 9 6 6 6-6"/>,
+    chevup: <path d="m6 15 6-6 6 6"/>,
     close: <path d="m6 6 12 12M18 6 6 18"/>,
     dots: <><circle cx="12" cy="5" r="1.4" fill={color} stroke="none"/><circle cx="12" cy="12" r="1.4" fill={color} stroke="none"/><circle cx="12" cy="19" r="1.4" fill={color} stroke="none"/></>,
     mail: <><rect x="3" y="5" width="18" height="14" rx="2.2"/><path d="m3.5 7 8.5 6 8.5-6"/></>,
