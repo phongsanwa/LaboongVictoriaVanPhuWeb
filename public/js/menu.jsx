@@ -146,6 +146,7 @@ function App() {
   const [liveShippingTiers, ] = useState(getLiveShippingTiers);
   const [selectedStoreId, setSelectedStoreId] = useState(getLiveStoreId);
   const [storeView,  setStoreView]  = useState(false);
+  const [storeViewMode, setStoreViewMode] = useState("pickup"); // "pickup" | "delivery"
   const [userLoc,    setUserLoc]    = useState(null);
   const [addrGeoCache, setAddrGeoCache] = useState({});
   const grpRefs = useRef({});
@@ -563,7 +564,7 @@ function App() {
                       return (
                         <button key={s.id}
                           className={"aopt" + (selectedStoreId === s.id ? " on" : "")}
-                          onClick={() => { setSelectedStoreId(s.id); setAddrId("pickup"); setStoreView(false); }}>
+                          onClick={() => { setSelectedStoreId(s.id); if (storeViewMode === "pickup") setAddrId("pickup"); setStoreView(false); }}>
                           <span className="ai"><Icon name="pin" size={19} color="currentColor" /></span>
                           <div style={{ minWidth: 0, flex: 1 }}>
                             <div className="albl">
@@ -607,7 +608,7 @@ function App() {
 
                   <div className="cp-sec">Hoặc</div>
                   <button className={"aopt pickup" + (addrId === "pickup" ? " on" : "")}
-                    onClick={() => { setAddrId("pickup"); setAddrView(false); if (liveStores.length > 1) setStoreView(true); }}>
+                    onClick={() => { setAddrId("pickup"); setAddrView(false); if (liveStores.length > 1) { setStoreViewMode("pickup"); setStoreView(true); } }}>
                     <span className="ai"><Icon name="bag" size={19} color="currentColor" /></span>
                     <div style={{ minWidth: 0, flex: 1 }}>
                       <div className="albl"><span className="atag">Nhận tại quầy</span></div>
@@ -641,7 +642,7 @@ function App() {
                           <div className="dt" style={{ marginTop: 3, display: "flex", alignItems: "center", gap: 5 }}>
                             <Icon name="pin" size={12} color="var(--ink-3)" />
                             <span style={{ color: "var(--ink-3)", fontSize: 12.5 }}>Từ</span>
-                            <button onClick={e => { e.stopPropagation(); setStoreView(true); }} style={{ fontSize: 12.5, fontWeight: 600, color: "var(--brand)", textDecoration: "underline", textDecorationStyle: "dashed", textUnderlineOffset: 3 }}>
+                            <button onClick={e => { e.stopPropagation(); setStoreViewMode("delivery"); setStoreView(true); }} style={{ fontSize: 12.5, fontWeight: 600, color: "var(--brand)", textDecoration: "underline", textDecorationStyle: "dashed", textUnderlineOffset: 3 }}>
                               {selectedStore ? selectedStore.name : "Chọn chi nhánh"}
                             </button>
                           </div>
