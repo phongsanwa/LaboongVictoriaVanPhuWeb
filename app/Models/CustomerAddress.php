@@ -12,6 +12,8 @@ class CustomerAddress extends Model
         'label',
         'recipient_name',
         'address_text',
+        'latitude',
+        'longitude',
         'is_default',
     ];
 

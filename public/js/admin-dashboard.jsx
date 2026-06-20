@@ -105,6 +105,7 @@ function App() {
     { ic: "users", label: "Khách hàng" },
     { ic: "receipt", label: "Điểm & giao dịch" },
     { ic: "bag", label: "Đơn hàng" },
+    { ic: "truck", label: "Phí ship" },
     { ic: "gift", label: "Đổi quà" },
     { ic: "mega", label: "Chiến dịch" },
     { ic: "cup", label: "Thực đơn" },
@@ -126,13 +127,13 @@ function App() {
         </div>
         <div className="side-sec">Quản lý</div>
         <nav className="side-nav">
-          {NAV.slice(0, 9).map(n => (
+          {NAV.slice(0, 10).map(n => (
             <a key={n.label} className={"side-link" + (n.on ? " on" : "")} href={adminHref(n.label)}><Icon name={n.ic} size={19} /> {n.label}</a>
           ))}
         </nav>
         <div className="side-sec">Hệ thống</div>
         <nav className="side-nav">
-          {NAV.slice(9).map(n => (
+          {NAV.slice(10).map(n => (
             <a key={n.label} className="side-link" href={adminHref(n.label)}><Icon name={n.ic} size={19} /> {n.label}</a>
           ))}
         </nav>

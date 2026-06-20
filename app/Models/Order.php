@@ -16,6 +16,7 @@ class Order extends Model
         'subtotal',
         'points_used',
         'discount_amount',
+        'shipping_fee',
         'total_amount',
         'points_earned',
         'note',

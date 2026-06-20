@@ -19,8 +19,41 @@ function getLiveStore()     { return LIVE ? LIVE_D.store         : (typeof STORE
 function getLivePerPoint()  { return LIVE ? LIVE_D.perPoint      : (typeof PER_POINT !== 'undefined' ? PER_POINT : 10000); }
 function getLivePromos()    { return LIVE ? LIVE_D.promos        : (typeof PROMOS !== 'undefined' ? PROMOS : {}); }
 function getLiveAddresses() { return LIVE ? (LIVE_D.addresses || []) : (typeof loadAddresses !== 'undefined' ? loadAddresses() : []); }
-function getLiveStores()   { return LIVE ? (LIVE_D.stores   || []) : []; }
-function getLiveStoreId()  { return LIVE ? (LIVE_D.storeId  ?? null) : null; }
+function getLiveStores()        { return LIVE ? (LIVE_D.stores        || []) : []; }
+function getLiveStoreId()       { return LIVE ? (LIVE_D.storeId       ?? null) : null; }
+function getLiveShippingTiers() { return LIVE ? (LIVE_D.shippingTiers || []) : []; }
+
+const GEO_CACHE_KEY = 'laboong_geo_v1';
+
+async function geocodeAddress(text) {
+  try {
+    const cache = JSON.parse(localStorage.getItem(GEO_CACHE_KEY) || '{}');
+    if (cache[text]) return cache[text];
+  } catch(e) { /* ignore */ }
+
+  const q = encodeURIComponent(text + ', Việt Nam');
+  const res = await fetch(`https://nominatim.openstreetmap.org/search?q=${q}&format=json&limit=1`, {
+    headers: { 'Accept': 'application/json', 'User-Agent': 'Laboong/1.0 (contact@laboong.vn)' },
+  });
+  const data = await res.json();
+  if (!data.length) return null;
+  const loc = { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) };
+  try {
+    const cache = JSON.parse(localStorage.getItem(GEO_CACHE_KEY) || '{}');
+    cache[text] = loc;
+    localStorage.setItem(GEO_CACHE_KEY, JSON.stringify(cache));
+  } catch(e) { /* ignore */ }
+  return loc;
+}
+
+function calcShippingFee(distKm, tiers) {
+  if (!tiers.length) return 0;
+  const sorted = [...tiers].sort((a, b) => a.min_km - b.min_km);
+  for (const t of sorted) {
+    if (distKm >= t.min_km && (t.max_km === null || distKm < t.max_km)) return t.fee;
+  }
+  return sorted[sorted.length - 1].fee;
+}
 
 function haversineDist(lat1, lon1, lat2, lon2) {
   const R = 6371;
@@ -110,9 +143,11 @@ function App() {
   const [addrId, setAddrId] = useState(null);
   const [addrView, setAddrView] = useState(false);
   const [liveStores,        ] = useState(getLiveStores);
+  const [liveShippingTiers, ] = useState(getLiveShippingTiers);
   const [selectedStoreId, setSelectedStoreId] = useState(getLiveStoreId);
   const [storeView,  setStoreView]  = useState(false);
   const [userLoc,    setUserLoc]    = useState(null);
+  const [addrGeoCache, setAddrGeoCache] = useState({});
   const grpRefs = useRef({});
 
   useEffect(() => {
@@ -141,6 +176,17 @@ function App() {
     const h = e => { if (e.key === "Escape") { setCustomize(null); setDrawer(false); } };
     window.addEventListener("keydown", h); return () => window.removeEventListener("keydown", h);
   }, []);
+
+  /* geocode delivery address when selected */
+  useEffect(() => {
+    if (!selectedAddr || addrId === 'pickup') return;
+    const id = selectedAddr.id;
+    if (addrGeoCache[id]) return;
+    setAddrGeoCache(c => ({ ...c, [id]: { geocoding: true, lat: null, lng: null } }));
+    geocodeAddress(selectedAddr.text)
+      .then(loc => setAddrGeoCache(c => ({ ...c, [id]: loc ? { geocoding: false, ...loc } : { geocoding: false, lat: null, lng: null } })))
+      .catch(()  => setAddrGeoCache(c => ({ ...c, [id]: { geocoding: false, lat: null, lng: null } })));
+  }, [addrId]); // eslint-disable-line
 
   /* request geolocation once storeView opens */
   useEffect(() => {
@@ -199,6 +245,21 @@ function App() {
   const count    = lines.reduce((s, l) => s + l.qty, 0);
   const subtotal = lines.reduce((s, l) => s + l.unit * l.qty, 0);
 
+  const selectedAddr  = addrId === "pickup" ? null : addresses.find(a => a.id === addrId);
+  const selectedStore = liveStores.find(s => s.id === selectedStoreId) || liveStores[0] || null;
+
+  /* shipping info: geocode delivery address, compute distance + fee */
+  const geoInfo = useMemo(() => {
+    if (!selectedAddr || addrId === 'pickup') return null;
+    const cached = addrGeoCache[selectedAddr.id];
+    if (!cached) return { geocoding: false, dist: null, fee: 0 };
+    if (cached.geocoding) return { geocoding: true, dist: null, fee: 0 };
+    if (!cached.lat || !selectedStore?.lat || !selectedStore?.lng) return { geocoding: false, dist: null, fee: 0 };
+    const dist = haversineDist(cached.lat, cached.lng, selectedStore.lat, selectedStore.lng);
+    const fee  = calcShippingFee(dist, liveShippingTiers);
+    return { geocoding: false, dist, fee };
+  }, [addrId, addrGeoCache, selectedStore, liveShippingTiers]); // eslint-disable-line
+
   const calcCouponDiscount = (c, sub) => {
     if (!c) return 0;
     if (sub < (c.min || 0)) return 0;
@@ -208,7 +269,8 @@ function App() {
   };
 
   const discount = calcCouponDiscount(coupon, subtotal);
-  const payable  = Math.max(0, subtotal - discount);
+  const shipFee  = geoInfo?.fee ?? 0;
+  const payable  = Math.max(0, subtotal - discount + shipFee);
   const earnPts  = Math.floor(payable / livePerPoint);
 
   /* parse voucher discount from wallet */
@@ -286,6 +348,7 @@ function App() {
           coupon_code: coupon?.code || null,
           discount: discount,
           store_id: selectedStoreId || null,
+          shipping_fee: shipFee || 0,
         }),
       });
       const json = await res.json();
@@ -299,9 +362,7 @@ function App() {
     }
   };
 
-  const selectedAddr  = addrId === "pickup" ? null : addresses.find(a => a.id === addrId);
   const addrIcon = (label) => label === "Công ty" ? "building" : label === "Khác" ? "pin" : "home";
-  const selectedStore = liveStores.find(s => s.id === selectedStoreId) || liveStores[0] || null;
   const pickupLabel   = selectedStore ? selectedStore.name : ('Laboong ' + liveStore);
 
   const sortedStores = useMemo(() => {
@@ -627,6 +688,23 @@ function App() {
                   )}
                   <div className="csum"><span>Tạm tính</span><span className="v tnum">{fmt(subtotal)}đ</span></div>
                   {discount > 0 && <div className="csum" style={{ color: "var(--pink)" }}><span>Giảm giá</span><span className="v tnum" style={{ color: "var(--pink)" }}>−{fmt(discount)}đ</span></div>}
+                  {geoInfo?.dist !== null && geoInfo?.dist !== undefined && (
+                    <div className="csum" style={{ color: "var(--ink-3)", fontSize: 13 }}>
+                      <span>Khoảng cách</span>
+                      <span className="v">{geoInfo.dist < 1 ? `${Math.round(geoInfo.dist * 1000)} m` : `${geoInfo.dist.toFixed(1)} km`}</span>
+                    </div>
+                  )}
+                  {geoInfo?.geocoding && (
+                    <div className="csum" style={{ color: "var(--ink-3)", fontSize: 13 }}>
+                      <span>Phí giao hàng</span><span className="v">Đang tính…</span>
+                    </div>
+                  )}
+                  {!geoInfo?.geocoding && geoInfo !== null && (
+                    <div className="csum" style={{ color: geoInfo.fee === 0 ? "var(--brand)" : "var(--ink-1)" }}>
+                      <span>Phí giao hàng</span>
+                      <span className="v tnum">{geoInfo.fee === 0 ? "Miễn phí" : `${fmt(geoInfo.fee)}đ`}</span>
+                    </div>
+                  )}
                   <div className="csum earn"><span>Điểm tích được</span><span className="v">+{fmt(earnPts)} điểm</span></div>
                   <div className="csum total"><span>Tổng cộng</span><span className="v tnum">{fmt(payable)}đ</span></div>
                   {orderErr && <div className="cp-err" style={{ marginBottom: 6 }}><Icon name="alert" size={14} color="var(--hot)" /> {orderErr}</div>}
