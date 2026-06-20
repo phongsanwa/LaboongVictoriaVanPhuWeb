@@ -637,7 +637,15 @@ function App() {
                       {selectedAddr ? (<>
                         <div className="dl">Giao đến <span className="dtag">{selectedAddr.label}</span>{selectedAddr.def && <span className="dtag" style={{ background: "var(--bg-2)", color: "var(--ink-2)" }}>Mặc định</span>}</div>
                         <div className="dt">{selectedAddr.text}</div>
-                        {selectedStore && <div className="dt" style={{ color: "var(--ink-3)", marginTop: 2, fontSize: 12.5 }}>Từ {selectedStore.name}</div>}
+                        {liveStores.length > 0 && (
+                          <div className="dt" style={{ marginTop: 3, display: "flex", alignItems: "center", gap: 5 }}>
+                            <Icon name="pin" size={12} color="var(--ink-3)" />
+                            <span style={{ color: "var(--ink-3)", fontSize: 12.5 }}>Từ</span>
+                            <button onClick={e => { e.stopPropagation(); setStoreView(true); }} style={{ fontSize: 12.5, fontWeight: 600, color: "var(--brand)", textDecoration: "underline", textDecorationStyle: "dashed", textUnderlineOffset: 3 }}>
+                              {selectedStore ? selectedStore.name : "Chọn chi nhánh"}
+                            </button>
+                          </div>
+                        )}
                       </>) : (<>
                         <div className="dl">Nhận tại quầy</div>
                         <div className="dt">{pickupLabel}</div>
