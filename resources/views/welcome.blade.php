@@ -25,6 +25,6 @@
 
 <script type="text/babel" src="{{ asset('js/tweaks-panel.jsx') }}"></script>
 <script type="text/babel" src="{{ asset('js/components.jsx') }}"></script>
-<script type="text/babel" src="{{ asset('js/app.jsx') }}"></script>
+<script type="text/babel" src="{{ asset('js/app.jsx') }}?v={{ time() }}"></script>
 </body>
 </html>
