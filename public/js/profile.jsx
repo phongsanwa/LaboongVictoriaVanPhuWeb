@@ -314,6 +314,32 @@ function App() {
   );
 }
 
+async function smartNominatimSearch(text) {
+  const headers = { "Accept-Language": "vi" };
+  const base = "https://nominatim.openstreetmap.org/search";
+  // Build query list: full text + version without leading house-number token
+  const queries = [text];
+  const noNum = text.replace(/^[A-Za-zÀ-ỹ]?\d+[A-Za-zÀ-ỹ]?\s+/, "").trim();
+  if (noNum && noNum !== text) queries.push(noNum);
+
+  const seen = new Set();
+  const results = [];
+  for (const q of queries) {
+    try {
+      const r = await fetch(`${base}?q=${encodeURIComponent(q + ", Việt Nam")}&format=json&limit=5&countrycodes=vn`, { headers });
+      const items = await r.json();
+      for (const d of items) {
+        if (!seen.has(d.place_id)) {
+          seen.add(d.place_id);
+          results.push({ text: d.display_name, lat: parseFloat(d.lat), lng: parseFloat(d.lon) });
+        }
+      }
+    } catch { /* ignore */ }
+    if (results.length >= 6) break;
+  }
+  return results.slice(0, 6);
+}
+
 function AddrModal({ init, onClose, onSave }) {
   const [f, setF] = useState({
     id: init.id, label: init.label || "Nhà", name: init.name || "",
@@ -386,19 +412,13 @@ function AddrModal({ init, onClose, onSave }) {
     const val = e.target.value;
     setF(prev => ({ ...prev, text: val, lat: null, lng: null }));
     if (debRef.current) clearTimeout(debRef.current);
-    if (val.trim().length < 5) { setSugg([]); setSearching(false); return; }
+    if (val.trim().length < 4) { setSugg([]); setSearching(false); return; }
     setSearching(true);
     debRef.current = setTimeout(async () => {
-      try {
-        const q = encodeURIComponent(val.trim() + ", Việt Nam");
-        const r = await fetch(`https://nominatim.openstreetmap.org/search?q=${q}&format=json&limit=5&countrycodes=vn`, {
-          headers: { "Accept-Language": "vi" },
-        });
-        const items = await r.json();
-        setSugg(items.map(d => ({ text: d.display_name, lat: parseFloat(d.lat), lng: parseFloat(d.lon) })));
-      } catch { setSugg([]); }
+      const results = await smartNominatimSearch(val.trim());
+      setSugg(results);
       setSearching(false);
-    }, 500);
+    }, 450);
   };
 
   const pickSugg = s => {
