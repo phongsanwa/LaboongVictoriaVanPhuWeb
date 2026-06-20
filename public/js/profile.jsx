@@ -142,9 +142,10 @@ function App() {
   };
 
   const saveAddr = async (form) => {
+    const payload = { label: form.label, name: form.name, text: form.text, def: form.def, lat: form.lat || null, lng: form.lng || null };
     const { ok, data: res } = form.id
-      ? await apiCall("PUT", `/profile/addresses/${form.id}`, { label: form.label, name: form.name, text: form.text, def: form.def })
-      : await apiCall("POST", "/profile/addresses", { label: form.label, name: form.name, text: form.text, def: form.def });
+      ? await apiCall("PUT", `/profile/addresses/${form.id}`, payload)
+      : await apiCall("POST", "/profile/addresses", payload);
 
     if (!ok) { flash(res.message || "Có lỗi xảy ra, vui lòng thử lại."); return; }
 
@@ -314,32 +315,146 @@ function App() {
 }
 
 function AddrModal({ init, onClose, onSave }) {
-  const [f, setF] = useState({ id: init.id, label: init.label || "Nhà", name: init.name || "", text: init.text || "", def: !!init.def });
+  const [f, setF] = useState({
+    id: init.id, label: init.label || "Nhà", name: init.name || "",
+    text: init.text || "", def: !!init.def,
+    lat: init.lat || null, lng: init.lng || null,
+  });
+  const [sugg, setSugg] = useState([]);
+  const [searching, setSearching] = useState(false);
+  const debRef = useRef(null);
+  const mapDivRef = useRef(null);
+  const mapRef = useRef(null);
+  const markerRef = useRef(null);
+
   useEffect(() => {
     const h = e => { if (e.key === "Escape") onClose(); };
-    window.addEventListener("keydown", h); return () => window.removeEventListener("keydown", h);
+    window.addEventListener("keydown", h);
+    return () => window.removeEventListener("keydown", h);
   }, [onClose]);
+
+  // Init Leaflet map after first render
+  useEffect(() => {
+    const L = window.L;
+    if (!L || !mapDivRef.current || mapRef.current) return;
+
+    delete L.Icon.Default.prototype._getIconUrl;
+    L.Icon.Default.mergeOptions({
+      iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
+      iconRetinaUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
+      shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
+    });
+
+    const center = (f.lat && f.lng) ? [f.lat, f.lng] : [20.9833, 105.8412];
+    const map = L.map(mapDivRef.current, { zoomControl: true }).setView(center, f.lat ? 16 : 11);
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      attribution: "© OpenStreetMap",
+    }).addTo(map);
+
+    if (f.lat && f.lng) {
+      markerRef.current = L.marker([f.lat, f.lng]).addTo(map);
+    }
+
+    map.on("click", e => {
+      const { lat, lng } = e.latlng;
+      setF(prev => ({ ...prev, lat, lng }));
+      if (markerRef.current) {
+        markerRef.current.setLatLng([lat, lng]);
+      } else {
+        markerRef.current = L.marker([lat, lng]).addTo(map);
+      }
+    });
+
+    mapRef.current = map;
+    return () => { map.remove(); mapRef.current = null; markerRef.current = null; };
+  }, []);
+
+  // Update marker & pan when lat/lng change (from suggestion pick)
+  useEffect(() => {
+    const map = mapRef.current;
+    const L = window.L;
+    if (!map || !L || f.lat == null || f.lng == null) return;
+    if (markerRef.current) {
+      markerRef.current.setLatLng([f.lat, f.lng]);
+    } else {
+      markerRef.current = L.marker([f.lat, f.lng]).addTo(map);
+    }
+    map.setView([f.lat, f.lng], 16, { animate: true });
+  }, [f.lat, f.lng]);
+
+  const onTextChange = e => {
+    const val = e.target.value;
+    setF(prev => ({ ...prev, text: val, lat: null, lng: null }));
+    if (debRef.current) clearTimeout(debRef.current);
+    if (val.trim().length < 5) { setSugg([]); setSearching(false); return; }
+    setSearching(true);
+    debRef.current = setTimeout(async () => {
+      try {
+        const q = encodeURIComponent(val.trim() + ", Việt Nam");
+        const r = await fetch(`https://nominatim.openstreetmap.org/search?q=${q}&format=json&limit=5&countrycodes=vn`, {
+          headers: { "Accept-Language": "vi" },
+        });
+        const items = await r.json();
+        setSugg(items.map(d => ({ text: d.display_name, lat: parseFloat(d.lat), lng: parseFloat(d.lon) })));
+      } catch { setSugg([]); }
+      setSearching(false);
+    }, 500);
+  };
+
+  const pickSugg = s => {
+    setF(prev => ({ ...prev, text: s.text, lat: s.lat, lng: s.lng }));
+    setSugg([]);
+  };
+
   const valid = f.text.trim().length >= 6 && f.name.trim().length >= 2;
+
   return (
     <div className="scrim" onClick={onClose}>
-      <div className="modal" onClick={e => e.stopPropagation()}>
-        <div className="modal-h"><h3>{init.id ? "Sửa địa chỉ" : "Thêm địa chỉ"}</h3><button className="x" onClick={onClose}><Icon name="close" size={18} /></button></div>
-        <div className="modal-b">
+      <div className="modal" onClick={e => e.stopPropagation()} style={{ maxHeight: "90vh", display: "flex", flexDirection: "column" }}>
+        <div className="modal-h">
+          <h3>{init.id ? "Sửa địa chỉ" : "Thêm địa chỉ"}</h3>
+          <button className="x" onClick={onClose}><Icon name="close" size={18} /></button>
+        </div>
+        <div className="modal-b" style={{ overflowY: "auto", flex: 1 }}>
           <div className="fld">
             <label>Loại địa chỉ</label>
             <div className="label-pick">
               {[["Nhà", "home"], ["Công ty", "building"], ["Khác", "pin"]].map(([l, ic]) => (
-                <button key={l} className={f.label === l ? "on" : ""} onClick={() => setF({ ...f, label: l })}><Icon name={ic} size={15} color="currentColor" /> {l}</button>
+                <button key={l} className={f.label === l ? "on" : ""} onClick={() => setF({ ...f, label: l })}>
+                  <Icon name={ic} size={15} color="currentColor" /> {l}
+                </button>
               ))}
             </div>
           </div>
           <div className="fld">
-            <label>Người nhận & SĐT</label>
+            <label>Người nhận &amp; SĐT</label>
             <input className="inp2" placeholder="VD: Minh Anh · 0912 845 207" value={f.name} onChange={e => setF({ ...f, name: e.target.value })} />
           </div>
+          <div className="fld" style={{ position: "relative" }}>
+            <label style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+              <span>Địa chỉ chi tiết</span>
+              {searching && <span style={{ fontWeight: 400, color: "var(--ink-3)", fontSize: 12 }}>Đang tìm…</span>}
+            </label>
+            <input className="inp2" placeholder="Số nhà, đường, phường/xã, quận/huyện, tỉnh/TP" value={f.text} onChange={onTextChange} autoComplete="off" />
+            {sugg.length > 0 && (
+              <div style={{ position: "absolute", top: "100%", left: 0, right: 0, background: "var(--card)", border: "1.5px solid var(--brand)", borderRadius: "var(--r-sm)", zIndex: 20, boxShadow: "0 8px 24px rgba(0,0,0,.15)", marginTop: 4 }}>
+                {sugg.map((s, i) => (
+                  <button key={i} onMouseDown={() => pickSugg(s)} style={{ display: "flex", alignItems: "flex-start", gap: 8, width: "100%", padding: "9px 12px", textAlign: "left", fontSize: 13, borderBottom: i < sugg.length - 1 ? "1px solid var(--line)" : "none", color: "var(--ink)", lineHeight: 1.4 }}>
+                    <span style={{ flexShrink: 0, marginTop: 2 }}><Icon name="pin" size={13} color="var(--brand)" /></span>
+                    <span>{s.text}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
           <div className="fld">
-            <label>Địa chỉ chi tiết</label>
-            <input className="inp2" placeholder="Số nhà, đường, phường/xã, quận/huyện, tỉnh/TP" value={f.text} onChange={e => setF({ ...f, text: e.target.value })} />
+            <label style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+              <span>Vị trí trên bản đồ</span>
+              {f.lat && f.lng
+                ? <span style={{ fontWeight: 600, color: "var(--brand)", fontSize: 12 }}>✓ Đã xác định</span>
+                : <span style={{ fontWeight: 400, color: "var(--ink-3)", fontSize: 12 }}>Nhấp bản đồ để chỉnh vị trí</span>}
+            </label>
+            <div ref={mapDivRef} style={{ height: 190, borderRadius: "var(--r-sm)", overflow: "hidden", border: "1.5px solid var(--line)" }} />
           </div>
           <div className="fld">
             <button className="label-pick" style={{ width: "100%" }} onClick={() => setF({ ...f, def: !f.def })}>
