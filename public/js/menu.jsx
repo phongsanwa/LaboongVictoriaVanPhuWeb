@@ -183,6 +183,11 @@ function App() {
     if (!selectedAddr || addrId === 'pickup') return;
     const id = selectedAddr.id;
     if (addrGeoCache[id]) return;
+    // Use saved coordinates from profile map if available
+    if (selectedAddr.lat && selectedAddr.lng) {
+      setAddrGeoCache(c => ({ ...c, [id]: { geocoding: false, lat: selectedAddr.lat, lng: selectedAddr.lng } }));
+      return;
+    }
     setAddrGeoCache(c => ({ ...c, [id]: { geocoding: true, lat: null, lng: null } }));
     geocodeAddress(selectedAddr.text)
       .then(loc => setAddrGeoCache(c => ({ ...c, [id]: loc ? { geocoding: false, ...loc } : { geocoding: false, lat: null, lng: null } })))
@@ -698,7 +703,7 @@ function App() {
                   )}
                   <div className="csum"><span>Tạm tính</span><span className="v tnum">{fmt(subtotal)}đ</span></div>
                   {discount > 0 && <div className="csum" style={{ color: "var(--pink)" }}><span>Giảm giá</span><span className="v tnum" style={{ color: "var(--pink)" }}>−{fmt(discount)}đ</span></div>}
-                  {geoInfo?.dist !== null && geoInfo?.dist !== undefined && (
+                  {geoInfo?.dist != null && (
                     <div className="csum" style={{ color: "var(--ink-3)", fontSize: 13 }}>
                       <span>Khoảng cách</span>
                       <span className="v">{geoInfo.dist < 1 ? `${Math.round(geoInfo.dist * 1000)} m` : `${geoInfo.dist.toFixed(1)} km`}</span>
@@ -710,9 +715,11 @@ function App() {
                     </div>
                   )}
                   {!geoInfo?.geocoding && geoInfo !== null && (
-                    <div className="csum" style={{ color: geoInfo.fee === 0 ? "var(--brand)" : "var(--ink-1)" }}>
+                    <div className="csum" style={{ color: geoInfo.dist == null ? "var(--ink-3)" : geoInfo.fee === 0 ? "var(--brand)" : "var(--ink-1)" }}>
                       <span>Phí giao hàng</span>
-                      <span className="v tnum">{geoInfo.fee === 0 ? "Miễn phí" : `${fmt(geoInfo.fee)}đ`}</span>
+                      <span className="v tnum">
+                        {geoInfo.dist == null ? "Chưa xác định" : geoInfo.fee === 0 ? "Miễn phí" : `${fmt(geoInfo.fee)}đ`}
+                      </span>
                     </div>
                   )}
                   <div className="csum earn"><span>Điểm tích được</span><span className="v">+{fmt(earnPts)} điểm</span></div>
