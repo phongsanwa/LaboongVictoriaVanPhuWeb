@@ -114,7 +114,7 @@ a { color: inherit; text-decoration: none; }
 .topbar {
   position: sticky; top: 0; z-index: 20; background: color-mix(in srgb, var(--bg) 84%, transparent);
   backdrop-filter: blur(12px) saturate(1.3); border-bottom: 1px solid var(--line);
-  padding: 16px 28px; display: flex; align-items: center; gap: 16px;
+  padding: 16px 28px; display: flex; align-items: center; gap: 16px;flex-wrap: wrap;
 }
 .crumb { font-size: 12.5px; color: var(--ink-3); font-weight: 600; }
 .topbar h1 { font-family: var(--display); font-weight: 800; font-size: 22px; margin: 2px 0 0; letter-spacing: -.01em; white-space: nowrap; }
@@ -144,7 +144,7 @@ a { color: inherit; text-decoration: none; }
 .stat-ic.a { background: var(--ok-bg); color: var(--ok); }
 .stat-ic.y { background: var(--gold-bg); color: var(--gold); }
 .stat-ic.p { background: color-mix(in srgb,#FF6FA5 14%, var(--panel)); color:#E0518A; }
-.stat .lbl { font-size: 12.5px; color: var(--ink-2); font-weight: 600; white-space: nowrap; }
+.stat .lbl { font-size: 12.5px; color: var(--ink-2); font-weight: 600 }
 .stat .val { font-family: var(--display); font-weight: 800; font-size: 26px; line-height: 1.06; margin-top: 4px; letter-spacing: -.01em; }
 .stat .chg { font-size: 11.5px; font-weight: 600; margin-top: 4px; display: inline-flex; gap: 4px; align-items: center; }
 .stat .chg.up { color: var(--ok); }
