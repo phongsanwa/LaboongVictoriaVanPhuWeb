@@ -379,22 +379,9 @@ function AddrModal({ init, onClose, onSave }) {
     text: init.text || "", def: !!init.def,
     lat: init.lat || null, lng: init.lng || null,
   });
-  const [sugg, setSugg] = useState([]);
-  const [searching, setSearching] = useState(false);
-  const debRef = useRef(null);
   const mapDivRef = useRef(null);
   const mapRef = useRef(null);
   const markerRef = useRef(null);
-  const addrInputRef = useRef(null);
-  const [suggRect, setSuggRect] = useState(null);
-
-  /* recompute dropdown position whenever suggestions list opens */
-  useEffect(() => {
-    if (sugg.length > 0 && addrInputRef.current) {
-      const r = addrInputRef.current.getBoundingClientRect();
-      setSuggRect({ top: r.bottom + 4, left: r.left, width: r.width });
-    }
-  }, [sugg.length]);
 
   useEffect(() => {
     const h = e => { if (e.key === "Escape") onClose(); };
@@ -457,19 +444,6 @@ function AddrModal({ init, onClose, onSave }) {
   const onTextChange = e => {
     const val = e.target.value;
     setF(prev => ({ ...prev, text: val, lat: null, lng: null }));
-    if (debRef.current) clearTimeout(debRef.current);
-    if (val.trim().length < 4) { setSugg([]); setSearching(false); return; }
-    setSearching(true);
-    debRef.current = setTimeout(async () => {
-      const results = await smartNominatimSearch(val.trim());
-      setSugg(results);
-      setSearching(false);
-    }, 450);
-  };
-
-  const pickSugg = s => {
-    setF(prev => ({ ...prev, text: s.text, lat: s.lat, lng: s.lng }));
-    setSugg([]);
   };
 
   const valid = f.text.trim().length >= 6 && f.name.trim().length >= 2;
@@ -497,26 +471,13 @@ function AddrModal({ init, onClose, onSave }) {
             <input className="inp2" placeholder="VD: Minh Anh · 0912 845 207" value={f.name} onChange={e => setF({ ...f, name: e.target.value })} />
           </div>
           <div className="fld" style={{ position: "relative" }}>
-            <label style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-              <span>Địa chỉ chi tiết</span>
-              {searching && <span style={{ fontWeight: 400, color: "var(--ink-3)", fontSize: 12 }}>Đang tìm…</span>}
-            </label>
-            <input ref={addrInputRef} className="inp2" placeholder="Số nhà, đường, phường/xã, quận/huyện, tỉnh/TP" value={f.text} onChange={onTextChange} autoComplete="off"
+            <label>Địa chỉ chi tiết</label>
+            <input className="inp2" placeholder="Số nhà, đường, phường/xã, quận/huyện, tỉnh/TP" value={f.text} onChange={onTextChange} autoComplete="off"
               onBlur={async () => {
                 if (f.lat || !f.text.trim()) return;
                 const loc = await cascadeGeocode(f.text.trim());
                 if (loc) setF(prev => ({ ...prev, lat: loc.lat, lng: loc.lng }));
               }} />
-            {sugg.length > 0 && suggRect && (
-              <div style={{ position: "fixed", top: suggRect.top, left: suggRect.left, width: suggRect.width, background: "var(--card)", border: "1.5px solid var(--brand)", borderRadius: "var(--r-sm)", zIndex: 99999, boxShadow: "0 8px 24px rgba(0,0,0,.18)" }}>
-                {sugg.map((s, i) => (
-                  <button key={i} onMouseDown={() => pickSugg(s)} style={{ display: "flex", alignItems: "flex-start", gap: 8, width: "100%", padding: "9px 12px", textAlign: "left", fontSize: 13, borderBottom: i < sugg.length - 1 ? "1px solid var(--line)" : "none", color: "var(--ink)", lineHeight: 1.4 }}>
-                    <span style={{ flexShrink: 0, marginTop: 2 }}><Icon name="pin" size={13} color="var(--brand)" /></span>
-                    <span>{s.text}</span>
-                  </button>
-                ))}
-              </div>
-            )}
           </div>
           <div className="fld">
             <label style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
