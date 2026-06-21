@@ -590,10 +590,9 @@ function AddrModal({ init, onClose, onSave }) {
             />
             {/* Suggestion dropdown — position:fixed to escape modal overflow */}
             {sugg.length > 0 && suggRect && (
-              <div style={{ position: "fixed", top: suggRect.top, left: suggRect.left, width: suggRect.width, background: "var(--card)", border: "1.5px solid var(--brand)", borderRadius: "var(--r-sm)", zIndex: 99999, boxShadow: "0 8px 28px rgba(0,0,0,.2)", maxHeight: 260, overflowY: "auto" }}>
+              <div className="suggest-address" style={{ position: "fixed", top: suggRect.top, left: suggRect.left, width: suggRect.width }}>
                 {sugg.map((s, i) => (
-                  <button key={i} onMouseDown={() => pickSugg(s)}
-                    style={{ display: "flex", alignItems: "flex-start", gap: 8, width: "100%", padding: "9px 12px", textAlign: "left", fontSize: 13, borderBottom: i < sugg.length - 1 ? "1px solid var(--line)" : "none", color: "var(--ink)", lineHeight: 1.4 }}>
+                  <button key={i} onMouseDown={() => pickSugg(s)}>
                     <span style={{ flexShrink: 0, marginTop: 2 }}><Icon name="pin" size={13} color="var(--brand)" /></span>
                     <span>{s.text}</span>
                   </button>
