@@ -89,11 +89,10 @@ function FormStep({ data, setData, onNext }) {
 
       <div className="fld">
         <label>Số điện thoại<span className="req">*</span></label>
-        <div className="inp-wrap has-prefix">
+        <div className="inp-wrap">
           <span className="lic"><Icon name="phone" size={18} /></span>
-          <span className="pfx">+84</span>
           <input className={"inp" + ((touched.phone && !phoneRes.ok) || serverError ? " bad" : "")} inputMode="numeric"
-            placeholder="9xx xxx xxx" value={data.phone}
+            placeholder="0912 345 678" value={data.phone}
             onChange={e => { setData({ ...data, phone: e.target.value.replace(/[^\d\s.\-]/g, "") }); setServerError(""); }}
             onBlur={() => setTouched(t => ({ ...t, phone: true }))} />
           {phoneRes.ok && data.phone && !serverError && <span className="okmark"><Icon name="check" size={18} /></span>}

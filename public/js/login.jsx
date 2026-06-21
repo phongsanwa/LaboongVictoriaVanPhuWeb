@@ -33,7 +33,7 @@ function validPhone(raw) {
   if (!/^(03|05|07|08|09)\d{8}$/.test(p)) return { ok: false, msg: "Số điện thoại không đúng định dạng" };
   return { ok: true };
 }
-function prettyPhone(raw) { return normPhone(raw).replace(/^0/, "").replace(/(\d{3})(\d{3})(\d{3})/, "$1 $2 $3"); }
+function prettyPhone(raw) { return normPhone(raw).replace(/^0(\d{3})(\d{3})(\d{3})$/, "0$1 $2 $3"); }
 
 function fmtTime(s) { return `${String(Math.floor(s / 60)).padStart(2, "0")}:${String(s % 60).padStart(2, "0")}`; }
 
@@ -122,7 +122,7 @@ function ForgotFlow({ onBack }) {
       </button>
       <div className="step-head">
         <h1>Nhập mã xác minh</h1>
-        <p>Mã OTP đã được gửi đến số <b>+84 {prettyPhone(phone)}</b>. Nhập mã và đặt mật khẩu mới bên dưới.</p>
+        <p>Mã OTP đã được gửi đến số <b>{prettyPhone(phone)}</b>. Nhập mã và đặt mật khẩu mới bên dưới.</p>
       </div>
 
       <div className="fld">
@@ -188,10 +188,9 @@ function ForgotFlow({ onBack }) {
       </div>
       <div className="fld">
         <label>Số điện thoại</label>
-        <div className="inp-wrap has-prefix">
+        <div className="inp-wrap">
           <span className="lic"><Icon name="phone" size={18} /></span>
-          <span className="pfx">+84</span>
-          <input className={"inp" + (touched && !pRes.ok ? " bad" : "")} inputMode="numeric" placeholder="9xx xxx xxx" value={phone}
+          <input className={"inp" + (touched && !pRes.ok ? " bad" : "")} inputMode="numeric" placeholder="0912 345 678" value={phone}
             onChange={e => { setPhone(e.target.value.replace(/[^\d\s.\-]/g, "")); setErr(""); }}
             onKeyDown={e => { if (e.key === "Enter") sendOtp(); }} />
         </div>
@@ -273,10 +272,9 @@ function App() {
 
               <div className="fld">
                 <label>Số điện thoại</label>
-                <div className="inp-wrap has-prefix">
+                <div className="inp-wrap">
                   <span className="lic"><Icon name="phone" size={18} /></span>
-                  <span className="pfx">+84</span>
-                  <input className={"inp" + (touched && !pRes.ok ? " bad" : "")} inputMode="numeric" placeholder="9xx xxx xxx" value={phone}
+                  <input className={"inp" + (touched && !pRes.ok ? " bad" : "")} inputMode="numeric" placeholder="0912 345 678" value={phone}
                     onChange={e => { setPhone(e.target.value.replace(/[^\d\s.\-]/g, "")); setNotReg(false); }}
                     onKeyDown={e => { if (e.key === "Enter") loginPw(); }} />
                 </div>
@@ -305,7 +303,7 @@ function App() {
               {notReg && (
                 <div className="notice">
                   <Icon name="info" size={17} color="var(--brand)" />
-                  <span>Số <b>+84 {prettyPhone(phone)}</b> chưa có tài khoản. <a href={NAV_URLS.register}>Đăng ký ngay →</a></span>
+                  <span>Số <b>{prettyPhone(phone)}</b> chưa có tài khoản. <a href={NAV_URLS.register}>Đăng ký ngay →</a></span>
                 </div>
               )}
 
