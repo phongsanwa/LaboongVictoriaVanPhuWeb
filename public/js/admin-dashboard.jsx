@@ -94,58 +94,11 @@ function App() {
     r.setAttribute("data-theme", tw.dark ? "dark" : "light");
   }, [tw.brand, tw.dark]);
 
-  const logout = async (e) => {
-    e.preventDefault();
-    await apiCall("POST", "/logout");
-    location.href = NAV_URLS.login;
-  };
-
-  const NAV = [
-    { ic: "chart", label: "Tổng quan", on: true },
-    { ic: "users", label: "Khách hàng" },
-    { ic: "receipt", label: "Điểm & giao dịch" },
-    { ic: "bag", label: "Đơn hàng" },
-    { ic: "truck", label: "Phí ship" },
-    { ic: "gift", label: "Đổi quà" },
-    { ic: "mega", label: "Chiến dịch" },
-    { ic: "cup", label: "Thực đơn" },
-    { ic: "percent", label: "Khuyến mãi" },
-    { ic: "plus", label: "Variant / Tuỳ chọn" },
-    { ic: "pin", label: "Cửa hàng" },
-    { ic: "shield", label: "Phân quyền" },
-    { ic: "gear", label: "Cài đặt" },
-  ];
-
   const { revenue: kRevenue, newCustomers: kCust, pointsIssued: kPoints, redemptionRate: kRate } = DATA.kpis;
 
   return (
     <div className="shell">
-      {sideOpen && <div className="scrim" style={{ zIndex: 55 }} onClick={() => setSideOpen(false)} />}
-      <aside className={"side" + (sideOpen ? " open" : "")}>
-        <div className="side-brand">
-          <div className="side-mark"><span>L</span></div>
-          <div><div className="nm">Laboong</div><div className="sb">Bảng quản trị</div></div>
-        </div>
-        <div className="side-sec">Quản lý</div>
-        <nav className="side-nav">
-          {NAV.slice(0, 10).map(n => (
-            <a key={n.label} className={"side-link" + (n.on ? " on" : "")} href={adminHref(n.label)}><Icon name={n.ic} size={19} /> {n.label}</a>
-          ))}
-        </nav>
-        <div className="side-sec">Hệ thống</div>
-        <nav className="side-nav">
-          {NAV.slice(10).map(n => (
-            <a key={n.label} className="side-link" href={adminHref(n.label)}><Icon name={n.ic} size={19} /> {n.label}</a>
-          ))}
-        </nav>
-        <div className="side-foot">
-          <div className="side-user">
-            <div className="side-av">{DATA.admin.initials}</div>
-            <div style={{ minWidth: 0 }}><div className="un">{DATA.admin.name}</div><div className="ur">{DATA.admin.email}</div></div>
-            <button className="icon-btn" style={{ width: 32, height: 32, marginLeft: "auto" }} onClick={logout} title="Đăng xuất"><Icon name="logout" size={16} /></button>
-          </div>
-        </div>
-      </aside>
+      <AdminSidebar activeLabel="Tổng quan" admin={DATA.admin} sideOpen={sideOpen} onClose={() => setSideOpen(false)} />
 
       <div className="main">
         <header className="topbar">

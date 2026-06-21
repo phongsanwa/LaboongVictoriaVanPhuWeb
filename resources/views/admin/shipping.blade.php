@@ -18,6 +18,7 @@ window.ADMIN_SHIPPING_DATA = @json($shippingData);
 <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" crossorigin="anonymous"></script>
 <script type="text/babel" src="{{ asset('js/tweaks-panel.jsx') }}?v={{ filemtime(public_path('js/tweaks-panel.jsx')) }}"></script>
 <script type="text/babel" src="{{ asset('js/components.jsx') }}?v={{ filemtime(public_path('js/components.jsx')) }}"></script>
+<script type="text/babel" src="{{ asset('js/admin-sidebar.jsx') }}?v={{ filemtime(public_path('js/admin-sidebar.jsx')) }}"></script>
 <script type="text/babel" src="{{ asset('js/admin-shipping.jsx') }}?v={{ filemtime(public_path('js/admin-shipping.jsx')) }}"></script>
 </body>
 </html>

@@ -22,10 +22,11 @@
   window.ADMIN_POINTS_DATA = @json($pointsData);
 </script>
 
-<script type="text/babel" src="{{ asset('js/tweaks-panel.jsx') }}?v={{ time() }}"></script>
-<script type="text/babel" src="{{ asset('js/components.jsx') }}?v={{ time() }}"></script>
-<script type="text/babel" src="{{ asset('js/admin-ledger.jsx') }}?v={{ time() }}"></script>
-<script type="text/babel" src="{{ asset('js/admin-adjust.jsx') }}?v={{ time() }}"></script>
-<script type="text/babel" src="{{ asset('js/admin-points.jsx') }}?v={{ time() }}"></script>
+<script type="text/babel" src="{{ asset('js/tweaks-panel.jsx') }}"></script>
+<script type="text/babel" src="{{ asset('js/components.jsx') }}"></script>
+<script type="text/babel" src="{{ asset('js/admin-sidebar.jsx') }}"></script>
+<script type="text/babel" src="{{ asset('js/admin-ledger.jsx') }}"></script>
+<script type="text/babel" src="{{ asset('js/admin-adjust.jsx') }}"></script>
+<script type="text/babel" src="{{ asset('js/admin-points.jsx') }}"></script>
 </body>
 </html>

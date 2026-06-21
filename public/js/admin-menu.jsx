@@ -440,49 +440,9 @@ function App() {
   const adminEmail = LIVE ? window.ADMIN_MENU_DATA.admin.email : 'admin@laboong.vn';
   const adminInitials = LIVE ? window.ADMIN_MENU_DATA.admin.initials : 'QT';
 
-  const NAV = [
-    { ic: "chart", label: "Tổng quan" },
-    { ic: "users", label: "Khách hàng" },
-    { ic: "receipt", label: "Điểm & giao dịch" },
-    { ic: "bag", label: "Đơn hàng" },
-    { ic: "truck", label: "Phí ship" },
-    { ic: "gift", label: "Đổi quà" },
-    { ic: "mega", label: "Chiến dịch" },
-    { ic: "cup", label: "Thực đơn", on: true, badge: String(items.length) },
-    { ic: "percent", label: "Khuyến mãi" },
-    { ic: "plus", label: "Variant / Tuỳ chọn" },
-    { ic: "shield", label: "Phân quyền" },
-    { ic: "gear", label: "Cài đặt" },
-  ];
-
   return (
     <div className="shell">
-      {sideOpen && <div className="scrim" style={{ zIndex: 55 }} onClick={() => setSideOpen(false)} />}
-      <aside className={"side" + (sideOpen ? " open" : "")}>
-        <div className="side-brand">
-          <div className="side-mark"><span>L</span></div>
-          <div><div className="nm">Laboong</div><div className="sb">Bảng quản trị</div></div>
-        </div>
-        <div className="side-sec">Quản lý</div>
-        <nav className="side-nav">
-          {NAV.slice(0, 9).map(n => (
-            <a key={n.label} className={"side-link" + (n.on ? " on" : "")} href={adminHref(n.label)}>
-              <Icon name={n.ic} size={19} /> {n.label}{n.badge && <span className="badge">{n.badge}</span>}
-            </a>
-          ))}
-        </nav>
-        <div className="side-sec">Hệ thống</div>
-        <nav className="side-nav">
-          {NAV.slice(9).map(n => <a key={n.label} className="side-link" href={adminHref(n.label)}><Icon name={n.ic} size={19} /> {n.label}</a>)}
-        </nav>
-        <div className="side-foot">
-          <div className="side-user">
-            <div className="side-av">{adminInitials}</div>
-            <div style={{ minWidth: 0 }}><div className="un">{adminName}</div><div className="ur">{adminEmail}</div></div>
-            <button className="icon-btn" style={{ width: 32, height: 32, marginLeft: "auto" }}><Icon name="logout" size={16} /></button>
-          </div>
-        </div>
-      </aside>
+      <AdminSidebar activeLabel="Thực đơn" badges={{ "Thực đơn": String(items.length) }} admin={{ name: adminName, email: adminEmail, initials: adminInitials }} sideOpen={sideOpen} onClose={() => setSideOpen(false)} />
 
       <div className="main">
         <header className="topbar">

@@ -22,11 +22,12 @@
   window.ADMIN_CAMPAIGNS_DATA = @json($campaignsData);
 </script>
 
-<script type="text/babel" src="{{ asset('js/tweaks-panel.jsx') }}?v={{ time() }}"></script>
-<script type="text/babel" src="{{ asset('js/components.jsx') }}?v={{ time() }}"></script>
-<script type="text/babel" src="{{ asset('js/admin-camp-data.jsx') }}?v={{ time() }}"></script>
-<script type="text/babel" src="{{ asset('js/admin-camp-wizard.jsx') }}?v={{ time() }}"></script>
-<script type="text/babel" src="{{ asset('js/admin-push.jsx') }}?v={{ time() }}"></script>
-<script type="text/babel" src="{{ asset('js/admin-campaigns.jsx') }}?v={{ time() }}"></script>
+<script type="text/babel" src="{{ asset('js/tweaks-panel.jsx') }}"></script>
+<script type="text/babel" src="{{ asset('js/components.jsx') }}"></script>
+<script type="text/babel" src="{{ asset('js/admin-sidebar.jsx') }}"></script>
+<script type="text/babel" src="{{ asset('js/admin-camp-data.jsx') }}"></script>
+<script type="text/babel" src="{{ asset('js/admin-camp-wizard.jsx') }}"></script>
+<script type="text/babel" src="{{ asset('js/admin-push.jsx') }}"></script>
+<script type="text/babel" src="{{ asset('js/admin-campaigns.jsx') }}"></script>
 </body>
 </html>

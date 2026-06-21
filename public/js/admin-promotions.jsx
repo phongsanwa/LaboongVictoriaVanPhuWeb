@@ -321,67 +321,9 @@ function App() {
     active: promotions.filter(p => p.is_active).length,
   }), [promotions]);
 
-  const NAV = [
-    { ic: 'chart',   label: 'Tổng quan' },
-    { ic: 'users',   label: 'Khách hàng' },
-    { ic: 'receipt', label: 'Điểm & giao dịch' },
-    { ic: 'bag',     label: 'Đơn hàng' },
-    { ic: 'truck',   label: 'Phí ship' },
-    { ic: 'gift',    label: 'Đổi quà' },
-    { ic: 'mega',    label: 'Chiến dịch' },
-    { ic: 'cup',     label: 'Thực đơn' },
-    { ic: 'percent', label: 'Khuyến mãi', on: true },
-    { ic: 'plus',    label: 'Variant / Tuỳ chọn' },
-    { ic: 'shield',  label: 'Phân quyền' },
-    { ic: 'gear',    label: 'Cài đặt' },
-  ];
-
   return (
     <div className="shell">
-      {sideOpen && <div className="scrim" style={{ zIndex: 55 }} onClick={() => setSideOpen(false)} />}
-      <aside className={"side" + (sideOpen ? " open" : "")}>
-        <div className="side-brand">
-          <div className="side-mark"><span>L</span></div>
-          <div><div className="nm">Laboong</div><div className="sb">Bảng quản trị</div></div>
-        </div>
-        <div className="side-sec">Quản lý</div>
-        <nav className="side-nav">
-          {NAV.slice(0, 10).map(n => (
-            <a key={n.label} className={"side-link" + (n.on ? " on" : "")} href={adminHref(n.label)}>
-              <Icon name={n.ic} size={19} /> {n.label}
-            </a>
-          ))}
-        </nav>
-        <div className="side-sec">Hệ thống</div>
-        <nav className="side-nav">
-          {NAV.slice(10).map(n => (
-            <a key={n.label} className="side-link" href={adminHref(n.label)}>
-              <Icon name={n.ic} size={19} /> {n.label}
-            </a>
-          ))}
-        </nav>
-        <div className="side-foot">
-          <div className="side-user">
-            {window.ADMIN_PROMOTIONS_DATA?.admin ? (
-              <>
-                <div className="side-av">{window.ADMIN_PROMOTIONS_DATA.admin.initials}</div>
-                <div style={{ minWidth: 0 }}>
-                  <div className="un">{window.ADMIN_PROMOTIONS_DATA.admin.name}</div>
-                  <div className="ur">{window.ADMIN_PROMOTIONS_DATA.admin.email}</div>
-                </div>
-              </>
-            ) : (
-              <>
-                <div className="side-av">QT</div>
-                <div style={{ minWidth: 0 }}>
-                  <div className="un">Quản trị viên</div>
-                  <div className="ur">admin@laboong.vn</div>
-                </div>
-              </>
-            )}
-          </div>
-        </div>
-      </aside>
+      <AdminSidebar activeLabel="Khuyến mãi" admin={window.ADMIN_PROMOTIONS_DATA?.admin} sideOpen={sideOpen} onClose={() => setSideOpen(false)} />
 
       <div className="main">
         <header className="topbar">
