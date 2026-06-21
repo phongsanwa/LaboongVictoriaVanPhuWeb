@@ -385,6 +385,16 @@ function AddrModal({ init, onClose, onSave }) {
   const mapDivRef = useRef(null);
   const mapRef = useRef(null);
   const markerRef = useRef(null);
+  const addrInputRef = useRef(null);
+  const [suggRect, setSuggRect] = useState(null);
+
+  /* recompute dropdown position whenever suggestions list opens */
+  useEffect(() => {
+    if (sugg.length > 0 && addrInputRef.current) {
+      const r = addrInputRef.current.getBoundingClientRect();
+      setSuggRect({ top: r.bottom + 4, left: r.left, width: r.width });
+    }
+  }, [sugg.length]);
 
   useEffect(() => {
     const h = e => { if (e.key === "Escape") onClose(); };
@@ -491,14 +501,14 @@ function AddrModal({ init, onClose, onSave }) {
               <span>Địa chỉ chi tiết</span>
               {searching && <span style={{ fontWeight: 400, color: "var(--ink-3)", fontSize: 12 }}>Đang tìm…</span>}
             </label>
-            <input className="inp2" placeholder="Số nhà, đường, phường/xã, quận/huyện, tỉnh/TP" value={f.text} onChange={onTextChange} autoComplete="off"
+            <input ref={addrInputRef} className="inp2" placeholder="Số nhà, đường, phường/xã, quận/huyện, tỉnh/TP" value={f.text} onChange={onTextChange} autoComplete="off"
               onBlur={async () => {
                 if (f.lat || !f.text.trim()) return;
                 const loc = await cascadeGeocode(f.text.trim());
                 if (loc) setF(prev => ({ ...prev, lat: loc.lat, lng: loc.lng }));
               }} />
-            {sugg.length > 0 && (
-              <div style={{ position: "absolute", top: "100%", left: 0, right: 0, background: "var(--card)", border: "1.5px solid var(--brand)", borderRadius: "var(--r-sm)", zIndex: 9999, boxShadow: "0 8px 24px rgba(0,0,0,.15)", marginTop: 4 }}>
+            {sugg.length > 0 && suggRect && (
+              <div style={{ position: "fixed", top: suggRect.top, left: suggRect.left, width: suggRect.width, background: "var(--card)", border: "1.5px solid var(--brand)", borderRadius: "var(--r-sm)", zIndex: 99999, boxShadow: "0 8px 24px rgba(0,0,0,.18)" }}>
                 {sugg.map((s, i) => (
                   <button key={i} onMouseDown={() => pickSugg(s)} style={{ display: "flex", alignItems: "flex-start", gap: 8, width: "100%", padding: "9px 12px", textAlign: "left", fontSize: 13, borderBottom: i < sugg.length - 1 ? "1px solid var(--line)" : "none", color: "var(--ink)", lineHeight: 1.4 }}>
                     <span style={{ flexShrink: 0, marginTop: 2 }}><Icon name="pin" size={13} color="var(--brand)" /></span>

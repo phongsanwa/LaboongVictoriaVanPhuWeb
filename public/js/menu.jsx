@@ -65,6 +65,10 @@ async function geocodeAddress(text) {
   return loc;
 }
 
+function distRangeLabel(km) {
+  return km < 1 ? 'dưới 1km' : `trên ${Math.floor(km)}km`;
+}
+
 function calcShippingFee(distKm, tiers) {
   if (!tiers.length) return 0;
   const sorted = [...tiers].sort((a, b) => a.min_km - b.min_km);
@@ -751,7 +755,7 @@ function App() {
                   {geoInfo?.dist != null && (
                     <div className="csum" style={{ color: "var(--ink-3)", fontSize: 13 }}>
                       <span>Khoảng cách</span>
-                      <span className="v">{geoInfo.dist < 1 ? `${Math.round(geoInfo.dist * 1000)} m` : `${geoInfo.dist.toFixed(1)} km`}</span>
+                      <span className="v">{distRangeLabel(geoInfo.dist)}</span>
                     </div>
                   )}
                   {geoInfo?.geocoding && (
