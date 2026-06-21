@@ -1,20 +1,20 @@
 /* global React, Icon, NAV_URLS, adminHref, apiCall */
 
 const SIDEBAR_NAV = [
-  { ic: 'chart',   label: 'Tổng quan' },
-  { ic: 'users',   label: 'Khách hàng' },
-  { ic: 'receipt', label: 'Điểm & giao dịch' },
-  { ic: 'bag',     label: 'Đơn hàng' },
-  { ic: 'truck',   label: 'Phí ship' },
-  { ic: 'gift',    label: 'Đổi quà' },
-  { ic: 'mega',    label: 'Chiến dịch' },
-  { ic: 'cal',     label: 'Điểm danh' },
-  { ic: 'cup',     label: 'Thực đơn' },
-  { ic: 'percent', label: 'Khuyến mãi' },
-  { ic: 'plus',    label: 'Variant / Tuỳ chọn' },
-  { ic: 'pin',     label: 'Cửa hàng' },
-  { ic: 'shield',  label: 'Phân quyền' },
-  { ic: 'gear',    label: 'Cài đặt' },
+  { ic: 'chart',   label: 'Tổng quan',          href: '/admin' },
+  { ic: 'users',   label: 'Khách hàng',          href: '/admin/customers' },
+  { ic: 'receipt', label: 'Điểm & giao dịch',   href: '/admin/points' },
+  { ic: 'bag',     label: 'Đơn hàng',            href: '/admin/orders' },
+  { ic: 'truck',   label: 'Phí ship',            href: '/admin/shipping' },
+  { ic: 'gift',    label: 'Đổi quà',             href: '/admin/rewards' },
+  { ic: 'mega',    label: 'Chiến dịch',          href: '/admin/campaigns' },
+  { ic: 'cal',     label: 'Điểm danh',           href: '/admin/checkin' },
+  { ic: 'cup',     label: 'Thực đơn',            href: '/admin/menu' },
+  { ic: 'percent', label: 'Khuyến mãi',          href: '/admin/promotions' },
+  { ic: 'plus',    label: 'Variant / Tuỳ chọn', href: '/admin/variants' },
+  { ic: 'pin',     label: 'Cửa hàng',            href: '/admin/stores' },
+  { ic: 'shield',  label: 'Phân quyền',          href: '/admin/roles' },
+  { ic: 'gear',    label: 'Cài đặt',             href: '/admin/settings' },
 ];
 
 function AdminSidebar({ activeLabel, badges = {}, admin, sideOpen, onClose }) {
@@ -30,7 +30,7 @@ function AdminSidebar({ activeLabel, badges = {}, admin, sideOpen, onClose }) {
   const renderLink = (n) => (
     <a key={n.label}
        className={'side-link' + (n.label === activeLabel ? ' on' : '')}
-       href={adminHref(n.label)}>
+       href={n.href || adminHref(n.label)}>
       <Icon name={n.ic} size={19} /> {n.label}
       {badges[n.label] && <span className="badge">{badges[n.label]}</span>}
     </a>
