@@ -1,4 +1,4 @@
-/* global React, ReactDOM, Icon, fmt, REWARDS, REWARD_CATS, expStatus, RewardEditor, ConfirmDelete, useTweaks, TweaksPanel, TweakSection, TweakColor, TweakToggle */
+/* global React, ReactDOM, Icon, fmt, REWARDS, REWARD_CATS, expStatus, RewardEditor, ConfirmDelete, useTweaks, TweaksPanel, TweakSection, TweakColor, TweakToggle, ADMIN_REWARDS_DATA, NAV_URLS, adminHref */
 const { useState, useEffect, useMemo } = React;
 
 const RW_DEFAULTS = /*EDITMODE-BEGIN*/{
@@ -6,7 +6,27 @@ const RW_DEFAULTS = /*EDITMODE-BEGIN*/{
   "dark": false
 }/*EDITMODE-END*/;
 
-const TODAY = "2026-06-08";
+const TODAY = new Date().toISOString().slice(0, 10);
+
+function csrfToken() {
+  const meta = document.querySelector('meta[name="csrf-token"]');
+  return meta ? meta.content : "";
+}
+async function apiCall(method, url, body) {
+  const res = await fetch(url, {
+    method,
+    headers: {
+      "Content-Type": "application/json",
+      "Accept": "application/json",
+      "X-CSRF-TOKEN": csrfToken(),
+    },
+    body: body !== undefined ? JSON.stringify(body) : undefined,
+  });
+  let data = {};
+  try { data = await res.json(); } catch (e) { /* no body */ }
+  return { ok: res.ok, status: res.status, data };
+}
+
 
 function fmtExpiry(iso) { const [y, m, d] = iso.split("-"); return `${d}/${m}/${y}`; }
 
@@ -97,69 +117,53 @@ function RewardsApp() {
     return true;
   }), [items, cat, status, q]);
 
-  const onSave = (data) => {
-    if (data.id) {
-      setItems(list => list.map(i => i.id === data.id ? { ...i, ...data } : i));
+  const onSave = async (data) => {
+    const payload = {
+      name: data.name, cat: data.cat, points: data.points, qty: data.qty,
+      expiry: data.expiry, status: data.status, grad: data.grad, img: data.img,
+    };
+    if (data.dbId) {
+      const { ok, data: res } = await apiCall("PUT", `/admin/rewards/${data.dbId}`, payload);
+      if (!ok) { flash(res.message || "Có lỗi xảy ra, vui lòng thử lại"); return; }
+      setItems(list => list.map(i => i.dbId === data.dbId ? res.reward : i));
       flash(`Đã cập nhật "${data.name}"`);
     } else {
-      const id = "RW" + (5000 + items.length);
-      setItems(list => [{ id, redeemed: 0, used: 0, ...data }, ...list]);
+      const { ok, data: res } = await apiCall("POST", "/admin/rewards", payload);
+      if (!ok) { flash(res.message || "Có lỗi xảy ra, vui lòng thử lại"); return; }
+      setItems(list => [res.reward, ...list]);
       flash(`Đã tạo phần thưởng "${data.name}"`);
     }
     setEditor(null);
   };
-  const onToggle = (r) => {
-    setItems(list => list.map(i => i.id === r.id ? { ...i, status: i.status === "on" ? "off" : "on" } : i));
+  const onToggle = async (r) => {
+    const { ok, data: res } = await apiCall("POST", `/admin/rewards/${r.dbId}/toggle`);
+    if (!ok) { flash(res.message || "Có lỗi xảy ra, vui lòng thử lại"); return; }
+    setItems(list => list.map(i => i.dbId === r.dbId ? res.reward : i));
     flash(`"${r.name}" → ${r.status === "on" ? "Inactive" : "Active"}`);
   };
-  const onDup = (r) => {
-    const id = "RW" + (5000 + items.length);
-    setItems(list => [{ ...r, id, name: r.name + " (bản sao)", redeemed: 0, used: 0, status: "off" }, ...list]);
+  const onDup = async (r) => {
+    const { ok, data: res } = await apiCall("POST", `/admin/rewards/${r.dbId}/duplicate`);
+    if (!ok) { flash(res.message || "Có lỗi xảy ra, vui lòng thử lại"); return; }
+    setItems(list => [res.reward, ...list]);
     flash(`Đã nhân bản "${r.name}"`);
   };
-  const doDelete = () => {
-    setItems(list => list.filter(i => i.id !== delTarget.id));
+  const doDelete = async () => {
+    const { ok, data: res } = await apiCall("DELETE", `/admin/rewards/${delTarget.dbId}`);
+    if (!ok) { flash(res.message || "Có lỗi xảy ra, vui lòng thử lại"); setDelTarget(null); return; }
+    setItems(list => list.filter(i => i.dbId !== delTarget.dbId));
     flash(`Đã xoá "${delTarget.name}"`);
     setDelTarget(null);
   };
 
-  const NAV = [
-    { ic: "chart", label: "Tổng quan" },
-    { ic: "users", label: "Khách hàng" },
-    { ic: "receipt", label: "Điểm & giao dịch" },
-    { ic: "gift", label: "Đổi quà", on: true, badge: String(items.length) },
-    { ic: "mega", label: "Chiến dịch" },
-    { ic: "shield", label: "Phân quyền" },
-  ];
+  const logout = async (e) => {
+    e.preventDefault();
+    await apiCall("POST", "/logout");
+    location.href = NAV_URLS.login;
+  };
 
   return (
     <div className="shell">
-      {sideOpen && <div className="scrim" style={{ zIndex: 55 }} onClick={() => setSideOpen(false)} />}
-      <aside className={"side" + (sideOpen ? " open" : "")}>
-        <div className="side-brand">
-          <div className="side-mark"><span>L</span></div>
-          <div><div className="nm">Laboong</div><div className="sb">Bảng quản trị</div></div>
-        </div>
-        <div className="side-sec">Quản lý</div>
-        <nav className="side-nav">
-          {NAV.map(n => (
-            <a key={n.label} className={"side-link" + (n.on ? " on" : "")} href={adminHref(n.label)}>
-              <Icon name={n.ic} size={19} /> {n.label}{n.badge && <span className="badge">{n.badge}</span>}
-            </a>
-          ))}
-        </nav>
-        <div className="side-sec">Hệ thống</div>
-        <nav className="side-nav">
-          <a className="side-link" href={NAV_URLS.adminSettings}><Icon name="gear" size={19} /> Cài đặt</a>
-        </nav>
-        <div className="side-foot">
-          <div className="side-user">
-            <div className="side-av">QT</div>
-            <div style={{ minWidth: 0 }}><div className="un">Quản trị viên</div><div className="ur">admin@laboong.vn</div></div>
-            <button className="icon-btn" style={{ width: 32, height: 32, marginLeft: "auto" }} title="Đăng xuất"><Icon name="logout" size={16} /></button>
-          </div>
-        </div>
-      </aside>
+      <AdminSidebar activeLabel="Đổi quà" badges={{ "Đổi quà": String(items.length) }} admin={ADMIN_REWARDS_DATA.admin} sideOpen={sideOpen} onClose={() => setSideOpen(false)} />
 
       <div className="main">
         <header className="topbar">

@@ -1,4 +1,4 @@
-/* global React, ReactDOM, Icon, fmt, CUSTOMERS, LEDGER, fmtTs, TYPE_META, avColor, initials, AdjustModal, useTweaks, TweaksPanel, TweakSection, TweakColor, TweakToggle, TweakRadio */
+/* global React, ReactDOM, Icon, fmt, ADMIN_POINTS_DATA, LEDGER, fmtTs, TYPE_META, avColor, initials, AdjustModal, useTweaks, TweaksPanel, TweakSection, TweakColor, TweakToggle, TweakRadio, NAV_URLS, adminHref */
 const { useState, useEffect, useMemo } = React;
 
 const TW_DEFAULTS = /*EDITMODE-BEGIN*/{
@@ -8,7 +8,25 @@ const TW_DEFAULTS = /*EDITMODE-BEGIN*/{
 }/*EDITMODE-END*/;
 
 const PAGE = 8;
-const REDEEMED_BASE = 128400; // all-time redeemed baseline (đ)
+
+function csrfToken() {
+  const meta = document.querySelector('meta[name="csrf-token"]');
+  return meta ? meta.content : "";
+}
+async function apiCall(method, url, body) {
+  const res = await fetch(url, {
+    method,
+    headers: {
+      "Content-Type": "application/json",
+      "Accept": "application/json",
+      "X-CSRF-TOKEN": csrfToken(),
+    },
+    body: body !== undefined ? JSON.stringify(body) : undefined,
+  });
+  let data = {};
+  try { data = await res.json(); } catch (e) { /* no body */ }
+  return { ok: res.ok, status: res.status, data };
+}
 
 function TypeBadge({ type }) {
   const m = TYPE_META[type];
@@ -17,7 +35,7 @@ function TypeBadge({ type }) {
 
 function PointsApp() {
   const [tw, setTweak] = useTweaks(TW_DEFAULTS);
-  const [custs, setCusts] = useState(() => CUSTOMERS.map(c => ({ ...c })));
+  const [custs, setCusts] = useState(() => ADMIN_POINTS_DATA.customers.map(c => ({ ...c })));
   const [ledger, setLedger] = useState(() => LEDGER.slice());
   const [q, setQ] = useState("");
   const [type, setType] = useState("all");
@@ -37,7 +55,7 @@ function PointsApp() {
 
   const stats = useMemo(() => {
     const remaining = custs.reduce((s, c) => s + c.points, 0);
-    const redeemed = REDEEMED_BASE;
+    const redeemed = ADMIN_POINTS_DATA.stats.redeemed;
     const issued = remaining + redeemed;
     return { issued, redeemed, remaining, count: ledger.length };
   }, [custs, ledger.length]);
@@ -61,52 +79,31 @@ function PointsApp() {
   const start = filtered.length ? (page - 1) * PAGE + 1 : 0;
   const end = Math.min(page * PAGE, filtered.length);
 
-  const onConfirm = (entry) => {
-    entry.id = "GD" + (4831 + ledger.length);
-    setLedger(l => [entry, ...l]);
-    setCusts(cs => cs.map(c => c.id === entry.cust.id ? { ...c, points: Math.max(0, c.points + entry.points) } : c));
+  const onConfirm = async ({ customerId, mode, amount, reason, note }) => {
+    const { ok, data } = await apiCall("POST", "/admin/points/adjust", {
+      customer_id: customerId, mode, amount, reason, note,
+    });
+    if (!ok) {
+      setToast(data.message || "Có lỗi xảy ra, vui lòng thử lại");
+      setTimeout(() => setToast(null), 3400);
+      return;
+    }
+    setLedger(l => [{ ...data.entry, ts: new Date(data.entry.ts) }, ...l]);
+    setCusts(cs => cs.map(c => c.dbId === data.customer.dbId ? { ...c, points: data.customer.points } : c));
     setAdjustOpen(false);
-    setToast(`Đã ${entry.points >= 0 ? "cộng" : "trừ"} ${fmt(Math.abs(entry.points))} điểm cho ${entry.cust.name}`);
+    setToast(data.message);
     setTimeout(() => setToast(null), 3400);
   };
 
-  const NAV = [
-    { ic: "chart", label: "Tổng quan" },
-    { ic: "users", label: "Khách hàng", badge: String(CUSTOMERS.length) },
-    { ic: "receipt", label: "Điểm & giao dịch", on: true },
-    { ic: "gift", label: "Đổi quà" },
-    { ic: "mega", label: "Chiến dịch" },
-    { ic: "shield", label: "Phân quyền" },
-  ];
+  const logout = async (e) => {
+    e.preventDefault();
+    await apiCall("POST", "/logout");
+    location.href = NAV_URLS.login;
+  };
 
   return (
     <div className="shell">
-      {sideOpen && <div className="scrim" style={{ zIndex: 55 }} onClick={() => setSideOpen(false)} />}
-      <aside className={"side" + (sideOpen ? " open" : "")}>
-        <div className="side-brand">
-          <div className="side-mark"><span>L</span></div>
-          <div><div className="nm">Laboong</div><div className="sb">Bảng quản trị</div></div>
-        </div>
-        <div className="side-sec">Quản lý</div>
-        <nav className="side-nav">
-          {NAV.map(n => (
-            <a key={n.label} className={"side-link" + (n.on ? " on" : "")} href={adminHref(n.label)}>
-              <Icon name={n.ic} size={19} /> {n.label}{n.badge && <span className="badge">{n.badge}</span>}
-            </a>
-          ))}
-        </nav>
-        <div className="side-sec">Hệ thống</div>
-        <nav className="side-nav">
-          <a className="side-link" href={NAV_URLS.adminSettings}><Icon name="gear" size={19} /> Cài đặt</a>
-        </nav>
-        <div className="side-foot">
-          <div className="side-user">
-            <div className="side-av">QT</div>
-            <div style={{ minWidth: 0 }}><div className="un">Quản trị viên</div><div className="ur">admin@laboong.vn</div></div>
-            <button className="icon-btn" style={{ width: 32, height: 32, marginLeft: "auto" }} title="Đăng xuất"><Icon name="logout" size={16} /></button>
-          </div>
-        </div>
-      </aside>
+      <AdminSidebar activeLabel="Điểm & giao dịch" badges={{ "Khách hàng": String(custs.length) }} admin={ADMIN_POINTS_DATA.admin} sideOpen={sideOpen} onClose={() => setSideOpen(false)} />
 
       <div className="main">
         <header className="topbar">

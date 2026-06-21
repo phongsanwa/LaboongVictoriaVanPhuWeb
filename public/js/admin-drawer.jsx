@@ -1,59 +1,189 @@
-/* global React, Icon, TIERS, TIER_ORDER, avColor, initials, fmtVND, fmtDate, fmt */
+/* global React, Icon, TIERS, TIER_ORDER, STORES, avColor, initials, fmtVND, fmtDate, fmt */
 
-function Drawer({ c, onClose }) {
-  React.useEffect(() => {
+function csrfTokenDr() {
+  return document.querySelector('meta[name="csrf-token"]')?.content || "";
+}
+
+/* ---- Edit Customer Modal ---- */
+function EditCustomerModal({ c, onClose, onSaved }) {
+  const { useState: useSt, useEffect: useEff } = React;
+  const [name, setName] = useSt(c.name || "");
+  const [phone, setPhone] = useSt(c.phone || "");
+  const [email, setEmail] = useSt(c.email || "");
+  const [storeId, setStoreId] = useSt(c.store_id ?? "");
+  const [dob, setDob] = useSt(c.date_of_birth || "");
+  const [gender, setGender] = useSt(c.gender || "");
+  const [status, setStatus] = useSt(c.status === "on" ? "active" : "inactive");
+  const [saving, setSaving] = useSt(false);
+  const [error, setError] = useSt("");
+
+  useEff(() => {
     const h = e => { if (e.key === "Escape") onClose(); };
     window.addEventListener("keydown", h);
     return () => window.removeEventListener("keydown", h);
   }, [onClose]);
 
-  const t = TIERS[c.tier];
-  const idx = TIER_ORDER.indexOf(c.tier);
+  const valid = name.trim() && phone.trim();
+
+  const save = async () => {
+    if (!valid || saving) return;
+    setSaving(true); setError("");
+    try {
+      const res = await fetch(`/admin/customers/${c.customerId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json", "Accept": "application/json", "X-CSRF-TOKEN": csrfTokenDr() },
+        body: JSON.stringify({ name: name.trim(), phone: phone.trim(), email: email.trim() || null, store_id: storeId || null, date_of_birth: dob || null, gender: gender || null, status }),
+      });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) { setError(body.message || "Lỗi lưu dữ liệu"); setSaving(false); return; }
+      onSaved(body.customer);
+    } catch { setError("Không thể kết nối máy chủ"); setSaving(false); }
+  };
+
+  return (
+    <div className="modal-scrim" onClick={onClose}>
+      <div className="modal wide" onClick={e => e.stopPropagation()}>
+        <div className="modal-h">
+          <div className="mh-ic"><Icon name="edit" size={20} /></div>
+          <div>
+            <h3>Chỉnh sửa khách hàng</h3>
+            <p>Cập nhật thông tin {c.name}</p>
+          </div>
+          <button className="x" onClick={onClose}><Icon name="close" size={18} /></button>
+        </div>
+
+        <div className="modal-b">
+          {error && <div className="modal-err">{error}</div>}
+
+          <div className="two-col">
+            <div className="fld">
+              <label>Họ và tên</label>
+              <input className="inp" value={name} onChange={e => setName(e.target.value)} placeholder="Nguyễn Văn A" autoFocus />
+            </div>
+            <div className="fld">
+              <label>Số điện thoại</label>
+              <input className="inp" value={phone} onChange={e => setPhone(e.target.value)} placeholder="0912345678" />
+            </div>
+          </div>
+
+          <div className="fld">
+            <label>Email (không bắt buộc)</label>
+            <input className="inp" type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="khachhang@gmail.com" />
+          </div>
+
+          <div className="two-col">
+            <div className="fld">
+              <label>Cửa hàng thường đến</label>
+              <select className="inp" value={storeId} onChange={e => setStoreId(e.target.value)}>
+                <option value="">— Chưa chọn —</option>
+                {STORES.map(s => <option key={s.id ?? s} value={s.id ?? s}>{s.name ?? s}</option>)}
+              </select>
+            </div>
+            <div className="fld">
+              <label>Giới tính</label>
+              <select className="inp" value={gender} onChange={e => setGender(e.target.value)}>
+                <option value="">— Chưa chọn —</option>
+                <option value="male">Nam</option>
+                <option value="female">Nữ</option>
+                <option value="other">Khác</option>
+              </select>
+            </div>
+          </div>
+
+          <div className="fld">
+            <label>Ngày sinh (không bắt buộc)</label>
+            <input className="inp" type="date" value={dob} onChange={e => setDob(e.target.value)} />
+          </div>
+
+          <div className="switch-row" onClick={() => setStatus(s => s === "active" ? "inactive" : "active")} style={{ cursor: "pointer" }}>
+            <div>
+              <div className="sl">Trạng thái: {status === "active" ? "Active" : "Inactive"}</div>
+              <div className="sd">{status === "active" ? "Tài khoản đang hoạt động bình thường" : "Tài khoản bị vô hiệu hoá"}</div>
+            </div>
+            <div className={"switch" + (status === "active" ? " on" : "")} />
+          </div>
+        </div>
+
+        <div className="modal-f">
+          <button className="btn ghost" style={{ flex: ".6" }} onClick={onClose}>Huỷ</button>
+          <button className="btn primary" disabled={!valid || saving} onClick={save}>
+            {saving
+              ? <span className="spin" style={{ width: 16, height: 16, borderWidth: 2 }} />
+              : <><Icon name="check" size={17} color="#fff" /> Lưu thay đổi</>}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ---- Drawer ---- */
+function Drawer({ c, onClose, onCustomerUpdated }) {
+  const [editing, setEditing] = React.useState(false);
+  const [customer, setCustomer] = React.useState(c);
+
+  React.useEffect(() => { setCustomer(c); }, [c]);
+
+  React.useEffect(() => {
+    const h = e => { if (e.key === "Escape" && !editing) onClose(); };
+    window.addEventListener("keydown", h);
+    return () => window.removeEventListener("keydown", h);
+  }, [onClose, editing]);
+
+  const t = TIERS[customer.tier];
+  const idx = TIER_ORDER.indexOf(customer.tier);
   const next = idx < TIER_ORDER.length - 1 ? TIERS[TIER_ORDER[idx + 1]] : null;
-  const toNext = next ? Math.max(0, next.min - c.points) : 0;
+  const toNext = next ? Math.max(0, next.min - customer.points) : 0;
+
+  const handleSaved = (updated) => {
+    const merged = { ...customer, ...updated, tx: customer.tx };
+    setCustomer(merged);
+    setEditing(false);
+    if (onCustomerUpdated) onCustomerUpdated(merged);
+  };
 
   return (
     <>
       <div className="scrim" onClick={onClose} />
-      <aside className="drawer" role="dialog" aria-label={"Hồ sơ " + c.name}>
+      <aside className="drawer" role="dialog" aria-label={"Hồ sơ " + customer.name}>
         <div className="dr-head">
           <button className="dr-close" onClick={onClose}><Icon name="close" size={18} color="#fff" /></button>
           <div className="dr-prof">
-            <div className="dr-av" style={{ background: avColor(c.name) }}>{initials(c.name)}</div>
+            <div className="dr-av" style={{ background: avColor(customer.name) }}>{initials(customer.name)}</div>
             <div style={{ minWidth: 0 }}>
-              <div className="nm">{c.name}</div>
+              <div className="nm">{customer.name}</div>
               <div className="meta">
-                <span>{c.id}</span><span>·</span>
-                <span>{c.status === "on" ? "Đang hoạt động" : "Ngừng hoạt động"}</span>
+                <span>{customer.id}</span><span>·</span>
+                <span>{customer.status === "on" ? "Đang hoạt động" : "Ngừng hoạt động"}</span>
               </div>
             </div>
           </div>
           <div className="dr-tierline">
             <span className="dr-chip"><Icon name="star" size={13} color="#fff" /> Hạng {t.label}</span>
-            <span className="dr-chip"><Icon name="coin" size={14} color="#fff" /> {fmt(c.points)} điểm</span>
+            <span className="dr-chip"><Icon name="coin" size={14} color="#fff" /> {fmt(customer.points)} điểm</span>
           </div>
         </div>
 
         <div className="dr-body">
           <div className="dr-stats">
-            <div className="dr-stat"><div className="l">Điểm hiện tại</div><div className="v tnum">{fmt(c.points)}<small>điểm</small></div></div>
-            <div className="dr-stat"><div className="l">Tổng chi tiêu</div><div className="v tnum">{fmtVND(c.spent)}</div></div>
-            <div className="dr-stat"><div className="l">Số lần ghé</div><div className="v tnum">{c.visits}<small>lần</small></div></div>
+            <div className="dr-stat"><div className="l">Điểm hiện tại</div><div className="v tnum">{fmt(customer.points)}<small>điểm</small></div></div>
+            <div className="dr-stat"><div className="l">Tổng chi tiêu</div><div className="v tnum">{fmtVND(customer.spent)}</div></div>
+            <div className="dr-stat"><div className="l">Số lần ghé</div><div className="v tnum">{customer.visits}<small>lần</small></div></div>
             <div className="dr-stat"><div className="l">{next ? "Lên hạng " + next.label : "Hạng cao nhất"}</div><div className="v tnum">{next ? <>{fmt(toNext)}<small>điểm</small></> : "★"}</div></div>
           </div>
 
           <div className="dr-sec-t">Thông tin hồ sơ</div>
           <div className="dr-info">
-            <div className="ir"><div className="ic"><Icon name="phone" size={16} /></div><span className="ik">Số điện thoại</span><span className="iv">{c.phone}</span></div>
-            <div className="ir"><div className="ic"><Icon name="mail" size={16} /></div><span className="ik">Email</span><span className="iv">{c.email}</span></div>
-            <div className="ir"><div className="ic"><Icon name="pin" size={16} /></div><span className="ik">Cửa hàng thường đến</span><span className="iv">{c.store}</span></div>
-            <div className="ir"><div className="ic"><Icon name="cal" size={16} /></div><span className="ik">Ngày tham gia</span><span className="iv">{fmtDate(c.joined)}</span></div>
-            <div className="ir"><div className="ic"><Icon name="users" size={16} /></div><span className="ik">Trạng thái</span><span className="iv"><span className={"status " + c.status}>{c.status === "on" ? "Active" : "Inactive"}</span></span></div>
+            <div className="ir"><div className="ic"><Icon name="phone" size={16} /></div><span className="ik">Số điện thoại</span><span className="iv">{customer.phone}</span></div>
+            <div className="ir"><div className="ic"><Icon name="mail" size={16} /></div><span className="ik">Email</span><span className="iv">{customer.email || "—"}</span></div>
+            <div className="ir"><div className="ic"><Icon name="pin" size={16} /></div><span className="ik">Cửa hàng thường đến</span><span className="iv">{customer.store}</span></div>
+            <div className="ir"><div className="ic"><Icon name="cal" size={16} /></div><span className="ik">Ngày tham gia</span><span className="iv">{fmtDate(customer.joined)}</span></div>
+            <div className="ir"><div className="ic"><Icon name="users" size={16} /></div><span className="ik">Trạng thái</span><span className="iv"><span className={"status " + customer.status}>{customer.status === "on" ? "Active" : "Inactive"}</span></span></div>
           </div>
 
-          <div className="dr-sec-t">Lịch sử giao dịch ({c.tx.length})</div>
+          <div className="dr-sec-t">Lịch sử giao dịch ({customer.tx.length})</div>
           <div className="dr-tx">
-            {c.tx.map((x, i) => (
+            {customer.tx.map((x, i) => (
               <div className="tx" key={i}>
                 <div className={"txic " + x.type}><Icon name={x.type === "earn" ? "cup" : "gift"} size={19} /></div>
                 <div style={{ minWidth: 0 }}>
@@ -69,9 +199,17 @@ function Drawer({ c, onClose }) {
         <div className="dr-foot">
           <button className="btn ghost" style={{ flex: "none" }} onClick={onClose}>Đóng</button>
           <button className="btn ghost"><Icon name="gift" size={16} /> Gửi ưu đãi</button>
-          <button className="btn primary"><Icon name="edit" size={16} color="#fff" /> Chỉnh sửa</button>
+          <button className="btn primary" onClick={() => setEditing(true)}><Icon name="edit" size={16} color="#fff" /> Chỉnh sửa</button>
         </div>
       </aside>
+
+      {editing && (
+        <EditCustomerModal
+          c={customer}
+          onClose={() => setEditing(false)}
+          onSaved={handleSaved}
+        />
+      )}
     </>
   );
 }

@@ -60,6 +60,7 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
 /* ---- map ---- */
 .map { position: relative; height: 300px; margin-top: -68px; overflow: hidden; background: var(--map-bg); }
 .map svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+.map-iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
 .map-grad { position: absolute; inset: 0; background: linear-gradient(180deg, rgba(0,0,0,.06) 0%, transparent 22%, transparent 70%, color-mix(in srgb, var(--bg) 70%, transparent) 100%); pointer-events: none; }
 
 .pin { position: absolute; transform: translate(-50%, -100%); z-index: 3; transition: left .6s cubic-bezier(.3,.8,.3,1), top .6s cubic-bezier(.3,.8,.3,1); }
@@ -79,6 +80,7 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
 
 /* ---- content ---- */
 .body { padding: 0 16px; }
+.empty { text-align: center; padding: 60px 20px; color: var(--ink-3); font-weight: 500; }
 
 .store-id { background: var(--card); border: 1px solid var(--line-2); border-radius: var(--r-lg); box-shadow: var(--shadow-md); padding: 18px 18px 6px; margin-top: -22px; position: relative; z-index: 5; }
 .store-top { display: flex; align-items: flex-start; gap: 13px; }
@@ -154,3 +156,8 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
   .photos { height: 180px; }
   .amen { grid-template-columns: repeat(auto-fill, minmax(76px, 1fr)); }
 }
+
+/* toast notification */
+.toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); z-index: 120; background: var(--ink); color: var(--bg); padding: 13px 20px; border-radius: 999px; font-size: 14px; font-weight: 600; box-shadow: var(--shadow-lg); display: flex; align-items: center; gap: 10px; white-space: nowrap; animation: tin .3s cubic-bezier(.2,.8,.2,1); }
+.toast .tc { width: 24px; height: 24px; border-radius: 50%; background: var(--brand); display: grid; place-items: center; flex: none; }
+@keyframes tin { from { opacity: 0; transform: translateX(-50%) translateY(10px); } to { opacity: 1; transform: translateX(-50%) translateY(0); } }

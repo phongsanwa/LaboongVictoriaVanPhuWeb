@@ -6,45 +6,18 @@ const TW_DEFAULTS = /*EDITMODE-BEGIN*/{
   "dark": false
 }/*EDITMODE-END*/;
 
-const MEMBER = { name: "Minh Anh", id: "LBVP·0257·418", tier: "Hạng Vàng" };
-const BALANCE = 2450;
-const EXPIRING = 180;          // điểm sắp hết hạn
-const EXPIRE_DATE = "30/06/2026";
-const EARNED_TOTAL = 8920;     // tích luỹ trọn đời
-const REDEEMED_TOTAL = 6470;
+const POINTS = window.POINTS_DATA || {};
+const MEMBER = POINTS.member || { name: "", id: "", tier: "" };
+const BALANCE = POINTS.balance || 0;
+const EXPIRING = POINTS.expiring || 0;          // điểm sắp hết hạn
+const EXPIRE_DATE = POINTS.expireDate || "";
+const EARNED_TOTAL = POINTS.earnedTotal || 0;   // tích luỹ trọn đời
+const REDEEMED_TOTAL = POINTS.redeemedTotal || 0;
 
 /* history: month key -> entries (newest first). amt + = cộng, - = trừ */
-const HISTORY = {
-  "2026-06": [
-    { type: "earn",   title: "Trà sữa trân châu đường đen", store: "Victoria Văn Phú", day: "08/06", time: "14:20", amt: 45 },
-    { type: "redeem", title: "Đổi voucher giảm 30.000đ",    store: "Đổi quà",          day: "06/06", time: "19:05", amt: -300 },
-    { type: "earn",   title: "2 ly Macchiato kem phô mai",  store: "Royal City",       day: "05/06", time: "12:30", amt: 60 },
-    { type: "adjust", title: "Tặng điểm sinh nhật",         store: "Hệ thống",         day: "03/06", time: "09:00", amt: 100 },
-    { type: "earn",   title: "Trà đào cam sả",              store: "Victoria Văn Phú", day: "01/06", time: "16:40", amt: 25 },
-  ],
-  "2026-05": [
-    { type: "earn",   title: "Combo 3 ly trà sữa",          store: "Times City",       day: "28/05", time: "18:10", amt: 75 },
-    { type: "expire", title: "Điểm hết hạn (Q1/2026)",      store: "Tự động",          day: "20/05", time: "00:00", amt: -120 },
-    { type: "redeem", title: "Đổi upsize miễn phí",         store: "Đổi quà",          day: "15/05", time: "13:25", amt: -120 },
-    { type: "earn",   title: "Flash Sale 8/5 · 2 ly",       store: "Aeon Hà Đông",     day: "08/05", time: "11:50", amt: 90 },
-    { type: "earn",   title: "Cà phê sữa đá",               store: "Victoria Văn Phú", day: "03/05", time: "08:15", amt: 20 },
-  ],
-  "2026-04": [
-    { type: "earn",   title: "Hồng trà sữa size L",         store: "Royal City",       day: "26/04", time: "15:00", amt: 40 },
-    { type: "redeem", title: "Đổi ly giữ nhiệt Laboong",    store: "Đổi quà",          day: "18/04", time: "17:30", amt: -2500 },
-    { type: "earn",   title: "Trà vải hạt sen",             store: "Times City",       day: "10/04", time: "14:05", amt: 35 },
-  ],
-  "2026-03": [
-    { type: "earn",   title: "Sữa tươi trân châu đường đen", store: "Victoria Văn Phú", day: "22/03", time: "19:40", amt: 50 },
-    { type: "adjust", title: "Bù điểm sự cố quét QR",        store: "Hệ thống",         day: "15/03", time: "10:20", amt: 60 },
-    { type: "earn",   title: "Trà sữa khoai môn",            store: "Aeon Hà Đông",     day: "05/03", time: "12:00", amt: 30 },
-  ],
-};
+const HISTORY = POINTS.history || {};
 
-const MONTHS = [
-  { key: "2026-06", label: "Th06" }, { key: "2026-05", label: "Th05" },
-  { key: "2026-04", label: "Th04" }, { key: "2026-03", label: "Th03" },
-];
+const MONTHS = POINTS.months || [];
 
 const TX_META = {
   earn:   { ic: "cup",  cls: "earn" },
@@ -63,7 +36,7 @@ const RULES = [
 
 function App() {
   const [tw, setTweak] = useTweaks(TW_DEFAULTS);
-  const [month, setMonth] = useState("2026-06");
+  const [month, setMonth] = useState((MONTHS[0] && MONTHS[0].key) || "");
   const [rulesOpen, setRulesOpen] = useState(false);
 
   useEffect(() => {
@@ -115,24 +88,28 @@ function App() {
         </section>
 
         {/* expire warning */}
-        <section className="expire">
-          <div className="ei"><Icon name="clock" size={22} color="#fff" /></div>
-          <div style={{ minWidth: 0 }}>
-            <div className="et"><b>{fmt(EXPIRING)}</b> điểm sắp hết hạn</div>
-            <div className="ed">Hết hạn vào {EXPIRE_DATE} — hãy đổi quà trước khi mất điểm nhé!</div>
-          </div>
-          <button className="ego">Đổi ngay <Icon name="arrow" size={14} /></button>
-        </section>
+        {EXPIRING > 0 && (
+          <section className="expire">
+            <div className="ei"><Icon name="clock" size={22} color="#fff" /></div>
+            <div style={{ minWidth: 0 }}>
+              <div className="et"><b>{fmt(EXPIRING)}</b> điểm sắp hết hạn</div>
+              <div className="ed">Hết hạn vào {EXPIRE_DATE} — hãy đổi quà trước khi mất điểm nhé!</div>
+            </div>
+            <button className="ego" onClick={() => location.href = NAV_URLS.catalog}>Đổi ngay <Icon name="arrow" size={14} /></button>
+          </section>
+        )}
 
         {/* history */}
         <div className="sec-h"><h2>Lịch sử điểm</h2></div>
-        <div className="months">
-          {MONTHS.map(m => (
-            <button key={m.key} className={"month" + (month === m.key ? " on" : "")} onClick={() => setMonth(m.key)}>
-              {m.label}/2026
-            </button>
-          ))}
-        </div>
+        {MONTHS.length > 0 && (
+          <div className="months">
+            {MONTHS.map(m => (
+              <button key={m.key} className={"month" + (month === m.key ? " on" : "")} onClick={() => setMonth(m.key)}>
+                {m.label}
+              </button>
+            ))}
+          </div>
+        )}
 
         <div className="msum">
           <div className="msum-card"><div className="l"><Icon name="spark" size={13} color="var(--brand)" /> Điểm cộng</div><div className="v plus tnum">+{fmt(msum.plus)}</div></div>

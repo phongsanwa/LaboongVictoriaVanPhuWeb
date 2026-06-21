@@ -6,7 +6,28 @@ const TW_DEFAULTS = /*EDITMODE-BEGIN*/{
   "dark": false
 }/*EDITMODE-END*/;
 
-const MEMBER = { tier: "Hạng Vàng", id: "LBVP·0257·418", phone: "0912 845 207", av: "linear-gradient(140deg,#0F623F,#1AA86A)" };
+/* ---------------- backend API helpers ---------------- */
+function csrfToken() {
+  const meta = document.querySelector('meta[name="csrf-token"]');
+  return meta ? meta.content : "";
+}
+async function apiCall(method, url, body) {
+  const res = await fetch(url, {
+    method,
+    headers: {
+      "Content-Type": "application/json",
+      "Accept": "application/json",
+      "X-CSRF-TOKEN": csrfToken(),
+    },
+    body: body !== undefined ? JSON.stringify(body) : undefined,
+  });
+  let data = {};
+  try { data = await res.json(); } catch (e) { /* no body */ }
+  return { ok: res.ok, status: res.status, data };
+}
+
+const PROFILE = window.PROFILE_DATA || {};
+const MEMBER = { tier: PROFILE.member?.tier || "", id: PROFILE.member?.id || "", phone: PROFILE.member?.phone || "", av: "linear-gradient(140deg,#0F623F,#1AA86A)" };
 
 const MENU = [
   { id: "m1", name: "Trà sữa trân châu ĐĐ", cat: "Trà sữa", ic: "cup", grad: "linear-gradient(135deg,#6B4A2B,#A9743F)" },
@@ -20,15 +41,12 @@ const MENU = [
 ];
 
 const INITIAL = {
-  name: "Nguyễn Minh Anh",
-  email: "minhanh.ng@gmail.com",
-  dob: "1998-05-30",
-  avatar: null, // dataURL
-  addresses: [
-    { id: "a1", label: "Nhà", name: "Minh Anh · 0912 845 207", text: "S2.03 KĐT Văn Phú, P. Phú La, Hà Đông, Hà Nội", def: true },
-    { id: "a2", label: "Công ty", name: "Minh Anh · 0912 845 207", text: "Tầng 12, Toà Keangnam, Phạm Hùng, Nam Từ Liêm, Hà Nội", def: false },
-  ],
-  favorites: ["m1", "m3", "m5"],
+  name: PROFILE.member?.name || "",
+  email: PROFILE.member?.email || "",
+  dob: PROFILE.member?.dob || "",
+  avatar: PROFILE.member?.avatar_url || null,
+  addresses: PROFILE.addresses || [],
+  favorites: PROFILE.favorites || [],
 };
 
 function initials(n) { const p = n.trim().split(/\s+/); return ((p[0]?.[0] || "") + (p[p.length - 1]?.[0] || "")).toUpperCase(); }
@@ -40,6 +58,7 @@ function App() {
   const [saved, setSaved] = useState(INITIAL);
   const [toast, setToast] = useState(null);
   const [addrModal, setAddrModal] = useState(null); // {edit?, label, name, text, def}
+  const [avatarUploading, setAvatarUploading] = useState(false);
   const fileRef = useRef(null);
 
   useEffect(() => {
@@ -56,32 +75,88 @@ function App() {
 
   const flash = (m) => { setToast(m); setTimeout(() => setToast(null), 2800); };
 
-  const onAvatar = (e) => {
+  const logout = async (e) => {
+    e.preventDefault();
+    await apiCall("POST", "/logout");
+    location.href = NAV_URLS.login;
+  };
+
+  const onAvatar = async (e) => {
     const f = e.target.files?.[0]; if (!f) return;
+    e.target.value = "";
+    // preview locally first
     const reader = new FileReader();
     reader.onload = () => setData(d => ({ ...d, avatar: reader.result }));
     reader.readAsDataURL(f);
-    e.target.value = "";
+    // upload to server
+    setAvatarUploading(true);
+    const form = new FormData();
+    form.append("avatar", f);
+    form.append("_token", document.querySelector('meta[name="csrf-token"]')?.content || "");
+    try {
+      const res = await fetch("/profile/avatar", { method: "POST", body: form, headers: { "Accept": "application/json", "X-CSRF-TOKEN": document.querySelector('meta[name="csrf-token"]')?.content || "" } });
+      const body = await res.json().catch(() => ({}));
+      if (res.ok) {
+        setData(d => ({ ...d, avatar: body.avatar_url }));
+        setSaved(s => ({ ...s, avatar: body.avatar_url }));
+        flash("Đã cập nhật ảnh đại diện");
+      } else {
+        flash(body.message || "Không thể tải ảnh lên, vui lòng thử lại");
+        setData(d => ({ ...d, avatar: saved.avatar }));
+      }
+    } catch {
+      flash("Lỗi kết nối, vui lòng thử lại");
+      setData(d => ({ ...d, avatar: saved.avatar }));
+    }
+    setAvatarUploading(false);
   };
 
-  const save = () => { if (!emailOk || !nameOk) return; setSaved(data); flash("Đã lưu thông tin cá nhân"); };
+  const save = async () => {
+    if (!emailOk || !nameOk) return;
+    const { ok, data: res } = await apiCall("PUT", "/profile", { name: data.name, email: data.email, dob: data.dob, favorites: data.favorites });
+    if (!ok) { flash(res.message || "Có lỗi xảy ra, vui lòng thử lại."); return; }
+    setSaved(data);
+    flash(res.message || "Đã lưu thông tin cá nhân");
+  };
   const discard = () => setData(saved);
 
   const toggleFav = (id) => setData(d => ({ ...d, favorites: d.favorites.includes(id) ? d.favorites.filter(x => x !== id) : [...d.favorites, id] }));
 
-  const delAddr = (id) => setData(d => ({ ...d, addresses: d.addresses.filter(a => a.id !== id) }));
-  const setDefault = (id) => setData(d => ({ ...d, addresses: d.addresses.map(a => ({ ...a, def: a.id === id })) }));
+  const setAddresses = (addresses) => {
+    setData(d => ({ ...d, addresses }));
+    setSaved(s => ({ ...s, addresses }));
+  };
 
-  const saveAddr = (form) => {
-    setData(d => {
-      let list;
-      if (form.id) list = d.addresses.map(a => a.id === form.id ? { ...a, ...form } : a);
-      else list = [...d.addresses, { ...form, id: "a" + Date.now() }];
-      if (form.def) list = list.map(a => ({ ...a, def: a.id === (form.id || list[list.length - 1].id) }));
-      else if (!list.some(a => a.def) && list.length) list[0].def = true;
-      return { ...d, addresses: list };
-    });
+  const delAddr = async (id) => {
+    const { ok, data: res } = await apiCall("DELETE", `/profile/addresses/${id}`);
+    if (!ok) { flash(res.message || "Có lỗi xảy ra, vui lòng thử lại."); return; }
+    setAddresses(data.addresses.filter(a => a.id !== id));
+    flash(res.message || "Đã xoá địa chỉ");
+  };
+
+  const setDefault = async (id) => {
+    const { ok, data: res } = await apiCall("POST", `/profile/addresses/${id}/default`);
+    if (!ok) { flash(res.message || "Có lỗi xảy ra, vui lòng thử lại."); return; }
+    setAddresses(data.addresses.map(a => ({ ...a, def: a.id === id })));
+    flash(res.message || "Đã đặt địa chỉ mặc định");
+  };
+
+  const saveAddr = async (form) => {
+    const payload = { label: form.label, name: form.name, text: form.text, def: form.def, lat: form.lat || null, lng: form.lng || null };
+    const { ok, data: res } = form.id
+      ? await apiCall("PUT", `/profile/addresses/${form.id}`, payload)
+      : await apiCall("POST", "/profile/addresses", payload);
+
+    if (!ok) { flash(res.message || "Có lỗi xảy ra, vui lòng thử lại."); return; }
+
+    let list;
+    if (form.id) list = data.addresses.map(a => a.id === form.id ? res.address : a);
+    else list = [...data.addresses, res.address];
+    if (res.address.def) list = list.map(a => ({ ...a, def: a.id === res.address.id }));
+
+    setAddresses(list);
     setAddrModal(null);
+    flash(res.message || "Đã lưu địa chỉ");
   };
 
   return (
@@ -100,7 +175,9 @@ function App() {
             <div className="avatar" style={data.avatar ? { backgroundImage: `url(${data.avatar})` } : { background: MEMBER.av }}>
               {!data.avatar && initials(data.name)}
             </div>
-            <button className="avatar-edit" onClick={() => fileRef.current?.click()} title="Đổi ảnh đại diện"><Icon name="camera" size={17} color="#fff" /></button>
+            <button className="avatar-edit" onClick={() => !avatarUploading && fileRef.current?.click()} title="Đổi ảnh đại diện" disabled={avatarUploading} style={avatarUploading ? { opacity: 0.6, cursor: "wait" } : {}}>
+              {avatarUploading ? <span className="spin" style={{ width: 17, height: 17, borderWidth: 2 }} /> : <Icon name="camera" size={17} color="#fff" />}
+            </button>
             <input ref={fileRef} type="file" accept="image/*" hidden onChange={onAvatar} />
           </div>
           <div className="pname">{data.name}</div>
@@ -113,7 +190,7 @@ function App() {
           <a className="acct-link" href={NAV_URLS.history}><span className="ali"><Icon name="receipt" size={19} color="currentColor" /></span><span className="alt">Lịch sử giao dịch</span><span className="alc"><Icon name="chev" size={18} /></span></a>
           <a className="acct-link" href={NAV_URLS.wallet}><span className="ali"><Icon name="gift" size={19} color="currentColor" /></span><span className="alt">Đổi quà &amp; Voucher của tôi</span><span className="alc"><Icon name="chev" size={18} /></span></a>
           <a className="acct-link" href={NAV_URLS.store}><span className="ali"><Icon name="pin" size={19} color="currentColor" /></span><span className="alt">Cửa hàng Laboong</span><span className="alc"><Icon name="chev" size={18} /></span></a>
-          <a className="acct-link danger" href={NAV_URLS.login}><span className="ali"><Icon name="logout" size={19} color="currentColor" /></span><span className="alt">Đăng xuất</span><span className="alc"><Icon name="chev" size={18} /></span></a>
+          <a className="acct-link danger" href={NAV_URLS.login} onClick={logout}><span className="ali"><Icon name="logout" size={19} color="currentColor" /></span><span className="alt">Đăng xuất</span><span className="alc"><Icon name="chev" size={18} /></span></a>
         </nav>
 
         {/* personal info */}
@@ -237,34 +314,306 @@ function App() {
   );
 }
 
+async function reverseGeocode(lat, lng) {
+  try {
+    const r = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json&accept-language=vi`, {
+      headers: { "Accept-Language": "vi" },
+    });
+    const d = await r.json();
+    if (!d.display_name) return null;
+    return d.display_name.replace(/,\s*Việt Nam$/i, "").trim();
+  } catch { return null; }
+}
+
+async function smartNominatimSearch(text) {
+  const headers = { "Accept-Language": "vi" };
+  const base = "https://nominatim.openstreetmap.org/search";
+  // Build query list: full text + version without leading house-number token
+  const queries = [text];
+  const noNum = text.replace(/^[A-Za-zÀ-ỹ]?\d+[A-Za-zÀ-ỹ]?\s+/, "").trim();
+  if (noNum && noNum !== text) queries.push(noNum);
+
+  const seen = new Set();
+  const results = [];
+  for (const q of queries) {
+    try {
+      const r = await fetch(`${base}?q=${encodeURIComponent(q + ", Việt Nam")}&format=json&limit=5&countrycodes=vn`, { headers });
+      const items = await r.json();
+      for (const d of items) {
+        if (!seen.has(d.place_id)) {
+          seen.add(d.place_id);
+          results.push({ text: d.display_name, lat: parseFloat(d.lat), lng: parseFloat(d.lon) });
+        }
+      }
+    } catch { /* ignore */ }
+    if (results.length >= 6) break;
+  }
+  return results.slice(0, 6);
+}
+
+async function cascadeGeocode(text) {
+  const headers = { "Accept-Language": "vi" };
+  const base = "https://nominatim.openstreetmap.org/search";
+  // Build cascade: full → no house-number → progressively drop front parts
+  const parts = text.split(",").map(p => p.trim()).filter(Boolean);
+  const noNum = text.replace(/^[A-Za-zÀ-ỹ]?\d+[A-Za-zÀ-ỹ]?\s+/, "").trim();
+  const queries = [text];
+  if (noNum !== text) queries.push(noNum);
+  // Drop leading parts one by one: [street+district+city] → [district+city] → [city]
+  for (let i = 1; i < parts.length; i++) queries.push(parts.slice(i).join(", "));
+
+  for (const q of queries) {
+    if (q.trim().length < 3) continue;
+    try {
+      const r = await fetch(`${base}?q=${encodeURIComponent(q + ", Việt Nam")}&format=json&limit=1&countrycodes=vn`, { headers });
+      const items = await r.json();
+      if (items.length) return { lat: parseFloat(items[0].lat), lng: parseFloat(items[0].lon) };
+    } catch { /* continue */ }
+  }
+  return null;
+}
+
 function AddrModal({ init, onClose, onSave }) {
-  const [f, setF] = useState({ id: init.id, label: init.label || "Nhà", name: init.name || "", text: init.text || "", def: !!init.def });
+  const [f, setF] = useState({
+    id: init.id, label: init.label || "Nhà", name: init.name || "",
+    def: !!init.def,
+    lat: init.lat || null, lng: init.lng || null,
+  });
+
+  // Province + district dropdowns (stable admin divisions)
+  const [cityCode, setCityCode] = useState(null);
+  const [cityName, setCityName] = useState('');
+  const [distCode, setDistCode] = useState(null);
+  const [distName, setDistName] = useState('');
+  const [provinces,   setProvinces]   = useState([]);
+  const [districts,   setDistricts]   = useState([]);
+  const [loadingDist, setLoadingDist] = useState(false);
+
+  // Free-text field for ward / street / house number with autocomplete
+  const [addrText,  setAddrText]  = useState(init.text || '');
+  const [pickedFull, setPickedFull] = useState(init.text || ''); // full text from suggestion pick
+  const [sugg,      setSugg]      = useState([]);
+  const [searching, setSearching] = useState(false);
+  const [suggRect,  setSuggRect]  = useState(null);
+  const debRef   = useRef(null);
+  const inputRef = useRef(null);
+
+  const [geocoding, setGeocoding] = useState(false);
+  const mapDivRef = useRef(null);
+  const mapRef    = useRef(null);
+  const markerRef = useRef(null);
+
+  /* final address text: prefer suggestion full text, else assemble from parts */
+  const fullText = pickedFull || [addrText, distName, cityName].filter(Boolean).join(', ');
+
+  /* ---- province / district APIs ---- */
   useEffect(() => {
-    const h = e => { if (e.key === "Escape") onClose(); };
-    window.addEventListener("keydown", h); return () => window.removeEventListener("keydown", h);
-  }, [onClose]);
-  const valid = f.text.trim().length >= 6 && f.name.trim().length >= 2;
+    fetch('https://provinces.open-api.vn/api/p/')
+      .then(r => r.json()).then(setProvinces).catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    if (!cityCode) { setDistricts([]); setDistCode(null); setDistName(''); return; }
+    setLoadingDist(true);
+    fetch(`https://provinces.open-api.vn/api/p/${cityCode}?depth=2`)
+      .then(r => r.json())
+      .then(d => { setDistricts(d.districts || []); setLoadingDist(false); })
+      .catch(() => setLoadingDist(false));
+  }, [cityCode]);
+
+  /* ---- autocomplete: search scoped to selected district + city ---- */
+  const onAddrChange = (val) => {
+    setAddrText(val);
+    setPickedFull('');                           // clear picked when user re-types
+    setF(prev => ({ ...prev, lat: null, lng: null }));
+    clearTimeout(debRef.current);
+    if (val.trim().length < 3) { setSugg([]); setSearching(false); return; }
+
+    // Build context: append district+city so Nominatim narrows results even if ward is wrong/missing
+    const ctx   = [distName, cityName].filter(Boolean).join(', ');
+    const query = ctx ? `${val.trim()}, ${ctx}` : `${val.trim()}, Việt Nam`;
+
+    setSearching(true);
+    debRef.current = setTimeout(async () => {
+      const results = await smartNominatimSearch(query);
+      setSugg(results);
+      setSearching(false);
+      if (results.length > 0 && inputRef.current) {
+        const r = inputRef.current.getBoundingClientRect();
+        setSuggRect({ top: r.bottom + 4, left: r.left, width: r.width });
+      }
+    }, 400);
+  };
+
+  const pickSugg = (s) => {
+    setAddrText(s.text);
+    setPickedFull(s.text);
+    setSugg([]);
+    setF(prev => ({ ...prev, lat: s.lat, lng: s.lng }));
+  };
+
+  /* ---- fallback geocode on blur if no lat yet ---- */
+  const onAddrBlur = async () => {
+    if (f.lat || !fullText.trim()) return;
+    setGeocoding(true);
+    const loc = await cascadeGeocode(fullText.trim());
+    if (loc) setF(prev => ({ ...prev, lat: loc.lat, lng: loc.lng }));
+    setGeocoding(false);
+  };
+
+  /* ---- re-geocode when district context changes and there's existing text ---- */
+  useEffect(() => {
+    if (!distName || !addrText.trim()) return;
+    const ctx   = [distName, cityName].filter(Boolean).join(', ');
+    const query = `${addrText.trim()}, ${ctx}`;
+    setGeocoding(true);
+    setF(prev => ({ ...prev, lat: null, lng: null }));
+    cascadeGeocode(query).then(loc => {
+      if (loc) setF(prev => ({ ...prev, lat: loc.lat, lng: loc.lng }));
+      setGeocoding(false);
+    });
+  }, [distCode]);
+
+  /* ---- Escape key ---- */
+  useEffect(() => {
+    const h = e => { if (e.key === "Escape") { if (sugg.length) { setSugg([]); } else { onClose(); } } };
+    window.addEventListener("keydown", h);
+    return () => window.removeEventListener("keydown", h);
+  }, [onClose, sugg.length]);
+
+  /* ---- Leaflet map ---- */
+  useEffect(() => {
+    const L = window.L;
+    if (!L || !mapDivRef.current || mapRef.current) return;
+    delete L.Icon.Default.prototype._getIconUrl;
+    L.Icon.Default.mergeOptions({
+      iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
+      iconRetinaUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
+      shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
+    });
+    const center = (f.lat && f.lng) ? [f.lat, f.lng] : [20.9833, 105.8412];
+    const map = L.map(mapDivRef.current, { zoomControl: true }).setView(center, f.lat ? 16 : 11);
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", { attribution: "© OpenStreetMap" }).addTo(map);
+    if (f.lat && f.lng) markerRef.current = L.marker([f.lat, f.lng]).addTo(map);
+    map.on("click", e => {
+      const { lat, lng } = e.latlng;
+      setF(prev => ({ ...prev, lat, lng }));
+      if (markerRef.current) markerRef.current.setLatLng([lat, lng]);
+      else markerRef.current = L.marker([lat, lng]).addTo(map);
+      reverseGeocode(lat, lng).then(addr => { if (addr) { setAddrText(addr); setPickedFull(addr); } });
+    });
+    mapRef.current = map;
+    return () => { map.remove(); mapRef.current = null; markerRef.current = null; };
+  }, []);
+
+  useEffect(() => {
+    const map = mapRef.current; const L = window.L;
+    if (!map || !L || f.lat == null || f.lng == null) return;
+    if (markerRef.current) markerRef.current.setLatLng([f.lat, f.lng]);
+    else markerRef.current = L.marker([f.lat, f.lng]).addTo(map);
+    map.setView([f.lat, f.lng], 16, { animate: true });
+  }, [f.lat, f.lng]);
+
+  const valid = addrText.trim().length >= 4 && f.name.trim().length >= 2;
+  const selStyle = { appearance: "auto" };
+
   return (
     <div className="scrim" onClick={onClose}>
-      <div className="modal" onClick={e => e.stopPropagation()}>
-        <div className="modal-h"><h3>{init.id ? "Sửa địa chỉ" : "Thêm địa chỉ"}</h3><button className="x" onClick={onClose}><Icon name="close" size={18} /></button></div>
-        <div className="modal-b">
+      <div className="modal" onClick={e => e.stopPropagation()} style={{ maxHeight: "90vh", display: "flex", flexDirection: "column" }}>
+        <div className="modal-h">
+          <h3>{init.id ? "Sửa địa chỉ" : "Thêm địa chỉ"}</h3>
+          <button className="x" onClick={onClose}><Icon name="close" size={18} /></button>
+        </div>
+        <div className="modal-b" style={{ overflowY: "auto", flex: 1 }}>
+
+          {/* Loại địa chỉ */}
           <div className="fld">
             <label>Loại địa chỉ</label>
             <div className="label-pick">
               {[["Nhà", "home"], ["Công ty", "building"], ["Khác", "pin"]].map(([l, ic]) => (
-                <button key={l} className={f.label === l ? "on" : ""} onClick={() => setF({ ...f, label: l })}><Icon name={ic} size={15} color="currentColor" /> {l}</button>
+                <button key={l} className={f.label === l ? "on" : ""} onClick={() => setF({ ...f, label: l })}>
+                  <Icon name={ic} size={15} color="currentColor" /> {l}
+                </button>
               ))}
             </div>
           </div>
+
+          {/* Người nhận */}
           <div className="fld">
-            <label>Người nhận & SĐT</label>
+            <label>Người nhận &amp; SĐT</label>
             <input className="inp2" placeholder="VD: Minh Anh · 0912 845 207" value={f.name} onChange={e => setF({ ...f, name: e.target.value })} />
           </div>
+
+          {/* Tỉnh / Thành phố */}
           <div className="fld">
-            <label>Địa chỉ chi tiết</label>
-            <input className="inp2" placeholder="Số nhà, đường, phường/xã, quận/huyện, tỉnh/TP" value={f.text} onChange={e => setF({ ...f, text: e.target.value })} />
+            <label>Tỉnh / Thành phố <span style={{ fontWeight: 400, color: "var(--ink-3)", fontSize: 12 }}>(tuỳ chọn — giúp tìm chính xác hơn)</span></label>
+            <select className="inp2" style={selStyle} value={cityCode || ''} onChange={e => {
+              const code = Number(e.target.value) || null;
+              const prov = provinces.find(p => p.code === code);
+              setCityCode(code); setCityName(prov?.name || '');
+              setDistCode(null); setDistName('');
+              setF(prev => ({ ...prev, lat: null, lng: null }));
+            }}>
+              <option value="">{provinces.length ? '-- Chọn tỉnh/thành phố --' : 'Đang tải…'}</option>
+              {provinces.map(p => <option key={p.code} value={p.code}>{p.name}</option>)}
+            </select>
           </div>
+
+          {/* Quận / Huyện */}
+          {cityCode && (
+            <div className="fld">
+              <label>Quận / Huyện</label>
+              <select className="inp2" style={selStyle} value={distCode || ''} disabled={loadingDist} onChange={e => {
+                const code = Number(e.target.value) || null;
+                const dist = districts.find(d => d.code === code);
+                setDistCode(code); setDistName(dist?.name || '');
+                setF(prev => ({ ...prev, lat: null, lng: null }));
+              }}>
+                <option value="">{loadingDist ? 'Đang tải…' : '-- Chọn quận/huyện --'}</option>
+                {districts.map(d => <option key={d.code} value={d.code}>{d.name}</option>)}
+              </select>
+            </div>
+          )}
+
+          {/* Địa chỉ chi tiết — free text + autocomplete */}
+          <div className="fld">
+            <label style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+              <span>Phường, đường, số nhà</span>
+              {searching && <span style={{ fontWeight: 400, color: "var(--ink-3)", fontSize: 12 }}>Đang tìm…</span>}
+              {!searching && pickedFull && <span style={{ fontWeight: 600, color: "var(--brand)", fontSize: 12 }}>✓ Đã chọn</span>}
+            </label>
+            <input ref={inputRef} className="inp2" autoComplete="off"
+              placeholder={distName ? `Phường, đường, số nhà trong ${distName}…` : 'Phường/xã, tên đường, số nhà, ngách…'}
+              value={addrText}
+              onChange={e => onAddrChange(e.target.value)}
+              onBlur={onAddrBlur}
+            />
+            {/* Suggestion dropdown — position:fixed to escape modal overflow */}
+            {sugg.length > 0 && suggRect && (
+              <div className="suggest-address" style={{ position: "fixed", top: suggRect.top, left: suggRect.left, width: suggRect.width }}>
+                {sugg.map((s, i) => (
+                  <button key={i} onMouseDown={() => pickSugg(s)}>
+                    <span style={{ flexShrink: 0, marginTop: 2 }}><Icon name="pin" size={13} color="var(--brand)" /></span>
+                    <span>{s.text}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Bản đồ */}
+          <div className="fld">
+            <label style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+              <span>Vị trí trên bản đồ</span>
+              {geocoding
+                ? <span style={{ fontWeight: 400, color: "var(--ink-3)", fontSize: 12 }}>Đang xác định…</span>
+                : f.lat && f.lng
+                  ? <span style={{ fontWeight: 600, color: "var(--brand)", fontSize: 12 }}>✓ Đã xác định</span>
+                  : <span style={{ fontWeight: 400, color: "var(--ink-3)", fontSize: 12 }}>Nhấp bản đồ để chỉnh vị trí</span>}
+            </label>
+            <div ref={mapDivRef} style={{ height: 190, borderRadius: "var(--r-sm)", overflow: "hidden", border: "1.5px solid var(--line)", isolation: "isolate" }} />
+          </div>
+
           <div className="fld">
             <button className="label-pick" style={{ width: "100%" }} onClick={() => setF({ ...f, def: !f.def })}>
               <span className={f.def ? "on" : ""} style={{ flex: 1, padding: 11, borderRadius: "var(--r-sm)", border: "1.5px solid var(--line)", display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 7, fontWeight: 700, fontSize: 13.5 }}>
@@ -275,7 +624,7 @@ function AddrModal({ init, onClose, onSave }) {
         </div>
         <div className="modal-f">
           <button className="btn ghost" onClick={onClose}>Huỷ</button>
-          <button className="btn primary" disabled={!valid} onClick={() => onSave(f)} style={!valid ? { opacity: .5 } : {}}>Lưu địa chỉ</button>
+          <button className="btn primary" disabled={!valid} onClick={() => onSave({ ...f, text: fullText })} style={!valid ? { opacity: .5 } : {}}>Lưu địa chỉ</button>
         </div>
       </div>
     </div>

@@ -22,7 +22,7 @@ function Sparkline({ data, color = "var(--brand)", up = true }) {
 
 /* ---- Area chart (revenue) ---- */
 function AreaChart({ data, color = "var(--brand)" }) {
-  const w = 620, h = 200, pad = 14, max = Math.max(...data) * 1.12;
+  const w = 620, h = 200, pad = 14, max = (Math.max(...data) * 1.12) || 1;
   const X = i => pad + i / (data.length - 1) * (w - pad * 2);
   const Y = v => h - 24 - (v / max) * (h - 44);
   const pts = data.map((v, i) => [X(i), Y(v)]);
@@ -48,7 +48,7 @@ function AreaChart({ data, color = "var(--brand)" }) {
 
 /* ---- Grouped bars (issued vs redeemed) ---- */
 function GroupBars({ data, colorA = "var(--brand)", colorB = "var(--gold)" }) {
-  const w = 360, h = 190, pad = 10, max = Math.max(...data.flatMap(d => [d.a, d.b])) * 1.14;
+  const w = 360, h = 190, pad = 10, max = (Math.max(...data.flatMap(d => [d.a, d.b])) * 1.14) || 1;
   const n = data.length, gw = (w - pad * 2) / n, bw = gw * 0.28;
   const Y = v => h - 20 - (v / max) * (h - 36);
   return (
@@ -76,7 +76,7 @@ function Donut({ segments, total }) {
       <g transform="rotate(-90 75 75)">
         <circle cx="75" cy="75" r={r} fill="none" stroke="var(--hover)" strokeWidth={sw} />
         {segments.map((s, i) => {
-          const frac = s.value / total;
+          const frac = s.value / (total || 1);
           const dash = frac * C;
           const el = <circle key={i} cx="75" cy="75" r={r} fill="none" stroke={s.color} strokeWidth={sw}
             strokeDasharray={`${dash} ${C - dash}`} strokeDashoffset={-acc * C} strokeLinecap="round" />;

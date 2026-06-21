@@ -1,4 +1,4 @@
-/* global React, ReactDOM, Icon, fmt, TIERS, TIER_ORDER, STORES, CUSTOMERS, avColor, initials, fmtVND, fmtDate, useTweaks, TweaksPanel, TweakSection, TweakColor, TweakToggle, TweakRadio */
+/* global React, ReactDOM, Icon, fmt, TIERS, TIER_ORDER, STORES, CUSTOMERS, ADMIN_CUSTOMERS_DATA, avColor, initials, fmtVND, fmtDate, useTweaks, TweaksPanel, TweakSection, TweakColor, TweakToggle, TweakRadio, NAV_URLS, adminHref */
 const { useState, useEffect, useMemo, useRef } = React;
 
 const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
@@ -8,6 +8,25 @@ const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
 }/*EDITMODE-END*/;
 
 const PAGE_SIZE = 7;
+
+function csrfToken() {
+  const meta = document.querySelector('meta[name="csrf-token"]');
+  return meta ? meta.content : "";
+}
+async function apiCall(method, url, body) {
+  const res = await fetch(url, {
+    method,
+    headers: {
+      "Content-Type": "application/json",
+      "Accept": "application/json",
+      "X-CSRF-TOKEN": csrfToken(),
+    },
+    body: body !== undefined ? JSON.stringify(body) : undefined,
+  });
+  let data = {};
+  try { data = await res.json(); } catch (e) { /* no body */ }
+  return { ok: res.ok, status: res.status, data };
+}
 
 function TierBadge({ tier }) {
   const t = TIERS[tier];
@@ -23,6 +42,7 @@ function App() {
   const [sort, setSort] = useState({ key: "points", dir: "desc" });
   const [page, setPage] = useState(1);
   const [sel, setSel] = useState(null);
+  const [customers, setCustomers] = useState(CUSTOMERS);
   const [sideOpen, setSideOpen] = useState(false);
   const [exp, setExp] = useState(false);
 
@@ -37,7 +57,7 @@ function App() {
 
   // filtering
   const filtered = useMemo(() => {
-    let rows = CUSTOMERS.filter(c => {
+    let rows = customers.filter(c => {
       if (tier !== "all" && c.tier !== tier) return false;
       if (store !== "all" && c.store !== store) return false;
       if (status !== "all" && c.status !== status) return false;
@@ -55,7 +75,7 @@ function App() {
       return 0;
     });
     return rows;
-  }, [q, tier, store, status, sort]);
+  }, [q, tier, store, status, sort, customers]);
 
   useEffect(() => { setPage(1); }, [q, tier, store, status]);
 
@@ -86,58 +106,20 @@ function App() {
   };
 
   const stats = useMemo(() => {
-    const total = CUSTOMERS.length;
-    const active = CUSTOMERS.filter(c => c.status === "on").length;
-    const newM = CUSTOMERS.filter(c => c.joined >= "2025-01-01").length;
-    const pts = CUSTOMERS.reduce((s, c) => s + c.points, 0);
-    return { total, active, newM, pts };
+    const s = ADMIN_CUSTOMERS_DATA.stats;
+    return { total: s.total, active: s.active, newM: s.newThisMonth, pts: s.points };
   }, []);
 
-  const NAV = [
-    { ic: "chart", label: "Tổng quan" },
-    { ic: "users", label: "Khách hàng", on: true, badge: String(CUSTOMERS.length) },
-    { ic: "receipt", label: "Điểm & giao dịch" },
-    { ic: "gift", label: "Đổi quà" },
-    { ic: "mega", label: "Chiến dịch" },
-    { ic: "shield", label: "Phân quyền" },
-  ];
+  const logout = async (e) => {
+    e.preventDefault();
+    await apiCall("POST", "/logout");
+    location.href = NAV_URLS.login;
+  };
 
   return (
     <div className="shell">
       {/* ---------- Sidebar ---------- */}
-      {sideOpen && <div className="scrim" style={{ zIndex: 55 }} onClick={() => setSideOpen(false)} />}
-      <aside className={"side" + (sideOpen ? " open" : "")}>
-        <div className="side-brand">
-          <div className="side-mark"><span>L</span></div>
-          <div>
-            <div className="nm">Laboong</div>
-            <div className="sb">Bảng quản trị</div>
-          </div>
-        </div>
-        <div className="side-sec">Quản lý</div>
-        <nav className="side-nav">
-          {NAV.map(n => (
-            <a key={n.label} className={"side-link" + (n.on ? " on" : "")} href={adminHref(n.label)}>
-              <Icon name={n.ic} size={19} /> {n.label}
-              {n.badge && <span className="badge">{n.badge}</span>}
-            </a>
-          ))}
-        </nav>
-        <div className="side-sec">Hệ thống</div>
-        <nav className="side-nav">
-          <a className="side-link" href={NAV_URLS.adminSettings}><Icon name="gear" size={19} /> Cài đặt</a>
-        </nav>
-        <div className="side-foot">
-          <div className="side-user">
-            <div className="side-av">QT</div>
-            <div style={{ minWidth: 0 }}>
-              <div className="un">Quản trị viên</div>
-              <div className="ur">admin@laboong.vn</div>
-            </div>
-            <button className="icon-btn" style={{ width: 32, height: 32, marginLeft: "auto" }} title="Đăng xuất"><Icon name="logout" size={16} /></button>
-          </div>
-        </div>
-      </aside>
+      <AdminSidebar activeLabel="Khách hàng" badges={{ "Khách hàng": String(CUSTOMERS.length) }} admin={ADMIN_CUSTOMERS_DATA.admin} sideOpen={sideOpen} onClose={() => setSideOpen(false)} />
 
       {/* ---------- Main ---------- */}
       <div className="main">
@@ -163,7 +145,7 @@ function App() {
             <div className="stat"><div className="stat-ic a"><Icon name="check" size={22} /></div>
               <div><div className="lbl">Đang hoạt động</div><div className="val tnum">{stats.active}</div><div className="chg up">{Math.round(stats.active / stats.total * 100)}% tổng số</div></div></div>
             <div className="stat"><div className="stat-ic y"><Icon name="star" size={20} /></div>
-              <div><div className="lbl">Khách mới (2025)</div><div className="val tnum">{stats.newM}</div><div className="chg up"><Icon name="spark" size={13} /> Tăng trưởng tốt</div></div></div>
+              <div><div className="lbl">Khách mới tháng này</div><div className="val tnum">{stats.newM}</div><div className="chg up"><Icon name="spark" size={13} /> Tăng trưởng tốt</div></div></div>
             <div className="stat"><div className="stat-ic p"><Icon name="coin" size={22} /></div>
               <div><div className="lbl">Điểm đã phát hành</div><div className="val tnum">{fmt(stats.pts)}</div><div className="chg up">Trên toàn hệ thống</div></div></div>
           </div>
@@ -187,7 +169,7 @@ function App() {
                 <span className="flbl">Cửa hàng</span>
                 <select className="select" value={store} onChange={e => setStore(e.target.value)}>
                   <option value="all">Tất cả cửa hàng</option>
-                  {STORES.map(s => <option key={s} value={s}>{s}</option>)}
+                  {STORES.map(s => <option key={s.id ?? s} value={s.name ?? s}>{s.name ?? s}</option>)}
                 </select>
                 <span className="chev"><Icon name="chevdown" size={16} /></span>
               </div>
@@ -267,7 +249,10 @@ function App() {
       </div>
 
       {/* ---------- Detail drawer ---------- */}
-      {sel && <Drawer c={sel} onClose={() => setSel(null)} />}
+      {sel && <Drawer c={sel} onClose={() => setSel(null)} onCustomerUpdated={updated => {
+        setCustomers(cs => cs.map(c => c.customerId === updated.customerId ? { ...c, ...updated } : c));
+        setSel(prev => prev?.customerId === updated.customerId ? { ...prev, ...updated } : prev);
+      }} />}
 
       {/* ---------- Tweaks ---------- */}
       <TweaksPanel>

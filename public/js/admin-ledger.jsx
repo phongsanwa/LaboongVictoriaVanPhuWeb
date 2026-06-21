@@ -1,68 +1,14 @@
-/* global CUSTOMERS, STORES */
-/* Build a flat transaction ledger from customer activity + manual adjustments. */
+/* global */
+const ADMIN_POINTS_DATA = window.ADMIN_POINTS_DATA || {
+  admin: { name: "Quản trị viên", email: "", initials: "QT" },
+  customers: [],
+  ledger: [],
+  stats: { issued: 0, redeemed: 0, remaining: 0, count: 0 },
+};
 
-const NOW = new Date(2026, 5, 8, 16, 30); // 08/06/2026
+const NOW = new Date();
 
-function parseDays(meta) {
-  const m = /(\d+)\s*ng/.exec(meta);
-  return m ? parseInt(m[1], 10) : 1;
-}
-function storeOf(meta) {
-  const parts = meta.split("·");
-  return parts.length > 1 ? parts[parts.length - 1].trim() : STORES[0];
-}
-
-let _seq = 4830;
-function gid() { return "GD" + (_seq--); }
-
-const ADJUST_SEED = [
-  { ci: 3,  pts:  200, reason: "Đền bù khiếu nại đơn hàng", note: "Đơn giao trễ 40 phút", days: 2,  staff: "Thu Hà" },
-  { ci: 0,  pts:  100, reason: "Tặng điểm sinh nhật",       note: "",                       days: 5,  staff: "Hệ thống" },
-  { ci: 7,  pts: -150, reason: "Trừ điểm do hoàn đơn",      note: "Khách hủy đơn #88213",   days: 6,  staff: "Quốc Bảo" },
-  { ci: 10, pts:  500, reason: "Bù điểm do lỗi hệ thống",   note: "Sự cố quét QR 03/06",    days: 8,  staff: "Thu Hà" },
-  { ci: 4,  pts:  300, reason: "Tặng điểm sinh nhật",       note: "",                       days: 12, staff: "Hệ thống" },
-  { ci: 14, pts:  -80, reason: "Điều chỉnh sau kiểm kê",    note: "Sai lệch tích điểm",     days: 15, staff: "Minh Quân" },
-];
-
-function buildLedger() {
-  const rows = [];
-  // from customer activity
-  CUSTOMERS.forEach((c) => {
-    c.tx.forEach((x, j) => {
-      const days = parseDays(x.meta);
-      const ts = new Date(NOW.getTime() - days * 86400000 - (j * 137 + (c.name.length * 53)) % 86400000);
-      rows.push({
-        id: gid(),
-        cust: { name: c.name, id: c.id, tier: c.tier },
-        type: x.type, // earn | redeem
-        desc: x.title,
-        reason: null,
-        source: x.type === "redeem" ? "Đổi quà tại quầy" : storeOf(x.meta),
-        staff: null,
-        ts, points: x.amt,
-      });
-    });
-  });
-  // manual adjustments
-  ADJUST_SEED.forEach((a) => {
-    const c = CUSTOMERS[a.ci];
-    const ts = new Date(NOW.getTime() - a.days * 86400000 - 3600000 * (a.ci % 9));
-    rows.push({
-      id: gid(),
-      cust: { name: c.name, id: c.id, tier: c.tier },
-      type: "adjust",
-      desc: a.pts > 0 ? "Cộng điểm thủ công" : "Trừ điểm thủ công",
-      reason: a.reason, note: a.note,
-      source: "Điều chỉnh thủ công",
-      staff: a.staff,
-      ts, points: a.pts,
-    });
-  });
-  rows.sort((a, b) => b.ts - a.ts);
-  return rows;
-}
-
-const LEDGER = buildLedger();
+const LEDGER = ADMIN_POINTS_DATA.ledger.map(e => ({ ...e, ts: new Date(e.ts) }));
 
 function fmtTs(ts) {
   const p = (n) => String(n).padStart(2, "0");
@@ -89,4 +35,21 @@ const ADJUST_REASONS = [
   "Khác",
 ];
 
-Object.assign(window, { LEDGER, fmtTs, TYPE_META, ADJUST_REASONS, NOW });
+const AV_COLORS = [
+  "linear-gradient(140deg,#0F623F,#1AA86A)",
+  "linear-gradient(140deg,#FF8A5B,#FF6FA5)",
+  "linear-gradient(140deg,#C99A2E,#E0B84A)",
+  "linear-gradient(140deg,#1E8FA8,#4FC3D9)",
+  "linear-gradient(140deg,#6B4FA0,#9B7FD4)",
+  "linear-gradient(140deg,#3E7CB1,#6FB1E0)",
+];
+function avColor(name) {
+  let h = 0; for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) >>> 0;
+  return AV_COLORS[h % AV_COLORS.length];
+}
+function initials(name) {
+  const p = name.trim().split(/\s+/);
+  return ((p[0]?.[0] || "") + (p[p.length - 1]?.[0] || "")).toUpperCase();
+}
+
+Object.assign(window, { ADMIN_POINTS_DATA, LEDGER, fmtTs, TYPE_META, ADJUST_REASONS, NOW, avColor, initials });

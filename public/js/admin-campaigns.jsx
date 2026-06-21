@@ -1,10 +1,29 @@
-/* global React, ReactDOM, Icon, fmt, CAMPAIGNS, CAMP_TYPES, AUDIENCES, CAMP_STATUS, CampaignWizard, PushComposer, useTweaks, TweaksPanel, TweakSection, TweakColor, TweakToggle */
+/* global React, ReactDOM, Icon, fmt, CAMPAIGNS, CAMP_TYPES, AUDIENCES, CAMP_STATUS, CAMP_REWARDS, CampaignWizard, PushComposer, useTweaks, TweaksPanel, TweakSection, TweakColor, TweakToggle, ADMIN_CAMPAIGNS_DATA, NAV_URLS, adminHref */
 const { useState, useEffect, useMemo } = React;
 
 const CM_DEFAULTS = /*EDITMODE-BEGIN*/{
   "brand": ["#0F623F", "#07432A"],
   "dark": false
 }/*EDITMODE-END*/;
+
+function csrfToken() {
+  const meta = document.querySelector('meta[name="csrf-token"]');
+  return meta ? meta.content : "";
+}
+async function apiCall(method, url, body) {
+  const res = await fetch(url, {
+    method,
+    headers: {
+      "Content-Type": "application/json",
+      "Accept": "application/json",
+      "X-CSRF-TOKEN": csrfToken(),
+    },
+    body: body !== undefined ? JSON.stringify(body) : undefined,
+  });
+  let data = {};
+  try { data = await res.json(); } catch (e) { /* no body */ }
+  return { ok: res.ok, status: res.status, data };
+}
 
 function fmtD(iso) { const [y, m, d] = iso.split("-"); return `${d}/${m}/${y}`; }
 
@@ -22,7 +41,7 @@ function CampaignRow({ c, onEdit, onPush, onToggle }) {
         <div className="camp-name">{c.name}</div>
         <div className="camp-cond">{c.condition}</div>
         <div className="camp-tags">
-          <span className="ctag type" style={{ background: t.color }}><Icon name={t.ic} size={11} color="#fff" /> {t.short}{c.type === "discount" && c.value ? ` ${c.value}%` : ""}</span>
+          <span className="ctag type" style={{ background: t.color }}><Icon name={t.ic} size={11} color="#fff" /> {t.short}{c.type === "discount" && c.value ? ` ${c.value}%` : c.type === "x2" && c.value && c.value !== 2 ? ` ×${c.value}` : c.type === "birthday" && c.bonus_points ? ` +${fmt(c.bonus_points)}đ` : ""}</span>
           <span className="ctag"><Icon name={aud.ic} size={11} /> {aud.label}</span>
           {c.pushSent && <span className="ctag push"><Icon name="bellpush" size={11} /> Đã gửi push</span>}
         </div>
@@ -88,72 +107,51 @@ function CampaignsApp() {
     return true;
   }), [items, type, status, q]);
 
-  const onSave = (data) => {
-    if (data.id) {
-      setItems(list => list.map(i => i.id === data.id ? { ...i, ...data } : i));
+  const onSave = async (data) => {
+    const payload = {
+      name: data.name, type: data.type, value: data.value ?? null,
+      start: data.start, end: data.end, condition: data.condition, audience: data.audience,
+    };
+    if (data.dbId) {
+      const { ok, data: res } = await apiCall("PUT", `/admin/campaigns/${data.dbId}`, payload);
+      if (!ok) { flash(res.message || "Có lỗi xảy ra, vui lòng thử lại"); return; }
+      setItems(list => list.map(i => i.dbId === data.dbId ? res.campaign : i));
       flash(`Đã cập nhật "${data.name}"`);
     } else {
-      const id = "CMP" + (800 + items.length);
-      const today = "2026-06-08";
-      const st = data.start > today ? "scheduled" : "running";
-      setItems(list => [{ id, opened: 0, converted: 0, pushSent: false, status: st, ...data }, ...list]);
-      flash(`Đã tạo chiến dịch "${data.name}" (${st === "scheduled" ? "đã lên lịch" : "đang chạy"})`);
+      const { ok, data: res } = await apiCall("POST", "/admin/campaigns", payload);
+      if (!ok) { flash(res.message || "Có lỗi xảy ra, vui lòng thử lại"); return; }
+      setItems(list => [res.campaign, ...list]);
+      flash(`Đã tạo chiến dịch "${data.name}" (${res.campaign.status === "scheduled" ? "đã lên lịch" : "đang chạy"})`);
     }
     setWizard(null);
   };
-  const onToggle = (c) => {
-    const next = c.status === "running" ? "scheduled" : "running";
+  const onToggle = async (c) => {
+    const { ok, data: res } = await apiCall("POST", `/admin/campaigns/${c.dbId}/toggle`);
+    if (!ok) { flash(res.message || "Có lỗi xảy ra, vui lòng thử lại"); return; }
+    setItems(list => list.map(i => i.dbId === c.dbId ? res.campaign : i));
     if (c.status === "ended" || c.status === "draft") {
-      setItems(list => list.map(i => i.id === c.id ? { ...i, status: "running" } : i));
       flash(`"${c.name}" đã được kích hoạt`);
-      return;
+    } else {
+      flash(`"${c.name}" → ${res.campaign.status === "running" ? "Đang chạy" : "Tạm dừng"}`);
     }
-    setItems(list => list.map(i => i.id === c.id ? { ...i, status: next } : i));
-    flash(`"${c.name}" → ${next === "running" ? "Đang chạy" : "Tạm dừng"}`);
   };
-  const onSend = (title, count) => {
-    setItems(list => list.map(i => i.id === push.id ? { ...i, pushSent: true } : i));
+  const onSend = async (title, count) => {
+    const { ok, data: res } = await apiCall("POST", `/admin/campaigns/${push.dbId}/push`);
+    if (!ok) { flash(res.message || "Có lỗi xảy ra, vui lòng thử lại"); return; }
+    setItems(list => list.map(i => i.dbId === push.dbId ? res.campaign : i));
     flash(`Đã gửi thông báo "${title}" tới ${fmt(count)} người`);
     setPush(null);
   };
 
-  const NAV = [
-    { ic: "chart", label: "Tổng quan" },
-    { ic: "users", label: "Khách hàng" },
-    { ic: "receipt", label: "Điểm & giao dịch" },
-    { ic: "gift", label: "Đổi quà" },
-    { ic: "mega", label: "Chiến dịch", on: true, badge: String(items.length) },
-    { ic: "shield", label: "Phân quyền" },
-  ];
+  const logout = async (e) => {
+    e.preventDefault();
+    await apiCall("POST", "/logout");
+    location.href = NAV_URLS.login;
+  };
 
   return (
     <div className="shell">
-      {sideOpen && <div className="scrim" style={{ zIndex: 55 }} onClick={() => setSideOpen(false)} />}
-      <aside className={"side" + (sideOpen ? " open" : "")}>
-        <div className="side-brand">
-          <div className="side-mark"><span>L</span></div>
-          <div><div className="nm">Laboong</div><div className="sb">Bảng quản trị</div></div>
-        </div>
-        <div className="side-sec">Quản lý</div>
-        <nav className="side-nav">
-          {NAV.map(n => (
-            <a key={n.label} className={"side-link" + (n.on ? " on" : "")} href={adminHref(n.label)}>
-              <Icon name={n.ic} size={19} /> {n.label}{n.badge && <span className="badge">{n.badge}</span>}
-            </a>
-          ))}
-        </nav>
-        <div className="side-sec">Hệ thống</div>
-        <nav className="side-nav">
-          <a className="side-link" href={NAV_URLS.adminSettings}><Icon name="gear" size={19} /> Cài đặt</a>
-        </nav>
-        <div className="side-foot">
-          <div className="side-user">
-            <div className="side-av">QT</div>
-            <div style={{ minWidth: 0 }}><div className="un">Quản trị viên</div><div className="ur">admin@laboong.vn</div></div>
-            <button className="icon-btn" style={{ width: 32, height: 32, marginLeft: "auto" }} title="Đăng xuất"><Icon name="logout" size={16} /></button>
-          </div>
-        </div>
-      </aside>
+      <AdminSidebar activeLabel="Chiến dịch" badges={{ "Chiến dịch": String(items.length) }} admin={ADMIN_CAMPAIGNS_DATA.admin} sideOpen={sideOpen} onClose={() => setSideOpen(false)} />
 
       <div className="main">
         <header className="topbar">
