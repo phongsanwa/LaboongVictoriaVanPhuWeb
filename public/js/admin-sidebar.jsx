@@ -8,6 +8,7 @@ const SIDEBAR_NAV = [
   { ic: 'truck',   label: 'Phí ship' },
   { ic: 'gift',    label: 'Đổi quà' },
   { ic: 'mega',    label: 'Chiến dịch' },
+  { ic: 'cal',     label: 'Điểm danh' },
   { ic: 'cup',     label: 'Thực đơn' },
   { ic: 'percent', label: 'Khuyến mãi' },
   { ic: 'plus',    label: 'Variant / Tuỳ chọn' },
@@ -23,8 +24,8 @@ function AdminSidebar({ activeLabel, badges = {}, admin, sideOpen, onClose }) {
     location.href = NAV_URLS.login;
   };
 
-  const mgmt = SIDEBAR_NAV.slice(0, 10);
-  const sys  = SIDEBAR_NAV.slice(10);
+  const mgmt = SIDEBAR_NAV.slice(0, 11);
+  const sys  = SIDEBAR_NAV.slice(11);
 
   const renderLink = (n) => (
     <a key={n.label}

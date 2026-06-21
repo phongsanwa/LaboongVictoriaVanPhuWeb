@@ -1,4 +1,4 @@
-/* global React, Icon, QRCanvas, fmt, useTweaks, TweaksPanel, TweakSection, TweakColor, TweakToggle, TweakSlider, TweakRadio */
+/* global React, Icon, QRCanvas, fmt, useTweaks, TweaksPanel, TweakSection, TweakColor, TweakToggle, TweakSlider, TweakRadio, NAV_URLS */
 const { useState, useEffect, useRef } = React;
 
 const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
@@ -16,6 +16,11 @@ const PROMOS = HOME.promos || [];
 const TX = HOME.transactions || [];
 const STORE = HOME.store || null;
 const POINTS_THIS_WEEK = HOME.pointsThisWeek || 0;
+const CHECKIN_CONFIG = HOME.checkinConfig || [
+  { d: "Ngày 1", pts: 5 }, { d: "Ngày 2", pts: 5 }, { d: "Ngày 3", pts: 10 },
+  { d: "Ngày 4", pts: 10 }, { d: "Ngày 5", pts: 15 }, { d: "Ngày 6", pts: 15 },
+  { d: "Ngày 7", pts: 50, bonus: true },
+];
 
 function storeStatus(store) {
   if (!store || !store.opening_time || !store.closing_time) return "";
@@ -28,6 +33,11 @@ function storeStatus(store) {
   return isOpen ? `Đang mở · đến ${store.closing_time.slice(0, 5)}` : `Đã đóng cửa · mở lại ${store.opening_time.slice(0, 5)}`;
 }
 
+function csrfToken() {
+  const m = document.querySelector('meta[name="csrf-token"]');
+  return m ? m.content : "";
+}
+
 /* ================= App ================= */
 function App() {
   const [t, setTweak] = useTweaks(TWEAK_DEFAULTS);
@@ -35,7 +45,35 @@ function App() {
   const [slide, setSlide] = useState(0);
   const [tab, setTab] = useState("home");
 
-  const points = HOME.points || 0;
+  const serverCi = HOME.checkin || { streak: 0, last: null, today: false };
+  const [checkedToday, setCheckedToday] = useState(serverCi.today);
+  const [streak, setStreak] = useState(serverCi.streak);
+  const [points, setPoints] = useState(HOME.points || 0);
+  const [ciToast, setCiToast] = useState(null);
+  const [ciLoading, setCiLoading] = useState(false);
+
+  const dayIdx = checkedToday ? (streak - 1) % 7 : streak % 7;
+
+  const doCheckin = async () => {
+    if (checkedToday || ciLoading) return;
+    setCiLoading(true);
+    try {
+      const res = await fetch("/checkin", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "Accept": "application/json", "X-CSRF-TOKEN": csrfToken() },
+      });
+      const data = await res.json();
+      if (res.ok && data.ok) {
+        setCheckedToday(true);
+        setStreak(data.streak);
+        setPoints(data.total_points);
+        setCiToast(`Điểm danh thành công! +${data.points_awarded} điểm`);
+        setTimeout(() => setCiToast(null), 3000);
+      }
+    } catch (e) { /* network error — silent */ }
+    setCiLoading(false);
+  };
+
   const remain = Math.max(0, GOAL - points);
   const pct = GOAL > 0 ? Math.min(100, Math.round((points / GOAL) * 100)) : 100;
 
@@ -174,6 +212,39 @@ function App() {
           {/* ============ RIGHT COLUMN ============ */}
           <div className="col">
 
+            {/* ---- Daily check-in ---- */}
+            <section className="card checkin">
+              <div className="checkin-head">
+                <span className="ci-ic"><Icon name="spark" size={19} color="#fff" /></span>
+                <div>
+                  <h3>Điểm danh hàng ngày</h3>
+                  <div className="ci-streak">Chuỗi <b>{streak} ngày</b> · điểm danh nhận điểm thưởng</div>
+                </div>
+              </div>
+              <div className="ci-days">
+                {CHECKIN_CONFIG.map((c, i) => {
+                  const done = i < dayIdx || (checkedToday && i === dayIdx);
+                  const isToday = !checkedToday && i === dayIdx;
+                  return (
+                    <div key={i} className={"ci-day" + (done ? " done" : "") + (isToday ? " today" : "") + (c.bonus ? " bonus" : "")}>
+                      <div className="cd-lbl">{c.d}</div>
+                      <div className="cd-pts">+{c.pts}</div>
+                      <div className="cd-ic"><Icon name={done ? "check" : c.bonus ? "gift" : "coin"} size={14} color="currentColor" /></div>
+                    </div>
+                  );
+                })}
+              </div>
+              <div className="ci-cta">
+                <button className={"ci-btn " + (checkedToday ? "claimed" : "ready")} onClick={doCheckin} disabled={checkedToday || ciLoading}>
+                  {checkedToday
+                    ? <><Icon name="check" size={18} color="currentColor" /> <span>Đã điểm danh hôm nay</span></>
+                    : ciLoading
+                      ? <span>Đang xử lý…</span>
+                      : <><Icon name="spark" size={18} color="#fff" /> <span>Điểm danh nhận +{CHECKIN_CONFIG[dayIdx]?.pts || 5} điểm</span></>}
+                </button>
+              </div>
+            </section>
+
             {/* ---- Nearest store ---- */}
             {STORE && (
               <section className="card">
@@ -235,7 +306,7 @@ function App() {
       <nav className="tabbar">
         <button className={"tab " + (tab==="home"?"on":"")} onClick={()=>setTab("home")}><span className="ti"><Icon name="home" size={22}/></span>Trang chủ</button>
         <a className="tab" href={NAV_URLS.menu}><span className="ti"><Icon name="cup" size={22}/></span>Đặt món</a>
-          <button className="tab tab-qr" onClick={openQR}><span className="ti"><Icon name="qr" size={26} color="#fff"/></span><span className="text-qr">Quét QR</span></button>
+        <button className="tab tab-qr" onClick={openQR}><span className="ti"><Icon name="qr" size={26} color="#fff"/></span><span className="text-qr">Quét QR</span></button>
         <a className="tab" href={NAV_URLS.catalog}><span className="ti"><Icon name="gift" size={22}/></span>Đổi quà</a>
         <a className="tab" href={NAV_URLS.profile}><span className="ti"><Icon name="user" size={22}/></span>Tài khoản</a>
       </nav>
@@ -264,6 +335,9 @@ function App() {
           </div>
         </div>
       )}
+
+      {/* ---------- Check-in toast ---------- */}
+      {ciToast && <div className="ci-toast"><span className="cit"><Icon name="check" size={14} color="#fff" /></span>{ciToast}</div>}
 
       {/* ---------- Tweaks ---------- */}
       <TweaksPanel>

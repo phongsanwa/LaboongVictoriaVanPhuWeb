@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Admin\CampaignsController;
+use App\Http\Controllers\Admin\CheckinController;
 use App\Http\Controllers\Admin\ShippingController;
 use App\Http\Controllers\Admin\CustomersController;
 use App\Http\Controllers\Admin\DashboardController;
@@ -83,4 +84,6 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
     Route::post('/menu/categories', [MenuController::class, 'storeCategory'])->name('menu.categories.store');
     Route::post('/menu/categories/{category}', [MenuController::class, 'updateCategory'])->name('menu.categories.update');
     Route::delete('/menu/categories/{category}', [MenuController::class, 'destroyCategory'])->name('menu.categories.destroy');
+    Route::get('/checkin', [CheckinController::class, 'index'])->name('checkin.index');
+    Route::post('/checkin', [CheckinController::class, 'update'])->name('checkin.update');
 });

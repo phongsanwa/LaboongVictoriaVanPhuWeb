@@ -2,8 +2,10 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Controllers\CheckinController;
 use App\Models\Campaign;
 use App\Models\CustomerPoint;
+use App\Models\DailyCheckin;
 use App\Models\Reward;
 use App\Models\Store;
 use Illuminate\Support\Facades\Auth;
@@ -26,6 +28,8 @@ class HomeController extends Controller
                 'transactions' => [],
                 'store' => null,
                 'pointsThisWeek' => 0,
+                'checkin' => ['streak' => 0, 'last' => null, 'today' => false],
+                'checkinConfig' => CheckinController::checkinConfig(),
             ]]);
         }
 
@@ -85,6 +89,15 @@ class HomeController extends Controller
 
         $store = $customer->store ?: Store::where('status', 'active')->first();
 
+        $today = Carbon::today()->toDateString();
+        $lastCheckin = DailyCheckin::where('customer_id', $customer->id)->orderByDesc('checkin_date')->first();
+        $checkinState = [
+            'streak' => $lastCheckin ? $lastCheckin->streak : 0,
+            'last' => $lastCheckin ? $lastCheckin->checkin_date->toDateString() : null,
+            'today' => $lastCheckin && $lastCheckin->checkin_date->toDateString() === $today,
+        ];
+        $checkinConfig = CheckinController::checkinConfig();
+
         return view('welcome', ['homeData' => [
             'member' => $member,
             'points' => $customer->total_points,
@@ -94,6 +107,8 @@ class HomeController extends Controller
             'transactions' => $transactions,
             'store' => $store,
             'pointsThisWeek' => $pointsThisWeek,
+            'checkin' => $checkinState,
+            'checkinConfig' => $checkinConfig,
         ]]);
     }
 
