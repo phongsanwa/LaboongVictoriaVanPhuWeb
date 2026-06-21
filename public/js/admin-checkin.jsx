@@ -1,4 +1,4 @@
-/* global React, ReactDOM, Icon, useTweaks, TweaksPanel, TweakSection, TweakColor, TweakToggle, AdminSidebar, NAV_URLS */
+/* global React, ReactDOM, Icon, fmt, useTweaks, TweaksPanel, TweakSection, TweakColor, TweakToggle, AdminSidebar */
 const { useState, useEffect } = React;
 
 const TW_DEFAULTS = /*EDITMODE-BEGIN*/{ "brand": ["#0F623F", "#07432A"], "dark": false }/*EDITMODE-END*/;
@@ -45,62 +45,92 @@ function AdminCheckin() {
   const stats = DATA.stats || {};
 
   return (
-    <div className="adm-wrap">
+    <div className="shell">
       <AdminSidebar activeLabel="Điểm danh" badges={{}} admin={ADMIN} sideOpen={sideOpen} onClose={() => setSideOpen(false)} />
-      <div className="adm-main">
-        <div className="adm-topbar">
-          <button className="adm-burger" onClick={() => setSideOpen(true)}><Icon name="menu" size={22} /></button>
-          <div className="adm-page-title">
+
+      <div className="main">
+        <header className="topbar">
+          <button className="icon-btn" onClick={() => setSideOpen(true)}><Icon name="grid" size={19} /></button>
+          <div>
+            <div className="crumb">Quản lý · Điểm danh</div>
             <h1>Điểm danh hàng ngày</h1>
-            <p>Cài đặt điểm thưởng cho từng ngày điểm danh trong chuỗi 7 ngày</p>
           </div>
-        </div>
+          <div className="topbar-spacer" />
+          <button className="btn primary" onClick={save} disabled={saving}>
+            {saving ? "Đang lưu…" : saved ? <><Icon name="check" size={16} color="#fff" /> Đã lưu</> : <><Icon name="gear" size={16} color="#fff" /> Lưu cài đặt</>}
+          </button>
+        </header>
 
-        {/* Stats */}
-        <div className="adm-stats-row" style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 14, marginBottom: 24 }}>
-          <div className="adm-stat-card">
-            <div className="asc-val">{stats.today ?? 0}</div>
-            <div className="asc-lbl">Điểm danh hôm nay</div>
-          </div>
-          <div className="adm-stat-card">
-            <div className="asc-val">{stats.total ?? 0}</div>
-            <div className="asc-lbl">Tổng lượt điểm danh</div>
-          </div>
-          <div className="adm-stat-card">
-            <div className="asc-val">{stats.streak7 ?? 0}</div>
-            <div className="asc-lbl">Chuỗi 7 ngày hoàn thành</div>
-          </div>
-        </div>
-
-        {/* Config editor */}
-        <div className="adm-card" style={{ padding: 24 }}>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20, gap: 12 }}>
-            <div>
-              <h2 style={{ margin: 0, fontSize: 17 }}>Cấu hình điểm thưởng</h2>
-              <p style={{ margin: "4px 0 0", fontSize: 13, color: "var(--ink-2)" }}>Thay đổi số điểm thưởng cho từng ngày trong chuỗi 7 ngày điểm danh.</p>
+        <div className="content">
+          {/* Stats */}
+          <div className="stats" style={{ gridTemplateColumns: "repeat(3, 1fr)" }}>
+            <div className="stat">
+              <div className="stat-ic g"><Icon name="cal" size={20} /></div>
+              <div>
+                <div className="lbl">Điểm danh hôm nay</div>
+                <div className="val tnum">{fmt(stats.today ?? 0)}</div>
+                <div className="chg up">lượt</div>
+              </div>
             </div>
-            <button className="adm-btn primary" onClick={save} disabled={saving} style={{ flexShrink: 0 }}>
-              {saving ? "Đang lưu…" : saved ? <><Icon name="check" size={16} color="#fff" /> Đã lưu</> : "Lưu cài đặt"}
-            </button>
+            <div className="stat">
+              <div className="stat-ic a"><Icon name="spark" size={20} /></div>
+              <div>
+                <div className="lbl">Tổng lượt điểm danh</div>
+                <div className="val tnum">{fmt(stats.total ?? 0)}</div>
+                <div className="chg up">tất cả thời gian</div>
+              </div>
+            </div>
+            <div className="stat">
+              <div className="stat-ic y"><Icon name="gift" size={20} /></div>
+              <div>
+                <div className="lbl">Chuỗi 7 ngày hoàn thành</div>
+                <div className="val tnum">{fmt(stats.streak7 ?? 0)}</div>
+                <div className="chg up">lượt hoàn thành</div>
+              </div>
+            </div>
           </div>
 
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(120px, 1fr))", gap: 14 }}>
-            {days.map((day, i) => (
-              <div key={i} style={{ background: "var(--bg-2)", borderRadius: 14, padding: "14px 10px", textAlign: "center", border: day.bonus ? "1.5px solid var(--brand)" : "1px solid var(--line)" }}>
-                <div style={{ fontSize: 11, fontWeight: 700, color: "var(--ink-3)", marginBottom: 8, textTransform: "uppercase", letterSpacing: ".04em" }}>
-                  {day.d} {day.bonus && <span style={{ color: "var(--brand)" }}>★</span>}
-                </div>
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 4 }}>
+          {/* Config editor */}
+          <div className="panel" style={{ padding: 24 }}>
+            <div style={{ marginBottom: 20 }}>
+              <div style={{ fontFamily: "var(--display)", fontWeight: 800, fontSize: 17, marginBottom: 4 }}>Cấu hình điểm thưởng</div>
+              <div style={{ fontSize: 13, color: "var(--ink-2)" }}>Thay đổi số điểm thưởng cho từng ngày trong chuỗi 7 ngày điểm danh. Ngày 7 là ngày thưởng đặc biệt.</div>
+            </div>
+
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(130px, 1fr))", gap: 14 }}>
+              {days.map((day, i) => (
+                <div key={i} style={{
+                  background: "var(--bg)",
+                  borderRadius: 14,
+                  padding: "16px 12px",
+                  textAlign: "center",
+                  border: day.bonus ? "2px solid var(--brand)" : "1px solid var(--line-2)",
+                  position: "relative",
+                }}>
+                  {day.bonus && (
+                    <div style={{ position: "absolute", top: -10, left: "50%", transform: "translateX(-50%)", background: "var(--brand)", color: "#fff", fontSize: 10, fontWeight: 700, padding: "2px 10px", borderRadius: 999, whiteSpace: "nowrap" }}>
+                      Thưởng đặc biệt
+                    </div>
+                  )}
+                  <div style={{ fontSize: 12, fontWeight: 700, color: day.bonus ? "var(--brand)" : "var(--ink-3)", marginBottom: 12, textTransform: "uppercase", letterSpacing: ".04em" }}>
+                    {day.d}
+                  </div>
                   <input
                     type="number" min={1} max={500} value={day.pts}
                     onChange={e => setDays(ds => ds.map((d, j) => j === i ? { ...d, pts: Math.max(1, parseInt(e.target.value) || 1) } : d))}
-                    style={{ width: 64, textAlign: "center", fontWeight: 800, fontSize: 20, border: "1.5px solid var(--line)", borderRadius: 8, padding: "6px 4px", background: "var(--card)", color: "var(--ink)", fontFamily: "var(--display)" }}
+                    style={{ width: 72, textAlign: "center", fontWeight: 800, fontSize: 22, border: "1.5px solid var(--line)", borderRadius: 8, padding: "8px 4px", background: "var(--panel)", color: "var(--ink)", fontFamily: "var(--display)", outline: "none" }}
+                    onFocus={e => e.target.style.borderColor = "var(--brand)"}
+                    onBlur={e => e.target.style.borderColor = "var(--line)"}
                   />
-                  <span style={{ fontSize: 12, color: "var(--ink-3)", marginTop: 2 }}>đ</span>
+                  <div style={{ fontSize: 12, color: "var(--ink-3)", marginTop: 8, fontWeight: 600 }}>điểm</div>
                 </div>
-                <div style={{ fontSize: 11, color: "var(--ink-3)", marginTop: 6 }}>điểm</div>
-              </div>
-            ))}
+              ))}
+            </div>
+
+            <div style={{ marginTop: 20, padding: "12px 16px", background: "var(--brand-soft)", borderRadius: 10, fontSize: 13, color: "var(--brand-ink)", display: "flex", gap: 9, alignItems: "flex-start" }}>
+              <Icon name="info" size={17} color="var(--brand)" />
+              <span>Chuỗi điểm danh reset về Ngày 1 nếu khách hàng bỏ lỡ một ngày. Sau khi hoàn thành 7 ngày, chuỗi sẽ tự động bắt đầu lại từ đầu.</span>
+            </div>
           </div>
         </div>
       </div>
