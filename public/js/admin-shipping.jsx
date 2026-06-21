@@ -174,45 +174,7 @@ function ShippingApp() {
 
   return (
     <div className="shell">
-      {(sideOpen || editor || delTarget) && (
-        <div className="scrim" style={{ zIndex: 55 }}
-          onClick={() => { setSideOpen(false); }}
-        />
-      )}
-
-      {/* Sidebar */}
-      <aside className={'side' + (sideOpen ? ' open' : '')}>
-        <div className="side-brand">
-          <div className="side-mark"><span>L</span></div>
-          <div><div className="nm">Laboong</div><div className="sb">Bảng quản trị</div></div>
-        </div>
-        <div className="side-sec">Quản lý</div>
-        <nav className="side-nav">
-          {NAV.slice(0, 9).map(n => (
-            <a key={n.label} className={'side-link' + (n.on ? ' on' : '')} href={adminHref(n.label)}>
-              <Icon name={n.ic} size={19} /> {n.label}{n.badge && <span className="badge">{n.badge}</span>}
-            </a>
-          ))}
-        </nav>
-        <div className="side-sec">Hệ thống</div>
-        <nav className="side-nav">
-          {NAV.slice(9).map(n => (
-            <a key={n.label} className="side-link" href={adminHref(n.label)}><Icon name={n.ic} size={19} /> {n.label}</a>
-          ))}
-        </nav>
-        <div className="side-foot">
-          <div className="side-user">
-            <div className="side-av">QT</div>
-            <div style={{ minWidth: 0 }}>
-              <div className="un">Quản trị viên</div>
-              <div className="ur">admin</div>
-            </div>
-            <button className="icon-btn" style={{ width: 32, height: 32, marginLeft: 'auto' }} onClick={logout} title="Đăng xuất">
-              <Icon name="logout" size={16} />
-            </button>
-          </div>
-        </div>
-      </aside>
+      <AdminSidebar activeLabel="Phí ship" badges={{ "Phí ship": String(tiers.length) }} admin={window.ADMIN_SHIPPING_DATA?.admin} sideOpen={sideOpen} onClose={() => setSideOpen(false)} />
 
       <div className="main">
         <header className="topbar">
