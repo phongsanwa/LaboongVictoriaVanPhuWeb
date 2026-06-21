@@ -116,16 +116,6 @@ function App() {
     location.href = NAV_URLS.login;
   };
 
-  const NAV = [
-    { ic: "chart", label: "Tổng quan" },
-    { ic: "users", label: "Khách hàng", on: true, badge: String(CUSTOMERS.length) },
-    { ic: "receipt", label: "Điểm & giao dịch" },
-    { ic: "gift", label: "Đổi quà" },
-    { ic: "mega", label: "Chiến dịch" },
-    { ic: "pin", label: "Cửa hàng" },
-    { ic: "shield", label: "Phân quyền" },
-  ];
-
   return (
     <div className="shell">
       {/* ---------- Sidebar ---------- */}

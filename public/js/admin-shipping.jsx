@@ -172,20 +172,6 @@ function ShippingApp() {
   const activeTiers = useMemo(() => tiers.filter(t => t.is_active), [tiers]);
   const sortedTiers = useMemo(() => [...tiers].sort((a, b) => a.sort_order - b.sort_order || a.min_km - b.min_km), [tiers]);
 
-  const NAV = [
-    { ic: 'chart',   label: 'Tổng quan' },
-    { ic: 'users',   label: 'Khách hàng' },
-    { ic: 'receipt', label: 'Điểm & giao dịch' },
-    { ic: 'bag',     label: 'Đơn hàng' },
-    { ic: 'truck',   label: 'Phí ship', on: true, badge: String(tiers.length) },
-    { ic: 'gift',    label: 'Đổi quà' },
-    { ic: 'mega',    label: 'Chiến dịch' },
-    { ic: 'cup',     label: 'Thực đơn' },
-    { ic: 'plus',    label: 'Variant / Tuỳ chọn' },
-    { ic: 'shield',  label: 'Phân quyền' },
-    { ic: 'gear',    label: 'Cài đặt' },
-  ];
-
   return (
     <div className="shell">
       {(sideOpen || editor || delTarget) && (

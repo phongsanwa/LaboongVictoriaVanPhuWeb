@@ -399,21 +399,6 @@ function App() {
     }
   };
 
-  const NAV = [
-    { ic: "chart",   label: "Tổng quan" },
-    { ic: "users",   label: "Khách hàng" },
-    { ic: "receipt", label: "Điểm & giao dịch" },
-    { ic: "bag",     label: "Đơn hàng" },
-    { ic: "truck",   label: "Phí ship" },
-    { ic: "gift",    label: "Đổi quà" },
-    { ic: "mega",    label: "Chiến dịch" },
-    { ic: "cup",     label: "Thực đơn" },
-    { ic: "percent", label: "Khuyến mãi" },
-    { ic: "plus",    label: "Variant / Tuỳ chọn", on: true },
-    { ic: "shield",  label: "Phân quyền" },
-    { ic: "gear",    label: "Cài đặt" },
-  ];
-
   const priceText = (g, o) => {
     if (g.type === "level") return null;
     return o.extra > 0 ? `+${fmt(o.extra)}đ` : "Miễn phí";

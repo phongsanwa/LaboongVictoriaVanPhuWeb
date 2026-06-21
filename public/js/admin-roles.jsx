@@ -161,22 +161,6 @@ function App() {
     location.href = NAV_URLS.login;
   };
 
-  const NAV = [
-    { ic: "chart", label: "Tổng quan" },
-    { ic: "users", label: "Khách hàng" },
-    { ic: "receipt", label: "Điểm & giao dịch" },
-    { ic: "bag", label: "Đơn hàng" },
-    { ic: "truck", label: "Phí ship" },
-    { ic: "gift", label: "Đổi quà" },
-    { ic: "mega", label: "Chiến dịch" },
-    { ic: "cup", label: "Thực đơn" },
-    { ic: "percent", label: "Khuyến mãi" },
-    { ic: "plus", label: "Variant / Tuỳ chọn" },
-    { ic: "pin", label: "Cửa hàng" },
-    { ic: "shield", label: "Phân quyền", on: true },
-    { ic: "gear", label: "Cài đặt" },
-  ];
-
   const RoleCard = ({ role }) => {
     const r = roles[role];
     const cnt = counts[role];

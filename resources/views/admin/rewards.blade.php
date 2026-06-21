@@ -24,6 +24,7 @@
 
 <script type="text/babel" src="{{ asset('js/tweaks-panel.jsx') }}"></script>
 <script type="text/babel" src="{{ asset('js/components.jsx') }}"></script>
+<script type="text/babel" src="{{ asset('js/admin-sidebar.jsx') }}"></script>
 <script type="text/babel" src="{{ asset('js/admin-rewards-data.jsx') }}"></script>
 <script type="text/babel" src="{{ asset('js/admin-reward-editor.jsx') }}"></script>
 <script type="text/babel" src="{{ asset('js/admin-rewards.jsx') }}"></script>
