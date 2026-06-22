@@ -1,4 +1,5 @@
 /* global React, Icon, NAV_URLS, adminHref, apiCall */
+const { useState, useEffect } = React;
 
 const SIDEBAR_NAV = [
   { ic: 'chart',   label: 'Tổng quan',          href: '/admin' },
@@ -17,7 +18,16 @@ const SIDEBAR_NAV = [
   { ic: 'gear',    label: 'Cài đặt',             href: '/admin/settings' },
 ];
 
-function AdminSidebar({ activeLabel, badges = {}, admin, sideOpen, onClose }) {
+function AdminSidebar({ activeLabel, badges: pageBadges = {}, admin, sideOpen, onClose }) {
+  const [globalBadges, setGlobalBadges] = useState({});
+  useEffect(() => {
+    fetch('/admin/badges', { headers: { Accept: 'application/json' } })
+      .then(r => r.ok ? r.json() : {})
+      .then(data => setGlobalBadges(data))
+      .catch(() => {});
+  }, []);
+  const badges = { ...globalBadges, ...pageBadges };
+
   const logout = async (e) => {
     e.preventDefault();
     await apiCall('POST', '/logout');

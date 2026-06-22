@@ -7,6 +7,10 @@ use App\Models\Campaign;
 use App\Models\Customer;
 use App\Models\CustomerPoint;
 use App\Models\CustomerTier;
+use App\Models\Order;
+use App\Models\Product;
+use App\Models\Reward;
+use App\Models\ShippingTier;
 use App\Models\Store;
 use App\Models\Transaction;
 use Illuminate\Support\Carbon;
@@ -377,5 +381,19 @@ class DashboardController extends Controller
         }
 
         return mb_strtoupper(mb_substr($parts[0], 0, 1) . mb_substr(end($parts), 0, 1));
+    }
+
+    public function badges(): \Illuminate\Http\JsonResponse
+    {
+        $pendingOrders = Order::whereIn('status', ['pending', 'confirmed', 'preparing'])->count();
+        return response()->json([
+            'Đơn hàng'         => $pendingOrders > 0 ? (string) $pendingOrders : null,
+            'Chiến dịch'       => (string) Campaign::where('status', 'active')->count(),
+            'Đổi quà'          => (string) Reward::where('status', 'active')->count(),
+            'Thực đơn'         => (string) Product::where('is_active', true)->count(),
+            'Khách hàng'       => (string) Customer::count(),
+            'Phí ship'         => (string) ShippingTier::count(),
+            'Cửa hàng'         => (string) Store::where('status', 'active')->count(),
+        ]);
     }
 }
