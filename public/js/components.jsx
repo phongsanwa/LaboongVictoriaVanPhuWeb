@@ -87,6 +87,8 @@ function Icon({ name, size = 20, stroke = 2.1, color = "currentColor", fill = "n
     bike: <><circle cx="6" cy="17" r="3"/><circle cx="18" cy="17" r="3"/><path d="M6 17 10 8h4l2 4M9 8h5M13 8l3 9"/></>,
     walk: <><circle cx="13" cy="4.5" r="1.6"/><path d="M11 9 8 11M11 9l3 1 1 4M14 14l-2 6M14 14l3 3M11 13l-1 7"/></>,
     cake: <><path d="M4 17h16v2.5A1.5 1.5 0 0 1 18.5 21h-13A1.5 1.5 0 0 1 4 19.5z"/><path d="M4 17c0-3 1.5-4 4-4h8c2.5 0 4 1 4 4"/><path d="M12 13V9M9 9V7M15 9V7"/><path d="M7 7c0-1.1.9-2 2-2s2 .9 2 2M13 7c0-1.1.9-2 2-2s2 .9 2 2"/></>,
+    bag: <><path d="M6 2 3.5 5.5v15A1.5 1.5 0 0 0 5 22h14a1.5 1.5 0 0 0 1.5-1.5v-15L18 2z"/><path d="M3.5 5.5h17M16 10a4 4 0 0 1-8 0"/></>,
+    truck: <><rect x="1.5" y="5" width="13" height="11" rx="1.5"/><path d="M14.5 8.5H19l2.5 3v5h-7z"/><circle cx="5" cy="18.5" r="2"/><circle cx="18" cy="18.5" r="2"/><path d="M3 16.5h19"/></>,
   };
   return <svg {...p} style={{ display: "block", flex: "none" }}>{paths[name] || null}</svg>;
 }

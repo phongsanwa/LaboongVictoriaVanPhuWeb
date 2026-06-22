@@ -44,10 +44,12 @@ function AdminSidebar({ activeLabel, badges = {}, admin, sideOpen, onClose }) {
           <div className="side-mark"><span>L</span></div>
           <div><div className="nm">Laboong</div><div className="sb">Bảng quản trị</div></div>
         </div>
-        <div className="side-sec">Quản lý</div>
-        <nav className="side-nav">{mgmt.map(renderLink)}</nav>
-        <div className="side-sec">Hệ thống</div>
-        <nav className="side-nav">{sys.map(renderLink)}</nav>
+        <div className="side-body">
+          <div className="side-sec">Quản lý</div>
+          <nav className="side-nav">{mgmt.map(renderLink)}</nav>
+          <div className="side-sec">Hệ thống</div>
+          <nav className="side-nav">{sys.map(renderLink)}</nav>
+        </div>
         <div className="side-foot">
           <div className="side-user">
             <div className="side-av">{admin?.initials ?? 'QT'}</div>

@@ -108,6 +108,10 @@ a { color: inherit; text-decoration: none; }
   display:grid; place-items:center; }
 .side-user .un { font-size: 13.5px; font-weight: 700; }
 .side-user .ur { font-size: 11.5px; color: var(--ink-2); }
+.side-body { flex: 1; overflow-y: auto; min-height: 0; padding-bottom: 8px; scrollbar-width: thin; scrollbar-color: var(--line) transparent; }
+.side-body::-webkit-scrollbar { width: 4px; }
+.side-body::-webkit-scrollbar-track { background: transparent; }
+.side-body::-webkit-scrollbar-thumb { background: var(--line); border-radius: 4px; }
 
 /* ---------------- Main ---------------- */
 .main { min-width: 0; display: flex; flex-direction: column; }
