@@ -60,7 +60,7 @@ class CheckinController extends Controller {
             'customer_id' => $customer->id,
             'points' => $pts,
             'description' => "Điểm danh hàng ngày (Ngày {$streak})",
-            'point_type' => 'checkin',
+            'point_type' => 'bonus',
         ]);
         $customer->increment('total_points', $pts);
 
