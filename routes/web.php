@@ -8,6 +8,7 @@ use App\Http\Controllers\MenuPageController;
 use App\Http\Controllers\OrderController;
 use App\Http\Controllers\PointsController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\PromotionController;
 use App\Http\Controllers\RewardsCatalogController;
 use App\Http\Controllers\CheckinController;
 use App\Http\Controllers\StoreController;
@@ -36,6 +37,11 @@ Route::middleware('auth')->prefix('profile')->name('profile.')->group(function (
 });
 
 Route::post('/checkin', [CheckinController::class, 'store'])->middleware('auth')->name('checkin.store');
+
+Route::middleware('auth')->group(function () {
+    Route::post('/promotions/claim', [PromotionController::class, 'claim'])->name('promotions.claim');
+    Route::get('/cart/vouchers', [PromotionController::class, 'cartVouchers'])->name('cart.vouchers');
+});
 
 Route::get('/register', [RegisterController::class, 'show'])->name('register');
 Route::post('/register', [RegisterController::class, 'register'])->name('register.submit');

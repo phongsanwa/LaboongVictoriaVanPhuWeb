@@ -39,13 +39,20 @@ class PromotionsController extends Controller
     public function store(Request $request): JsonResponse
     {
         $data = $request->validate([
-            'name'          => ['required', 'string', 'max:100'],
-            'code'          => ['nullable', 'string', 'max:30', 'alpha_dash', 'unique:promotions,code'],
-            'type'          => ['required', Rule::in(['percent', 'amount'])],
-            'value'         => ['required', 'integer', 'min:1'],
-            'scope'         => ['required', Rule::in(['all', 'specific'])],
-            'product_ids'   => ['nullable', 'array'],
-            'product_ids.*' => ['integer', Rule::exists('products', 'id')],
+            'name'                    => ['required', 'string', 'max:100'],
+            'code'                    => ['nullable', 'string', 'max:30', 'alpha_dash', 'unique:promotions,code'],
+            'type'                    => ['required', Rule::in(['percent', 'amount'])],
+            'value'                   => ['required', 'integer', 'min:1'],
+            'scope'                   => ['required', Rule::in(['all', 'specific'])],
+            'product_ids'             => ['nullable', 'array'],
+            'product_ids.*'           => ['integer', Rule::exists('products', 'id')],
+            'min_purchase'            => ['nullable', 'numeric', 'min:0'],
+            'max_discount'            => ['nullable', 'numeric', 'min:0'],
+            'valid_from'              => ['nullable', 'date'],
+            'valid_until'             => ['nullable', 'date', 'after_or_equal:valid_from'],
+            'usage_limit_total'       => ['nullable', 'integer', 'min:1'],
+            'usage_limit_per_customer'=> ['nullable', 'integer', 'min:1'],
+            'applies_to'              => ['required', Rule::in(['ORDER', 'SHIPPING'])],
         ], [
             'value.min'    => 'Giá trị giảm phải lớn hơn 0',
             'code.unique'  => 'Mã này đã được dùng cho khuyến mãi khác',
@@ -62,13 +69,20 @@ class PromotionsController extends Controller
             : null;
 
         $promo = Promotion::create([
-            'name'       => $data['name'],
-            'code'       => $code,
-            'type'       => $data['type'],
-            'value'      => $data['value'],
-            'scope'      => $data['scope'],
-            'is_active'  => true,
-            'sort_order' => $order,
+            'name'                     => $data['name'],
+            'code'                     => $code,
+            'type'                     => $data['type'],
+            'value'                    => $data['value'],
+            'scope'                    => $data['scope'],
+            'is_active'                => true,
+            'sort_order'               => $order,
+            'min_purchase'             => $data['min_purchase'] ?? null,
+            'max_discount'             => $data['max_discount'] ?? null,
+            'valid_from'               => $data['valid_from'] ?? null,
+            'valid_until'              => $data['valid_until'] ?? null,
+            'usage_limit_total'        => $data['usage_limit_total'] ?? null,
+            'usage_limit_per_customer' => $data['usage_limit_per_customer'] ?? 1,
+            'applies_to'               => $data['applies_to'] ?? 'ORDER',
         ]);
 
         if ($data['scope'] === 'specific') {
@@ -82,13 +96,20 @@ class PromotionsController extends Controller
     public function update(Request $request, Promotion $promotion): JsonResponse
     {
         $data = $request->validate([
-            'name'          => ['required', 'string', 'max:100'],
-            'code'          => ['nullable', 'string', 'max:30', 'alpha_dash', Rule::unique('promotions', 'code')->ignore($promotion->id)],
-            'type'          => ['required', Rule::in(['percent', 'amount'])],
-            'value'         => ['required', 'integer', 'min:1'],
-            'scope'         => ['required', Rule::in(['all', 'specific'])],
-            'product_ids'   => ['nullable', 'array'],
-            'product_ids.*' => ['integer', Rule::exists('products', 'id')],
+            'name'                    => ['required', 'string', 'max:100'],
+            'code'                    => ['nullable', 'string', 'max:30', 'alpha_dash', Rule::unique('promotions', 'code')->ignore($promotion->id)],
+            'type'                    => ['required', Rule::in(['percent', 'amount'])],
+            'value'                   => ['required', 'integer', 'min:1'],
+            'scope'                   => ['required', Rule::in(['all', 'specific'])],
+            'product_ids'             => ['nullable', 'array'],
+            'product_ids.*'           => ['integer', Rule::exists('products', 'id')],
+            'min_purchase'            => ['nullable', 'numeric', 'min:0'],
+            'max_discount'            => ['nullable', 'numeric', 'min:0'],
+            'valid_from'              => ['nullable', 'date'],
+            'valid_until'             => ['nullable', 'date', 'after_or_equal:valid_from'],
+            'usage_limit_total'       => ['nullable', 'integer', 'min:1'],
+            'usage_limit_per_customer'=> ['nullable', 'integer', 'min:1'],
+            'applies_to'              => ['required', Rule::in(['ORDER', 'SHIPPING'])],
         ], [
             'value.min'       => 'Giá trị giảm phải lớn hơn 0',
             'code.unique'     => 'Mã này đã được dùng cho khuyến mãi khác',
@@ -104,11 +125,18 @@ class PromotionsController extends Controller
             : null;
 
         $promotion->update([
-            'name'  => $data['name'],
-            'code'  => $code,
-            'type'  => $data['type'],
-            'value' => $data['value'],
-            'scope' => $data['scope'],
+            'name'                     => $data['name'],
+            'code'                     => $code,
+            'type'                     => $data['type'],
+            'value'                    => $data['value'],
+            'scope'                    => $data['scope'],
+            'min_purchase'             => $data['min_purchase'] ?? null,
+            'max_discount'             => $data['max_discount'] ?? null,
+            'valid_from'               => $data['valid_from'] ?? null,
+            'valid_until'              => $data['valid_until'] ?? null,
+            'usage_limit_total'        => $data['usage_limit_total'] ?? null,
+            'usage_limit_per_customer' => $data['usage_limit_per_customer'] ?? null,
+            'applies_to'               => $data['applies_to'] ?? 'ORDER',
         ]);
 
         if ($data['scope'] === 'specific') {
@@ -166,16 +194,24 @@ class PromotionsController extends Controller
     private function presentPromotion(Promotion $p): array
     {
         return [
-            'id'          => $p->id,
-            'name'        => $p->name,
-            'code'        => $p->code,
-            'type'        => $p->type,
-            'value'       => $p->value,
-            'scope'       => $p->scope,
-            'is_active'   => $p->is_active,
-            'sort_order'  => $p->sort_order,
-            'badge'       => $p->badgeLabel(),
-            'product_ids' => $p->products->pluck('id')->values()->toArray(),
+            'id'                       => $p->id,
+            'name'                     => $p->name,
+            'code'                     => $p->code,
+            'type'                     => $p->type,
+            'value'                    => $p->value,
+            'scope'                    => $p->scope,
+            'is_active'                => $p->is_active,
+            'sort_order'               => $p->sort_order,
+            'badge'                    => $p->badgeLabel(),
+            'product_ids'              => $p->products->pluck('id')->values()->toArray(),
+            'min_purchase'             => $p->min_purchase ? (float) $p->min_purchase : null,
+            'max_discount'             => $p->max_discount ? (float) $p->max_discount : null,
+            'valid_from'               => $p->valid_from?->format('Y-m-d'),
+            'valid_until'              => $p->valid_until?->format('Y-m-d'),
+            'usage_limit_total'        => $p->usage_limit_total,
+            'usage_limit_per_customer' => $p->usage_limit_per_customer,
+            'applies_to'               => $p->applies_to ?? 'ORDER',
+            'claimed_count'            => $p->claimed_count ?? 0,
         ];
     }
 

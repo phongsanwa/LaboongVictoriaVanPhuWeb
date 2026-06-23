@@ -14,6 +14,7 @@ class OrderItem extends Model
         'quantity',
         'unit_price',
         'item_total',
+        'discount_amount',
         'sugar_level',
         'ice_level',
         'size_name',
