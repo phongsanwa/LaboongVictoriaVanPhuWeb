@@ -93,8 +93,22 @@ class OrderController extends Controller
             return response()->json(['message' => 'Không có sản phẩm hợp lệ trong đơn hàng'], 422);
         }
 
-        $subtotal     = round(array_sum(array_column($itemData, 'item_total')), 2);
-        $discountAmt  = 0;
+        $subtotal = round(array_sum(array_column($itemData, 'item_total')), 2);
+        $discountAmt = 0;
+
+        // Validate and apply coupon code if provided
+        if (!empty($data['coupon_code'])) {
+            $couponCode = trim($data['coupon_code']);
+            $promotion = Promotion::where('name', $couponCode)
+                ->where('is_active', true)
+                ->where('scope', 'all')
+                ->first();
+
+            if ($promotion) {
+                $discountAmt = $this->calcPromotionDiscount($promotion, $subtotal);
+            }
+        }
+
         $shippingFee  = (int) ($data['shipping_fee'] ?? 0);
         $totalAmount  = max(0.0, round($subtotal - $discountAmt + $shippingFee, 2));
         $pointsEarned = (int) floor($totalAmount / self::PER_POINT);
@@ -231,5 +245,16 @@ class OrderController extends Controller
         if ($pct <= 60) return '50';
         if ($pct <= 85) return '75';
         return '100';
+    }
+
+    private function calcPromotionDiscount(Promotion $promo, float $subtotal): float
+    {
+        if ($promo->type === 'amount') {
+            return min((float) $promo->value, $subtotal);
+        } elseif ($promo->type === 'percent') {
+            $discount = floor($subtotal * (float) $promo->value / 100);
+            return (float) min($discount, $subtotal);
+        }
+        return 0;
     }
 }

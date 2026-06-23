@@ -184,6 +184,21 @@ class MenuPageController extends Controller
             ])->values()->toArray();
         }
 
+        // --- Promo codes for checkout (converted from Promotion model) ---
+        $promoCodes = [];
+        foreach ($activePromos as $promo) {
+            // Only include promotions with scope 'all' for coupon codes
+            // (specific-scope promos apply automatically to products)
+            if ($promo->scope === 'all') {
+                $promoCodes[$promo->name] = [
+                    'name'  => $promo->name,
+                    'type'  => $promo->type, // 'percent' or 'amount'
+                    'value' => (int) $promo->value,
+                    'min'   => 0,
+                ];
+            }
+        }
+
         return [
             'cats'          => $cats,
             'menu'          => $menu,
@@ -204,11 +219,7 @@ class MenuPageController extends Controller
                 ->values()
                 ->toArray(),
             'perPoint'      => 10000,
-            'promos'        => [
-                'LABOONG10' => ['name' => 'Giảm 10% toàn đơn',               'type' => 'percent', 'value' => 10,    'min' => 0,     'max' => 30000],
-                'WELCOME20' => ['name' => 'Giảm 20.000đ cho khách mới',      'type' => 'amount',  'value' => 20000, 'min' => 50000],
-                'FREESHIP'  => ['name' => 'Miễn phí giao hàng',              'type' => 'amount',  'value' => 15000, 'min' => 0],
-            ],
+            'promos'        => $promoCodes,
             'addresses'     => $addresses,
             'urls'          => [
                 'placeOrder' => route('orders.place'),
