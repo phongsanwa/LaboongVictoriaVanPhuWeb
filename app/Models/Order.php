@@ -53,6 +53,11 @@ class Order extends Model
         return $this->hasMany(OrderItem::class);
     }
 
+    public function discounts(): HasMany
+    {
+        return $this->hasMany(OrderDiscount::class);
+    }
+
     /** Tính điểm thưởng theo công thức floor(total_amount / 1000) */
     public function calculatePointsEarned(): int
     {

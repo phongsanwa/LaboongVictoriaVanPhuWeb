@@ -34,9 +34,9 @@ function loadCartState() {
   } catch (e) { return null; }
 }
 
-function saveCartState(lines, note, coupon) {
+function saveCartState(lines, note) {
   try {
-    localStorage.setItem(CART_STATE_KEY, JSON.stringify({ lines, note, coupon }));
+    localStorage.setItem(CART_STATE_KEY, JSON.stringify({ lines, note }));
   } catch (e) { /* ignore */ }
 }
 
@@ -94,6 +94,18 @@ function getLiveVariantGroups() {
   return typeof VARIANT_GROUPS !== 'undefined' ? VARIANT_GROUPS : [];
 }
 
+/* ─── Voucher discount calculation ─────────────────────────────── */
+function calcVoucherDiscount(v, base) {
+  if (!v) return 0;
+  if (base < (v.min_purchase || 0)) return 0;
+  if (v.discount_type === 'percentage') {
+    let d = Math.floor(base * v.discount_value / 100);
+    if (v.max_discount) d = Math.min(d, v.max_discount);
+    return d;
+  }
+  return Math.min(v.discount_value, base);
+}
+
 /* ─── Line item helpers ─────────────────────────────────────────── */
 function lineKey(l) {
   if (l.selections) {
@@ -144,7 +156,6 @@ function App() {
   const [liveTagMeta,       ] = useState(getLiveTagMeta);
   const [liveStore,         ] = useState(getLiveStore);
   const [livePerPoint,      ] = useState(getLivePerPoint);
-  const [livePromos,        ] = useState(getLivePromos);
   const [variantGroups,     ] = useState(getLiveVariantGroups);
 
   const [q, setQ] = useState("");
@@ -157,11 +168,17 @@ function App() {
   const [orderErr, setOrderErr] = useState("");
   const [actualPts, setActualPts] = useState(0);
   const [note, setNote] = useState(() => loadCartState()?.note || "");
-  const [coupon, setCoupon] = useState(() => loadCartState()?.coupon || null);
-  const [couponView, setCouponView] = useState(false);
-  const [couponInput, setCouponInput] = useState("");
-  const [couponErr, setCouponErr] = useState("");
-  const [myVouchers, setMyVouchers] = useState([]);
+
+  /* ─── 3-source discount state ─── */
+  const [orderVoucher,    setOrderVoucher]    = useState(null); // selected ORDER voucher
+  const [shippingVoucher, setShippingVoucher] = useState(null); // selected SHIPPING voucher
+  const [cartVouchers,    setCartVouchers]    = useState({ order: [], shipping: [] }); // fetched from server
+  const [couponView,      setCouponView]      = useState(false);
+  const [couponInput,     setCouponInput]     = useState("");
+  const [couponErr,       setCouponErr]       = useState("");
+  const [claimLoading,    setClaimLoading]    = useState(false);
+  const [vouchersLoading, setVouchersLoading] = useState(false);
+
   const [addresses, setAddresses] = useState(getLiveAddresses);
   const [addrId, setAddrId] = useState(null);
   const [addrView, setAddrView] = useState(false);
@@ -184,20 +201,12 @@ function App() {
 
   /* persist cart to localStorage */
   useEffect(() => {
-    if (lines.length === 0 && !note && !coupon) {
+    if (lines.length === 0 && !note) {
       clearCartState();
     } else {
-      saveCartState(lines, note, coupon);
+      saveCartState(lines, note);
     }
-  }, [lines, note, coupon]);
-
-  /* load vouchers from wallet (demo mode) */
-  useEffect(() => {
-    try {
-      const raw = localStorage.getItem("laboong_vouchers_v1");
-      if (raw) setMyVouchers(JSON.parse(raw));
-    } catch (e) { /* ignore */ }
-  }, []);
+  }, [lines, note]);
 
   /* set default address */
   useEffect(() => {
@@ -235,6 +244,19 @@ function App() {
       { enableHighAccuracy: false, timeout: 6000 }
     );
   }, [storeView]); // eslint-disable-line
+
+  /* fetch cart vouchers when coupon view opens */
+  useEffect(() => {
+    if (!couponView || !LIVE) return;
+    setVouchersLoading(true);
+    fetch('/cart/vouchers', {
+      headers: { 'Accept': 'application/json', 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || '' },
+    })
+      .then(r => r.json())
+      .then(data => setCartVouchers({ order: data.order || [], shipping: data.shipping || [] }))
+      .catch(() => {})
+      .finally(() => setVouchersLoading(false));
+  }, [couponView]); // eslint-disable-line
 
   const addLine = (line) => {
     const key = lineKey(line);
@@ -299,58 +321,60 @@ function App() {
     return { geocoding: false, dist, fee };
   }, [addrId, addrGeoCache, selectedStore, liveShippingTiers]); // eslint-disable-line
 
-  const calcCouponDiscount = (c, sub) => {
-    if (!c) return 0;
-    if (sub < (c.min || 0)) return 0;
-    if (c.type === "amount") return Math.min(c.value, sub);
-    if (c.type === "percent") { let d = Math.floor(sub * c.value / 100); if (c.max) d = Math.min(d, c.max); return d; }
-    return 0;
-  };
+  const shipFee       = geoInfo?.fee ?? 0;
+  const orderDiscount = calcVoucherDiscount(orderVoucher, subtotal);
+  const shipDiscount  = calcVoucherDiscount(shippingVoucher, shipFee);
+  const totalDiscount = orderDiscount + shipDiscount;
+  const payable       = Math.max(0, subtotal - orderDiscount + shipFee - shipDiscount);
+  const earnPts       = Math.floor(payable / livePerPoint);
 
-  const discount = calcCouponDiscount(coupon, subtotal);
-  const shipFee  = geoInfo?.fee ?? 0;
-  const payable  = Math.max(0, subtotal - discount + shipFee);
-  const earnPts  = Math.floor(payable / livePerPoint);
-
-  /* parse voucher discount from wallet */
-  const parseWalletVoucher = (v) => {
-    if (typeof parseVoucherDiscount !== 'undefined') return parseVoucherDiscount(v);
-    const m = (v.name || "").match(/giảm\s+([\d.]+)\s*đ/i);
-    if (!m) return null;
-    const value = parseInt(m[1].replace(/\./g, ""), 10);
-    const minM  = (v.fine || "").match(/Đơn từ\s+([\d.]+)/i);
-    const min   = minM ? parseInt(minM[1].replace(/\./g, ""), 10) : 0;
-    return { code: v.code, name: v.name, type: "amount", value, min, source: "voucher" };
-  };
-
-  const usableVouchers = useMemo(() =>
-    myVouchers
-      .filter(v => v.status !== "used" && (!v.expiry || v.expiry >= TODAY_ISO))
-      .map(parseWalletVoucher)
-      .filter(Boolean),
-  [myVouchers]); // eslint-disable-line
-
+  /* Clear order voucher if subtotal drops below min */
   useEffect(() => {
-    if (coupon && subtotal < (coupon.min || 0)) setCoupon(null);
+    if (orderVoucher && subtotal < (orderVoucher.min_purchase || 0)) setOrderVoucher(null);
   }, [subtotal]); // eslint-disable-line
 
-  const applyCode = (raw) => {
+  /* Claim a promo code via POST /promotions/claim */
+  const claimCode = async (raw) => {
     const code = (raw || "").trim().toUpperCase();
     if (!code) return;
-    let c = livePromos[code] ? { ...livePromos[code], code, source: "promo" } : null;
-    if (!c) { const v = usableVouchers.find(v => v.code.toUpperCase() === code); if (v) c = v; }
-    if (!c) {
-      const used = myVouchers.find(v => v.code.toUpperCase() === code);
-      setCouponErr(used ? "Voucher này đã được sử dụng hoặc hết hạn" : "Mã không hợp lệ");
-      return;
+    if (!LIVE) { setCouponErr("Nhập mã trong chế độ live để kiểm tra"); return; }
+    setClaimLoading(true);
+    setCouponErr("");
+    try {
+      const res = await fetch('/promotions/claim', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || '',
+          'Accept': 'application/json',
+        },
+        body: JSON.stringify({ code }),
+      });
+      const json = await res.json();
+      if (!res.ok) { setCouponErr(json.message || 'Mã không hợp lệ'); return; }
+      const v = json.voucher;
+      // Add the newly claimed voucher to the list
+      if (v.applies_to === 'SHIPPING') {
+        setCartVouchers(cv => ({ ...cv, shipping: [v, ...cv.shipping] }));
+      } else {
+        setCartVouchers(cv => ({ ...cv, order: [v, ...cv.order] }));
+      }
+      setCouponInput("");
+      setCouponErr("");
+    } catch (e) {
+      setCouponErr("Có lỗi xảy ra, vui lòng thử lại");
+    } finally {
+      setClaimLoading(false);
     }
-    if (subtotal < (c.min || 0)) { setCouponErr(`Áp dụng cho đơn từ ${fmt(c.min)}đ`); return; }
-    setCoupon(c); setCouponErr(""); setCouponInput(""); setCouponView(false);
   };
 
-  const applyVoucher = (c) => {
-    if (subtotal < (c.min || 0)) { setCouponErr(`Áp dụng cho đơn từ ${fmt(c.min)}đ`); return; }
-    setCoupon(c); setCouponErr(""); setCouponView(false);
+  const applyOrderVoucher = (v) => {
+    if (subtotal < (v.min_purchase || 0)) { setCouponErr(`Áp dụng cho đơn từ ${fmt(v.min_purchase)}đ`); return; }
+    setOrderVoucher(v); setCouponErr(""); setCouponView(false);
+  };
+
+  const applyShippingVoucher = (v) => {
+    setShippingVoucher(v); setCouponErr(""); setCouponView(false);
   };
 
   const jumpCat = (key) => {
@@ -362,7 +386,8 @@ function App() {
   const reset = () => {
     clearCartState();
     setLines([]); setPlaced(false); setDrawer(false); setNote(""); setOrderErr("");
-    setCoupon(null); setCouponView(false); setCouponInput(""); setCouponErr("");
+    setOrderVoucher(null); setShippingVoucher(null);
+    setCouponView(false); setCouponInput(""); setCouponErr("");
     setStoreView(false); setAddrView(false);
     setActualPts(0);
   };
@@ -385,8 +410,8 @@ function App() {
         body: JSON.stringify({
           lines: lines.map(l => ({ id: l.id, qty: l.qty, selections: l.selections || null })),
           note: note || null,
-          coupon_code: coupon?.code || null,
-          discount: discount,
+          voucher_id:          orderVoucher?.id    || null,
+          shipping_voucher_id: shippingVoucher?.id || null,
           store_id: selectedStoreId || null,
           shipping_fee: shipFee || 0,
         }),
@@ -413,6 +438,37 @@ function App() {
       return da - db;
     });
   }, [liveStores, userLoc]); // eslint-disable-line
+
+  /* helper: render a voucher card in coupon view */
+  const VoucherCard = ({ v, onApply, isSelected, base }) => {
+    const disc = calcVoucherDiscount(v, base);
+    const ok = disc > 0 || base === 0;
+    const notEnough = (v.min_purchase || 0) > base;
+    return (
+      <button className={"vopt" + (isSelected ? " on" : "")} disabled={notEnough} onClick={() => onApply(v)}>
+        <span className="vi" style={{ background: isSelected ? "var(--brand)" : "linear-gradient(135deg,#FF8A5B,#FF6FA5)" }}>
+          <Icon name="ticket" size={20} color="#fff" />
+        </span>
+        <div style={{ minWidth: 0, flex: 1 }}>
+          <div className="vn">{v.name}</div>
+          <div className="vd">
+            {v.discount_type === 'percentage'
+              ? `Giảm ${v.discount_value}%` + (v.max_discount ? ` (tối đa ${fmt(v.max_discount)}đ)` : '')
+              : `Giảm ${fmt(v.discount_value)}đ`}
+            {v.min_purchase ? ` · Đơn từ ${fmt(v.min_purchase)}đ` : ''}
+          </div>
+          {v.valid_until && <div className="vd" style={{ color: "var(--ink-3)" }}>HSD: {v.valid_until}</div>}
+        </div>
+        <span className="vgo">
+          {notEnough
+            ? `Còn thiếu ${fmt((v.min_purchase || 0) - base)}đ`
+            : isSelected
+              ? <><Icon name="check" size={14} /> Đang dùng</>
+              : <>Dùng <Icon name="chev" size={14} /></>}
+        </span>
+      </button>
+    );
+  };
 
   return (
     <>
@@ -553,40 +609,52 @@ function App() {
               <>
                 <div className="cp-h">
                   <button className="cp-back" onClick={() => { setCouponView(false); setCouponErr(""); }}><Icon name="arrowleft" size={18} /></button>
-                  <h3>Áp mã giảm giá</h3>
+                  <h3>Mã giảm giá & Voucher</h3>
                 </div>
                 <div className="cp-b">
+                  {/* Claim promo code input */}
                   <div className="cp-input">
-                    <input placeholder="Nhập mã giảm giá / voucher" value={couponInput}
+                    <input placeholder="Nhập mã khuyến mãi để nhận voucher" value={couponInput}
                       onChange={e => { setCouponInput(e.target.value); setCouponErr(""); }}
-                      onKeyDown={e => { if (e.key === "Enter") applyCode(couponInput); }} />
-                    <button className="cp-apply" disabled={!couponInput.trim()} onClick={() => applyCode(couponInput)}>Áp dụng</button>
+                      onKeyDown={e => { if (e.key === "Enter") claimCode(couponInput); }} />
+                    <button className="cp-apply" disabled={!couponInput.trim() || claimLoading}
+                      onClick={() => claimCode(couponInput)}>
+                      {claimLoading ? "…" : "Nhận"}
+                    </button>
                   </div>
                   {couponErr && <div className="cp-err"><Icon name="alert" size={14} color="var(--hot)" /> {couponErr}</div>}
 
-                  <div className="cp-sec">Voucher của bạn</div>
-                  {usableVouchers.length === 0 ? (
-                    <div className="cp-empty">Bạn chưa có voucher giảm tiền nào. Đổi điểm lấy voucher ở mục Đổi quà nhé!</div>
-                  ) : (
-                    <div className="vlist">
-                      {usableVouchers.map(v => {
-                        const ok = subtotal >= (v.min || 0);
-                        return (
-                          <button key={v.code} className="vopt" disabled={!ok} onClick={() => applyVoucher(v)}>
-                            <span className="vi" style={{ background: "linear-gradient(135deg,#FF8A5B,#FF6FA5)" }}><Icon name="ticket" size={20} color="#fff" /></span>
-                            <div style={{ minWidth: 0, flex: 1 }}>
-                              <div className="vn">{v.name}</div>
-                              <div className="vd">{v.min > 0 ? `Đơn từ ${fmt(v.min)}đ` : "Áp dụng mọi đơn"}</div>
-                              <div className="vc">{v.code}</div>
-                            </div>
-                            <span className="vgo">{ok ? <>Dùng <Icon name="chev" size={14} /></> : `Còn thiếu ${fmt(v.min - subtotal)}đ`}</span>
-                          </button>
-                        );
-                      })}
-                    </div>
-                  )}
+                  {vouchersLoading ? (
+                    <div style={{ textAlign: "center", padding: "20px 0", color: "var(--ink-3)", fontSize: 13 }}>Đang tải voucher…</div>
+                  ) : (<>
+                    {/* ORDER vouchers */}
+                    <div className="cp-sec">Voucher giảm đơn hàng</div>
+                    {cartVouchers.order.length === 0 ? (
+                      <div className="cp-empty">Bạn chưa có voucher giảm đơn. Nhập mã ở trên hoặc đổi điểm ở mục Đổi quà!</div>
+                    ) : (
+                      <div className="vlist">
+                        {cartVouchers.order.map(v => (
+                          <VoucherCard key={v.id} v={v} onApply={applyOrderVoucher}
+                            isSelected={orderVoucher?.id === v.id} base={subtotal} />
+                        ))}
+                      </div>
+                    )}
 
-                  <div className="cp-hint"><Icon name="info" size={13} color="var(--ink-3)" /> Mã thử: <b>LABOONG10</b> (giảm 10%), <b>WELCOME20</b> (giảm 20k / đơn từ 50k), <b>FREESHIP</b> (giảm 15k).</div>
+                    {/* SHIPPING vouchers — only show if there's a delivery fee */}
+                    {(cartVouchers.shipping.length > 0 || shipFee > 0) && (<>
+                      <div className="cp-sec">Voucher giảm phí ship</div>
+                      {cartVouchers.shipping.length === 0 ? (
+                        <div className="cp-empty">Bạn chưa có voucher giảm phí ship.</div>
+                      ) : (
+                        <div className="vlist">
+                          {cartVouchers.shipping.map(v => (
+                            <VoucherCard key={v.id} v={v} onApply={applyShippingVoucher}
+                              isSelected={shippingVoucher?.id === v.id} base={shipFee} />
+                          ))}
+                        </div>
+                      )}
+                    </>)}
+                  </>)}
                 </div>
               </>
             ) : storeView ? (
@@ -733,15 +801,37 @@ function App() {
                   </div>
                 </div>
                 <div className="cart-f">
-                  {coupon ? (
-                    <div className="coupon-applied">
-                      <span className="cai"><Icon name="ticket" size={17} color="#fff" /></span>
-                      <div style={{ minWidth: 0 }}>
-                        <div className="can">{coupon.name}</div>
-                        <div className="cac">{coupon.code}</div>
-                      </div>
-                      <span className="cav">−{fmt(discount)}đ</span>
-                      <button className="cax" onClick={() => setCoupon(null)} title="Bỏ mã"><Icon name="close" size={16} /></button>
+                  {/* Applied vouchers row or trigger */}
+                  {(orderVoucher || shippingVoucher) ? (
+                    <div style={{ display: "flex", flexDirection: "column", gap: 6, marginBottom: 4 }}>
+                      {orderVoucher && (
+                        <div className="coupon-applied">
+                          <span className="cai"><Icon name="ticket" size={17} color="#fff" /></span>
+                          <div style={{ minWidth: 0 }}>
+                            <div className="can">{orderVoucher.name}</div>
+                            <div className="cac">{orderVoucher.code}</div>
+                          </div>
+                          <span className="cav">−{fmt(orderDiscount)}đ</span>
+                          <button className="cax" onClick={() => setOrderVoucher(null)} title="Bỏ voucher"><Icon name="close" size={16} /></button>
+                        </div>
+                      )}
+                      {shippingVoucher && (
+                        <div className="coupon-applied" style={{ background: "var(--brand-soft)" }}>
+                          <span className="cai" style={{ background: "var(--brand)" }}><Icon name="truck" size={17} color="#fff" /></span>
+                          <div style={{ minWidth: 0 }}>
+                            <div className="can">{shippingVoucher.name}</div>
+                            <div className="cac">Giảm phí ship</div>
+                          </div>
+                          <span className="cav" style={{ color: "var(--brand-ink)" }}>−{fmt(shipDiscount)}đ</span>
+                          <button className="cax" onClick={() => setShippingVoucher(null)} title="Bỏ voucher"><Icon name="close" size={16} /></button>
+                        </div>
+                      )}
+                      <button className="coupon-trigger" style={{ marginTop: 2 }}
+                        onClick={() => { setCouponView(true); setCouponErr(""); }}>
+                        <span className="cti"><Icon name="plus" size={15} color="currentColor" /></span>
+                        Thêm / đổi voucher
+                        <span className="ctchev"><Icon name="chev" size={17} /></span>
+                      </button>
                     </div>
                   ) : (
                     <button className="coupon-trigger" onClick={() => { setCouponView(true); setCouponErr(""); }}>
@@ -751,7 +841,7 @@ function App() {
                     </button>
                   )}
                   <div className="csum"><span>Tạm tính</span><span className="v tnum">{fmt(subtotal)}đ</span></div>
-                  {discount > 0 && <div className="csum" style={{ color: "var(--pink)" }}><span>Giảm giá</span><span className="v tnum" style={{ color: "var(--pink)" }}>−{fmt(discount)}đ</span></div>}
+                  {orderDiscount > 0 && <div className="csum" style={{ color: "var(--pink)" }}><span>Giảm đơn hàng</span><span className="v tnum" style={{ color: "var(--pink)" }}>−{fmt(orderDiscount)}đ</span></div>}
                   {geoInfo?.dist != null && (
                     <div className="csum" style={{ color: "var(--ink-3)", fontSize: 13 }}>
                       <span>Khoảng cách</span>
@@ -771,6 +861,7 @@ function App() {
                       </span>
                     </div>
                   )}
+                  {shipDiscount > 0 && <div className="csum" style={{ color: "var(--brand)" }}><span>Giảm phí ship</span><span className="v tnum" style={{ color: "var(--brand)" }}>−{fmt(shipDiscount)}đ</span></div>}
                   <div className="csum earn"><span>Điểm tích được</span><span className="v">+{fmt(earnPts)} điểm</span></div>
                   <div className="csum total"><span>Tổng cộng</span><span className="v tnum">{fmt(payable)}đ</span></div>
                   {orderErr && <div className="cp-err" style={{ marginBottom: 6 }}><Icon name="alert" size={14} color="var(--hot)" /> {orderErr}</div>}

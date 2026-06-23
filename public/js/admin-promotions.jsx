@@ -28,13 +28,20 @@ async function apiFetch(method, url, body) {
 /* ─── PromoEditor modal ──────────────────────────────────────────── */
 function PromoEditor({ initial, allProducts, onClose, onSave, saving }) {
   const isEdit = !!initial.id;
-  const [name,          setName]          = useState(initial.name   || '');
-  const [code,          setCode]          = useState(initial.code   || '');
-  const [type,          setType]          = useState(initial.type   || 'percent');
-  const [value,         setValue]         = useState(initial.value  ? String(initial.value) : '');
-  const [scope,         setScope]         = useState(initial.scope  || 'all');
-  const [selectedIds,   setSelectedIds]   = useState(new Set(initial.product_ids || []));
-  const [productSearch, setProductSearch] = useState('');
+  const [name,              setName]          = useState(initial.name       || '');
+  const [code,              setCode]          = useState(initial.code       || '');
+  const [type,              setType]          = useState(initial.type       || 'percent');
+  const [value,             setValue]         = useState(initial.value      ? String(initial.value) : '');
+  const [scope,             setScope]         = useState(initial.scope      || 'all');
+  const [appliesTo,         setAppliesTo]     = useState(initial.applies_to || 'ORDER');
+  const [minPurchase,       setMinPurchase]   = useState(initial.min_purchase ? String(initial.min_purchase) : '');
+  const [maxDiscount,       setMaxDiscount]   = useState(initial.max_discount ? String(initial.max_discount) : '');
+  const [validFrom,         setValidFrom]     = useState(initial.valid_from  || '');
+  const [validUntil,        setValidUntil]    = useState(initial.valid_until || '');
+  const [limitTotal,        setLimitTotal]    = useState(initial.usage_limit_total        ? String(initial.usage_limit_total) : '');
+  const [limitPerCustomer,  setLimitPerCustomer] = useState(initial.usage_limit_per_customer != null ? String(initial.usage_limit_per_customer) : '1');
+  const [selectedIds,       setSelectedIds]   = useState(new Set(initial.product_ids || []));
+  const [productSearch,     setProductSearch] = useState('');
 
   useEffect(() => {
     const h = e => { if (e.key === 'Escape') onClose(); };
@@ -61,12 +68,19 @@ function PromoEditor({ initial, allProducts, onClose, onSave, saving }) {
   const submit = () => {
     if (!valid || saving) return;
     onSave({
-      name:        name.trim(),
-      code:        code.trim().toUpperCase() || null,
+      name:                     name.trim(),
+      code:                     code.trim().toUpperCase() || null,
       type,
-      value:       numVal,
+      value:                    numVal,
       scope,
-      product_ids: scope === 'specific' ? [...selectedIds] : [],
+      applies_to:               appliesTo,
+      product_ids:              scope === 'specific' ? [...selectedIds] : [],
+      min_purchase:             minPurchase ? parseFloat(minPurchase) : null,
+      max_discount:             maxDiscount ? parseFloat(maxDiscount) : null,
+      valid_from:               validFrom || null,
+      valid_until:              validUntil || null,
+      usage_limit_total:        limitTotal ? parseInt(limitTotal, 10) : null,
+      usage_limit_per_customer: limitPerCustomer ? parseInt(limitPerCustomer, 10) : null,
     });
   };
 
@@ -76,7 +90,7 @@ function PromoEditor({ initial, allProducts, onClose, onSave, saving }) {
 
   return (
     <div className="modal-scrim" onClick={onClose}>
-      <div className="modal" style={{ maxWidth: 540, maxHeight: '92vh', display: 'flex', flexDirection: 'column' }} onClick={e => e.stopPropagation()}>
+      <div className="modal" style={{ maxWidth: 560, maxHeight: '92vh', display: 'flex', flexDirection: 'column' }} onClick={e => e.stopPropagation()}>
         <div className="modal-h">
           <div className="mh-ic"><Icon name={isEdit ? 'edit' : 'percent'} size={20} /></div>
           <div>
@@ -115,6 +129,32 @@ function PromoEditor({ initial, allProducts, onClose, onSave, saving }) {
             </div>
             <div style={{ fontSize: 12, color: 'var(--ink-3)', marginTop: 5 }}>
               Khách nhập mã này vào giỏ hàng để được giảm giá. Chỉ dùng chữ cái và số.
+            </div>
+          </div>
+
+          {/* Applies to (ORDER / SHIPPING) */}
+          <div className="fld">
+            <label>Loại giảm</label>
+            <div style={{ display: 'flex', gap: 10 }}>
+              {[
+                { v: 'ORDER',    label: 'Giảm đơn hàng',  desc: 'Áp dụng cho tổng tiền đơn' },
+                { v: 'SHIPPING', label: 'Giảm phí ship',   desc: 'Áp dụng cho phí giao hàng' },
+              ].map(t => (
+                <label key={t.v} style={{
+                  flex: 1, display: 'flex', alignItems: 'center', gap: 10,
+                  padding: '11px 13px',
+                  border: `1.5px solid ${appliesTo === t.v ? 'var(--brand)' : 'var(--line)'}`,
+                  borderRadius: 'var(--r-sm)', cursor: 'pointer',
+                  background: appliesTo === t.v ? 'var(--brand-soft)' : 'transparent', transition: '.14s',
+                }}>
+                  <input type="radio" name="pmapplies" value={t.v} checked={appliesTo === t.v}
+                    onChange={() => setAppliesTo(t.v)} style={{ accentColor: 'var(--brand)', flexShrink: 0 }} />
+                  <div>
+                    <div style={{ fontWeight: 700, fontSize: 13.5 }}>{t.label}</div>
+                    <div style={{ fontSize: 11.5, color: 'var(--ink-2)', marginTop: 1 }}>{t.desc}</div>
+                  </div>
+                </label>
+              ))}
             </div>
           </div>
 
@@ -171,9 +211,67 @@ function PromoEditor({ initial, allProducts, onClose, onSave, saving }) {
             )}
           </div>
 
+          {/* Min purchase + Max discount (side by side) */}
+          <div className="fld">
+            <div style={{ display: 'flex', gap: 12 }}>
+              <div style={{ flex: 1 }}>
+                <label style={{ display: 'block', marginBottom: 6 }}>Đơn tối thiểu</label>
+                <div style={{ position: 'relative' }}>
+                  <input className="inp tnum" inputMode="numeric" value={minPurchase}
+                    onChange={e => setMinPurchase(e.target.value.replace(/[^\d]/g, ''))}
+                    placeholder="Không giới hạn" style={{ paddingRight: 22 }} />
+                  <span style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', fontSize: 13, color: 'var(--ink-3)', pointerEvents: 'none' }}>đ</span>
+                </div>
+              </div>
+              {type === 'percent' && (
+                <div style={{ flex: 1 }}>
+                  <label style={{ display: 'block', marginBottom: 6 }}>Giảm tối đa</label>
+                  <div style={{ position: 'relative' }}>
+                    <input className="inp tnum" inputMode="numeric" value={maxDiscount}
+                      onChange={e => setMaxDiscount(e.target.value.replace(/[^\d]/g, ''))}
+                      placeholder="Không giới hạn" style={{ paddingRight: 22 }} />
+                    <span style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', fontSize: 13, color: 'var(--ink-3)', pointerEvents: 'none' }}>đ</span>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Valid from + Valid until (side by side) */}
+          <div className="fld">
+            <div style={{ display: 'flex', gap: 12 }}>
+              <div style={{ flex: 1 }}>
+                <label style={{ display: 'block', marginBottom: 6 }}>Ngày bắt đầu</label>
+                <input className="inp" type="date" value={validFrom} onChange={e => setValidFrom(e.target.value)} />
+              </div>
+              <div style={{ flex: 1 }}>
+                <label style={{ display: 'block', marginBottom: 6 }}>Ngày kết thúc</label>
+                <input className="inp" type="date" value={validUntil} onChange={e => setValidUntil(e.target.value)} min={validFrom || undefined} />
+              </div>
+            </div>
+          </div>
+
+          {/* Usage limits (side by side) */}
+          <div className="fld">
+            <div style={{ display: 'flex', gap: 12 }}>
+              <div style={{ flex: 1 }}>
+                <label style={{ display: 'block', marginBottom: 6 }}>Giới hạn tổng lượt</label>
+                <input className="inp tnum" inputMode="numeric" value={limitTotal}
+                  onChange={e => setLimitTotal(e.target.value.replace(/[^\d]/g, ''))}
+                  placeholder="Không giới hạn" />
+              </div>
+              <div style={{ flex: 1 }}>
+                <label style={{ display: 'block', marginBottom: 6 }}>Giới hạn mỗi người</label>
+                <input className="inp tnum" inputMode="numeric" value={limitPerCustomer}
+                  onChange={e => setLimitPerCustomer(e.target.value.replace(/[^\d]/g, ''))}
+                  placeholder="1" />
+              </div>
+            </div>
+          </div>
+
           {/* Scope */}
           <div className="fld">
-            <label>Áp dụng cho</label>
+            <label>Sản phẩm áp dụng</label>
             <div style={{ display: 'flex', gap: 10 }}>
               {[
                 { v: 'all',      label: 'Tất cả sản phẩm', ic: 'grid' },
@@ -430,6 +528,14 @@ function App() {
                         <Icon name={p.scope === 'all' ? 'grid' : 'check'} size={12} color="currentColor" style={{ marginRight: 4 }} />
                         {scopeLabel}
                       </span>
+                      {p.applies_to === 'SHIPPING' && (
+                        <span style={{
+                          fontSize: 12, fontWeight: 600, padding: '2px 9px', borderRadius: 20,
+                          background: '#E0F0FF', color: '#1D6FA4',
+                        }}>
+                          Phí ship
+                        </span>
+                      )}
                       {p.code && (
                         <span style={{
                           fontSize: 12, fontWeight: 700, padding: '2px 10px', borderRadius: 20,

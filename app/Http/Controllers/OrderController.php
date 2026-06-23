@@ -6,11 +6,15 @@ use App\Jobs\SendOrderNotification;
 use App\Models\Customer;
 use App\Models\CustomerPoint;
 use App\Models\Order;
+use App\Models\OrderDiscount;
 use App\Models\Product;
 use App\Models\ProductVariant;
 use App\Models\Promotion;
 use App\Models\Store;
 use App\Models\VariantGroup;
+use App\Models\Voucher;
+use App\Services\DiscountCalculationService;
+use App\Services\PromotionClaimService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -24,15 +28,17 @@ class OrderController extends Controller
     public function place(Request $request): JsonResponse
     {
         $data = $request->validate([
-            'lines'              => ['required', 'array', 'min:1'],
-            'lines.*.id'         => ['required', 'string'],
-            'lines.*.qty'        => ['required', 'integer', 'min:1', 'max:99'],
-            'lines.*.selections' => ['nullable', 'array'],
-            'note'               => ['nullable', 'string', 'max:500'],
-            'coupon_code'        => ['nullable', 'string', 'max:50'],
-            'discount'           => ['nullable', 'numeric', 'min:0'],
-            'store_id'           => ['nullable', 'integer'],
-            'shipping_fee'       => ['nullable', 'integer', 'min:0'],
+            'lines'               => ['required', 'array', 'min:1'],
+            'lines.*.id'          => ['required', 'string'],
+            'lines.*.qty'         => ['required', 'integer', 'min:1', 'max:99'],
+            'lines.*.selections'  => ['nullable', 'array'],
+            'note'                => ['nullable', 'string', 'max:500'],
+            'coupon_code'         => ['nullable', 'string', 'max:50'],
+            'discount'            => ['nullable', 'numeric', 'min:0'],
+            'store_id'            => ['nullable', 'integer'],
+            'shipping_fee'        => ['nullable', 'integer', 'min:0'],
+            'voucher_id'          => ['nullable', 'integer'],
+            'shipping_voucher_id' => ['nullable', 'integer'],
         ]);
 
         $user     = Auth::user();
@@ -95,29 +101,64 @@ class OrderController extends Controller
         }
 
         $subtotal = round(array_sum(array_column($itemData, 'item_total')), 2);
-        $discountAmt = 0;
 
-        // Validate and apply coupon code if provided
-        if (!empty($data['coupon_code'])) {
-            $couponCode = strtoupper(trim($data['coupon_code']));
-            $promotion = Promotion::where('code', $couponCode)
-                ->where('is_active', true)
+        // --- Resolve vouchers ---
+        $orderVoucher    = null;
+        $shippingVoucher = null;
+
+        if (!empty($data['voucher_id'])) {
+            $v = Voucher::where('id', $data['voucher_id'])
+                ->where('customer_id', $customer->id)
+                ->where('status', 'active')
+                ->where('applies_to', 'ORDER')
                 ->first();
+            if ($v) $orderVoucher = $v;
+        }
 
+        if (!empty($data['shipping_voucher_id'])) {
+            $v = Voucher::where('id', $data['shipping_voucher_id'])
+                ->where('customer_id', $customer->id)
+                ->where('status', 'active')
+                ->where('applies_to', 'SHIPPING')
+                ->first();
+            if ($v) $shippingVoucher = $v;
+        }
+
+        // Fallback: old coupon_code flow (direct promo code without pre-claim)
+        if (!$orderVoucher && !empty($data['coupon_code'])) {
+            $couponCode = strtoupper(trim($data['coupon_code']));
+            $promotion  = Promotion::where('code', $couponCode)
+                ->where('is_active', true)
+                ->where('applies_to', 'ORDER')
+                ->first();
             if ($promotion) {
-                $discountAmt = $this->calcPromotionDiscount($promotion, $subtotal);
+                $claimService = app(PromotionClaimService::class);
+                $result = $claimService->claim($customer, $couponCode);
+                if ($result['ok']) {
+                    $voucherId = $result['voucher']['id'] ?? null;
+                    if ($voucherId) {
+                        $orderVoucher = Voucher::find($voucherId);
+                    }
+                }
             }
         }
 
+        // --- Calculate discounts ---
+        $discSvc      = app(DiscountCalculationService::class);
         $shippingFee  = (int) ($data['shipping_fee'] ?? 0);
-        $totalAmount  = max(0.0, round($subtotal - $discountAmt + $shippingFee, 2));
+        $orderDiscAmt = $orderVoucher    ? $discSvc->calcVoucherDiscount($orderVoucher, $subtotal)    : 0;
+        $shipDiscAmt  = $shippingVoucher ? $discSvc->calcVoucherDiscount($shippingVoucher, $shippingFee) : 0;
+        $discountAmt  = $orderDiscAmt + $shipDiscAmt;
+        $totalAmount  = max(0.0, round($subtotal - $orderDiscAmt + $shippingFee - $shipDiscAmt, 2));
         $pointsEarned = (int) floor($totalAmount / self::PER_POINT);
 
         $orderId = null;
 
         DB::transaction(function () use (
             $customer, $store, $data, $itemData,
-            $subtotal, $discountAmt, $shippingFee, $totalAmount, $pointsEarned, &$orderId
+            $subtotal, $discountAmt, $shippingFee, $totalAmount, $pointsEarned,
+            $orderVoucher, $shippingVoucher, $orderDiscAmt, $shipDiscAmt,
+            &$orderId
         ) {
             $order = Order::create([
                 'customer_id'     => $customer->id,
@@ -143,6 +184,31 @@ class OrderController extends Controller
                         'price_at_order' => $top['extra'],
                     ]);
                 }
+            }
+
+            // Save OrderDiscount records + mark vouchers used
+            if ($orderVoucher && $orderDiscAmt > 0) {
+                OrderDiscount::create([
+                    'order_id'          => $order->id,
+                    'discount_category' => $orderVoucher->source_type === 'PROMOTION_CLAIM' ? 'PROMOTION_VOUCHER' : 'GIFT_VOUCHER',
+                    'voucher_id'        => $orderVoucher->id,
+                    'discount_amount'   => $orderDiscAmt,
+                    'description'       => $orderVoucher->discount_type === 'percentage'
+                        ? "Giảm {$orderVoucher->discount_value}%"
+                        : "Giảm " . number_format($orderVoucher->discount_value, 0, ',', '.') . "đ",
+                ]);
+                $orderVoucher->update(['status' => 'used', 'used_at' => now()]);
+            }
+
+            if ($shippingVoucher && $shipDiscAmt > 0) {
+                OrderDiscount::create([
+                    'order_id'          => $order->id,
+                    'discount_category' => 'SHIPPING',
+                    'voucher_id'        => $shippingVoucher->id,
+                    'discount_amount'   => $shipDiscAmt,
+                    'description'       => "Giảm phí ship",
+                ]);
+                $shippingVoucher->update(['status' => 'used', 'used_at' => now()]);
             }
 
             if ($pointsEarned > 0) {
