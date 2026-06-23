@@ -29,6 +29,7 @@ async function apiFetch(method, url, body) {
 function PromoEditor({ initial, allProducts, onClose, onSave, saving }) {
   const isEdit = !!initial.id;
   const [name,          setName]          = useState(initial.name   || '');
+  const [code,          setCode]          = useState(initial.code   || '');
   const [type,          setType]          = useState(initial.type   || 'percent');
   const [value,         setValue]         = useState(initial.value  ? String(initial.value) : '');
   const [scope,         setScope]         = useState(initial.scope  || 'all');
@@ -61,6 +62,7 @@ function PromoEditor({ initial, allProducts, onClose, onSave, saving }) {
     if (!valid || saving) return;
     onSave({
       name:        name.trim(),
+      code:        code.trim().toUpperCase() || null,
       type,
       value:       numVal,
       scope,
@@ -91,6 +93,29 @@ function PromoEditor({ initial, allProducts, onClose, onSave, saving }) {
             <input className="inp" value={name} onChange={e => setName(e.target.value)}
               placeholder="VD: Giảm giá cuối tuần, Khai trương…" autoFocus
               onKeyDown={e => { if (e.key === 'Enter') submit(); }} />
+          </div>
+
+          {/* Code */}
+          <div className="fld">
+            <label>Mã giảm giá <span style={{ fontWeight: 400, color: 'var(--ink-3)' }}>(để trống nếu áp dụng tự động)</span></label>
+            <div style={{ position: 'relative' }}>
+              <input className="inp tnum" value={code}
+                onChange={e => setCode(e.target.value.replace(/[^A-Za-z0-9_-]/g, '').toUpperCase())}
+                placeholder="VD: GIAM10, KHAITUONG, FREESHIP"
+                style={{ letterSpacing: 1 }}
+                onKeyDown={e => { if (e.key === 'Enter') submit(); }} />
+              {code && (
+                <span style={{
+                  position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)',
+                  background: 'var(--brand-soft)', color: 'var(--brand-ink)',
+                  fontWeight: 700, fontSize: 11, borderRadius: 6, padding: '2px 8px',
+                  pointerEvents: 'none',
+                }}>Mã nhập tay</span>
+              )}
+            </div>
+            <div style={{ fontSize: 12, color: 'var(--ink-3)', marginTop: 5 }}>
+              Khách nhập mã này vào giỏ hàng để được giảm giá. Chỉ dùng chữ cái và số.
+            </div>
           </div>
 
           {/* Type */}
@@ -394,7 +419,7 @@ function App() {
                   {/* Info */}
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ fontWeight: 700, fontSize: 14.5, marginBottom: 3 }}>{p.name}</div>
-                    <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+                    <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
                       <span style={{
                         fontSize: 12, fontWeight: 600, padding: '2px 9px', borderRadius: 20,
                         background: 'var(--brand-soft)', color: 'var(--brand-ink)',
@@ -405,6 +430,15 @@ function App() {
                         <Icon name={p.scope === 'all' ? 'grid' : 'check'} size={12} color="currentColor" style={{ marginRight: 4 }} />
                         {scopeLabel}
                       </span>
+                      {p.code && (
+                        <span style={{
+                          fontSize: 12, fontWeight: 700, padding: '2px 10px', borderRadius: 20,
+                          background: '#FFF4E0', color: '#B45309', letterSpacing: .5,
+                          fontFamily: 'monospace',
+                        }}>
+                          {p.code}
+                        </span>
+                      )}
                     </div>
                   </div>
 

@@ -39,14 +39,17 @@ class PromotionsController extends Controller
     public function store(Request $request): JsonResponse
     {
         $data = $request->validate([
-            'name'        => ['required', 'string', 'max:100'],
-            'type'        => ['required', Rule::in(['percent', 'amount'])],
-            'value'       => ['required', 'integer', 'min:1'],
-            'scope'       => ['required', Rule::in(['all', 'specific'])],
-            'product_ids' => ['nullable', 'array'],
+            'name'          => ['required', 'string', 'max:100'],
+            'code'          => ['nullable', 'string', 'max:30', 'alpha_dash', 'unique:promotions,code'],
+            'type'          => ['required', Rule::in(['percent', 'amount'])],
+            'value'         => ['required', 'integer', 'min:1'],
+            'scope'         => ['required', Rule::in(['all', 'specific'])],
+            'product_ids'   => ['nullable', 'array'],
             'product_ids.*' => ['integer', Rule::exists('products', 'id')],
         ], [
-            'value.min' => 'Giá trị giảm phải lớn hơn 0',
+            'value.min'    => 'Giá trị giảm phải lớn hơn 0',
+            'code.unique'  => 'Mã này đã được dùng cho khuyến mãi khác',
+            'code.alpha_dash' => 'Mã chỉ được chứa chữ cái, số và dấu gạch ngang',
         ]);
 
         if ($data['type'] === 'percent' && $data['value'] > 100) {
@@ -54,9 +57,13 @@ class PromotionsController extends Controller
         }
 
         $order = Promotion::max('sort_order') + 1;
+        $code  = isset($data['code']) && $data['code'] !== ''
+            ? strtoupper(trim($data['code']))
+            : null;
 
         $promo = Promotion::create([
             'name'       => $data['name'],
+            'code'       => $code,
             'type'       => $data['type'],
             'value'      => $data['value'],
             'scope'      => $data['scope'],
@@ -76,21 +83,29 @@ class PromotionsController extends Controller
     {
         $data = $request->validate([
             'name'          => ['required', 'string', 'max:100'],
+            'code'          => ['nullable', 'string', 'max:30', 'alpha_dash', Rule::unique('promotions', 'code')->ignore($promotion->id)],
             'type'          => ['required', Rule::in(['percent', 'amount'])],
             'value'         => ['required', 'integer', 'min:1'],
             'scope'         => ['required', Rule::in(['all', 'specific'])],
             'product_ids'   => ['nullable', 'array'],
             'product_ids.*' => ['integer', Rule::exists('products', 'id')],
         ], [
-            'value.min' => 'Giá trị giảm phải lớn hơn 0',
+            'value.min'       => 'Giá trị giảm phải lớn hơn 0',
+            'code.unique'     => 'Mã này đã được dùng cho khuyến mãi khác',
+            'code.alpha_dash' => 'Mã chỉ được chứa chữ cái, số và dấu gạch ngang',
         ]);
 
         if ($data['type'] === 'percent' && $data['value'] > 100) {
             return response()->json(['message' => 'Phần trăm giảm không được vượt quá 100%'], 422);
         }
 
+        $code = isset($data['code']) && $data['code'] !== ''
+            ? strtoupper(trim($data['code']))
+            : null;
+
         $promotion->update([
             'name'  => $data['name'],
+            'code'  => $code,
             'type'  => $data['type'],
             'value' => $data['value'],
             'scope' => $data['scope'],
@@ -153,6 +168,7 @@ class PromotionsController extends Controller
         return [
             'id'          => $p->id,
             'name'        => $p->name,
+            'code'        => $p->code,
             'type'        => $p->type,
             'value'       => $p->value,
             'scope'       => $p->scope,

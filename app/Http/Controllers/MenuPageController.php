@@ -184,15 +184,13 @@ class MenuPageController extends Controller
             ])->values()->toArray();
         }
 
-        // --- Promo codes for checkout (converted from Promotion model) ---
+        // --- Promo codes for checkout (only promotions that have a code set) ---
         $promoCodes = [];
         foreach ($activePromos as $promo) {
-            // Only include promotions with scope 'all' for coupon codes
-            // (specific-scope promos apply automatically to products)
-            if ($promo->scope === 'all') {
-                $promoCodes[$promo->name] = [
+            if ($promo->code) {
+                $promoCodes[$promo->code] = [
                     'name'  => $promo->name,
-                    'type'  => $promo->type, // 'percent' or 'amount'
+                    'type'  => $promo->type,
                     'value' => (int) $promo->value,
                     'min'   => 0,
                 ];
