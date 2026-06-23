@@ -8,6 +8,7 @@ use App\Models\CustomerPoint;
 use App\Models\Order;
 use App\Models\Product;
 use App\Models\ProductVariant;
+use App\Models\Promotion;
 use App\Models\Store;
 use App\Models\VariantGroup;
 use Illuminate\Http\JsonResponse;
@@ -98,10 +99,9 @@ class OrderController extends Controller
 
         // Validate and apply coupon code if provided
         if (!empty($data['coupon_code'])) {
-            $couponCode = trim($data['coupon_code']);
-            $promotion = Promotion::where('name', $couponCode)
+            $couponCode = strtoupper(trim($data['coupon_code']));
+            $promotion = Promotion::where('code', $couponCode)
                 ->where('is_active', true)
-                ->where('scope', 'all')
                 ->first();
 
             if ($promotion) {

@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 class Promotion extends Model
 {
-    protected $fillable = ['name', 'type', 'value', 'scope', 'is_active', 'sort_order'];
+    protected $fillable = ['name', 'code', 'type', 'value', 'scope', 'is_active', 'sort_order'];
 
     protected function casts(): array
     {
