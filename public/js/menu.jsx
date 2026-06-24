@@ -107,6 +107,15 @@ function calcVoucherDiscount(v, base) {
   return Math.min(v.discount_value, base);
 }
 
+function calcShipPromoDiscount(p, shipFee, subtotal, dist) {
+  if (!p || shipFee === 0) return 0;
+  if (subtotal < p.min_order_amount) return 0;
+  if (p.max_km !== null && dist !== null && dist > p.max_km) return 0;
+  if (p.discount_type === 'free')    return shipFee;
+  if (p.discount_type === 'percent') return Math.floor(shipFee * p.discount_value / 100);
+  return Math.min(p.discount_value, shipFee);
+}
+
 /* ─── Line item helpers ─────────────────────────────────────────── */
 function lineKey(l) {
   if (l.selections) {
@@ -172,7 +181,8 @@ function App() {
 
   /* ─── 3-source discount state ─── */
   const [orderVoucher,    setOrderVoucher]    = useState(null); // selected ORDER voucher
-  const [shippingVoucher, setShippingVoucher] = useState(null); // selected SHIPPING voucher
+  const [shippingVoucher, setShippingVoucher] = useState(null); // selected SHIPPING voucher (personal)
+  const [selectedShipPromo, setSelectedShipPromo] = useState(null); // selected ShippingPromotion rule
   const [cartVouchers,    setCartVouchers]    = useState({ order: [], shipping: [] }); // fetched from server
   const [couponView,      setCouponView]      = useState(false);
   const [couponInput,     setCouponInput]     = useState("");
@@ -326,44 +336,25 @@ function App() {
   const shipFee = geoInfo?.fee ?? 0;
   const dist    = geoInfo?.dist ?? null;
 
-  /* Auto-apply best shipping promo: highest saving among eligible rules */
-  const autoShipPromo = useMemo(() => {
-    if (!liveShippingPromos.length || shipFee === 0) return null;
-    const eligible = liveShippingPromos.filter(p => {
-      if (subtotal < p.min_order_amount) return false;
-      if (p.max_km !== null && dist !== null && dist > p.max_km) return false;
-      return true;
-    });
-    if (!eligible.length) return null;
-    // Pick the one that saves the most
-    return eligible.reduce((best, p) => {
-      const saving = p.discount_type === 'free' ? shipFee
-        : p.discount_type === 'percent' ? Math.floor(shipFee * p.discount_value / 100)
-        : Math.min(p.discount_value, shipFee);
-      const bestSaving = best.discount_type === 'free' ? shipFee
-        : best.discount_type === 'percent' ? Math.floor(shipFee * best.discount_value / 100)
-        : Math.min(best.discount_value, shipFee);
-      return saving > bestSaving ? p : best;
-    });
-  }, [liveShippingPromos, subtotal, dist, shipFee]); // eslint-disable-line
-
-  const autoShipDiscount = useMemo(() => {
-    if (!autoShipPromo) return 0;
-    if (autoShipPromo.discount_type === 'free') return shipFee;
-    if (autoShipPromo.discount_type === 'percent') return Math.floor(shipFee * autoShipPromo.discount_value / 100);
-    return Math.min(autoShipPromo.discount_value, shipFee);
-  }, [autoShipPromo, shipFee]);
-
-  const orderDiscount = calcVoucherDiscount(orderVoucher, subtotal);
-  const shipDiscount  = Math.max(calcVoucherDiscount(shippingVoucher, shipFee), autoShipDiscount);
-  const totalDiscount = orderDiscount + shipDiscount;
-  const payable       = Math.max(0, subtotal - orderDiscount + shipFee - shipDiscount);
+  const orderDiscount   = calcVoucherDiscount(orderVoucher, subtotal);
+  const shipDiscount    = shippingVoucher
+    ? calcVoucherDiscount(shippingVoucher, shipFee)
+    : calcShipPromoDiscount(selectedShipPromo, shipFee, subtotal, dist);
+  const totalDiscount   = orderDiscount + shipDiscount;
+  const payable         = Math.max(0, subtotal - orderDiscount + shipFee - shipDiscount);
   const earnPts       = Math.floor(payable / livePerPoint);
 
   /* Clear order voucher if subtotal drops below min */
   useEffect(() => {
     if (orderVoucher && subtotal < (orderVoucher.min_purchase || 0)) setOrderVoucher(null);
   }, [subtotal]); // eslint-disable-line
+
+  /* Clear selectedShipPromo if it becomes ineligible */
+  useEffect(() => {
+    if (!selectedShipPromo) return;
+    if (subtotal < selectedShipPromo.min_order_amount) { setSelectedShipPromo(null); return; }
+    if (selectedShipPromo.max_km !== null && dist !== null && dist > selectedShipPromo.max_km) setSelectedShipPromo(null);
+  }, [subtotal, dist]); // eslint-disable-line
 
   /* Claim a promo code via POST /promotions/claim */
   const claimCode = async (raw) => {
@@ -406,8 +397,14 @@ function App() {
   };
 
   const applyShippingVoucher = (v) => {
-    setShippingVoucher(v); setCouponErr(""); setCouponView(false);
+    setShippingVoucher(v); setSelectedShipPromo(null); setCouponErr(""); setCouponView(false);
   };
+
+  const applyShipPromo = (p) => {
+    setSelectedShipPromo(p); setShippingVoucher(null); setCouponErr(""); setCouponView(false);
+  };
+
+  const clearShipDiscount = () => { setShippingVoucher(null); setSelectedShipPromo(null); };
 
   const jumpCat = (key) => {
     setActiveCat(key);
@@ -418,7 +415,7 @@ function App() {
   const reset = () => {
     clearCartState();
     setLines([]); setPlaced(false); setDrawer(false); setNote(""); setOrderErr("");
-    setOrderVoucher(null); setShippingVoucher(null);
+    setOrderVoucher(null); setShippingVoucher(null); setSelectedShipPromo(null);
     setCouponView(false); setCouponInput(""); setCouponErr("");
     setStoreView(false); setAddrView(false);
     setActualPts(0);
@@ -442,8 +439,9 @@ function App() {
         body: JSON.stringify({
           lines: lines.map(l => ({ id: l.id, qty: l.qty, selections: l.selections || null })),
           note: note || null,
-          voucher_id:          orderVoucher?.id    || null,
-          shipping_voucher_id: shippingVoucher?.id || null,
+          voucher_id:          orderVoucher?.id      || null,
+          shipping_voucher_id: shippingVoucher?.id   || null,
+          ship_promo_id:       selectedShipPromo?.id || null,
           store_id: selectedStoreId || null,
           shipping_fee: shipFee || 0,
         }),
@@ -672,24 +670,60 @@ function App() {
                       </div>
                     )}
 
-                    {/* SHIPPING vouchers — always show */}
+                    {/* SHIPPING vouchers + promo rules — always show */}
                     <div className="cp-sec">Voucher giảm phí ship</div>
-                    {cartVouchers.shipping.length === 0 ? (
+                    {shipFee === 0 && addrId === "pickup" && (
+                      <div style={{ fontSize: 12, color: "var(--ink-3)", marginBottom: 8, padding: "0 2px" }}>
+                        Chọn giao hàng và nhập địa chỉ để áp dụng ưu đãi phí ship.
+                      </div>
+                    )}
+                    {cartVouchers.shipping.length === 0 && liveShippingPromos.length === 0 ? (
                       <div className="cp-empty">Bạn chưa có voucher giảm phí ship. Nhập mã ở trên hoặc đổi điểm ở mục Đổi quà!</div>
                     ) : (
-                      <>
-                        {shipFee === 0 && addrId === "pickup" && (
-                          <div style={{ fontSize: 12, color: "var(--ink-3)", marginBottom: 8, padding: "0 2px" }}>
-                            Chọn giao hàng và nhập địa chỉ để áp dụng voucher ship.
-                          </div>
-                        )}
-                        <div className="vlist">
-                          {cartVouchers.shipping.map(v => (
-                            <VoucherCard key={v.id} v={v} onApply={applyShippingVoucher}
-                              isSelected={shippingVoucher?.id === v.id} base={shipFee} />
-                          ))}
-                        </div>
-                      </>
+                      <div className="vlist">
+                        {/* Personal shipping vouchers from wallet */}
+                        {cartVouchers.shipping.map(v => (
+                          <VoucherCard key={v.id} v={v} onApply={applyShippingVoucher}
+                            isSelected={shippingVoucher?.id === v.id} base={shipFee} />
+                        ))}
+                        {/* Admin shipping promo rules — selectable */}
+                        {liveShippingPromos.map(p => {
+                          const ineligibleAmt = subtotal < p.min_order_amount;
+                          const ineligibleKm  = p.max_km !== null && dist !== null && dist > p.max_km;
+                          const notEligible   = ineligibleAmt || ineligibleKm;
+                          const saving        = calcShipPromoDiscount(p, shipFee, subtotal, dist);
+                          const isSelected    = selectedShipPromo?.id === p.id;
+                          return (
+                            <button key={p.id}
+                              className={"vopt" + (isSelected ? " on" : "")}
+                              disabled={notEligible}
+                              onClick={() => applyShipPromo(p)}
+                            >
+                              <span className="vi" style={{ background: isSelected ? "var(--brand)" : "linear-gradient(135deg,#1E8FA8,#4FC3D9)" }}>
+                                <Icon name="truck" size={20} color="#fff" />
+                              </span>
+                              <div style={{ minWidth: 0, flex: 1 }}>
+                                <div className="vn">{p.name}</div>
+                                <div className="vd">
+                                  {p.badge}
+                                  {p.min_order_amount > 0 ? ` · Đơn từ ${fmt(p.min_order_amount)}đ` : ''}
+                                  {p.max_km !== null ? ` · Trong ${p.max_km}km` : ''}
+                                </div>
+                                {notEligible && (
+                                  <div style={{ fontSize: 11, color: "var(--hot)", marginTop: 2 }}>
+                                    {ineligibleAmt ? `Đơn tối thiểu ${fmt(p.min_order_amount)}đ` : `Chỉ trong bán kính ${p.max_km}km`}
+                                  </div>
+                                )}
+                              </div>
+                              {!notEligible && saving > 0 && (
+                                <span style={{ color: "var(--brand)", fontWeight: 700, fontSize: 13, whiteSpace: "nowrap" }}>
+                                  −{fmt(saving)}đ
+                                </span>
+                              )}
+                            </button>
+                          );
+                        })}
+                      </div>
                     )}
                   </>)}
                 </div>
@@ -839,7 +873,7 @@ function App() {
                 </div>
                 <div className="cart-f">
                   {/* Applied vouchers row or trigger */}
-                  {(orderVoucher || shippingVoucher) ? (
+                  {(orderVoucher || shippingVoucher || selectedShipPromo) ? (
                     <div style={{ display: "flex", flexDirection: "column", gap: 6, marginBottom: 4 }}>
                       {orderVoucher && (
                         <div className="coupon-applied">
@@ -852,15 +886,15 @@ function App() {
                           <button className="cax" onClick={() => setOrderVoucher(null)} title="Bỏ voucher"><Icon name="close" size={16} /></button>
                         </div>
                       )}
-                      {shippingVoucher && (
+                      {(shippingVoucher || selectedShipPromo) && (
                         <div className="coupon-applied" style={{ background: "var(--brand-soft)" }}>
                           <span className="cai" style={{ background: "var(--brand)" }}><Icon name="truck" size={17} color="#fff" /></span>
                           <div style={{ minWidth: 0 }}>
-                            <div className="can">{shippingVoucher.name}</div>
+                            <div className="can">{shippingVoucher ? shippingVoucher.name : selectedShipPromo.name}</div>
                             <div className="cac">Giảm phí ship</div>
                           </div>
                           <span className="cav" style={{ color: "var(--brand-ink)" }}>−{fmt(shipDiscount)}đ</span>
-                          <button className="cax" onClick={() => setShippingVoucher(null)} title="Bỏ voucher"><Icon name="close" size={16} /></button>
+                          <button className="cax" onClick={clearShipDiscount} title="Bỏ ưu đãi"><Icon name="close" size={16} /></button>
                         </div>
                       )}
                       <button className="coupon-trigger" style={{ marginTop: 2 }}
@@ -898,13 +932,12 @@ function App() {
                       </span>
                     </div>
                   )}
-                  {autoShipPromo && autoShipDiscount > 0 && (
+                  {shipDiscount > 0 && (
                     <div className="csum" style={{ color: "var(--brand)" }}>
-                      <span>🎉 {autoShipPromo.name}</span>
-                      <span className="v tnum" style={{ color: "var(--brand)" }}>−{fmt(autoShipDiscount)}đ</span>
+                      <span>{selectedShipPromo ? selectedShipPromo.name : "Giảm phí ship"}</span>
+                      <span className="v tnum" style={{ color: "var(--brand)" }}>−{fmt(shipDiscount)}đ</span>
                     </div>
                   )}
-                  {!autoShipPromo && shipDiscount > 0 && <div className="csum" style={{ color: "var(--brand)" }}><span>Giảm phí ship</span><span className="v tnum" style={{ color: "var(--brand)" }}>−{fmt(shipDiscount)}đ</span></div>}
                   <div className="csum earn"><span>Điểm tích được</span><span className="v">+{fmt(earnPts)} điểm</span></div>
                   <div className="csum total"><span>Tổng cộng</span><span className="v tnum">{fmt(payable)}đ</span></div>
                   {orderErr && <div className="cp-err" style={{ marginBottom: 6 }}><Icon name="alert" size={14} color="var(--hot)" /> {orderErr}</div>}
