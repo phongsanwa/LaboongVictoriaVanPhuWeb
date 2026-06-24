@@ -32,6 +32,7 @@ class PromotionController extends Controller
         if (!$customer) return response()->json(['order' => [], 'shipping' => []]);
 
         $today = Carbon::today();
+
         $vouchers = Voucher::where('customer_id', $customer->id)
             ->where('status', 'active')
             ->where(fn ($q) => $q->whereNull('valid_until')->orWhere('valid_until', '>=', $today))
@@ -41,7 +42,7 @@ class PromotionController extends Controller
         $order    = $vouchers->where('applies_to', 'ORDER')->values();
         $shipping = $vouchers->where('applies_to', 'SHIPPING')->values();
 
-        $fmt = fn($v) => [
+        $fmtVoucher = fn($v) => [
             'id'             => $v->id,
             'code'           => $v->voucher_code,
             'name'           => $this->voucherName($v),
@@ -53,9 +54,28 @@ class PromotionController extends Controller
             'valid_until'    => $v->valid_until?->format('d/m/Y'),
         ];
 
+        $redemptions = \App\Models\Redemption::with('reward')
+            ->where('customer_id', $customer->id)
+            ->whereIn('status', ['pending', 'approved'])
+            ->where(fn ($q) => $q->whereNull('expires_at')->orWhere('expires_at', '>=', $today))
+            ->orderByDesc('redeemed_at')
+            ->get()
+            ->map(fn ($r) => [
+                'id'          => $r->id,
+                'code'        => $r->redemption_code,
+                'name'        => $r->reward?->name ?? 'Quà tặng',
+                'reward_type' => $r->reward?->reward_type ?? 'other',
+                'status'      => $r->status,
+                'points_spent'=> (int) $r->points_spent,
+                'expires_at'  => $r->expires_at?->format('d/m/Y'),
+                'image_url'   => $r->reward?->image_url,
+            ])
+            ->values();
+
         return response()->json([
-            'order'    => $order->map($fmt)->values(),
-            'shipping' => $shipping->map($fmt)->values(),
+            'order'       => $order->map($fmtVoucher)->values(),
+            'shipping'    => $shipping->map($fmtVoucher)->values(),
+            'redemptions' => $redemptions,
         ]);
     }
 
