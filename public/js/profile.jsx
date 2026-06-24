@@ -471,42 +471,64 @@ function AddrModal({ init, onClose, onSave }) {
     return () => window.removeEventListener("keydown", h);
   }, [onClose, sugg.length]);
 
-  /* ---- Leaflet map ---- */
+  /* ---- Mapbox GL JS map ---- */
   useEffect(() => {
-    const L = window.L;
-    if (!L || !mapDivRef.current || mapRef.current) return;
-    delete L.Icon.Default.prototype._getIconUrl;
-    L.Icon.Default.mergeOptions({
-      iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
-      iconRetinaUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
-      shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
-    });
-    const center = (f.lat && f.lng) ? [f.lat, f.lng] : [20.9833, 105.8412];
-    const map = L.map(mapDivRef.current, { zoomControl: true }).setView(center, f.lat ? 16 : 11);
+    const mapboxgl = window.mapboxgl;
+    if (!mapboxgl || !mapDivRef.current || mapRef.current) return;
     const token = getMapboxToken();
-    L.tileLayer(
-      `https://api.mapbox.com/styles/v1/mapbox/streets-v12/tiles/{z}/{x}/{y}?access_token=${token}`,
-      { tileSize: 512, zoomOffset: -1, attribution: "© <a href='https://www.mapbox.com/about/maps/'>Mapbox</a>" }
-    ).addTo(map);
-    if (f.lat && f.lng) markerRef.current = L.marker([f.lat, f.lng]).addTo(map);
-    map.on("click", e => {
-      const { lat, lng } = e.latlng;
+    mapboxgl.accessToken = token;
+    const center = (f.lng && f.lat) ? [f.lng, f.lat] : [105.8412, 20.9833];
+    const map = new mapboxgl.Map({
+      container: mapDivRef.current,
+      style: 'mapbox://styles/mapbox/streets-v12',
+      center,
+      zoom: f.lat ? 16 : 11,
+    });
+    map.addControl(new mapboxgl.NavigationControl(), 'top-right');
+    if (f.lat && f.lng) {
+      markerRef.current = new mapboxgl.Marker({ color: '#0F623F', draggable: true })
+        .setLngLat([f.lng, f.lat])
+        .addTo(map);
+      markerRef.current.on('dragend', () => {
+        const { lng, lat } = markerRef.current.getLngLat();
+        setF(prev => ({ ...prev, lat, lng }));
+        reverseGeocode(lat, lng).then(addr => { if (addr) { setAddrText(addr); setPickedFull(addr); } });
+      });
+    }
+    map.on('click', e => {
+      const { lng, lat } = e.lngLat;
       setF(prev => ({ ...prev, lat, lng }));
-      if (markerRef.current) markerRef.current.setLatLng([lat, lng]);
-      else markerRef.current = L.marker([lat, lng]).addTo(map);
+      if (markerRef.current) {
+        markerRef.current.setLngLat([lng, lat]);
+      } else {
+        markerRef.current = new mapboxgl.Marker({ color: '#0F623F', draggable: true })
+          .setLngLat([lng, lat])
+          .addTo(map);
+        markerRef.current.on('dragend', () => {
+          const lnglat = markerRef.current.getLngLat();
+          setF(prev => ({ ...prev, lat: lnglat.lat, lng: lnglat.lng }));
+          reverseGeocode(lnglat.lat, lnglat.lng).then(addr => { if (addr) { setAddrText(addr); setPickedFull(addr); } });
+        });
+      }
       reverseGeocode(lat, lng).then(addr => { if (addr) { setAddrText(addr); setPickedFull(addr); } });
     });
     mapRef.current = map;
     return () => { map.remove(); mapRef.current = null; markerRef.current = null; };
-  }, []);
+  }, []); // eslint-disable-line
 
   useEffect(() => {
-    const map = mapRef.current; const L = window.L;
-    if (!map || !L || f.lat == null || f.lng == null) return;
-    if (markerRef.current) markerRef.current.setLatLng([f.lat, f.lng]);
-    else markerRef.current = L.marker([f.lat, f.lng]).addTo(map);
-    map.setView([f.lat, f.lng], 16, { animate: true });
-  }, [f.lat, f.lng]);
+    const map = mapRef.current;
+    if (!map || f.lat == null || f.lng == null) return;
+    if (markerRef.current) {
+      markerRef.current.setLngLat([f.lng, f.lat]);
+    } else {
+      const mapboxgl = window.mapboxgl;
+      markerRef.current = new mapboxgl.Marker({ color: '#0F623F', draggable: true })
+        .setLngLat([f.lng, f.lat])
+        .addTo(map);
+    }
+    map.flyTo({ center: [f.lng, f.lat], zoom: 16 });
+  }, [f.lat, f.lng]); // eslint-disable-line
 
   const valid = addrText.trim().length >= 4 && f.name.trim().length >= 2;
   const selStyle = { appearance: "auto" };
