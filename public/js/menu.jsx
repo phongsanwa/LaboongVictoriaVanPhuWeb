@@ -45,19 +45,22 @@ function clearCartState() {
   try { localStorage.removeItem(CART_STATE_KEY); } catch (e) { /* ignore */ }
 }
 
+function getMapboxToken() { return window.MENU_PAGE_DATA?.mapboxToken || ''; }
+
 async function geocodeAddress(text) {
   try {
     const cache = JSON.parse(localStorage.getItem(GEO_CACHE_KEY) || '{}');
     if (cache[text]) return cache[text];
   } catch(e) { /* ignore */ }
 
-  const q = encodeURIComponent(text + ', Việt Nam');
-  const res = await fetch(`https://nominatim.openstreetmap.org/search?q=${q}&format=json&limit=1`, {
-    headers: { 'Accept': 'application/json', 'User-Agent': 'Laboong/1.0 (contact@laboong.vn)' },
-  });
+  const q   = encodeURIComponent(text);
+  const url = `https://api.mapbox.com/geocoding/v5/mapbox.places/${q}.json`
+    + `?country=VN&language=vi&limit=1&access_token=${getMapboxToken()}`;
+  const res  = await fetch(url, { headers: { 'Accept': 'application/json' } });
   const data = await res.json();
-  if (!data.length) return null;
-  const loc = { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) };
+  if (!data.features?.length) return null;
+  const [lng, lat] = data.features[0].center;
+  const loc = { lat, lng };
   try {
     const cache = JSON.parse(localStorage.getItem(GEO_CACHE_KEY) || '{}');
     cache[text] = loc;
