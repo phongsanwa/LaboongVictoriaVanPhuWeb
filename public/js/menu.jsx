@@ -188,9 +188,7 @@ function App() {
   const [selectedShipPromo, setSelectedShipPromo] = useState(null); // selected ShippingPromotion rule
   const [cartVouchers,    setCartVouchers]    = useState({ order: [], shipping: [] }); // fetched from server
   const [couponView,      setCouponView]      = useState(false);
-  const [couponInput,     setCouponInput]     = useState("");
   const [couponErr,       setCouponErr]       = useState("");
-  const [claimLoading,    setClaimLoading]    = useState(false);
   const [vouchersLoading, setVouchersLoading] = useState(false);
 
   const [addresses, setAddresses] = useState(getLiveAddresses);
@@ -359,41 +357,6 @@ function App() {
     if (selectedShipPromo.max_km !== null && dist !== null && dist > selectedShipPromo.max_km) setSelectedShipPromo(null);
   }, [subtotal, dist]); // eslint-disable-line
 
-  /* Claim a promo code via POST /promotions/claim */
-  const claimCode = async (raw) => {
-    const code = (raw || "").trim().toUpperCase();
-    if (!code) return;
-    if (!LIVE) { setCouponErr("Nhập mã trong chế độ live để kiểm tra"); return; }
-    setClaimLoading(true);
-    setCouponErr("");
-    try {
-      const res = await fetch('/promotions/claim', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || '',
-          'Accept': 'application/json',
-        },
-        body: JSON.stringify({ code }),
-      });
-      const json = await res.json();
-      if (!res.ok) { setCouponErr(json.message || 'Mã không hợp lệ'); return; }
-      const v = json.voucher;
-      // Add the newly claimed voucher to the list
-      if (v.applies_to === 'SHIPPING') {
-        setCartVouchers(cv => ({ ...cv, shipping: [v, ...cv.shipping] }));
-      } else {
-        setCartVouchers(cv => ({ ...cv, order: [v, ...cv.order] }));
-      }
-      setCouponInput("");
-      setCouponErr("");
-    } catch (e) {
-      setCouponErr("Có lỗi xảy ra, vui lòng thử lại");
-    } finally {
-      setClaimLoading(false);
-    }
-  };
-
   const applyOrderVoucher = (v) => {
     if (subtotal < (v.min_purchase || 0)) { setCouponErr(`Áp dụng cho đơn từ ${fmt(v.min_purchase)}đ`); return; }
     setOrderVoucher(v); setCouponErr(""); setCouponView(false);
@@ -419,7 +382,7 @@ function App() {
     clearCartState();
     setLines([]); setPlaced(false); setDrawer(false); setNote(""); setOrderErr("");
     setOrderVoucher(null); setShippingVoucher(null); setSelectedShipPromo(null);
-    setCouponView(false); setCouponInput(""); setCouponErr("");
+    setCouponView(false); setCouponErr("");
     setStoreView(false); setAddrView(false);
     setActualPts(0);
   };
@@ -642,28 +605,19 @@ function App() {
               <>
                 <div className="cp-h">
                   <button className="cp-back" onClick={() => { setCouponView(false); setCouponErr(""); }}><Icon name="arrowleft" size={18} /></button>
-                  <h3>Mã giảm giá & Voucher</h3>
+                  <h3>Voucher của bạn</h3>
                 </div>
                 <div className="cp-b">
-                  {/* Claim promo code input */}
-                  <div className="cp-input">
-                    <input placeholder="Nhập mã khuyến mãi để nhận voucher" value={couponInput}
-                      onChange={e => { setCouponInput(e.target.value); setCouponErr(""); }}
-                      onKeyDown={e => { if (e.key === "Enter") claimCode(couponInput); }} />
-                    <button className="cp-apply" disabled={!couponInput.trim() || claimLoading}
-                      onClick={() => claimCode(couponInput)}>
-                      {claimLoading ? "…" : "Nhận"}
-                    </button>
-                  </div>
-                  {couponErr && <div className="cp-err"><Icon name="alert" size={14} color="var(--hot)" /> {couponErr}</div>}
-
                   {vouchersLoading ? (
                     <div style={{ textAlign: "center", padding: "20px 0", color: "var(--ink-3)", fontSize: 13 }}>Đang tải voucher…</div>
                   ) : (<>
                     {/* ORDER vouchers */}
                     <div className="cp-sec">Voucher giảm đơn hàng</div>
                     {cartVouchers.order.length === 0 ? (
-                      <div className="cp-empty">Bạn chưa có voucher giảm đơn. Nhập mã ở trên hoặc đổi điểm ở mục Đổi quà!</div>
+                      <div className="cp-empty">
+                        Bạn chưa có voucher. Tích điểm và đổi quà tại{" "}
+                        <a href="/profile#rewards" style={{ color: "var(--brand)", fontWeight: 600 }}>Đổi quà</a>!
+                      </div>
                     ) : (
                       <div className="vlist">
                         {cartVouchers.order.map(v => (
@@ -681,7 +635,7 @@ function App() {
                       </div>
                     )}
                     {cartVouchers.shipping.length === 0 && liveShippingPromos.length === 0 ? (
-                      <div className="cp-empty">Bạn chưa có voucher giảm phí ship. Nhập mã ở trên hoặc đổi điểm ở mục Đổi quà!</div>
+                      <div className="cp-empty">Bạn chưa có voucher giảm phí ship.</div>
                     ) : (
                       <div className="vlist">
                         {/* Personal shipping vouchers from wallet */}
