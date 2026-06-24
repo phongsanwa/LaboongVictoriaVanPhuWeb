@@ -186,7 +186,7 @@ function App() {
   const [orderVoucher,    setOrderVoucher]    = useState(null); // selected ORDER voucher
   const [shippingVoucher, setShippingVoucher] = useState(null); // selected SHIPPING voucher (personal)
   const [selectedShipPromo, setSelectedShipPromo] = useState(null); // selected ShippingPromotion rule
-  const [cartVouchers,    setCartVouchers]    = useState({ order: [], shipping: [] }); // fetched from server
+  const [cartVouchers,    setCartVouchers]    = useState({ order: [], shipping: [], redemptions: [] }); // fetched from server
   const [couponView,      setCouponView]      = useState(false);
   const [couponErr,       setCouponErr]       = useState("");
   const [vouchersLoading, setVouchersLoading] = useState(false);
@@ -266,7 +266,7 @@ function App() {
       headers: { 'Accept': 'application/json', 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || '' },
     })
       .then(r => r.json())
-      .then(data => setCartVouchers({ order: data.order || [], shipping: data.shipping || [] }))
+      .then(data => setCartVouchers({ order: data.order || [], shipping: data.shipping || [], redemptions: data.redemptions || [] }))
       .catch(() => {})
       .finally(() => setVouchersLoading(false));
   }, [couponView]); // eslint-disable-line
@@ -626,6 +626,46 @@ function App() {
                         ))}
                       </div>
                     )}
+
+                    {/* Redeemed gifts */}
+                    {cartVouchers.redemptions.length > 0 && (<>
+                      <div className="cp-sec">Quà Đã Đổi</div>
+                      <div className="vlist">
+                        {cartVouchers.redemptions.map(r => {
+                          const typeLabel = {
+                            discount_voucher: 'Voucher giảm giá',
+                            free_item:        'Sản phẩm miễn phí',
+                            tier_upgrade:     'Nâng hạng',
+                            other:            'Quà tặng',
+                          }[r.reward_type] ?? 'Quà tặng';
+                          const typeColor = {
+                            discount_voucher: 'linear-gradient(135deg,#FF8A5B,#FF6FA5)',
+                            free_item:        'linear-gradient(135deg,#0F623F,#1AA86A)',
+                            tier_upgrade:     'linear-gradient(135deg,#6B4FA0,#9B7FD0)',
+                            other:            'linear-gradient(135deg,#7A4A28,#B87045)',
+                          }[r.reward_type] ?? 'linear-gradient(135deg,#7A4A28,#B87045)';
+                          return (
+                            <div key={r.id} className="vopt" style={{ cursor: 'default', opacity: 1 }}>
+                              {r.image_url ? (
+                                <img src={r.image_url} alt="" style={{ width: 40, height: 40, borderRadius: 10, objectFit: 'cover', flexShrink: 0 }} />
+                              ) : (
+                                <span className="vi" style={{ background: typeColor }}>
+                                  <Icon name="gift" size={20} color="#fff" />
+                                </span>
+                              )}
+                              <div style={{ minWidth: 0, flex: 1 }}>
+                                <div className="vn">{r.name}</div>
+                                <div className="vd">{typeLabel} · {r.points_spent} điểm</div>
+                                {r.expires_at && <div style={{ fontSize: 11, color: 'var(--ink-3)', marginTop: 2 }}>HSD: {r.expires_at}</div>}
+                              </div>
+                              <span style={{ fontSize: 11, fontWeight: 700, padding: '3px 8px', borderRadius: 6, background: r.status === 'approved' ? '#0F623F20' : '#FFA50020', color: r.status === 'approved' ? 'var(--brand)' : '#E07000', whiteSpace: 'nowrap' }}>
+                                {r.status === 'approved' ? 'Đã duyệt' : 'Chờ duyệt'}
+                              </span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </>)}
 
                     {/* SHIPPING vouchers + promo rules — always show */}
                     <div className="cp-sec">Voucher giảm phí ship</div>
