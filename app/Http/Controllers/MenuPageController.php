@@ -231,6 +231,23 @@ class MenuPageController extends Controller
                 ])
                 ->values()
                 ->toArray(),
+            'orderPromos' => Promotion::where('is_active', true)
+                ->where('applies_to', 'ORDER')
+                ->orderBy('sort_order')
+                ->get()
+                ->filter(fn ($p) => $p->valid_until === null || $p->valid_until->isFuture())
+                ->map(fn ($p) => [
+                    'id'          => $p->id,
+                    'name'        => $p->name,
+                    'type'        => $p->type,
+                    'value'       => (int) $p->value,
+                    'min_purchase'=> $p->min_purchase ? (int) $p->min_purchase : 0,
+                    'max_discount'=> $p->max_discount ? (int) $p->max_discount : null,
+                    'valid_until' => $p->valid_until?->format('d/m/Y'),
+                    'badge'       => $p->badgeLabel(),
+                ])
+                ->values()
+                ->toArray(),
             'perPoint'      => 10000,
             'promos'        => $promoCodes,
             'addresses'     => $addresses,
