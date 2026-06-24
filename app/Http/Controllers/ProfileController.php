@@ -29,9 +29,10 @@ class ProfileController extends Controller
         $addresses = ($customer?->addresses ?? collect())->map(fn (CustomerAddress $a) => $this->formatAddress($a))->values()->all();
 
         return view('profile', ['profileData' => [
-            'member' => $member,
-            'addresses' => $addresses,
-            'favorites' => $customer?->favorite_items ?? [],
+            'member'       => $member,
+            'addresses'    => $addresses,
+            'favorites'    => $customer?->favorite_items ?? [],
+            'mapboxToken'  => config('services.mapbox.token', ''),
         ]]);
     }
 

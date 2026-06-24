@@ -314,62 +314,52 @@ function App() {
   );
 }
 
+function getMapboxToken() { return window.PROFILE_DATA?.mapboxToken || ''; }
+
 async function reverseGeocode(lat, lng) {
   try {
-    const r = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json&accept-language=vi`, {
-      headers: { "Accept-Language": "vi" },
-    });
+    const token = getMapboxToken();
+    const url = `https://api.mapbox.com/geocoding/v5/mapbox.places/${lng},${lat}.json`
+      + `?language=vi&limit=1&access_token=${token}`;
+    const r = await fetch(url, { headers: { Accept: "application/json" } });
     const d = await r.json();
-    if (!d.display_name) return null;
-    return d.display_name.replace(/,\s*Việt Nam$/i, "").trim();
+    if (!d.features?.length) return null;
+    return d.features[0].place_name.replace(/,\s*Việt Nam$/i, "").trim();
   } catch { return null; }
 }
 
 async function smartNominatimSearch(text) {
-  const headers = { "Accept-Language": "vi" };
-  const base = "https://nominatim.openstreetmap.org/search";
-  // Build query list: full text + version without leading house-number token
-  const queries = [text];
-  const noNum = text.replace(/^[A-Za-zÀ-ỹ]?\d+[A-Za-zÀ-ỹ]?\s+/, "").trim();
-  if (noNum && noNum !== text) queries.push(noNum);
-
-  const seen = new Set();
-  const results = [];
-  for (const q of queries) {
-    try {
-      const r = await fetch(`${base}?q=${encodeURIComponent(q + ", Việt Nam")}&format=json&limit=5&countrycodes=vn`, { headers });
-      const items = await r.json();
-      for (const d of items) {
-        if (!seen.has(d.place_id)) {
-          seen.add(d.place_id);
-          results.push({ text: d.display_name, lat: parseFloat(d.lat), lng: parseFloat(d.lon) });
-        }
-      }
-    } catch { /* ignore */ }
-    if (results.length >= 6) break;
-  }
-  return results.slice(0, 6);
+  try {
+    const token = getMapboxToken();
+    const url = `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(text)}.json`
+      + `?country=VN&language=vi&limit=6&access_token=${token}`;
+    const r = await fetch(url, { headers: { Accept: "application/json" } });
+    const d = await r.json();
+    if (!d.features?.length) return [];
+    return d.features.map(f => ({
+      text: f.place_name.replace(/,\s*Việt Nam$/i, "").trim(),
+      lat: f.center[1],
+      lng: f.center[0],
+    }));
+  } catch { return []; }
 }
 
 async function cascadeGeocode(text) {
-  const headers = { "Accept-Language": "vi" };
-  const base = "https://nominatim.openstreetmap.org/search";
-  // Build cascade: full → no house-number → progressively drop front parts
-  const parts = text.split(",").map(p => p.trim()).filter(Boolean);
-  const noNum = text.replace(/^[A-Za-zÀ-ỹ]?\d+[A-Za-zÀ-ỹ]?\s+/, "").trim();
-  const queries = [text];
-  if (noNum !== text) queries.push(noNum);
-  // Drop leading parts one by one: [street+district+city] → [district+city] → [city]
-  for (let i = 1; i < parts.length; i++) queries.push(parts.slice(i).join(", "));
-
-  for (const q of queries) {
-    if (q.trim().length < 3) continue;
-    try {
-      const r = await fetch(`${base}?q=${encodeURIComponent(q + ", Việt Nam")}&format=json&limit=1&countrycodes=vn`, { headers });
-      const items = await r.json();
-      if (items.length) return { lat: parseFloat(items[0].lat), lng: parseFloat(items[0].lon) };
-    } catch { /* continue */ }
-  }
+  try {
+    const token = getMapboxToken();
+    const parts = text.split(",").map(p => p.trim()).filter(Boolean);
+    const queries = [text];
+    // Drop leading parts one by one as fallback
+    for (let i = 1; i < parts.length; i++) queries.push(parts.slice(i).join(", "));
+    for (const q of queries) {
+      if (q.trim().length < 3) continue;
+      const url = `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(q)}.json`
+        + `?country=VN&language=vi&limit=1&access_token=${token}`;
+      const r = await fetch(url, { headers: { Accept: "application/json" } });
+      const d = await r.json();
+      if (d.features?.length) return { lat: d.features[0].center[1], lng: d.features[0].center[0] };
+    }
+  } catch { /* ignore */ }
   return null;
 }
 
@@ -493,7 +483,11 @@ function AddrModal({ init, onClose, onSave }) {
     });
     const center = (f.lat && f.lng) ? [f.lat, f.lng] : [20.9833, 105.8412];
     const map = L.map(mapDivRef.current, { zoomControl: true }).setView(center, f.lat ? 16 : 11);
-    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", { attribution: "© OpenStreetMap" }).addTo(map);
+    const token = getMapboxToken();
+    L.tileLayer(
+      `https://api.mapbox.com/styles/v1/mapbox/streets-v12/tiles/{z}/{x}/{y}?access_token=${token}`,
+      { tileSize: 512, zoomOffset: -1, attribution: "© <a href='https://www.mapbox.com/about/maps/'>Mapbox</a>" }
+    ).addTo(map);
     if (f.lat && f.lng) markerRef.current = L.marker([f.lat, f.lng]).addTo(map);
     map.on("click", e => {
       const { lat, lng } = e.latlng;
