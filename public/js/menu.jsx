@@ -21,7 +21,8 @@ function getLivePromos()    { return LIVE ? LIVE_D.promos        : (typeof PROMO
 function getLiveAddresses() { return LIVE ? (LIVE_D.addresses || []) : (typeof loadAddresses !== 'undefined' ? loadAddresses() : []); }
 function getLiveStores()        { return LIVE ? (LIVE_D.stores        || []) : []; }
 function getLiveStoreId()       { return LIVE ? (LIVE_D.storeId       ?? null) : null; }
-function getLiveShippingTiers() { return LIVE ? (LIVE_D.shippingTiers || []) : []; }
+function getLiveShippingTiers()  { return LIVE ? (LIVE_D.shippingTiers  || []) : []; }
+function getLiveShippingPromos() { return LIVE ? (LIVE_D.shippingPromos || []) : []; }
 
 const GEO_CACHE_KEY  = 'laboong_geo_v1';
 const CART_STATE_KEY = 'laboong_cart_v2';
@@ -183,7 +184,8 @@ function App() {
   const [addrId, setAddrId] = useState(null);
   const [addrView, setAddrView] = useState(false);
   const [liveStores,        ] = useState(getLiveStores);
-  const [liveShippingTiers, ] = useState(getLiveShippingTiers);
+  const [liveShippingTiers,  ] = useState(getLiveShippingTiers);
+  const [liveShippingPromos, ] = useState(getLiveShippingPromos);
   const [selectedStoreId, setSelectedStoreId] = useState(getLiveStoreId);
   const [storeView,  setStoreView]  = useState(false);
   const [storeViewMode, setStoreViewMode] = useState("pickup"); // "pickup" | "delivery"
@@ -321,9 +323,39 @@ function App() {
     return { geocoding: false, dist, fee };
   }, [addrId, addrGeoCache, selectedStore, liveShippingTiers]); // eslint-disable-line
 
-  const shipFee       = geoInfo?.fee ?? 0;
+  const shipFee = geoInfo?.fee ?? 0;
+  const dist    = geoInfo?.dist ?? null;
+
+  /* Auto-apply best shipping promo: highest saving among eligible rules */
+  const autoShipPromo = useMemo(() => {
+    if (!liveShippingPromos.length || shipFee === 0) return null;
+    const eligible = liveShippingPromos.filter(p => {
+      if (subtotal < p.min_order_amount) return false;
+      if (p.max_km !== null && dist !== null && dist > p.max_km) return false;
+      return true;
+    });
+    if (!eligible.length) return null;
+    // Pick the one that saves the most
+    return eligible.reduce((best, p) => {
+      const saving = p.discount_type === 'free' ? shipFee
+        : p.discount_type === 'percent' ? Math.floor(shipFee * p.discount_value / 100)
+        : Math.min(p.discount_value, shipFee);
+      const bestSaving = best.discount_type === 'free' ? shipFee
+        : best.discount_type === 'percent' ? Math.floor(shipFee * best.discount_value / 100)
+        : Math.min(best.discount_value, shipFee);
+      return saving > bestSaving ? p : best;
+    });
+  }, [liveShippingPromos, subtotal, dist, shipFee]); // eslint-disable-line
+
+  const autoShipDiscount = useMemo(() => {
+    if (!autoShipPromo) return 0;
+    if (autoShipPromo.discount_type === 'free') return shipFee;
+    if (autoShipPromo.discount_type === 'percent') return Math.floor(shipFee * autoShipPromo.discount_value / 100);
+    return Math.min(autoShipPromo.discount_value, shipFee);
+  }, [autoShipPromo, shipFee]);
+
   const orderDiscount = calcVoucherDiscount(orderVoucher, subtotal);
-  const shipDiscount  = calcVoucherDiscount(shippingVoucher, shipFee);
+  const shipDiscount  = Math.max(calcVoucherDiscount(shippingVoucher, shipFee), autoShipDiscount);
   const totalDiscount = orderDiscount + shipDiscount;
   const payable       = Math.max(0, subtotal - orderDiscount + shipFee - shipDiscount);
   const earnPts       = Math.floor(payable / livePerPoint);
@@ -861,7 +893,13 @@ function App() {
                       </span>
                     </div>
                   )}
-                  {shipDiscount > 0 && <div className="csum" style={{ color: "var(--brand)" }}><span>Giảm phí ship</span><span className="v tnum" style={{ color: "var(--brand)" }}>−{fmt(shipDiscount)}đ</span></div>}
+                  {autoShipPromo && autoShipDiscount > 0 && (
+                    <div className="csum" style={{ color: "var(--brand)" }}>
+                      <span>🎉 {autoShipPromo.name}</span>
+                      <span className="v tnum" style={{ color: "var(--brand)" }}>−{fmt(autoShipDiscount)}đ</span>
+                    </div>
+                  )}
+                  {!autoShipPromo && shipDiscount > 0 && <div className="csum" style={{ color: "var(--brand)" }}><span>Giảm phí ship</span><span className="v tnum" style={{ color: "var(--brand)" }}>−{fmt(shipDiscount)}đ</span></div>}
                   <div className="csum earn"><span>Điểm tích được</span><span className="v">+{fmt(earnPts)} điểm</span></div>
                   <div className="csum total"><span>Tổng cộng</span><span className="v tnum">{fmt(payable)}đ</span></div>
                   {orderErr && <div className="cp-err" style={{ marginBottom: 6 }}><Icon name="alert" size={14} color="var(--hot)" /> {orderErr}</div>}

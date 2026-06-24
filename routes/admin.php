@@ -66,6 +66,10 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
     Route::put('/shipping/{shipping}', [ShippingController::class, 'update'])->name('shipping.update');
     Route::delete('/shipping/{shipping}', [ShippingController::class, 'destroy'])->name('shipping.destroy');
     Route::post('/shipping/reorder', [ShippingController::class, 'reorder'])->name('shipping.reorder');
+    Route::post('/shipping/promos', [ShippingController::class, 'storePromo'])->name('shipping.promos.store');
+    Route::put('/shipping/promos/{promo}', [ShippingController::class, 'updatePromo'])->name('shipping.promos.update');
+    Route::delete('/shipping/promos/{promo}', [ShippingController::class, 'destroyPromo'])->name('shipping.promos.destroy');
+    Route::post('/shipping/promos/{promo}/toggle', [ShippingController::class, 'togglePromo'])->name('shipping.promos.toggle');
     Route::get('/variants', [VariantsController::class, 'index'])->name('variants.index');
     Route::post('/variants/groups', [VariantsController::class, 'storeGroup'])->name('variants.groups.store');
     Route::post('/variants/groups/reorder', [VariantsController::class, 'reorderGroups'])->name('variants.groups.reorder');

@@ -6,6 +6,7 @@ use App\Models\Category;
 use App\Models\Product;
 use App\Models\ProductVariant;
 use App\Models\Promotion;
+use App\Models\ShippingPromotion;
 use App\Models\ShippingTier;
 use App\Models\Store;
 use App\Models\VariantGroup;
@@ -213,6 +214,20 @@ class MenuPageController extends Controller
                     'min_km' => (float) $t->min_km,
                     'max_km' => $t->max_km !== null ? (float) $t->max_km : null,
                     'fee'    => (int) $t->fee,
+                ])
+                ->values()
+                ->toArray(),
+            'shippingPromos' => ShippingPromotion::where('is_active', true)
+                ->orderBy('sort_order')->orderBy('min_order_amount')
+                ->get()
+                ->map(fn ($p) => [
+                    'id'               => $p->id,
+                    'name'             => $p->name,
+                    'min_order_amount' => (int) $p->min_order_amount,
+                    'max_km'           => $p->max_km !== null ? (float) $p->max_km : null,
+                    'discount_type'    => $p->discount_type,
+                    'discount_value'   => (int) $p->discount_value,
+                    'badge'            => $p->badgeLabel(),
                 ])
                 ->values()
                 ->toArray(),
