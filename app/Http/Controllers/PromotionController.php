@@ -34,7 +34,7 @@ class PromotionController extends Controller
         $today = Carbon::today();
         $vouchers = Voucher::where('customer_id', $customer->id)
             ->where('status', 'active')
-            ->where('valid_until', '>=', $today)
+            ->where(fn ($q) => $q->whereNull('valid_until')->orWhere('valid_until', '>=', $today))
             ->orderByDesc('created_at')
             ->get();
 
