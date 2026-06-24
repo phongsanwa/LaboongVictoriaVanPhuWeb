@@ -672,20 +672,25 @@ function App() {
                       </div>
                     )}
 
-                    {/* SHIPPING vouchers — only show if there's a delivery fee */}
-                    {(cartVouchers.shipping.length > 0 || shipFee > 0) && (<>
-                      <div className="cp-sec">Voucher giảm phí ship</div>
-                      {cartVouchers.shipping.length === 0 ? (
-                        <div className="cp-empty">Bạn chưa có voucher giảm phí ship.</div>
-                      ) : (
+                    {/* SHIPPING vouchers — always show */}
+                    <div className="cp-sec">Voucher giảm phí ship</div>
+                    {cartVouchers.shipping.length === 0 ? (
+                      <div className="cp-empty">Bạn chưa có voucher giảm phí ship. Nhập mã ở trên hoặc đổi điểm ở mục Đổi quà!</div>
+                    ) : (
+                      <>
+                        {shipFee === 0 && addrId === "pickup" && (
+                          <div style={{ fontSize: 12, color: "var(--ink-3)", marginBottom: 8, padding: "0 2px" }}>
+                            Chọn giao hàng và nhập địa chỉ để áp dụng voucher ship.
+                          </div>
+                        )}
                         <div className="vlist">
                           {cartVouchers.shipping.map(v => (
                             <VoucherCard key={v.id} v={v} onApply={applyShippingVoucher}
                               isSelected={shippingVoucher?.id === v.id} base={shipFee} />
                           ))}
                         </div>
-                      )}
-                    </>)}
+                      </>
+                    )}
                   </>)}
                 </div>
               </>
