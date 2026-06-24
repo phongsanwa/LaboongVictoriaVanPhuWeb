@@ -23,6 +23,7 @@ function getLiveStores()        { return LIVE ? (LIVE_D.stores        || []) : [
 function getLiveStoreId()       { return LIVE ? (LIVE_D.storeId       ?? null) : null; }
 function getLiveShippingTiers()  { return LIVE ? (LIVE_D.shippingTiers  || []) : []; }
 function getLiveShippingPromos() { return LIVE ? (LIVE_D.shippingPromos || []) : []; }
+function getLiveOrderPromos()    { return LIVE ? (LIVE_D.orderPromos    || []) : []; }
 
 const GEO_CACHE_KEY  = 'laboong_geo_v1';
 const CART_STATE_KEY = 'laboong_cart_v2';
@@ -119,6 +120,17 @@ function calcShipPromoDiscount(p, shipFee, subtotal, dist) {
   return Math.min(p.discount_value, shipFee);
 }
 
+function calcOrderPromoDiscount(p, subtotal) {
+  if (!p) return 0;
+  if (subtotal < (p.min_purchase || 0)) return 0;
+  if (p.type === 'percent') {
+    let d = Math.floor(subtotal * p.value / 100);
+    if (p.max_discount) d = Math.min(d, p.max_discount);
+    return d;
+  }
+  return Math.min(p.value, subtotal);
+}
+
 /* ─── Line item helpers ─────────────────────────────────────────── */
 function lineKey(l) {
   if (l.selections) {
@@ -182,10 +194,11 @@ function App() {
   const [actualPts, setActualPts] = useState(0);
   const [note, setNote] = useState(() => loadCartState()?.note || "");
 
-  /* ─── 3-source discount state ─── */
-  const [orderVoucher,    setOrderVoucher]    = useState(null); // selected ORDER voucher
-  const [shippingVoucher, setShippingVoucher] = useState(null); // selected SHIPPING voucher (personal)
-  const [selectedShipPromo, setSelectedShipPromo] = useState(null); // selected ShippingPromotion rule
+  /* ─── discount state ─── */
+  const [orderVoucher,      setOrderVoucher]      = useState(null); // personal ORDER voucher from wallet
+  const [selectedOrderPromo,setSelectedOrderPromo]= useState(null); // ORDER promo from Quản lý khuyến mãi
+  const [shippingVoucher,   setShippingVoucher]   = useState(null); // personal SHIPPING voucher from wallet
+  const [selectedShipPromo, setSelectedShipPromo] = useState(null); // ShippingPromotion rule
   const [cartVouchers,    setCartVouchers]    = useState({ order: [], shipping: [], redemptions: [] }); // fetched from server
   const [couponView,      setCouponView]      = useState(false);
   const [couponErr,       setCouponErr]       = useState("");
@@ -197,6 +210,7 @@ function App() {
   const [liveStores,        ] = useState(getLiveStores);
   const [liveShippingTiers,  ] = useState(getLiveShippingTiers);
   const [liveShippingPromos, ] = useState(getLiveShippingPromos);
+  const [liveOrderPromos,    ] = useState(getLiveOrderPromos);
   const [selectedStoreId, setSelectedStoreId] = useState(getLiveStoreId);
   const [storeView,  setStoreView]  = useState(false);
   const [storeViewMode, setStoreViewMode] = useState("pickup"); // "pickup" | "delivery"
@@ -337,7 +351,9 @@ function App() {
   const shipFee = geoInfo?.fee ?? 0;
   const dist    = geoInfo?.dist ?? null;
 
-  const orderDiscount   = calcVoucherDiscount(orderVoucher, subtotal);
+  const orderDiscount   = orderVoucher
+    ? calcVoucherDiscount(orderVoucher, subtotal)
+    : calcOrderPromoDiscount(selectedOrderPromo, subtotal);
   const shipDiscount    = shippingVoucher
     ? calcVoucherDiscount(shippingVoucher, shipFee)
     : calcShipPromoDiscount(selectedShipPromo, shipFee, subtotal, dist);
@@ -345,9 +361,10 @@ function App() {
   const payable         = Math.max(0, subtotal - orderDiscount + shipFee - shipDiscount);
   const earnPts       = Math.floor(payable / livePerPoint);
 
-  /* Clear order voucher if subtotal drops below min */
+  /* Clear order voucher/promo if subtotal drops below min */
   useEffect(() => {
     if (orderVoucher && subtotal < (orderVoucher.min_purchase || 0)) setOrderVoucher(null);
+    if (selectedOrderPromo && subtotal < (selectedOrderPromo.min_purchase || 0)) setSelectedOrderPromo(null);
   }, [subtotal]); // eslint-disable-line
 
   /* Clear selectedShipPromo if it becomes ineligible */
@@ -359,7 +376,12 @@ function App() {
 
   const applyOrderVoucher = (v) => {
     if (subtotal < (v.min_purchase || 0)) { setCouponErr(`Áp dụng cho đơn từ ${fmt(v.min_purchase)}đ`); return; }
-    setOrderVoucher(v); setCouponErr(""); setCouponView(false);
+    setOrderVoucher(v); setSelectedOrderPromo(null); setCouponErr(""); setCouponView(false);
+  };
+
+  const applyOrderPromo = (p) => {
+    if (subtotal < (p.min_purchase || 0)) { setCouponErr(`Áp dụng cho đơn từ ${fmt(p.min_purchase)}đ`); return; }
+    setSelectedOrderPromo(p); setOrderVoucher(null); setCouponErr(""); setCouponView(false);
   };
 
   const applyShippingVoucher = (v) => {
@@ -381,7 +403,7 @@ function App() {
   const reset = () => {
     clearCartState();
     setLines([]); setPlaced(false); setDrawer(false); setNote(""); setOrderErr("");
-    setOrderVoucher(null); setShippingVoucher(null); setSelectedShipPromo(null);
+    setOrderVoucher(null); setSelectedOrderPromo(null); setShippingVoucher(null); setSelectedShipPromo(null);
     setCouponView(false); setCouponErr("");
     setStoreView(false); setAddrView(false);
     setActualPts(0);
@@ -405,9 +427,10 @@ function App() {
         body: JSON.stringify({
           lines: lines.map(l => ({ id: l.id, qty: l.qty, selections: l.selections || null })),
           note: note || null,
-          voucher_id:          orderVoucher?.id      || null,
-          shipping_voucher_id: shippingVoucher?.id   || null,
-          ship_promo_id:       selectedShipPromo?.id || null,
+          voucher_id:          orderVoucher?.id       || null,
+          order_promo_id:      selectedOrderPromo?.id || null,
+          shipping_voucher_id: shippingVoucher?.id    || null,
+          ship_promo_id:       selectedShipPromo?.id  || null,
           store_id: selectedStoreId || null,
           shipping_fee: shipFee || 0,
         }),
@@ -611,19 +634,58 @@ function App() {
                   {vouchersLoading ? (
                     <div style={{ textAlign: "center", padding: "20px 0", color: "var(--ink-3)", fontSize: 13 }}>Đang tải voucher…</div>
                   ) : (<>
-                    {/* ORDER vouchers */}
+                    {/* ORDER vouchers + order promos from admin */}
                     <div className="cp-sec">Voucher giảm đơn hàng</div>
-                    {cartVouchers.order.length === 0 ? (
+                    {cartVouchers.order.length === 0 && liveOrderPromos.length === 0 ? (
                       <div className="cp-empty">
-                        Bạn chưa có voucher. Tích điểm và đổi quà tại{" "}
+                        Chưa có voucher giảm đơn. Tích điểm và đổi quà tại{" "}
                         <a href="/profile#rewards" style={{ color: "var(--brand)", fontWeight: 600 }}>Đổi quà</a>!
                       </div>
                     ) : (
                       <div className="vlist">
+                        {/* Personal ORDER vouchers from wallet */}
                         {cartVouchers.order.map(v => (
                           <VoucherCard key={v.id} v={v} onApply={applyOrderVoucher}
                             isSelected={orderVoucher?.id === v.id} base={subtotal} />
                         ))}
+                        {/* Admin-created order promos from Quản lý khuyến mãi */}
+                        {liveOrderPromos.map(p => {
+                          const notEnough  = subtotal < (p.min_purchase || 0);
+                          const saving     = calcOrderPromoDiscount(p, subtotal);
+                          const isSelected = selectedOrderPromo?.id === p.id;
+                          return (
+                            <button key={p.id}
+                              className={"vopt" + (isSelected ? " on" : "")}
+                              disabled={notEnough}
+                              onClick={() => applyOrderPromo(p)}
+                            >
+                              <span className="vi" style={{ background: isSelected ? "var(--brand)" : "linear-gradient(135deg,#FF8A5B,#FF6FA5)" }}>
+                                <Icon name="ticket" size={20} color="#fff" />
+                              </span>
+                              <div style={{ minWidth: 0, flex: 1 }}>
+                                <div className="vn">{p.name}</div>
+                                <div className="vd">
+                                  {p.badge}
+                                  {p.max_discount ? ` (tối đa ${fmt(p.max_discount)}đ)` : ''}
+                                  {p.min_purchase > 0 ? ` · Đơn từ ${fmt(p.min_purchase)}đ` : ''}
+                                </div>
+                                {p.valid_until && <div className="vd" style={{ color: "var(--ink-3)" }}>HSD: {p.valid_until}</div>}
+                                {notEnough && (
+                                  <div style={{ fontSize: 11, color: "var(--hot)", marginTop: 2 }}>
+                                    Còn thiếu {fmt((p.min_purchase || 0) - subtotal)}đ
+                                  </div>
+                                )}
+                              </div>
+                              {!notEnough && saving > 0 && (
+                                <span className="vgo" style={{ color: "var(--pink)" }}>
+                                  {isSelected
+                                    ? <><Icon name="check" size={14} /> Đang dùng</>
+                                    : <>−{fmt(saving)}đ <Icon name="chev" size={14} /></>}
+                                </span>
+                              )}
+                            </button>
+                          );
+                        })}
                       </div>
                     )}
 
@@ -870,7 +932,7 @@ function App() {
                 </div>
                 <div className="cart-f">
                   {/* Applied vouchers row or trigger */}
-                  {(orderVoucher || shippingVoucher || selectedShipPromo) ? (
+                  {(orderVoucher || selectedOrderPromo || shippingVoucher || selectedShipPromo) ? (
                     <div style={{ display: "flex", flexDirection: "column", gap: 6, marginBottom: 4 }}>
                       {orderVoucher && (
                         <div className="coupon-applied">
@@ -881,6 +943,17 @@ function App() {
                           </div>
                           <span className="cav">−{fmt(orderDiscount)}đ</span>
                           <button className="cax" onClick={() => setOrderVoucher(null)} title="Bỏ voucher"><Icon name="close" size={16} /></button>
+                        </div>
+                      )}
+                      {selectedOrderPromo && (
+                        <div className="coupon-applied">
+                          <span className="cai"><Icon name="ticket" size={17} color="#fff" /></span>
+                          <div style={{ minWidth: 0 }}>
+                            <div className="can">{selectedOrderPromo.name}</div>
+                            <div className="cac">Khuyến mãi đơn hàng</div>
+                          </div>
+                          <span className="cav">−{fmt(orderDiscount)}đ</span>
+                          <button className="cax" onClick={() => setSelectedOrderPromo(null)} title="Bỏ khuyến mãi"><Icon name="close" size={16} /></button>
                         </div>
                       )}
                       {(shippingVoucher || selectedShipPromo) && (
@@ -909,7 +982,7 @@ function App() {
                     </button>
                   )}
                   <div className="csum"><span>Tạm tính</span><span className="v tnum">{fmt(subtotal)}đ</span></div>
-                  {orderDiscount > 0 && <div className="csum" style={{ color: "var(--pink)" }}><span>Giảm đơn hàng</span><span className="v tnum" style={{ color: "var(--pink)" }}>−{fmt(orderDiscount)}đ</span></div>}
+                  {orderDiscount > 0 && <div className="csum" style={{ color: "var(--pink)" }}><span>{selectedOrderPromo ? selectedOrderPromo.name : "Giảm đơn hàng"}</span><span className="v tnum" style={{ color: "var(--pink)" }}>−{fmt(orderDiscount)}đ</span></div>}
                   {geoInfo?.dist != null && (
                     <div className="csum" style={{ color: "var(--ink-3)", fontSize: 13 }}>
                       <span>Khoảng cách</span>
