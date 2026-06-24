@@ -234,6 +234,7 @@ class MenuPageController extends Controller
             'perPoint'      => 10000,
             'promos'        => $promoCodes,
             'addresses'     => $addresses,
+            'mapboxToken'   => config('services.mapbox.token', ''),
             'urls'          => [
                 'placeOrder' => route('orders.place'),
             ],
