@@ -31,9 +31,10 @@ class Reward extends Model
     protected function casts(): array
     {
         return [
-            'valid_from' => 'date',
+            'valid_from'  => 'date',
             'valid_until' => 'date',
             'is_featured' => 'boolean',
+            'value'       => 'float',
         ];
     }
 
