@@ -118,15 +118,18 @@ class RewardsCatalogController extends Controller
                     'status'        => 'active',
                 ]);
             } elseif ($reward->reward_type === 'free_item' && $reward->product_id) {
-                $product = \App\Models\Product::find($reward->product_id);
+                $product  = \App\Models\Product::find($reward->product_id);
+                $qty      = max(1, (int) ($reward->free_item_quantity ?? 1));
+                $unitPrice = $product ? (int) $product->base_price : 0;
                 Voucher::create([
                     'voucher_code'          => 'FRE' . now()->format('Ymd') . strtoupper(Str::random(6)),
                     'customer_id'           => $customer->id,
                     'redemption_id'         => $redemption->id,
                     'applies_to'            => 'ORDER',
                     'discount_type'         => 'free_item',
-                    'discount_value'        => $product ? (int) $product->base_price : 0,
+                    'discount_value'        => $unitPrice * $qty,
                     'free_item_product_id'  => $reward->product_id,
+                    'free_item_quantity'    => $qty,
                     'min_purchase'          => null,
                     'max_discount'          => null,
                     'valid_from'            => now()->toDateString(),

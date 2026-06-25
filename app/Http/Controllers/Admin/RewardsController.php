@@ -106,19 +106,23 @@ class RewardsController extends Controller
             'status'     => ['required', 'in:on,off'],
             'grad'       => ['nullable', 'string', 'max:100'],
             'img'        => ['nullable', 'string', 'max:500'],
-            'product_id' => ['nullable', 'integer', 'exists:products,id'],
+            'product_id'          => ['nullable', 'integer', 'exists:products,id'],
+            'free_item_quantity'  => ['nullable', 'integer', 'min:1', 'max:99'],
         ]);
 
+        $isFreeItem = $data['cat'] !== 'voucher';
+
         return [
-            'name'             => $data['name'],
-            'category'         => $data['cat'],
-            'points_required'  => $data['points'],
-            'quantity_total'   => $data['qty'],
-            'valid_until'      => $data['expiry'],
-            'status'           => $data['status'] === 'on' ? 'active' : 'inactive',
-            'gradient'         => $data['grad'] ?? null,
-            'image_url'        => $data['img'] ?? null,
-            'product_id'       => ($data['cat'] !== 'voucher') ? ($data['product_id'] ?? null) : null,
+            'name'               => $data['name'],
+            'category'           => $data['cat'],
+            'points_required'    => $data['points'],
+            'quantity_total'     => $data['qty'],
+            'valid_until'        => $data['expiry'],
+            'status'             => $data['status'] === 'on' ? 'active' : 'inactive',
+            'gradient'           => $data['grad'] ?? null,
+            'image_url'          => $data['img'] ?? null,
+            'product_id'         => $isFreeItem ? ($data['product_id'] ?? null) : null,
+            'free_item_quantity' => $isFreeItem ? (int) ($data['free_item_quantity'] ?? 1) : 1,
         ];
     }
 
@@ -176,9 +180,10 @@ class RewardsController extends Controller
             'used'       => $used,
             'expiry'     => $reward->valid_until->toDateString(),
             'status'     => $reward->status === 'active' ? 'on' : 'off',
-            'grad'       => $reward->gradient ?? self::GRADS[$reward->id % count(self::GRADS)],
-            'img'        => $reward->image_url,
-            'product_id' => $reward->product_id,
+            'grad'               => $reward->gradient ?? self::GRADS[$reward->id % count(self::GRADS)],
+            'img'                => $reward->image_url,
+            'product_id'         => $reward->product_id,
+            'free_item_quantity' => $reward->free_item_quantity ?? 1,
         ];
     }
 
