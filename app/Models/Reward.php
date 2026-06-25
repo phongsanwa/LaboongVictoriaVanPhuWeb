@@ -21,6 +21,7 @@ class Reward extends Model
         'valid_until',
         'min_purchase',
         'product_id',
+        'free_item_quantity',
         'category',
         'status',
         'display_order',

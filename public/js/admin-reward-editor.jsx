@@ -27,6 +27,7 @@ function RewardEditor({ initial, onClose, onSave }) {
   const [grad, setGrad] = useStateEd(initial?.grad || GRADS[0]);
   const [img, setImg] = useStateEd(initial?.img || null);
   const [productId, setProductId] = useStateEd(initial?.product_id ?? null);
+  const [freeQty, setFreeQty]     = useStateEd(initial?.free_item_quantity ?? 1);
   const isFreeItem = cat !== "voucher";
 
   useEffectEd(() => {
@@ -35,9 +36,9 @@ function RewardEditor({ initial, onClose, onSave }) {
     return () => window.removeEventListener("keydown", h);
   }, [onClose]);
 
-  // Reset product selection when switching to voucher category
+  // Reset product/quantity when switching to voucher category
   useEffectEd(() => {
-    if (cat === "voucher") setProductId(null);
+    if (cat === "voucher") { setProductId(null); setFreeQty(1); }
   }, [cat]);
 
   const onFile = (e) => {
@@ -53,7 +54,8 @@ function RewardEditor({ initial, onClose, onSave }) {
       ...(initial || {}),
       name: name.trim(), cat, points: Number(points), qty: Number(qty),
       expiry, status: status ? "on" : "off", grad, img,
-      product_id: isFreeItem ? (productId ?? null) : null,
+      product_id:          isFreeItem ? (productId ?? null) : null,
+      free_item_quantity:  isFreeItem ? Math.max(1, Number(freeQty) || 1) : 1,
     });
   };
 
@@ -129,6 +131,23 @@ function RewardEditor({ initial, onClose, onSave }) {
                   </select>
                   <div style={{ fontSize: 11.5, color: "var(--ink-3)", marginTop: 4 }}>
                     Khách đổi quà sẽ nhận voucher miễn phí sản phẩm này khi đặt hàng.
+                  </div>
+                </div>
+              )}
+
+              {isFreeItem && (
+                <div className="fld">
+                  <label>Số lượng miễn phí</label>
+                  <input
+                    className="inp"
+                    type="number"
+                    min="1"
+                    max="99"
+                    value={freeQty}
+                    onChange={e => setFreeQty(Math.max(1, parseInt(e.target.value, 10) || 1))}
+                  />
+                  <div style={{ fontSize: 11.5, color: "var(--ink-3)", marginTop: 4 }}>
+                    Voucher sẽ miễn phí tối đa <b>{freeQty}</b> sản phẩm trong đơn hàng.
                   </div>
                 </div>
               )}
