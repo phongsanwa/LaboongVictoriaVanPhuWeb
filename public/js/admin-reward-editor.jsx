@@ -30,7 +30,7 @@ function RewardEditor({ initial, onClose, onSave }) {
   const [freeQty, setFreeQty]     = useStateEd(Number(initial?.free_item_quantity ?? 1) || 1);
   const [toppingValue, setToppingValue] = useStateEd(initial?.value != null ? Number(initial.value) : 5000);
   const isFreeItem  = cat === "drink" || cat === "gift";
-  const isUpgrade   = cat === "upgrade";
+  const isUpgrade   = cat === "topping" || cat === "upsize";
 
   useEffectEd(() => {
     const h = (e) => { if (e.key === "Escape") onClose(); };
@@ -40,7 +40,7 @@ function RewardEditor({ initial, onClose, onSave }) {
 
   // Reset product/quantity when switching category
   useEffectEd(() => {
-    if (cat === "voucher" || cat === "upgrade") { setProductId(null); }
+    if (cat === "voucher" || cat === "topping" || cat === "upsize") { setProductId(null); }
     if (cat === "voucher") setFreeQty(1);
   }, [cat]);
 

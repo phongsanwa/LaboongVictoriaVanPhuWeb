@@ -3,9 +3,10 @@
 
 const REWARD_CATS = {
   voucher: { label: "Voucher giảm giá", ic: "percent" },
-  drink:   { label: "Đồ uống miễn phí", ic: "cup" },
-  gift:    { label: "Quà tặng", ic: "gift" },
-  upgrade: { label: "Nâng cấp / Topping", ic: "spark" },
+  drink:   { label: "Miễn phí món",     ic: "cup" },
+  gift:    { label: "Quà vật phẩm",     ic: "gift" },
+  topping: { label: "Freetopping",      ic: "spark" },
+  upsize:  { label: "Upsize",           ic: "arrowup" },
 };
 
 const ADMIN_REWARDS_DATA = window.ADMIN_REWARDS_DATA || { admin: null, rewards: [], products: [] };

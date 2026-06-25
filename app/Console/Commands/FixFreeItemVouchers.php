@@ -47,7 +47,7 @@ class FixFreeItemVouchers extends Command
                     'status'         => 'active',
                 ];
 
-                if ($reward->category === 'upgrade' && (int) ($reward->value ?? 0) > 0) {
+                if (in_array($reward->category, ['topping', 'upsize', 'upgrade']) && (int) ($reward->value ?? 0) > 0) {
                     $qty = max(1, (int) ($reward->free_item_quantity ?? 1));
                     Voucher::create(array_merge($base, [
                         'voucher_code'         => 'TOP' . now()->format('Ymd') . strtoupper(Str::random(6)),
@@ -55,7 +55,7 @@ class FixFreeItemVouchers extends Command
                         'free_item_product_id' => null,
                         'free_item_quantity'   => $qty,
                     ]));
-                    $this->line("Created upgrade voucher for redemption #{$r->id} ({$reward->name})");
+                    $this->line("Created topping/upsize voucher for redemption #{$r->id} ({$reward->name})");
                     $created++;
                 } elseif ($reward->reward_type === 'free_item' && $reward->product_id && in_array($reward->category, ['drink', 'gift'])) {
                     $product = Product::find($reward->product_id);
@@ -72,7 +72,7 @@ class FixFreeItemVouchers extends Command
                 } else {
                     $this->warn("Skipped #{$r->id} ({$reward->name})");
                     $this->line("  category={$reward->category} reward_type={$reward->reward_type} product_id={$reward->product_id} value={$reward->value} free_item_qty={$reward->free_item_quantity}");
-                    if ($reward->category === 'upgrade') {
+                    if (in_array($reward->category, ['topping', 'upsize', 'upgrade'])) {
                         $this->line("  → FIX: vào admin sửa 'Giá trị mỗi topping' thành số > 0 (VD: 5000)");
                     } elseif (in_array($reward->category, ['drink', 'gift']) && !$reward->product_id) {
                         $this->line("  → FIX: vào admin chọn 'Sản phẩm miễn phí' cho phần thưởng này");

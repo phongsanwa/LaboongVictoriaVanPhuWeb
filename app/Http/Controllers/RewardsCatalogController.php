@@ -14,7 +14,7 @@ use Illuminate\Support\Str;
 
 class RewardsCatalogController extends Controller
 {
-    private const CATEGORIES = ['voucher', 'drink', 'upgrade', 'gift'];
+    private const CATEGORIES = ['voucher', 'drink', 'gift', 'topping', 'upsize', 'upgrade'];
 
     public function index()
     {
@@ -137,7 +137,7 @@ class RewardsCatalogController extends Controller
                     'usage_count'           => 0,
                     'status'                => 'active',
                 ]);
-            } elseif ($reward->category === 'upgrade' && (int) ($reward->value ?? 0) > 0) {
+            } elseif (in_array($reward->category, ['topping', 'upsize', 'upgrade']) && (int) ($reward->value ?? 0) > 0) {
                 $qty       = max(1, (int) ($reward->free_item_quantity ?? 1));
                 $unitValue = (int) $reward->value;
                 Voucher::create([
