@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\Product;
 use App\Models\Reward;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -39,7 +40,8 @@ class RewardsController extends Controller
                     'email' => $admin->email,
                     'initials' => $this->initials($admin->name),
                 ],
-                'rewards' => $this->rewardsList(),
+                'rewards'  => $this->rewardsList(),
+                'products' => $this->buildProducts(),
             ],
         ]);
     }
@@ -96,26 +98,46 @@ class RewardsController extends Controller
     private function validated(Request $request): array
     {
         $data = $request->validate([
-            'name' => ['required', 'string', 'max:255'],
-            'cat' => ['required', 'in:' . implode(',', self::CATEGORIES)],
-            'points' => ['required', 'integer', 'min:0'],
-            'qty' => ['required', 'integer', 'min:0'],
-            'expiry' => ['required', 'date'],
-            'status' => ['required', 'in:on,off'],
-            'grad' => ['nullable', 'string', 'max:100'],
-            'img' => ['nullable', 'string', 'max:500'],
+            'name'       => ['required', 'string', 'max:255'],
+            'cat'        => ['required', 'in:' . implode(',', self::CATEGORIES)],
+            'points'     => ['required', 'integer', 'min:0'],
+            'qty'        => ['required', 'integer', 'min:0'],
+            'expiry'     => ['required', 'date'],
+            'status'     => ['required', 'in:on,off'],
+            'grad'       => ['nullable', 'string', 'max:100'],
+            'img'        => ['nullable', 'string', 'max:500'],
+            'product_id' => ['nullable', 'integer', 'exists:products,id'],
         ]);
 
         return [
-            'name' => $data['name'],
-            'category' => $data['cat'],
-            'points_required' => $data['points'],
-            'quantity_total' => $data['qty'],
-            'valid_until' => $data['expiry'],
-            'status' => $data['status'] === 'on' ? 'active' : 'inactive',
-            'gradient' => $data['grad'] ?? null,
-            'image_url' => $data['img'] ?? null,
+            'name'             => $data['name'],
+            'category'         => $data['cat'],
+            'points_required'  => $data['points'],
+            'quantity_total'   => $data['qty'],
+            'valid_until'      => $data['expiry'],
+            'status'           => $data['status'] === 'on' ? 'active' : 'inactive',
+            'gradient'         => $data['grad'] ?? null,
+            'image_url'        => $data['img'] ?? null,
+            'product_id'       => ($data['cat'] !== 'voucher') ? ($data['product_id'] ?? null) : null,
         ];
+    }
+
+    private function buildProducts(): array
+    {
+        return Product::with('category')
+            ->where('is_available', true)
+            ->orderBy('sort_order')
+            ->get()
+            ->map(fn (Product $p) => [
+                'id'    => $p->id,
+                'name'  => $p->name,
+                'price' => (int) $p->base_price,
+                'cat'   => $p->category?->name ?? '',
+                'img'   => $p->image_url ?: null,
+                'grad'  => $p->color ?? 'linear-gradient(150deg,#0F623F,#1AA86A)',
+            ])
+            ->values()
+            ->toArray();
     }
 
     private function rewardsList()
@@ -144,18 +166,19 @@ class RewardsController extends Controller
             ?? max($redeemed, $reward->quantity_available > 0 ? $reward->quantity_available + $redeemed : 0, 1);
 
         return [
-            'id' => 'RW' . (4000 + $reward->id),
-            'dbId' => $reward->id,
-            'name' => $reward->name,
-            'cat' => $reward->category,
-            'points' => $reward->points_required,
-            'qty' => $qty,
-            'redeemed' => $redeemed,
-            'used' => $used,
-            'expiry' => $reward->valid_until->toDateString(),
-            'status' => $reward->status === 'active' ? 'on' : 'off',
-            'grad' => $reward->gradient ?? self::GRADS[$reward->id % count(self::GRADS)],
-            'img' => $reward->image_url,
+            'id'         => 'RW' . (4000 + $reward->id),
+            'dbId'       => $reward->id,
+            'name'       => $reward->name,
+            'cat'        => $reward->category,
+            'points'     => $reward->points_required,
+            'qty'        => $qty,
+            'redeemed'   => $redeemed,
+            'used'       => $used,
+            'expiry'     => $reward->valid_until->toDateString(),
+            'status'     => $reward->status === 'active' ? 'on' : 'off',
+            'grad'       => $reward->gradient ?? self::GRADS[$reward->id % count(self::GRADS)],
+            'img'        => $reward->image_url,
+            'product_id' => $reward->product_id,
         ];
     }
 

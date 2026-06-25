@@ -17,6 +17,7 @@ class Voucher extends Model
         'qr_code',
         'discount_type',
         'discount_value',
+        'free_item_product_id',
         'min_purchase',
         'max_discount',
         'valid_from',
@@ -45,5 +46,10 @@ class Voucher extends Model
     public function redemption(): BelongsTo
     {
         return $this->belongsTo(Redemption::class);
+    }
+
+    public function freeItemProduct(): BelongsTo
+    {
+        return $this->belongsTo(\App\Models\Product::class, 'free_item_product_id');
     }
 }

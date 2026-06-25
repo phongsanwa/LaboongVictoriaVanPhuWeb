@@ -107,7 +107,8 @@ class OrderController extends Controller
         $shippingVoucher = null;
 
         if (!empty($data['voucher_id'])) {
-            $v = Voucher::where('id', $data['voucher_id'])
+            $v = Voucher::with('freeItemProduct')
+                ->where('id', $data['voucher_id'])
                 ->where('customer_id', $customer->id)
                 ->where('status', 'active')
                 ->where('applies_to', 'ORDER')
@@ -193,9 +194,11 @@ class OrderController extends Controller
                     'discount_category' => $orderVoucher->source_type === 'PROMOTION_CLAIM' ? 'PROMOTION_VOUCHER' : 'GIFT_VOUCHER',
                     'voucher_id'        => $orderVoucher->id,
                     'discount_amount'   => $orderDiscAmt,
-                    'description'       => $orderVoucher->discount_type === 'percentage'
-                        ? "Giảm {$orderVoucher->discount_value}%"
-                        : "Giảm " . number_format($orderVoucher->discount_value, 0, ',', '.') . "đ",
+                    'description'       => match($orderVoucher->discount_type) {
+                        'free_item'  => "Miễn phí: " . ($orderVoucher->freeItemProduct?->name ?? 'sản phẩm'),
+                        'percentage' => "Giảm {$orderVoucher->discount_value}%",
+                        default      => "Giảm " . number_format($orderVoucher->discount_value, 0, ',', '.') . "đ",
+                    },
                 ]);
                 $orderVoucher->update(['status' => 'used', 'used_at' => now()]);
             }

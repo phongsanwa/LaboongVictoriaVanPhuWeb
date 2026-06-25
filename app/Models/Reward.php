@@ -20,6 +20,7 @@ class Reward extends Model
         'valid_from',
         'valid_until',
         'min_purchase',
+        'product_id',
         'category',
         'status',
         'display_order',
@@ -38,5 +39,10 @@ class Reward extends Model
     public function redemptions(): HasMany
     {
         return $this->hasMany(Redemption::class);
+    }
+
+    public function product(): \Illuminate\Database\Eloquent\Relations\BelongsTo
+    {
+        return $this->belongsTo(\App\Models\Product::class);
     }
 }

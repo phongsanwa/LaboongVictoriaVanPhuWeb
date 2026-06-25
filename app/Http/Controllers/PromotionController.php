@@ -54,7 +54,7 @@ class PromotionController extends Controller
             'valid_until'    => $v->valid_until?->format('d/m/Y'),
         ];
 
-        $redemptions = \App\Models\Redemption::with(['reward', 'voucher'])
+        $redemptions = \App\Models\Redemption::with(['reward', 'voucher.freeItemProduct'])
             ->where('customer_id', $customer->id)
             ->whereIn('status', ['pending', 'approved'])
             ->where(fn ($q) => $q->whereNull('expires_at')->orWhere('expires_at', '>=', $today))
@@ -66,15 +66,17 @@ class PromotionController extends Controller
                 if ($v && $v->status === 'active' && $v->applies_to === 'ORDER'
                     && ($v->valid_until === null || $v->valid_until >= $today)) {
                     $voucherData = [
-                        'id'             => $v->id,
-                        'code'           => $v->voucher_code,
-                        'name'           => $r->reward?->name ?? 'Voucher quà tặng',
-                        'applies_to'     => $v->applies_to,
-                        'discount_type'  => $v->discount_type,
-                        'discount_value' => (float) $v->discount_value,
-                        'min_purchase'   => $v->min_purchase ? (float) $v->min_purchase : null,
-                        'max_discount'   => $v->max_discount ? (float) $v->max_discount : null,
-                        'valid_until'    => $v->valid_until?->format('d/m/Y'),
+                        'id'                    => $v->id,
+                        'code'                  => $v->voucher_code,
+                        'name'                  => $r->reward?->name ?? 'Voucher quà tặng',
+                        'applies_to'            => $v->applies_to,
+                        'discount_type'         => $v->discount_type,
+                        'discount_value'        => (float) $v->discount_value,
+                        'free_item_product_id'  => $v->free_item_product_id,
+                        'free_item_product_name'=> $v->freeItemProduct?->name,
+                        'min_purchase'          => $v->min_purchase ? (float) $v->min_purchase : null,
+                        'max_discount'          => $v->max_discount ? (float) $v->max_discount : null,
+                        'valid_until'           => $v->valid_until?->format('d/m/Y'),
                     ];
                 }
                 return [
