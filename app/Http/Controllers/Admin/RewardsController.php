@@ -65,7 +65,9 @@ class RewardsController extends Controller
     {
         $data = $this->validated($request);
 
-        $reward->update($data);
+        $reward->update(array_merge($data, [
+            'quantity_available' => max(0, $data['quantity_total'] - $reward->redemptions()->count()),
+        ]));
 
         return response()->json(['reward' => $this->present($reward)]);
     }
@@ -108,7 +110,7 @@ class RewardsController extends Controller
             'img'        => ['nullable', 'string', 'max:500'],
             'product_id'          => ['nullable', 'integer', 'exists:products,id'],
             'free_item_quantity'  => ['nullable', 'integer', 'min:1', 'max:99'],
-            'value'               => ['nullable', 'integer', 'min:0'],
+            'value'               => ['nullable', 'numeric', 'min:0'],
         ]);
 
         $isFreeItem = in_array($data['cat'], ['drink', 'gift']);

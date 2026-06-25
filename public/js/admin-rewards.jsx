@@ -125,14 +125,17 @@ function RewardsApp() {
       free_item_quantity: data.free_item_quantity ?? 1,
       value:              data.value ?? null,
     };
+    const errMsg = (res) => res.errors
+      ? Object.values(res.errors).flat().join(' · ')
+      : (res.message || "Có lỗi xảy ra, vui lòng thử lại");
     if (data.dbId) {
       const { ok, data: res } = await apiCall("PUT", `/admin/rewards/${data.dbId}`, payload);
-      if (!ok) { flash(res.message || "Có lỗi xảy ra, vui lòng thử lại"); return; }
+      if (!ok) { flash(errMsg(res)); return; }
       setItems(list => list.map(i => i.dbId === data.dbId ? res.reward : i));
       flash(`Đã cập nhật "${data.name}"`);
     } else {
       const { ok, data: res } = await apiCall("POST", "/admin/rewards", payload);
-      if (!ok) { flash(res.message || "Có lỗi xảy ra, vui lòng thử lại"); return; }
+      if (!ok) { flash(errMsg(res)); return; }
       setItems(list => [res.reward, ...list]);
       flash(`Đã tạo phần thưởng "${data.name}"`);
     }
