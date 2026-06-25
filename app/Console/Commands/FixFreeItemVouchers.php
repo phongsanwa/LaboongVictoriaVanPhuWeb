@@ -70,7 +70,13 @@ class FixFreeItemVouchers extends Command
                     $this->line("Created free_item voucher for redemption #{$r->id} ({$reward->name})");
                     $created++;
                 } else {
-                    $this->line("Skipped redemption #{$r->id} ({$reward->name}) — no voucher rule matched (upgrade value={$reward->value})");
+                    $this->warn("Skipped #{$r->id} ({$reward->name})");
+                    $this->line("  category={$reward->category} reward_type={$reward->reward_type} product_id={$reward->product_id} value={$reward->value} free_item_qty={$reward->free_item_quantity}");
+                    if ($reward->category === 'upgrade') {
+                        $this->line("  → FIX: vào admin sửa 'Giá trị mỗi topping' thành số > 0 (VD: 5000)");
+                    } elseif (in_array($reward->category, ['drink', 'gift']) && !$reward->product_id) {
+                        $this->line("  → FIX: vào admin chọn 'Sản phẩm miễn phí' cho phần thưởng này");
+                    }
                 }
             });
 
