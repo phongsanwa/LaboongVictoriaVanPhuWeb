@@ -56,7 +56,7 @@ class PromotionController extends Controller
 
         $redemptions = \App\Models\Redemption::with(['reward', 'voucher.freeItemProduct'])
             ->where('customer_id', $customer->id)
-            ->whereIn('status', ['pending', 'approved'])
+            ->where('status', 'approved')
             ->where(fn ($q) => $q->whereNull('expires_at')->orWhere('expires_at', '>=', $today))
             ->orderByDesc('redeemed_at')
             ->get()

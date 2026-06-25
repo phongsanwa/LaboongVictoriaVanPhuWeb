@@ -28,7 +28,9 @@ function RewardEditor({ initial, onClose, onSave }) {
   const [img, setImg] = useStateEd(initial?.img || null);
   const [productId, setProductId] = useStateEd(initial?.product_id ?? null);
   const [freeQty, setFreeQty]     = useStateEd(initial?.free_item_quantity ?? 1);
-  const isFreeItem = cat === "drink" || cat === "gift";
+  const [toppingValue, setToppingValue] = useStateEd(initial?.value ?? 5000);
+  const isFreeItem  = cat === "drink" || cat === "gift";
+  const isUpgrade   = cat === "upgrade";
 
   useEffectEd(() => {
     const h = (e) => { if (e.key === "Escape") onClose(); };
@@ -36,9 +38,10 @@ function RewardEditor({ initial, onClose, onSave }) {
     return () => window.removeEventListener("keydown", h);
   }, [onClose]);
 
-  // Reset product/quantity when switching to voucher category
+  // Reset product/quantity when switching category
   useEffectEd(() => {
-    if (cat === "voucher") { setProductId(null); setFreeQty(1); }
+    if (cat === "voucher" || cat === "upgrade") { setProductId(null); }
+    if (cat === "voucher") setFreeQty(1);
   }, [cat]);
 
   const onFile = (e) => {
@@ -47,7 +50,8 @@ function RewardEditor({ initial, onClose, onSave }) {
   };
 
   const valid = name.trim() && points > 0 && qty > 0 && expiry
-    && (!isFreeItem || productId !== null);
+    && (!isFreeItem || productId !== null)
+    && (!isUpgrade || (toppingValue > 0));
   const submit = () => {
     if (!valid) return;
     onSave({
@@ -55,7 +59,8 @@ function RewardEditor({ initial, onClose, onSave }) {
       name: name.trim(), cat, points: Number(points), qty: Number(qty),
       expiry, status: status ? "on" : "off", grad, img,
       product_id:          isFreeItem ? (productId ?? null) : null,
-      free_item_quantity:  isFreeItem ? Math.max(1, Number(freeQty) || 1) : 1,
+      free_item_quantity:  (isFreeItem || isUpgrade) ? Math.max(1, Number(freeQty) || 1) : 1,
+      value:               isUpgrade ? Math.max(0, Number(toppingValue) || 0) : undefined,
     });
   };
 
@@ -132,6 +137,38 @@ function RewardEditor({ initial, onClose, onSave }) {
                   <div style={{ fontSize: 11.5, color: "var(--ink-3)", marginTop: 4 }}>
                     Khách đổi quà sẽ nhận voucher miễn phí sản phẩm này khi đặt hàng.
                   </div>
+                </div>
+              )}
+
+              {isUpgrade && (
+                <div className="two-col">
+                  <div className="fld">
+                    <label>Giá trị mỗi topping (đ) <span style={{ color: "var(--hot)", fontWeight: 700 }}>*</span></label>
+                    <input
+                      className="inp"
+                      type="number"
+                      min="0"
+                      step="500"
+                      value={toppingValue}
+                      onChange={e => setToppingValue(Math.max(0, parseInt(e.target.value, 10) || 0))}
+                    />
+                  </div>
+                  <div className="fld">
+                    <label>Số lượng topping miễn phí</label>
+                    <input
+                      className="inp"
+                      type="number"
+                      min="1"
+                      max="99"
+                      value={freeQty}
+                      onChange={e => setFreeQty(Math.max(1, parseInt(e.target.value, 10) || 1))}
+                    />
+                  </div>
+                </div>
+              )}
+              {isUpgrade && (
+                <div style={{ fontSize: 11.5, color: "var(--ink-3)", marginBottom: 12, marginTop: -4 }}>
+                  Voucher sẽ giảm <b>{typeof fmt === 'function' ? fmt(toppingValue * freeQty) : (toppingValue * freeQty).toLocaleString()}đ</b> ({freeQty} topping × {typeof fmt === 'function' ? fmt(toppingValue) : toppingValue.toLocaleString()}đ) vào đơn hàng.
                 </div>
               )}
 

@@ -118,8 +118,8 @@ class RewardsCatalogController extends Controller
                     'status'        => 'active',
                 ]);
             } elseif ($reward->reward_type === 'free_item' && $reward->product_id && in_array($reward->category, ['drink', 'gift'])) {
-                $product  = \App\Models\Product::find($reward->product_id);
-                $qty      = max(1, (int) ($reward->free_item_quantity ?? 1));
+                $product   = \App\Models\Product::find($reward->product_id);
+                $qty       = max(1, (int) ($reward->free_item_quantity ?? 1));
                 $unitPrice = $product ? (int) $product->base_price : 0;
                 Voucher::create([
                     'voucher_code'          => 'FRE' . now()->format('Ymd') . strtoupper(Str::random(6)),
@@ -129,6 +129,25 @@ class RewardsCatalogController extends Controller
                     'discount_type'         => 'free_item',
                     'discount_value'        => $unitPrice * $qty,
                     'free_item_product_id'  => $reward->product_id,
+                    'free_item_quantity'    => $qty,
+                    'min_purchase'          => null,
+                    'max_discount'          => null,
+                    'valid_from'            => now()->toDateString(),
+                    'valid_until'           => now()->addMonths(3)->toDateString(),
+                    'usage_count'           => 0,
+                    'status'                => 'active',
+                ]);
+            } elseif ($reward->category === 'upgrade' && (int) ($reward->value ?? 0) > 0) {
+                $qty       = max(1, (int) ($reward->free_item_quantity ?? 1));
+                $unitValue = (int) $reward->value;
+                Voucher::create([
+                    'voucher_code'          => 'TOP' . now()->format('Ymd') . strtoupper(Str::random(6)),
+                    'customer_id'           => $customer->id,
+                    'redemption_id'         => $redemption->id,
+                    'applies_to'            => 'ORDER',
+                    'discount_type'         => 'free_item',
+                    'discount_value'        => $unitValue * $qty,
+                    'free_item_product_id'  => null,
                     'free_item_quantity'    => $qty,
                     'min_purchase'          => null,
                     'max_discount'          => null,
