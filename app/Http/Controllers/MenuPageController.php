@@ -50,8 +50,9 @@ class MenuPageController extends Controller
             'ic'    => $c->icon ?? 'cup',
         ])->values()->toArray();
 
-        // --- Active promotions (keyed for fast lookup) ---
+        // --- Active price-badge promotions (shown on product cards) ---
         $activePromos = Promotion::where('is_active', true)
+            ->where('kind', 'price')
             ->orderBy('sort_order')
             ->with('products:id')
             ->get();
@@ -185,18 +186,8 @@ class MenuPageController extends Controller
             ])->values()->toArray();
         }
 
-        // --- Promo codes for checkout (only promotions that have a code set) ---
+        // --- Legacy promo codes (kept for demo mode compatibility) ---
         $promoCodes = [];
-        foreach ($activePromos as $promo) {
-            if ($promo->code) {
-                $promoCodes[$promo->code] = [
-                    'name'  => $promo->name,
-                    'type'  => $promo->type,
-                    'value' => (int) $promo->value,
-                    'min'   => 0,
-                ];
-            }
-        }
 
         return [
             'cats'          => $cats,
@@ -232,7 +223,7 @@ class MenuPageController extends Controller
                 ->values()
                 ->toArray(),
             'orderPromos' => Promotion::where('is_active', true)
-                ->where('applies_to', 'ORDER')
+                ->where('kind', 'voucher')
                 ->orderBy('sort_order')
                 ->get()
                 ->filter(fn ($p) => $p->valid_until === null || $p->valid_until->isFuture())

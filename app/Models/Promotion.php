@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 class Promotion extends Model
 {
     protected $fillable = [
-        'name', 'code', 'type', 'value', 'scope', 'is_active', 'sort_order',
+        'kind', 'name', 'code', 'type', 'value', 'scope', 'is_active', 'sort_order',
         'min_purchase', 'max_discount', 'valid_from', 'valid_until',
         'usage_limit_total', 'usage_limit_per_customer', 'applies_to', 'claimed_count',
     ];

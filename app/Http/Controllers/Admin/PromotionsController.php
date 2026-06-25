@@ -39,6 +39,7 @@ class PromotionsController extends Controller
     public function store(Request $request): JsonResponse
     {
         $data = $request->validate([
+            'kind'                    => ['required', Rule::in(['price', 'voucher'])],
             'name'                    => ['required', 'string', 'max:100'],
             'code'                    => ['nullable', 'string', 'max:30', 'alpha_dash', 'unique:promotions,code'],
             'type'                    => ['required', Rule::in(['percent', 'amount'])],
@@ -52,10 +53,9 @@ class PromotionsController extends Controller
             'valid_until'             => ['nullable', 'date', 'after_or_equal:valid_from'],
             'usage_limit_total'       => ['nullable', 'integer', 'min:1'],
             'usage_limit_per_customer'=> ['nullable', 'integer', 'min:1'],
-            'applies_to'              => ['required', Rule::in(['ORDER', 'SHIPPING'])],
         ], [
-            'value.min'    => 'Giá trị giảm phải lớn hơn 0',
-            'code.unique'  => 'Mã này đã được dùng cho khuyến mãi khác',
+            'value.min'       => 'Giá trị giảm phải lớn hơn 0',
+            'code.unique'     => 'Mã này đã được dùng cho khuyến mãi khác',
             'code.alpha_dash' => 'Mã chỉ được chứa chữ cái, số và dấu gạch ngang',
         ]);
 
@@ -69,6 +69,7 @@ class PromotionsController extends Controller
             : null;
 
         $promo = Promotion::create([
+            'kind'                     => $data['kind'],
             'name'                     => $data['name'],
             'code'                     => $code,
             'type'                     => $data['type'],
@@ -82,7 +83,7 @@ class PromotionsController extends Controller
             'valid_until'              => $data['valid_until'] ?? null,
             'usage_limit_total'        => $data['usage_limit_total'] ?? null,
             'usage_limit_per_customer' => $data['usage_limit_per_customer'] ?? 1,
-            'applies_to'               => $data['applies_to'] ?? 'ORDER',
+            'applies_to'               => 'ORDER',
         ]);
 
         if ($data['scope'] === 'specific') {
@@ -96,6 +97,7 @@ class PromotionsController extends Controller
     public function update(Request $request, Promotion $promotion): JsonResponse
     {
         $data = $request->validate([
+            'kind'                    => ['required', Rule::in(['price', 'voucher'])],
             'name'                    => ['required', 'string', 'max:100'],
             'code'                    => ['nullable', 'string', 'max:30', 'alpha_dash', Rule::unique('promotions', 'code')->ignore($promotion->id)],
             'type'                    => ['required', Rule::in(['percent', 'amount'])],
@@ -109,7 +111,6 @@ class PromotionsController extends Controller
             'valid_until'             => ['nullable', 'date', 'after_or_equal:valid_from'],
             'usage_limit_total'       => ['nullable', 'integer', 'min:1'],
             'usage_limit_per_customer'=> ['nullable', 'integer', 'min:1'],
-            'applies_to'              => ['required', Rule::in(['ORDER', 'SHIPPING'])],
         ], [
             'value.min'       => 'Giá trị giảm phải lớn hơn 0',
             'code.unique'     => 'Mã này đã được dùng cho khuyến mãi khác',
@@ -125,6 +126,7 @@ class PromotionsController extends Controller
             : null;
 
         $promotion->update([
+            'kind'                     => $data['kind'],
             'name'                     => $data['name'],
             'code'                     => $code,
             'type'                     => $data['type'],
@@ -136,7 +138,7 @@ class PromotionsController extends Controller
             'valid_until'              => $data['valid_until'] ?? null,
             'usage_limit_total'        => $data['usage_limit_total'] ?? null,
             'usage_limit_per_customer' => $data['usage_limit_per_customer'] ?? null,
-            'applies_to'               => $data['applies_to'] ?? 'ORDER',
+            'applies_to'               => 'ORDER',
         ]);
 
         if ($data['scope'] === 'specific') {
@@ -195,6 +197,7 @@ class PromotionsController extends Controller
     {
         return [
             'id'                       => $p->id,
+            'kind'                     => $p->kind ?? 'price',
             'name'                     => $p->name,
             'code'                     => $p->code,
             'type'                     => $p->type,
