@@ -19,7 +19,10 @@ const GRADS = [
 function RewardEditor({ initial, onClose, onSave }) {
   const isEdit = !!initial;
   const [name, setName] = useStateEd(initial?.name || "");
-  const [cat, setCat] = useStateEd(initial?.cat || "voucher");
+  const [cat, setCat] = useStateEd(() => {
+    const c = initial?.cat || "voucher";
+    return REWARD_CATS[c] ? c : "topping";
+  });
   const [points, setPoints] = useStateEd(initial?.points ?? 300);
   const [qty, setQty] = useStateEd(initial?.qty ?? 200);
   const [expiry, setExpiry] = useStateEd(initial?.expiry || "2026-12-31");
