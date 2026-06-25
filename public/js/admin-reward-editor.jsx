@@ -28,7 +28,7 @@ function RewardEditor({ initial, onClose, onSave }) {
   const [img, setImg] = useStateEd(initial?.img || null);
   const [productId, setProductId] = useStateEd(initial?.product_id ?? null);
   const [freeQty, setFreeQty]     = useStateEd(initial?.free_item_quantity ?? 1);
-  const isFreeItem = cat !== "voucher";
+  const isFreeItem = cat === "drink" || cat === "gift";
 
   useEffectEd(() => {
     const h = (e) => { if (e.key === "Escape") onClose(); };

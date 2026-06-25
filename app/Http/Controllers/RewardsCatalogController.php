@@ -117,7 +117,7 @@ class RewardsCatalogController extends Controller
                     'usage_count'   => 0,
                     'status'        => 'active',
                 ]);
-            } elseif ($reward->reward_type === 'free_item' && $reward->product_id) {
+            } elseif ($reward->reward_type === 'free_item' && $reward->product_id && in_array($reward->category, ['drink', 'gift'])) {
                 $product  = \App\Models\Product::find($reward->product_id);
                 $qty      = max(1, (int) ($reward->free_item_quantity ?? 1));
                 $unitPrice = $product ? (int) $product->base_price : 0;
