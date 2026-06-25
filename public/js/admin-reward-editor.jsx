@@ -27,8 +27,8 @@ function RewardEditor({ initial, onClose, onSave }) {
   const [grad, setGrad] = useStateEd(initial?.grad || GRADS[0]);
   const [img, setImg] = useStateEd(initial?.img || null);
   const [productId, setProductId] = useStateEd(initial?.product_id ?? null);
-  const [freeQty, setFreeQty]     = useStateEd(initial?.free_item_quantity ?? 1);
-  const [toppingValue, setToppingValue] = useStateEd(initial?.value ?? 5000);
+  const [freeQty, setFreeQty]     = useStateEd(Number(initial?.free_item_quantity ?? 1) || 1);
+  const [toppingValue, setToppingValue] = useStateEd(initial?.value != null ? Number(initial.value) : 5000);
   const isFreeItem  = cat === "drink" || cat === "gift";
   const isUpgrade   = cat === "upgrade";
 
