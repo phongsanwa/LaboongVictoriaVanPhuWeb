@@ -704,56 +704,46 @@ function App() {
                             </span>
                           );
 
-                          if (canApply) {
-                            const disc = calcVoucherDiscount(v, subtotal, lines);
-                            return (
-                              <button key={r.id}
-                                className={"vopt" + (isSelected ? " on" : "")}
-                                disabled={isDisabled}
-                                onClick={() => applyOrderVoucher(v)}
-                              >
-                                {thumb}
-                                <div style={{ minWidth: 0, flex: 1 }}>
-                                  <div className="vn">{r.name}</div>
-                                  <div className="vd">
-                                    {isFreeItem
-                                      ? `Miễn phí ${freeQty > 1 ? freeQty + '× ' : ''}${v.free_item_product_name || 'sản phẩm'}`
-                                      : v.discount_type === 'percentage'
-                                        ? `Giảm ${v.discount_value}%` + (v.max_discount ? ` (tối đa ${fmt(v.max_discount)}đ)` : '')
-                                        : `Giảm ${fmt(v.discount_value)}đ`}
-                                    {v.min_purchase ? ` · Đơn từ ${fmt(v.min_purchase)}đ` : ''}
-                                  </div>
-                                  {isFreeItem && freeProductInCart && effectiveQty < freeQty && (
-                                    <div style={{ fontSize: 11, color: 'var(--ink-3)', marginTop: 2 }}>
-                                      Đơn có {cartQty}/{freeQty} — miễn phí {effectiveQty} cái
-                                    </div>
-                                  )}
-                                  {r.expires_at && <div className="vd" style={{ color: 'var(--ink-3)' }}>HSD: {r.expires_at}</div>}
-                                  {notEnough && <div style={{ fontSize: 11, color: 'var(--hot)', marginTop: 2 }}>Còn thiếu {fmt((v.min_purchase || 0) - subtotal)}đ</div>}
-                                  {notInCart && <div style={{ fontSize: 11, color: 'var(--hot)', marginTop: 2 }}>Thêm "{v.free_item_product_name || 'sản phẩm'}" vào đơn để dùng</div>}
-                                </div>
-                                <span className="vgo">
-                                  {notEnough ? `Còn thiếu ${fmt((v.min_purchase || 0) - subtotal)}đ`
-                                    : notInCart ? <Icon name="lock" size={14} />
-                                    : isSelected ? <><Icon name="check" size={14} /> Đang dùng</>
-                                    : <>−{fmt(disc)}đ <Icon name="chev" size={14} /></>}
-                                </span>
-                              </button>
-                            );
-                          }
+                          // Hide redemptions that have no applicable voucher (e.g. tier_upgrade)
+                          if (!canApply) return null;
+
+                          const disc = calcVoucherDiscount(v, subtotal, lines);
+                          // Label for free_item: "Miễn phí N× [product]" or "Miễn phí N× topping"
+                          const freeLabel = isFreeItem
+                            ? `Miễn phí ${freeQty > 1 ? freeQty + '× ' : ''}${v.free_item_product_id ? (v.free_item_product_name || 'sản phẩm') : 'topping'}`
+                            : v.discount_type === 'percentage'
+                              ? `Giảm ${v.discount_value}%` + (v.max_discount ? ` (tối đa ${fmt(v.max_discount)}đ)` : '')
+                              : `Giảm ${fmt(v.discount_value)}đ`;
 
                           return (
-                            <div key={r.id} className="vopt" style={{ cursor: 'default' }}>
+                            <button key={r.id}
+                              className={"vopt" + (isSelected ? " on" : "")}
+                              disabled={isDisabled}
+                              onClick={() => applyOrderVoucher(v)}
+                            >
                               {thumb}
                               <div style={{ minWidth: 0, flex: 1 }}>
                                 <div className="vn">{r.name}</div>
-                                <div className="vd">{typeLabel} · {r.points_spent} điểm</div>
-                                {r.expires_at && <div style={{ fontSize: 11, color: 'var(--ink-3)', marginTop: 2 }}>HSD: {r.expires_at}</div>}
+                                <div className="vd">
+                                  {freeLabel}
+                                  {v.min_purchase ? ` · Đơn từ ${fmt(v.min_purchase)}đ` : ''}
+                                </div>
+                                {isFreeItem && v.free_item_product_id && freeProductInCart && effectiveQty < freeQty && (
+                                  <div style={{ fontSize: 11, color: 'var(--ink-3)', marginTop: 2 }}>
+                                    Đơn có {cartQty}/{freeQty} — miễn phí {effectiveQty} cái
+                                  </div>
+                                )}
+                                {r.expires_at && <div className="vd" style={{ color: 'var(--ink-3)' }}>HSD: {r.expires_at}</div>}
+                                {notEnough && <div style={{ fontSize: 11, color: 'var(--hot)', marginTop: 2 }}>Còn thiếu {fmt((v.min_purchase || 0) - subtotal)}đ</div>}
+                                {notInCart && <div style={{ fontSize: 11, color: 'var(--hot)', marginTop: 2 }}>Thêm "{v.free_item_product_name || 'sản phẩm'}" vào đơn để dùng</div>}
                               </div>
-                              <span style={{ fontSize: 11, fontWeight: 700, padding: '3px 8px', borderRadius: 6, background: r.status === 'approved' ? '#0F623F20' : '#FFA50020', color: r.status === 'approved' ? 'var(--brand)' : '#E07000', whiteSpace: 'nowrap' }}>
-                                {r.status === 'approved' ? 'Đã duyệt' : 'Chờ duyệt'}
+                              <span className="vgo">
+                                {notEnough ? `Còn thiếu ${fmt((v.min_purchase || 0) - subtotal)}đ`
+                                  : notInCart ? <Icon name="lock" size={14} />
+                                  : isSelected ? <><Icon name="check" size={14} /> Đang dùng</>
+                                  : <>−{fmt(disc)}đ <Icon name="chev" size={14} /></>}
                               </span>
-                            </div>
+                            </button>
                           );
                         })}
                       </div>
@@ -1013,7 +1003,7 @@ function App() {
                             <div className="can">{orderVoucher.name}</div>
                             <div className="cac">
                               {orderVoucher.discount_type === 'free_item'
-                                ? `Miễn phí ${(orderVoucher.free_item_quantity || 1) > 1 ? (orderVoucher.free_item_quantity + '× ') : ''}${orderVoucher.free_item_product_name || 'sản phẩm'}`
+                                ? `Miễn phí ${(orderVoucher.free_item_quantity || 1) > 1 ? (orderVoucher.free_item_quantity + '× ') : ''}${orderVoucher.free_item_product_id ? (orderVoucher.free_item_product_name || 'sản phẩm') : 'topping'}`
                                 : (orderVoucher.code || 'Quà tích điểm')}
                             </div>
                           </div>
@@ -1058,7 +1048,7 @@ function App() {
                     </button>
                   )}
                   <div className="csum"><span>Tạm tính</span><span className="v tnum">{fmt(subtotal)}đ</span></div>
-                  {orderDiscount > 0 && <div className="csum" style={{ color: "var(--pink)" }}><span>{selectedOrderPromo ? selectedOrderPromo.name : orderVoucher?.discount_type === 'free_item' ? `Miễn phí ${(orderVoucher.free_item_quantity || 1) > 1 ? orderVoucher.free_item_quantity + '× ' : ''}${orderVoucher.free_item_product_name || 'sản phẩm'}` : "Giảm đơn hàng"}</span><span className="v tnum" style={{ color: "var(--pink)" }}>−{fmt(orderDiscount)}đ</span></div>}
+                  {orderDiscount > 0 && <div className="csum" style={{ color: "var(--pink)" }}><span>{selectedOrderPromo ? selectedOrderPromo.name : orderVoucher?.discount_type === 'free_item' ? `Miễn phí ${(orderVoucher.free_item_quantity || 1) > 1 ? orderVoucher.free_item_quantity + '× ' : ''}${orderVoucher.free_item_product_id ? (orderVoucher.free_item_product_name || 'sản phẩm') : 'topping'}` : "Giảm đơn hàng"}</span><span className="v tnum" style={{ color: "var(--pink)" }}>−{fmt(orderDiscount)}đ</span></div>}
                   {geoInfo?.dist != null && (
                     <div className="csum" style={{ color: "var(--ink-3)", fontSize: 13 }}>
                       <span>Khoảng cách</span>
