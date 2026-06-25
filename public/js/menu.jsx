@@ -634,21 +634,93 @@ function App() {
                   {vouchersLoading ? (
                     <div style={{ textAlign: "center", padding: "20px 0", color: "var(--ink-3)", fontSize: 13 }}>Đang tải voucher…</div>
                   ) : (<>
-                    {/* ORDER vouchers + order promos from admin */}
-                    <div className="cp-sec">Voucher giảm đơn hàng</div>
-                    {cartVouchers.order.length === 0 && liveOrderPromos.length === 0 ? (
+                    {/* Quà tích điểm — redemptions, applicable if has active voucher */}
+                    <div className="cp-sec">Quà tích điểm</div>
+                    {cartVouchers.redemptions.length === 0 ? (
                       <div className="cp-empty">
-                        Chưa có voucher giảm đơn. Tích điểm và đổi quà tại{" "}
+                        Bạn chưa có quà tích điểm. Đổi điểm tại{" "}
                         <a href="/profile#rewards" style={{ color: "var(--brand)", fontWeight: 600 }}>Đổi quà</a>!
                       </div>
                     ) : (
                       <div className="vlist">
-                        {/* Personal ORDER vouchers from wallet */}
-                        {cartVouchers.order.map(v => (
-                          <VoucherCard key={v.id} v={v} onApply={applyOrderVoucher}
-                            isSelected={orderVoucher?.id === v.id} base={subtotal} />
-                        ))}
-                        {/* Admin-created order promos from Quản lý khuyến mãi */}
+                        {cartVouchers.redemptions.map(r => {
+                          const typeColor = {
+                            discount_voucher: 'linear-gradient(135deg,#FF8A5B,#FF6FA5)',
+                            free_item:        'linear-gradient(135deg,#0F623F,#1AA86A)',
+                            tier_upgrade:     'linear-gradient(135deg,#6B4FA0,#9B7FD0)',
+                            other:            'linear-gradient(135deg,#7A4A28,#B87045)',
+                          }[r.reward_type] ?? 'linear-gradient(135deg,#7A4A28,#B87045)';
+                          const typeLabel = {
+                            discount_voucher: 'Voucher giảm giá',
+                            free_item:        'Sản phẩm miễn phí',
+                            tier_upgrade:     'Nâng hạng',
+                            other:            'Quà tặng',
+                          }[r.reward_type] ?? 'Quà tặng';
+                          const v          = r.voucher;
+                          const canApply   = !!v;
+                          const notEnough  = canApply && subtotal < (v.min_purchase || 0);
+                          const isSelected = canApply && orderVoucher?.id === v.id;
+
+                          const thumb = r.image_url ? (
+                            <img src={r.image_url} alt="" style={{ width: 40, height: 40, borderRadius: 10, objectFit: 'cover', flexShrink: 0 }} />
+                          ) : (
+                            <span className="vi" style={{ background: canApply && isSelected ? "var(--brand)" : typeColor }}>
+                              <Icon name={r.reward_type === 'discount_voucher' ? 'ticket' : 'gift'} size={20} color="#fff" />
+                            </span>
+                          );
+
+                          if (canApply) {
+                            const disc = calcVoucherDiscount(v, subtotal);
+                            return (
+                              <button key={r.id}
+                                className={"vopt" + (isSelected ? " on" : "")}
+                                disabled={notEnough}
+                                onClick={() => applyOrderVoucher(v)}
+                              >
+                                {thumb}
+                                <div style={{ minWidth: 0, flex: 1 }}>
+                                  <div className="vn">{r.name}</div>
+                                  <div className="vd">
+                                    {v.discount_type === 'percentage'
+                                      ? `Giảm ${v.discount_value}%` + (v.max_discount ? ` (tối đa ${fmt(v.max_discount)}đ)` : '')
+                                      : `Giảm ${fmt(v.discount_value)}đ`}
+                                    {v.min_purchase ? ` · Đơn từ ${fmt(v.min_purchase)}đ` : ''}
+                                  </div>
+                                  {r.expires_at && <div className="vd" style={{ color: 'var(--ink-3)' }}>HSD: {r.expires_at}</div>}
+                                  {notEnough && <div style={{ fontSize: 11, color: 'var(--hot)', marginTop: 2 }}>Còn thiếu {fmt((v.min_purchase || 0) - subtotal)}đ</div>}
+                                </div>
+                                <span className="vgo">
+                                  {notEnough ? `Còn thiếu ${fmt((v.min_purchase || 0) - subtotal)}đ`
+                                    : isSelected ? <><Icon name="check" size={14} /> Đang dùng</>
+                                    : <>−{fmt(disc)}đ <Icon name="chev" size={14} /></>}
+                                </span>
+                              </button>
+                            );
+                          }
+
+                          return (
+                            <div key={r.id} className="vopt" style={{ cursor: 'default' }}>
+                              {thumb}
+                              <div style={{ minWidth: 0, flex: 1 }}>
+                                <div className="vn">{r.name}</div>
+                                <div className="vd">{typeLabel} · {r.points_spent} điểm</div>
+                                {r.expires_at && <div style={{ fontSize: 11, color: 'var(--ink-3)', marginTop: 2 }}>HSD: {r.expires_at}</div>}
+                              </div>
+                              <span style={{ fontSize: 11, fontWeight: 700, padding: '3px 8px', borderRadius: 6, background: r.status === 'approved' ? '#0F623F20' : '#FFA50020', color: r.status === 'approved' ? 'var(--brand)' : '#E07000', whiteSpace: 'nowrap' }}>
+                                {r.status === 'approved' ? 'Đã duyệt' : 'Chờ duyệt'}
+                              </span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+
+                    {/* Mã giảm đơn hàng từ Quản lý khuyến mãi */}
+                    <div className="cp-sec">Voucher giảm đơn hàng</div>
+                    {liveOrderPromos.length === 0 ? (
+                      <div className="cp-empty">Hiện chưa có chương trình giảm giá đơn hàng.</div>
+                    ) : (
+                      <div className="vlist">
                         {liveOrderPromos.map(p => {
                           const notEnough  = subtotal < (p.min_purchase || 0);
                           const saving     = calcOrderPromoDiscount(p, subtotal);
@@ -670,11 +742,7 @@ function App() {
                                   {p.min_purchase > 0 ? ` · Đơn từ ${fmt(p.min_purchase)}đ` : ''}
                                 </div>
                                 {p.valid_until && <div className="vd" style={{ color: "var(--ink-3)" }}>HSD: {p.valid_until}</div>}
-                                {notEnough && (
-                                  <div style={{ fontSize: 11, color: "var(--hot)", marginTop: 2 }}>
-                                    Còn thiếu {fmt((p.min_purchase || 0) - subtotal)}đ
-                                  </div>
-                                )}
+                                {notEnough && <div style={{ fontSize: 11, color: "var(--hot)", marginTop: 2 }}>Còn thiếu {fmt((p.min_purchase || 0) - subtotal)}đ</div>}
                               </div>
                               {!notEnough && saving > 0 && (
                                 <span className="vgo" style={{ color: "var(--pink)" }}>
@@ -688,46 +756,6 @@ function App() {
                         })}
                       </div>
                     )}
-
-                    {/* Redeemed gifts */}
-                    {cartVouchers.redemptions.length > 0 && (<>
-                      <div className="cp-sec">Quà Đã Đổi</div>
-                      <div className="vlist">
-                        {cartVouchers.redemptions.map(r => {
-                          const typeLabel = {
-                            discount_voucher: 'Voucher giảm giá',
-                            free_item:        'Sản phẩm miễn phí',
-                            tier_upgrade:     'Nâng hạng',
-                            other:            'Quà tặng',
-                          }[r.reward_type] ?? 'Quà tặng';
-                          const typeColor = {
-                            discount_voucher: 'linear-gradient(135deg,#FF8A5B,#FF6FA5)',
-                            free_item:        'linear-gradient(135deg,#0F623F,#1AA86A)',
-                            tier_upgrade:     'linear-gradient(135deg,#6B4FA0,#9B7FD0)',
-                            other:            'linear-gradient(135deg,#7A4A28,#B87045)',
-                          }[r.reward_type] ?? 'linear-gradient(135deg,#7A4A28,#B87045)';
-                          return (
-                            <div key={r.id} className="vopt" style={{ cursor: 'default', opacity: 1 }}>
-                              {r.image_url ? (
-                                <img src={r.image_url} alt="" style={{ width: 40, height: 40, borderRadius: 10, objectFit: 'cover', flexShrink: 0 }} />
-                              ) : (
-                                <span className="vi" style={{ background: typeColor }}>
-                                  <Icon name="gift" size={20} color="#fff" />
-                                </span>
-                              )}
-                              <div style={{ minWidth: 0, flex: 1 }}>
-                                <div className="vn">{r.name}</div>
-                                <div className="vd">{typeLabel} · {r.points_spent} điểm</div>
-                                {r.expires_at && <div style={{ fontSize: 11, color: 'var(--ink-3)', marginTop: 2 }}>HSD: {r.expires_at}</div>}
-                              </div>
-                              <span style={{ fontSize: 11, fontWeight: 700, padding: '3px 8px', borderRadius: 6, background: r.status === 'approved' ? '#0F623F20' : '#FFA50020', color: r.status === 'approved' ? 'var(--brand)' : '#E07000', whiteSpace: 'nowrap' }}>
-                                {r.status === 'approved' ? 'Đã duyệt' : 'Chờ duyệt'}
-                              </span>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </>)}
 
                     {/* SHIPPING vouchers + promo rules — always show */}
                     <div className="cp-sec">Voucher giảm phí ship</div>
@@ -939,7 +967,7 @@ function App() {
                           <span className="cai"><Icon name="ticket" size={17} color="#fff" /></span>
                           <div style={{ minWidth: 0 }}>
                             <div className="can">{orderVoucher.name}</div>
-                            <div className="cac">{orderVoucher.code}</div>
+                            <div className="cac">{orderVoucher.code || 'Quà tích điểm'}</div>
                           </div>
                           <span className="cav">−{fmt(orderDiscount)}đ</span>
                           <button className="cax" onClick={() => setOrderVoucher(null)} title="Bỏ voucher"><Icon name="close" size={16} /></button>
