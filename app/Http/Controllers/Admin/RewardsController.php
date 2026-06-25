@@ -110,7 +110,7 @@ class RewardsController extends Controller
             'free_item_quantity'  => ['nullable', 'integer', 'min:1', 'max:99'],
         ]);
 
-        $isFreeItem = $data['cat'] !== 'voucher';
+        $isFreeItem = in_array($data['cat'], ['drink', 'gift']);
 
         return [
             'name'               => $data['name'],
