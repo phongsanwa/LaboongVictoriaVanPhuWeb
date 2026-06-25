@@ -104,17 +104,35 @@ class RewardsCatalogController extends Controller
 
             if ($reward->reward_type === 'discount_voucher') {
                 Voucher::create([
-                    'voucher_code' => 'VOC' . now()->format('Ymd') . strtoupper(Str::random(6)),
-                    'customer_id' => $customer->id,
+                    'voucher_code'  => 'VOC' . now()->format('Ymd') . strtoupper(Str::random(6)),
+                    'customer_id'   => $customer->id,
                     'redemption_id' => $redemption->id,
+                    'applies_to'    => 'ORDER',
                     'discount_type' => 'fixed',
-                    'discount_value' => $reward->value ?? 0,
-                    'min_purchase' => $reward->min_purchase,
-                    'max_discount' => null,
-                    'valid_from' => now()->toDateString(),
-                    'valid_until' => now()->addMonths(3)->toDateString(),
-                    'usage_count' => 0,
-                    'status' => 'active',
+                    'discount_value'=> $reward->value ?? 0,
+                    'min_purchase'  => $reward->min_purchase,
+                    'max_discount'  => null,
+                    'valid_from'    => now()->toDateString(),
+                    'valid_until'   => now()->addMonths(3)->toDateString(),
+                    'usage_count'   => 0,
+                    'status'        => 'active',
+                ]);
+            } elseif ($reward->reward_type === 'free_item' && $reward->product_id) {
+                $product = \App\Models\Product::find($reward->product_id);
+                Voucher::create([
+                    'voucher_code'          => 'FRE' . now()->format('Ymd') . strtoupper(Str::random(6)),
+                    'customer_id'           => $customer->id,
+                    'redemption_id'         => $redemption->id,
+                    'applies_to'            => 'ORDER',
+                    'discount_type'         => 'free_item',
+                    'discount_value'        => $product ? (int) $product->base_price : 0,
+                    'free_item_product_id'  => $reward->product_id,
+                    'min_purchase'          => null,
+                    'max_discount'          => null,
+                    'valid_from'            => now()->toDateString(),
+                    'valid_until'           => now()->addMonths(3)->toDateString(),
+                    'usage_count'           => 0,
+                    'status'                => 'active',
                 ]);
             }
         });

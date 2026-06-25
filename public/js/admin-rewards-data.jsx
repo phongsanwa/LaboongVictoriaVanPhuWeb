@@ -8,8 +8,9 @@ const REWARD_CATS = {
   upgrade: { label: "Nâng cấp / Topping", ic: "spark" },
 };
 
-const ADMIN_REWARDS_DATA = window.ADMIN_REWARDS_DATA || { admin: null, rewards: [] };
+const ADMIN_REWARDS_DATA = window.ADMIN_REWARDS_DATA || { admin: null, rewards: [], products: [] };
 const REWARDS = ADMIN_REWARDS_DATA.rewards;
+const REWARD_PRODUCTS = ADMIN_REWARDS_DATA.products || [];
 
 function expStatus(iso, todayISO) {
   if (iso < todayISO) return "expired";
@@ -19,4 +20,4 @@ function expStatus(iso, todayISO) {
   return "ok";
 }
 
-Object.assign(window, { REWARDS, REWARD_CATS, expStatus, ADMIN_REWARDS_DATA });
+Object.assign(window, { REWARDS, REWARD_CATS, REWARD_PRODUCTS, expStatus, ADMIN_REWARDS_DATA });

@@ -15,6 +15,11 @@ class DiscountCalculationService
         if ($v->valid_until && Carbon::today()->gt($v->valid_until)) return 0;
         if ($v->min_purchase && $subtotal < (float) $v->min_purchase) return 0;
 
+        // free_item: discount = product price stored at redemption; frontend validates product is in cart
+        if ($v->discount_type === 'free_item') {
+            return min((float) $v->discount_value, $subtotal);
+        }
+
         if ($v->discount_type === 'percentage') {
             $d = floor($subtotal * (float) $v->discount_value / 100);
             if ($v->max_discount) $d = min($d, (float) $v->max_discount);

@@ -1,4 +1,4 @@
-/* global React, Icon, REWARD_CATS */
+/* global React, Icon, REWARD_CATS, REWARD_PRODUCTS, fmt */
 const { useState: useStateEd, useEffect: useEffectEd } = React;
 
 const GRADS = [
@@ -26,6 +26,8 @@ function RewardEditor({ initial, onClose, onSave }) {
   const [status, setStatus] = useStateEd(initial ? initial.status === "on" : true);
   const [grad, setGrad] = useStateEd(initial?.grad || GRADS[0]);
   const [img, setImg] = useStateEd(initial?.img || null);
+  const [productId, setProductId] = useStateEd(initial?.product_id ?? null);
+  const isFreeItem = cat !== "voucher";
 
   useEffectEd(() => {
     const h = (e) => { if (e.key === "Escape") onClose(); };
@@ -33,18 +35,25 @@ function RewardEditor({ initial, onClose, onSave }) {
     return () => window.removeEventListener("keydown", h);
   }, [onClose]);
 
+  // Reset product selection when switching to voucher category
+  useEffectEd(() => {
+    if (cat === "voucher") setProductId(null);
+  }, [cat]);
+
   const onFile = (e) => {
     const f = e.target.files?.[0];
     if (f) { const url = URL.createObjectURL(f); setImg(url); }
   };
 
-  const valid = name.trim() && points > 0 && qty > 0 && expiry;
+  const valid = name.trim() && points > 0 && qty > 0 && expiry
+    && (!isFreeItem || productId !== null);
   const submit = () => {
     if (!valid) return;
     onSave({
       ...(initial || {}),
       name: name.trim(), cat, points: Number(points), qty: Number(qty),
       expiry, status: status ? "on" : "off", grad, img,
+      product_id: isFreeItem ? (productId ?? null) : null,
     });
   };
 
@@ -102,6 +111,27 @@ function RewardEditor({ initial, onClose, onSave }) {
                   ))}
                 </div>
               </div>
+
+              {isFreeItem && (
+                <div className="fld">
+                  <label>Sản phẩm miễn phí <span style={{ color: "var(--hot)", fontWeight: 700 }}>*</span></label>
+                  <select
+                    className="inp"
+                    value={productId ?? ""}
+                    onChange={e => setProductId(e.target.value ? Number(e.target.value) : null)}
+                  >
+                    <option value="">— Chọn sản phẩm —</option>
+                    {(REWARD_PRODUCTS || []).map(p => (
+                      <option key={p.id} value={p.id}>
+                        {p.name}{p.cat ? ` (${p.cat})` : ""} — {typeof fmt === 'function' ? fmt(p.price) : p.price.toLocaleString()}đ
+                      </option>
+                    ))}
+                  </select>
+                  <div style={{ fontSize: 11.5, color: "var(--ink-3)", marginTop: 4 }}>
+                    Khách đổi quà sẽ nhận voucher miễn phí sản phẩm này khi đặt hàng.
+                  </div>
+                </div>
+              )}
 
               <div className="two-col">
                 <div className="fld">

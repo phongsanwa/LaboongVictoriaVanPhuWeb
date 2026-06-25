@@ -100,9 +100,17 @@ function getLiveVariantGroups() {
 }
 
 /* ─── Voucher discount calculation ─────────────────────────────── */
-function calcVoucherDiscount(v, base) {
+function calcVoucherDiscount(v, base, cartLines) {
   if (!v) return 0;
   if (base < (v.min_purchase || 0)) return 0;
+  if (v.discount_type === 'free_item') {
+    // Only applicable if the free product is actually in the cart
+    if (!v.free_item_product_id) return Math.min(v.discount_value, base);
+    const productCartId = 'p' + v.free_item_product_id;
+    const inCart = cartLines && cartLines.some(l => l.id === productCartId);
+    if (!inCart) return 0;
+    return Math.min(v.discount_value, base);
+  }
   if (v.discount_type === 'percentage') {
     let d = Math.floor(base * v.discount_value / 100);
     if (v.max_discount) d = Math.min(d, v.max_discount);
@@ -352,7 +360,7 @@ function App() {
   const dist    = geoInfo?.dist ?? null;
 
   const orderDiscount   = orderVoucher
-    ? calcVoucherDiscount(orderVoucher, subtotal)
+    ? calcVoucherDiscount(orderVoucher, subtotal, lines)
     : calcOrderPromoDiscount(selectedOrderPromo, subtotal);
   const shipDiscount    = shippingVoucher
     ? calcVoucherDiscount(shippingVoucher, shipFee)
@@ -361,11 +369,18 @@ function App() {
   const payable         = Math.max(0, subtotal - orderDiscount + shipFee - shipDiscount);
   const earnPts       = Math.floor(payable / livePerPoint);
 
-  /* Clear order voucher/promo if subtotal drops below min */
+  /* Clear order voucher/promo if subtotal drops below min or free_item product removed */
   useEffect(() => {
     if (orderVoucher && subtotal < (orderVoucher.min_purchase || 0)) setOrderVoucher(null);
     if (selectedOrderPromo && subtotal < (selectedOrderPromo.min_purchase || 0)) setSelectedOrderPromo(null);
   }, [subtotal]); // eslint-disable-line
+
+  useEffect(() => {
+    if (orderVoucher?.discount_type === 'free_item' && orderVoucher.free_item_product_id) {
+      const productCartId = 'p' + orderVoucher.free_item_product_id;
+      if (!lines.some(l => l.id === productCartId)) setOrderVoucher(null);
+    }
+  }, [lines]); // eslint-disable-line
 
   /* Clear selectedShipPromo if it becomes ineligible */
   useEffect(() => {
@@ -376,6 +391,13 @@ function App() {
 
   const applyOrderVoucher = (v) => {
     if (subtotal < (v.min_purchase || 0)) { setCouponErr(`Áp dụng cho đơn từ ${fmt(v.min_purchase)}đ`); return; }
+    if (v.discount_type === 'free_item' && v.free_item_product_id) {
+      const productCartId = 'p' + v.free_item_product_id;
+      if (!lines.some(l => l.id === productCartId)) {
+        setCouponErr(`Vui lòng thêm "${v.free_item_product_name || 'sản phẩm'}" vào đơn để dùng voucher này`);
+        return;
+      }
+    }
     setOrderVoucher(v); setSelectedOrderPromo(null); setCouponErr(""); setCouponView(false);
   };
 
@@ -658,7 +680,13 @@ function App() {
                           }[r.reward_type] ?? 'Quà tặng';
                           const v          = r.voucher;
                           const canApply   = !!v;
+                          const isFreeItem = canApply && v.discount_type === 'free_item';
+                          const freeProductInCart = isFreeItem && v.free_item_product_id
+                            ? lines.some(l => l.id === 'p' + v.free_item_product_id)
+                            : true;
                           const notEnough  = canApply && subtotal < (v.min_purchase || 0);
+                          const notInCart  = isFreeItem && !freeProductInCart;
+                          const isDisabled = notEnough || notInCart;
                           const isSelected = canApply && orderVoucher?.id === v.id;
 
                           const thumb = r.image_url ? (
@@ -670,28 +698,33 @@ function App() {
                           );
 
                           if (canApply) {
-                            const disc = calcVoucherDiscount(v, subtotal);
+                            const disc = calcVoucherDiscount(v, subtotal, lines);
                             return (
                               <button key={r.id}
                                 className={"vopt" + (isSelected ? " on" : "")}
-                                disabled={notEnough}
+                                disabled={isDisabled}
                                 onClick={() => applyOrderVoucher(v)}
                               >
                                 {thumb}
                                 <div style={{ minWidth: 0, flex: 1 }}>
                                   <div className="vn">{r.name}</div>
                                   <div className="vd">
-                                    {v.discount_type === 'percentage'
-                                      ? `Giảm ${v.discount_value}%` + (v.max_discount ? ` (tối đa ${fmt(v.max_discount)}đ)` : '')
-                                      : `Giảm ${fmt(v.discount_value)}đ`}
+                                    {isFreeItem
+                                      ? `Miễn phí: ${v.free_item_product_name || 'sản phẩm'}`
+                                      : v.discount_type === 'percentage'
+                                        ? `Giảm ${v.discount_value}%` + (v.max_discount ? ` (tối đa ${fmt(v.max_discount)}đ)` : '')
+                                        : `Giảm ${fmt(v.discount_value)}đ`}
                                     {v.min_purchase ? ` · Đơn từ ${fmt(v.min_purchase)}đ` : ''}
                                   </div>
                                   {r.expires_at && <div className="vd" style={{ color: 'var(--ink-3)' }}>HSD: {r.expires_at}</div>}
                                   {notEnough && <div style={{ fontSize: 11, color: 'var(--hot)', marginTop: 2 }}>Còn thiếu {fmt((v.min_purchase || 0) - subtotal)}đ</div>}
+                                  {notInCart && <div style={{ fontSize: 11, color: 'var(--hot)', marginTop: 2 }}>Thêm "{v.free_item_product_name || 'sản phẩm'}" vào đơn để dùng</div>}
                                 </div>
                                 <span className="vgo">
                                   {notEnough ? `Còn thiếu ${fmt((v.min_purchase || 0) - subtotal)}đ`
+                                    : notInCart ? <Icon name="lock" size={14} />
                                     : isSelected ? <><Icon name="check" size={14} /> Đang dùng</>
+                                    : isFreeItem ? <>−{fmt(v.discount_value)}đ <Icon name="chev" size={14} /></>
                                     : <>−{fmt(disc)}đ <Icon name="chev" size={14} /></>}
                                 </span>
                               </button>
@@ -967,7 +1000,11 @@ function App() {
                           <span className="cai"><Icon name="ticket" size={17} color="#fff" /></span>
                           <div style={{ minWidth: 0 }}>
                             <div className="can">{orderVoucher.name}</div>
-                            <div className="cac">{orderVoucher.code || 'Quà tích điểm'}</div>
+                            <div className="cac">
+                              {orderVoucher.discount_type === 'free_item'
+                                ? `Miễn phí: ${orderVoucher.free_item_product_name || 'sản phẩm'}`
+                                : (orderVoucher.code || 'Quà tích điểm')}
+                            </div>
                           </div>
                           <span className="cav">−{fmt(orderDiscount)}đ</span>
                           <button className="cax" onClick={() => setOrderVoucher(null)} title="Bỏ voucher"><Icon name="close" size={16} /></button>
@@ -1010,7 +1047,7 @@ function App() {
                     </button>
                   )}
                   <div className="csum"><span>Tạm tính</span><span className="v tnum">{fmt(subtotal)}đ</span></div>
-                  {orderDiscount > 0 && <div className="csum" style={{ color: "var(--pink)" }}><span>{selectedOrderPromo ? selectedOrderPromo.name : "Giảm đơn hàng"}</span><span className="v tnum" style={{ color: "var(--pink)" }}>−{fmt(orderDiscount)}đ</span></div>}
+                  {orderDiscount > 0 && <div className="csum" style={{ color: "var(--pink)" }}><span>{selectedOrderPromo ? selectedOrderPromo.name : orderVoucher?.discount_type === 'free_item' ? `Miễn phí: ${orderVoucher.free_item_product_name || 'sản phẩm'}` : "Giảm đơn hàng"}</span><span className="v tnum" style={{ color: "var(--pink)" }}>−{fmt(orderDiscount)}đ</span></div>}
                   {geoInfo?.dist != null && (
                     <div className="csum" style={{ color: "var(--ink-3)", fontSize: 13 }}>
                       <span>Khoảng cách</span>
