@@ -12,7 +12,7 @@ use Illuminate\Support\Facades\Auth;
 class RewardsController extends Controller
 {
     /** Reward categories shown in the admin catalogue; anything else (e.g. tier_benefit) is hidden here. */
-    private const CATEGORIES = ['voucher', 'drink', 'gift', 'upgrade'];
+    private const CATEGORIES = ['voucher', 'drink', 'gift', 'topping', 'upsize', 'upgrade'];
 
     private const GRADS = [
         'linear-gradient(135deg,#0F623F,#1AA86A)',
@@ -53,7 +53,7 @@ class RewardsController extends Controller
         $reward = Reward::create([
             ...$data,
             'description' => $data['name'],
-            'reward_type' => $data['category'] === 'voucher' ? 'discount_voucher' : 'free_item',
+            'reward_type' => in_array($data['category'], ['topping', 'upsize', 'upgrade']) ? 'free_item' : ($data['category'] === 'voucher' ? 'discount_voucher' : 'free_item'),
             'quantity_available' => $data['quantity_total'],
             'valid_from' => Carbon::now()->toDateString(),
         ]);
@@ -114,7 +114,7 @@ class RewardsController extends Controller
         ]);
 
         $isFreeItem = in_array($data['cat'], ['drink', 'gift']);
-        $isUpgrade  = $data['cat'] === 'upgrade';
+        $isUpgrade  = in_array($data['cat'], ['topping', 'upsize', 'upgrade']);
 
         return [
             'name'               => $data['name'],
@@ -127,7 +127,7 @@ class RewardsController extends Controller
             'image_url'          => $data['img'] ?? null,
             'product_id'         => $isFreeItem ? ($data['product_id'] ?? null) : null,
             'free_item_quantity' => ($isFreeItem || $isUpgrade) ? (int) ($data['free_item_quantity'] ?? 1) : 1,
-            'value'              => $isUpgrade ? (int) ($data['value'] ?? 0) : null,
+            'value'              => $isUpgrade ? (float) ($data['value'] ?? 0) : null,
         ];
     }
 

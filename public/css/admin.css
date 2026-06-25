@@ -443,6 +443,13 @@ table.tbl { width: 100%; border-collapse: collapse; min-width: 840px; table-layo
 .view-toggle button { width: 34px; height: 32px; border-radius: 7px; display: grid; place-items: center; color: var(--ink-3); }
 .view-toggle button.on { background: var(--panel); color: var(--brand); box-shadow: var(--shadow-sm); }
 
+/* category tabs */
+.rw-tabs-bar { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 16px; }
+.rw-tab { display: inline-flex; align-items: center; gap: 6px; padding: 8px 15px; border-radius: var(--r-sm); border: 1px solid var(--line); background: var(--panel); color: var(--ink-2); font-size: 13px; font-weight: 600; cursor: pointer; transition: .14s; white-space: nowrap; }
+.rw-tab:hover { border-color: var(--brand); color: var(--brand); background: color-mix(in srgb, var(--brand) 6%, var(--panel)); }
+.rw-tab.on { background: var(--brand); color: #fff; border-color: var(--brand); box-shadow: 0 2px 8px color-mix(in srgb, var(--brand) 30%, transparent); }
+.rw-tab-ct { font-size: 11px; font-weight: 700; opacity: .75; background: color-mix(in srgb, currentColor 12%, transparent); border-radius: 999px; padding: 1px 7px; }
+
 /* grid */
 .rw-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(268px, 1fr)); gap: 18px; }
 .rw-card { background: var(--panel); border: 1px solid var(--line-2); border-radius: var(--r-lg); overflow: hidden;

@@ -30,8 +30,11 @@ async function apiCall(method, url, body) {
 
 function fmtExpiry(iso) { const [y, m, d] = iso.split("-"); return `${d}/${m}/${y}`; }
 
+// 'upgrade' is the legacy category — map it to 'topping' for display
+function resolvedCat(r) { return REWARD_CATS[r.cat] ? r.cat : 'topping'; }
+
 function RewardCard({ r, onEdit, onToggle, onDup, onDelete }) {
-  const cat = REWARD_CATS[r.cat];
+  const cat = REWARD_CATS[resolvedCat(r)];
   const remaining = Math.max(0, r.qty - r.redeemed);
   const usedPct = Math.round((r.used / r.qty) * 100);
   const pendingPct = Math.round(((r.redeemed - r.used) / r.qty) * 100);
@@ -111,7 +114,8 @@ function RewardsApp() {
   }, [items]);
 
   const filtered = useMemo(() => items.filter(i => {
-    if (cat !== "all" && i.cat !== cat) return false;
+    const rc = resolvedCat(i);
+    if (cat !== "all" && rc !== cat) return false;
     if (status !== "all" && i.status !== status) return false;
     if (q.trim() && !i.name.toLowerCase().includes(q.toLowerCase())) return false;
     return true;
@@ -198,19 +202,29 @@ function RewardsApp() {
               <div><div className="lbl">Còn lại trong kho</div><div className="val tnum">{fmt(stats.remaining)}</div><div className="chg up">Sẵn sàng phát hành</div></div></div>
           </div>
 
-          {/* filters */}
+          {/* category tabs */}
+          <div className="rw-tabs-bar">
+            <button className={"rw-tab" + (cat === "all" ? " on" : "")} onClick={() => setCat("all")}>
+              <Icon name="grid" size={14} /> Tất cả <span className="rw-tab-ct">{items.length}</span>
+            </button>
+            {Object.entries(REWARD_CATS).map(([k, m]) => {
+              const cnt = items.filter(i => resolvedCat(i) === k).length;
+              return (
+                <button key={k} className={"rw-tab" + (cat === k ? " on" : "")} onClick={() => setCat(k)}>
+                  <Icon name={m.ic} size={14} /> {m.label} <span className="rw-tab-ct">{cnt}</span>
+                </button>
+              );
+            })}
+          </div>
+
+          {/* status filter */}
           <div className="panel" style={{ marginBottom: 20 }}>
             <div className="toolbar" style={{ borderBottom: "none" }}>
-              <div className="ttl">Danh mục phần thưởng <span className="ct">{filtered.length}</span></div>
-              <div className="tb-spacer" />
-              <div className="field">
-                <span className="flbl">Loại</span>
-                <select className="select" value={cat} onChange={e => setCat(e.target.value)}>
-                  <option value="all">Tất cả loại</option>
-                  {Object.entries(REWARD_CATS).map(([k, m]) => <option key={k} value={k}>{m.label}</option>)}
-                </select>
-                <span className="chev"><Icon name="chevdown" size={16} /></span>
+              <div className="ttl">
+                {cat === "all" ? "Tất cả phần thưởng" : REWARD_CATS[cat]?.label ?? cat}
+                <span className="ct">{filtered.length}</span>
               </div>
+              <div className="tb-spacer" />
               <div className="seg">
                 <button className={status === "all" ? "on" : ""} onClick={() => setStatus("all")}>Tất cả</button>
                 <button className={status === "on" ? "on ok" : ""} onClick={() => setStatus("on")}>Active</button>
