@@ -34,6 +34,7 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
     Route::post('/rewards/{reward}/toggle', [RewardsController::class, 'toggle'])->name('rewards.toggle');
     Route::post('/rewards/{reward}/duplicate', [RewardsController::class, 'duplicate'])->name('rewards.duplicate');
     Route::delete('/rewards/{reward}', [RewardsController::class, 'destroy'])->name('rewards.destroy');
+    Route::post('/rewards/upload-image', [RewardsController::class, 'uploadImage'])->name('rewards.upload-image');
     Route::get('/campaigns', [CampaignsController::class, 'index'])->name('campaigns.index');
     Route::post('/campaigns', [CampaignsController::class, 'store'])->name('campaigns.store');
     Route::put('/campaigns/{campaign}', [CampaignsController::class, 'update'])->name('campaigns.update');
