@@ -32,7 +32,7 @@ class ProfileController extends Controller
             'member'       => $member,
             'addresses'    => $addresses,
             'favorites'    => $customer?->favorite_items ?? [],
-            'mapboxToken'  => config('services.mapbox.token', ''),
+            'googleMapsKey'  => config('services.google_maps.key', ''),
         ]]);
     }
 

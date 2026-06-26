@@ -46,27 +46,29 @@ function clearCartState() {
   try { localStorage.removeItem(CART_STATE_KEY); } catch (e) { /* ignore */ }
 }
 
-function getMapboxToken() { return window.MENU_PAGE_DATA?.mapboxToken || ''; }
-
 async function geocodeAddress(text) {
   try {
     const cache = JSON.parse(localStorage.getItem(GEO_CACHE_KEY) || '{}');
     if (cache[text]) return cache[text];
   } catch(e) { /* ignore */ }
 
-  const q   = encodeURIComponent(text);
-  const url = `https://api.mapbox.com/geocoding/v5/mapbox.places/${q}.json`
-    + `?country=VN&language=vi&limit=1&access_token=${getMapboxToken()}`;
-  const res  = await fetch(url, { headers: { 'Accept': 'application/json' } });
-  const data = await res.json();
-  if (!data.features?.length) return null;
-  const [lng, lat] = data.features[0].center;
-  const loc = { lat, lng };
-  try {
-    const cache = JSON.parse(localStorage.getItem(GEO_CACHE_KEY) || '{}');
-    cache[text] = loc;
-    localStorage.setItem(GEO_CACHE_KEY, JSON.stringify(cache));
-  } catch(e) { /* ignore */ }
+  const maps = window.google?.maps;
+  if (!maps) return null;
+  const loc = await new Promise(resolve => {
+    new maps.Geocoder().geocode({ address: text + ', Việt Nam', region: 'VN' }, (results, status) => {
+      if (status === 'OK' && results?.length) {
+        const l = results[0].geometry.location;
+        resolve({ lat: l.lat(), lng: l.lng() });
+      } else resolve(null);
+    });
+  });
+  if (loc) {
+    try {
+      const cache = JSON.parse(localStorage.getItem(GEO_CACHE_KEY) || '{}');
+      cache[text] = loc;
+      localStorage.setItem(GEO_CACHE_KEY, JSON.stringify(cache));
+    } catch(e) { /* ignore */ }
+  }
   return loc;
 }
 

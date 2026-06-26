@@ -242,7 +242,7 @@ class MenuPageController extends Controller
             'perPoint'      => 10000,
             'promos'        => $promoCodes,
             'addresses'     => $addresses,
-            'mapboxToken'   => config('services.mapbox.token', ''),
+            'googleMapsKey'   => config('services.google_maps.key', ''),
             'urls'          => [
                 'placeOrder' => route('orders.place'),
             ],
