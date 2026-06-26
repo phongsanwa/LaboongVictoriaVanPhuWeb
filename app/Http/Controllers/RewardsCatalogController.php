@@ -179,12 +179,14 @@ class RewardsCatalogController extends Controller
         }
 
         return [
-            'id' => $r->id,
-            'name' => $r->name,
-            'cat' => in_array($r->category, self::CATEGORIES, true) ? $r->category : 'gift',
+            'id'     => $r->id,
+            'name'   => $r->name,
+            'cat'    => in_array($r->category, self::CATEGORIES, true) ? $r->category : 'gift',
             'points' => $r->points_required,
-            'stock' => $r->quantity_available,
-            'tags' => $tags,
+            'stock'  => $r->quantity_available,
+            'img'    => $r->image_url,
+            'grad'   => $r->gradient,
+            'tags'   => $tags,
         ];
     }
 
