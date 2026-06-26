@@ -92,6 +92,12 @@ class RewardsController extends Controller
 
     public function destroy(Reward $reward)
     {
+        // Delete child vouchers then redemptions before deleting the reward
+        foreach ($reward->redemptions as $redemption) {
+            $redemption->voucher()->delete();
+            $redemption->delete();
+        }
+
         $reward->delete();
 
         return response()->json(['message' => 'Đã xoá phần thưởng']);
