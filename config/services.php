@@ -35,8 +35,8 @@ return [
         ],
     ],
 
-    'mapbox' => [
-        'token' => env('MAPBOX_TOKEN', ''),
+    'google_maps' => [
+        'key' => env('GOOGLE_MAPS_KEY', ''),
     ],
 
 ];
