@@ -8,6 +8,7 @@ use App\Models\Reward;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Storage;
 
 class RewardsController extends Controller
 {
@@ -88,6 +89,13 @@ class RewardsController extends Controller
         $copy->save();
 
         return response()->json(['reward' => $this->present($copy)]);
+    }
+
+    public function uploadImage(Request $request)
+    {
+        $request->validate(['image' => ['required', 'image', 'max:2048']]);
+        $path = Storage::disk('public')->put('rewards', $request->file('image'));
+        return response()->json(['url' => Storage::url($path)]);
     }
 
     public function destroy(Reward $reward)

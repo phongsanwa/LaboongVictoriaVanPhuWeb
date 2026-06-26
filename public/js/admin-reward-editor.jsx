@@ -1,6 +1,11 @@
 /* global React, Icon, REWARD_CATS, REWARD_PRODUCTS, fmt */
 const { useState: useStateEd, useEffect: useEffectEd } = React;
 
+function csrfTokenEd() {
+  const m = document.querySelector('meta[name="csrf-token"]');
+  return m ? m.content : "";
+}
+
 const GRADS = [
   "linear-gradient(135deg,#0F623F,#1AA86A)",
   "linear-gradient(135deg,#FF8A5B,#FF6FA5)",
@@ -47,9 +52,24 @@ function RewardEditor({ initial, onClose, onSave }) {
     if (cat === "voucher") setFreeQty(1);
   }, [cat]);
 
-  const onFile = (e) => {
+  const [uploading, setUploading] = useStateEd(false);
+  const onFile = async (e) => {
     const f = e.target.files?.[0];
-    if (f) { const url = URL.createObjectURL(f); setImg(url); }
+    if (!f) return;
+    setImg(URL.createObjectURL(f)); // preview ngay
+    setUploading(true);
+    try {
+      const fd = new FormData();
+      fd.append("image", f);
+      const res = await fetch("/admin/rewards/upload-image", {
+        method: "POST",
+        headers: { "X-CSRF-TOKEN": csrfTokenEd(), "Accept": "application/json" },
+        body: fd,
+      });
+      const data = await res.json();
+      if (res.ok && data.url) setImg(data.url);
+    } catch (_) { /* giữ blob preview nếu lỗi */ }
+    setUploading(false);
   };
 
   const valid = name.trim() && points > 0 && qty > 0 && expiry
@@ -89,9 +109,9 @@ function RewardEditor({ initial, onClose, onSave }) {
               <div className="thumb-preview" style={{ background: img ? `url(${img}) center/cover` : grad }}>
                 {!img && <span className="ti"><Icon name={catIc} size={48} color="#fff" /></span>}
               </div>
-              <label className="rw-btn" style={{ cursor: "pointer", justifyContent: "center" }}>
-                <Icon name="image" size={15} /> {img ? "Đổi ảnh" : "Tải ảnh lên"}
-                <input type="file" accept="image/*" hidden onChange={onFile} />
+              <label className="rw-btn" style={{ cursor: uploading ? "wait" : "pointer", justifyContent: "center", opacity: uploading ? .6 : 1 }}>
+                <Icon name="image" size={15} /> {uploading ? "Đang tải…" : img ? "Đổi ảnh" : "Tải ảnh lên"}
+                <input type="file" accept="image/*" hidden onChange={onFile} disabled={uploading} />
               </label>
               {img && <button className="rw-btn" onClick={() => setImg(null)}>Bỏ ảnh, dùng màu</button>}
               {!img && (
