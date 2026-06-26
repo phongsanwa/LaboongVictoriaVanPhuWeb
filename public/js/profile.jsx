@@ -409,21 +409,11 @@ function AddrModal({ init, onClose, onSave }) {
     lat: init.lat || null, lng: init.lng || null,
   });
 
-  // Province + district dropdowns (stable admin divisions)
-  const [cityCode, setCityCode] = useState(null);
-  const [cityName, setCityName] = useState('');
-  const [distCode, setDistCode] = useState(null);
-  const [distName, setDistName] = useState('');
-  const [provinces,   setProvinces]   = useState([]);
-  const [districts,   setDistricts]   = useState([]);
-  const [loadingDist, setLoadingDist] = useState(false);
-
-  // Free-text field for ward / street / house number with autocomplete
-  const [addrText,  setAddrText]  = useState(init.text || '');
-  const [pickedFull, setPickedFull] = useState(init.text || ''); // full text from suggestion pick
-  const [sugg,      setSugg]      = useState([]);
-  const [searching, setSearching] = useState(false);
-  const [suggRect,  setSuggRect]  = useState(null);
+  const [addrText,   setAddrText]   = useState(init.text || '');
+  const [pickedFull, setPickedFull] = useState(init.text || '');
+  const [sugg,       setSugg]       = useState([]);
+  const [searching,  setSearching]  = useState(false);
+  const [suggRect,   setSuggRect]   = useState(null);
   const debRef   = useRef(null);
   const inputRef = useRef(null);
 
@@ -432,39 +422,18 @@ function AddrModal({ init, onClose, onSave }) {
   const mapRef    = useRef(null);
   const markerRef = useRef(null);
 
-  /* final address text: prefer suggestion full text, else assemble from parts */
-  const fullText = pickedFull || [addrText, distName, cityName].filter(Boolean).join(', ');
+  const fullText = addrText.trim();
 
-  /* ---- province / district APIs ---- */
-  useEffect(() => {
-    fetch('https://provinces.open-api.vn/api/p/')
-      .then(r => r.json()).then(setProvinces).catch(() => {});
-  }, []);
-
-  useEffect(() => {
-    if (!cityCode) { setDistricts([]); setDistCode(null); setDistName(''); return; }
-    setLoadingDist(true);
-    fetch(`https://provinces.open-api.vn/api/p/${cityCode}?depth=2`)
-      .then(r => r.json())
-      .then(d => { setDistricts(d.districts || []); setLoadingDist(false); })
-      .catch(() => setLoadingDist(false));
-  }, [cityCode]);
-
-  /* ---- autocomplete: search scoped to selected district + city ---- */
+  /* ---- autocomplete ---- */
   const onAddrChange = (val) => {
     setAddrText(val);
-    setPickedFull('');                           // clear picked when user re-types
+    setPickedFull('');
     setF(prev => ({ ...prev, lat: null, lng: null }));
     clearTimeout(debRef.current);
     if (val.trim().length < 3) { setSugg([]); setSearching(false); return; }
-
-    // Build context: append district+city so Nominatim narrows results even if ward is wrong/missing
-    const ctx   = [distName, cityName].filter(Boolean).join(', ');
-    const query = ctx ? `${val.trim()}, ${ctx}` : `${val.trim()}, Việt Nam`;
-
     setSearching(true);
     debRef.current = setTimeout(async () => {
-      const results = await smartNominatimSearch(query);
+      const results = await smartNominatimSearch(val.trim() + ', Việt Nam');
       setSugg(results);
       setSearching(false);
       if (results.length > 0 && inputRef.current) {
@@ -481,27 +450,14 @@ function AddrModal({ init, onClose, onSave }) {
     setF(prev => ({ ...prev, lat: s.lat, lng: s.lng }));
   };
 
-  /* ---- fallback geocode on blur if no lat yet ---- */
+  /* ---- fallback geocode on blur ---- */
   const onAddrBlur = async () => {
-    if (f.lat || !fullText.trim()) return;
+    if (f.lat || !fullText) return;
     setGeocoding(true);
-    const loc = await cascadeGeocode(fullText.trim());
+    const loc = await cascadeGeocode(fullText);
     if (loc) setF(prev => ({ ...prev, lat: loc.lat, lng: loc.lng }));
     setGeocoding(false);
   };
-
-  /* ---- re-geocode when district context changes and there's existing text ---- */
-  useEffect(() => {
-    if (!distName || !addrText.trim()) return;
-    const ctx   = [distName, cityName].filter(Boolean).join(', ');
-    const query = `${addrText.trim()}, ${ctx}`;
-    setGeocoding(true);
-    setF(prev => ({ ...prev, lat: null, lng: null }));
-    cascadeGeocode(query).then(loc => {
-      if (loc) setF(prev => ({ ...prev, lat: loc.lat, lng: loc.lng }));
-      setGeocoding(false);
-    });
-  }, [distCode]);
 
   /* ---- Escape key ---- */
   useEffect(() => {
@@ -519,7 +475,6 @@ function AddrModal({ init, onClose, onSave }) {
       center, zoom: f.lat ? 16 : 11,
       mapTypeControl: false, streetViewControl: false, fullscreenControl: false,
     });
-
     const addMarker = (lat, lng) => {
       markerRef.current = new maps.Marker({
         position: { lat, lng }, map, draggable: true,
@@ -531,9 +486,7 @@ function AddrModal({ init, onClose, onSave }) {
         reverseGeocode(la, lo).then(addr => { if (addr) { setAddrText(addr); setPickedFull(addr); } });
       });
     };
-
     if (f.lat && f.lng) addMarker(f.lat, f.lng);
-
     map.addListener('click', e => {
       const lat = e.latLng.lat(), lng = e.latLng.lng();
       setF(prev => ({ ...prev, lat, lng }));
@@ -541,7 +494,6 @@ function AddrModal({ init, onClose, onSave }) {
       else addMarker(lat, lng);
       reverseGeocode(lat, lng).then(addr => { if (addr) { setAddrText(addr); setPickedFull(addr); } });
     });
-
     mapRef.current = map;
     return () => { mapRef.current = null; markerRef.current = null; };
   }, []); // eslint-disable-line
@@ -564,7 +516,6 @@ function AddrModal({ init, onClose, onSave }) {
   }, [f.lat, f.lng]); // eslint-disable-line
 
   const valid = addrText.trim().length >= 4 && f.name.trim().length >= 2;
-  const selStyle = { appearance: "auto" };
 
   return (
     <div className="scrim" onClick={onClose}>
@@ -593,51 +544,19 @@ function AddrModal({ init, onClose, onSave }) {
             <input className="inp2" placeholder="VD: Minh Anh · 0912 845 207" value={f.name} onChange={e => setF({ ...f, name: e.target.value })} />
           </div>
 
-          {/* Tỉnh / Thành phố */}
-          <div className="fld">
-            <label>Tỉnh / Thành phố <span style={{ fontWeight: 400, color: "var(--ink-3)", fontSize: 12 }}>(tuỳ chọn — giúp tìm chính xác hơn)</span></label>
-            <select className="inp2" style={selStyle} value={cityCode || ''} onChange={e => {
-              const code = Number(e.target.value) || null;
-              const prov = provinces.find(p => p.code === code);
-              setCityCode(code); setCityName(prov?.name || '');
-              setDistCode(null); setDistName('');
-              setF(prev => ({ ...prev, lat: null, lng: null }));
-            }}>
-              <option value="">{provinces.length ? '-- Chọn tỉnh/thành phố --' : 'Đang tải…'}</option>
-              {provinces.map(p => <option key={p.code} value={p.code}>{p.name}</option>)}
-            </select>
-          </div>
-
-          {/* Quận / Huyện */}
-          {cityCode && (
-            <div className="fld">
-              <label>Quận / Huyện</label>
-              <select className="inp2" style={selStyle} value={distCode || ''} disabled={loadingDist} onChange={e => {
-                const code = Number(e.target.value) || null;
-                const dist = districts.find(d => d.code === code);
-                setDistCode(code); setDistName(dist?.name || '');
-                setF(prev => ({ ...prev, lat: null, lng: null }));
-              }}>
-                <option value="">{loadingDist ? 'Đang tải…' : '-- Chọn quận/huyện --'}</option>
-                {districts.map(d => <option key={d.code} value={d.code}>{d.name}</option>)}
-              </select>
-            </div>
-          )}
-
-          {/* Địa chỉ chi tiết — free text + autocomplete */}
+          {/* Địa chỉ — free text + autocomplete */}
           <div className="fld">
             <label style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-              <span>Phường, đường, số nhà</span>
+              <span>Địa chỉ</span>
               {searching && <span style={{ fontWeight: 400, color: "var(--ink-3)", fontSize: 12 }}>Đang tìm…</span>}
               {!searching && pickedFull && <span style={{ fontWeight: 600, color: "var(--brand)", fontSize: 12 }}>✓ Đã chọn</span>}
             </label>
             <input ref={inputRef} className="inp2" autoComplete="off"
-              placeholder={distName ? `Phường, đường, số nhà trong ${distName}…` : 'Phường/xã, tên đường, số nhà, ngách…'}
+              placeholder="Nhập số nhà, tên đường, phường, quận…"
               value={addrText}
               onChange={e => onAddrChange(e.target.value)}
               onBlur={onAddrBlur}
             />
-            {/* Suggestion dropdown — position:fixed to escape modal overflow */}
             {sugg.length > 0 && suggRect && (
               <div className="suggest-address" style={{ position: "fixed", top: suggRect.top, left: suggRect.left, width: suggRect.width }}>
                 {sugg.map((s, i) => (
