@@ -22,8 +22,8 @@
   window.REWARDS_DATA = @json($rewardsData);
 </script>
 
-<script type="text/babel" src="{{ asset('js/tweaks-panel.jsx') }}"></script>
-<script type="text/babel" src="{{ asset('js/components.jsx') }}"></script>
-<script type="text/babel" src="{{ asset('js/rewards-catalog.jsx') }}"></script>
+<script type="text/babel" src="{{ asset('js/tweaks-panel.jsx') }}?v={{ filemtime(public_path('js/tweaks-panel.jsx')) }}"></script>
+<script type="text/babel" src="{{ asset('js/components.jsx') }}?v={{ filemtime(public_path('js/components.jsx')) }}"></script>
+<script type="text/babel" src="{{ asset('js/rewards-catalog.jsx') }}?v={{ filemtime(public_path('js/rewards-catalog.jsx')) }}"></script>
 </body>
 </html>

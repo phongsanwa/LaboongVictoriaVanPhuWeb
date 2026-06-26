@@ -22,9 +22,9 @@
   window.ADMIN_ROLES_DATA = @json($rolesData);
 </script>
 
-<script type="text/babel" src="{{ asset('js/tweaks-panel.jsx') }}"></script>
-<script type="text/babel" src="{{ asset('js/components.jsx') }}"></script>
-<script type="text/babel" src="{{ asset('js/admin-sidebar.jsx') }}"></script>
-<script type="text/babel" src="{{ asset('js/admin-roles.jsx') }}"></script>
+<script type="text/babel" src="{{ asset('js/tweaks-panel.jsx') }}?v={{ filemtime(public_path('js/tweaks-panel.jsx')) }}"></script>
+<script type="text/babel" src="{{ asset('js/components.jsx') }}?v={{ filemtime(public_path('js/components.jsx')) }}"></script>
+<script type="text/babel" src="{{ asset('js/admin-sidebar.jsx') }}?v={{ filemtime(public_path('js/admin-sidebar.jsx')) }}"></script>
+<script type="text/babel" src="{{ asset('js/admin-roles.jsx') }}?v={{ filemtime(public_path('js/admin-roles.jsx')) }}"></script>
 </body>
 </html>

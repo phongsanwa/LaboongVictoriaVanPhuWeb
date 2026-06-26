@@ -22,10 +22,10 @@
   window.ADMIN_DASHBOARD_DATA = @json($dashboardData);
 </script>
 
-<script type="text/babel" src="{{ asset('js/tweaks-panel.jsx') }}"></script>
-<script type="text/babel" src="{{ asset('js/components.jsx') }}"></script>
-<script type="text/babel" src="{{ asset('js/admin-sidebar.jsx') }}"></script>
-<script type="text/babel" src="{{ asset('js/admin-charts.jsx') }}"></script>
-<script type="text/babel" src="{{ asset('js/admin-dashboard.jsx') }}"></script>
+<script type="text/babel" src="{{ asset('js/tweaks-panel.jsx') }}?v={{ filemtime(public_path('js/tweaks-panel.jsx')) }}"></script>
+<script type="text/babel" src="{{ asset('js/components.jsx') }}?v={{ filemtime(public_path('js/components.jsx')) }}"></script>
+<script type="text/babel" src="{{ asset('js/admin-sidebar.jsx') }}?v={{ filemtime(public_path('js/admin-sidebar.jsx')) }}"></script>
+<script type="text/babel" src="{{ asset('js/admin-charts.jsx') }}?v={{ filemtime(public_path('js/admin-charts.jsx')) }}"></script>
+<script type="text/babel" src="{{ asset('js/admin-dashboard.jsx') }}?v={{ filemtime(public_path('js/admin-dashboard.jsx')) }}"></script>
 </body>
 </html>

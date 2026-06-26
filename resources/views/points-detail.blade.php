@@ -22,8 +22,8 @@
   window.POINTS_DATA = @json($pointsData);
 </script>
 
-<script type="text/babel" src="{{ asset('js/tweaks-panel.jsx') }}"></script>
-<script type="text/babel" src="{{ asset('js/components.jsx') }}"></script>
-<script type="text/babel" src="{{ asset('js/points-detail.jsx') }}"></script>
+<script type="text/babel" src="{{ asset('js/tweaks-panel.jsx') }}?v={{ filemtime(public_path('js/tweaks-panel.jsx')) }}"></script>
+<script type="text/babel" src="{{ asset('js/components.jsx') }}?v={{ filemtime(public_path('js/components.jsx')) }}"></script>
+<script type="text/babel" src="{{ asset('js/points-detail.jsx') }}?v={{ filemtime(public_path('js/points-detail.jsx')) }}"></script>
 </body>
 </html>

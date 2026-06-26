@@ -24,10 +24,10 @@
   window.ADMIN_STORES_DATA = @json($storesData);
 </script>
 
-<script type="text/babel" src="{{ asset('js/tweaks-panel.jsx') }}"></script>
-<script type="text/babel" src="{{ asset('js/components.jsx') }}"></script>
-<script type="text/babel" src="{{ asset('js/admin-sidebar.jsx') }}"></script>
-<script type="text/babel" src="{{ asset('js/admin-store-editor.jsx') }}"></script>
-<script type="text/babel" src="{{ asset('js/admin-stores.jsx') }}"></script>
+<script type="text/babel" src="{{ asset('js/tweaks-panel.jsx') }}?v={{ filemtime(public_path('js/tweaks-panel.jsx')) }}"></script>
+<script type="text/babel" src="{{ asset('js/components.jsx') }}?v={{ filemtime(public_path('js/components.jsx')) }}"></script>
+<script type="text/babel" src="{{ asset('js/admin-sidebar.jsx') }}?v={{ filemtime(public_path('js/admin-sidebar.jsx')) }}"></script>
+<script type="text/babel" src="{{ asset('js/admin-store-editor.jsx') }}?v={{ filemtime(public_path('js/admin-store-editor.jsx')) }}"></script>
+<script type="text/babel" src="{{ asset('js/admin-stores.jsx') }}?v={{ filemtime(public_path('js/admin-stores.jsx')) }}"></script>
 </body>
 </html>
