@@ -149,22 +149,27 @@ function RewardEditor({ initial, onClose, onSave }) {
                     <label>Giá trị mỗi topping (đ) <span style={{ color: "var(--hot)", fontWeight: 700 }}>*</span></label>
                     <input
                       className="inp"
-                      type="number"
-                      min="0"
-                      step="500"
+                      type="text"
+                      inputMode="numeric"
+                      placeholder="VD: 5000"
                       value={toppingValue}
-                      onChange={e => setToppingValue(e.target.value === "" ? "" : Math.max(0, parseInt(e.target.value, 10) || 0))}
+                      onChange={e => {
+                        const v = e.target.value.replace(/[^0-9]/g, "");
+                        setToppingValue(v === "" ? "" : Number(v));
+                      }}
                     />
                   </div>
                   <div className="fld">
                     <label>Số lượng topping miễn phí</label>
                     <input
                       className="inp"
-                      type="number"
-                      min="1"
-                      max="99"
+                      type="text"
+                      inputMode="numeric"
                       value={freeQty}
-                      onChange={e => setFreeQty(e.target.value === "" ? "" : Math.max(1, parseInt(e.target.value, 10) || 1))}
+                      onChange={e => {
+                        const v = e.target.value.replace(/[^0-9]/g, "");
+                        setFreeQty(v === "" ? "" : Math.max(1, Number(v)));
+                      }}
                     />
                   </div>
                 </div>
@@ -180,11 +185,13 @@ function RewardEditor({ initial, onClose, onSave }) {
                   <label>Số lượng miễn phí</label>
                   <input
                     className="inp"
-                    type="number"
-                    min="1"
-                    max="99"
+                    type="text"
+                    inputMode="numeric"
                     value={freeQty}
-                    onChange={e => setFreeQty(e.target.value === "" ? "" : Math.max(1, parseInt(e.target.value, 10) || 1))}
+                    onChange={e => {
+                      const v = e.target.value.replace(/[^0-9]/g, "");
+                      setFreeQty(v === "" ? "" : Math.max(1, Number(v)));
+                    }}
                   />
                   <div style={{ fontSize: 11.5, color: "var(--ink-3)", marginTop: 4 }}>
                     Voucher sẽ miễn phí tối đa <b>{freeQty}</b> sản phẩm trong đơn hàng.

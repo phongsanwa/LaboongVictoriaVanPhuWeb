@@ -23,9 +23,9 @@
   window.ADMIN_USER = @json($admin);
 </script>
 
-<script type="text/babel" src="{{ asset('js/tweaks-panel.jsx') }}?v={{ time() }}"></script>
-<script type="text/babel" src="{{ asset('js/components.jsx') }}?v={{ time() }}"></script>
-<script type="text/babel" src="{{ asset('js/admin-sidebar.jsx') }}?v={{ time() }}"></script>
-<script type="text/babel" src="{{ asset('js/admin-checkin.jsx') }}?v={{ time() }}"></script>
+<script type="text/babel" src="{{ asset('js/tweaks-panel.jsx') }}?v={{ filemtime(public_path('js/tweaks-panel.jsx')) }}"></script>
+<script type="text/babel" src="{{ asset('js/components.jsx') }}?v={{ filemtime(public_path('js/components.jsx')) }}"></script>
+<script type="text/babel" src="{{ asset('js/admin-sidebar.jsx') }}?v={{ filemtime(public_path('js/admin-sidebar.jsx')) }}"></script>
+<script type="text/babel" src="{{ asset('js/admin-checkin.jsx') }}?v={{ filemtime(public_path('js/admin-checkin.jsx')) }}"></script>
 </body>
 </html>

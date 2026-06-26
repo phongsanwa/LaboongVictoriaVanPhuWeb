@@ -22,11 +22,11 @@
   window.ADMIN_CUSTOMERS_DATA = @json($customersData);
 </script>
 
-<script type="text/babel" src="{{ asset('js/tweaks-panel.jsx') }}"></script>
-<script type="text/babel" src="{{ asset('js/components.jsx') }}"></script>
-<script type="text/babel" src="{{ asset('js/admin-sidebar.jsx') }}"></script>
-<script type="text/babel" src="{{ asset('js/admin-data.jsx') }}"></script>
-<script type="text/babel" src="{{ asset('js/admin-drawer.jsx') }}"></script>
-<script type="text/babel" src="{{ asset('js/admin.jsx') }}"></script>
+<script type="text/babel" src="{{ asset('js/tweaks-panel.jsx') }}?v={{ filemtime(public_path('js/tweaks-panel.jsx')) }}"></script>
+<script type="text/babel" src="{{ asset('js/components.jsx') }}?v={{ filemtime(public_path('js/components.jsx')) }}"></script>
+<script type="text/babel" src="{{ asset('js/admin-sidebar.jsx') }}?v={{ filemtime(public_path('js/admin-sidebar.jsx')) }}"></script>
+<script type="text/babel" src="{{ asset('js/admin-data.jsx') }}?v={{ filemtime(public_path('js/admin-data.jsx')) }}"></script>
+<script type="text/babel" src="{{ asset('js/admin-drawer.jsx') }}?v={{ filemtime(public_path('js/admin-drawer.jsx')) }}"></script>
+<script type="text/babel" src="{{ asset('js/admin.jsx') }}?v={{ filemtime(public_path('js/admin.jsx')) }}"></script>
 </body>
 </html>
