@@ -330,54 +330,24 @@ async function reverseGeocode(lat, lng) {
 
 async function smartNominatimSearch(text) {
   const maps = gmaps();
-  if (!maps) return [];
-
-  // New Places API (keys created after March 2025)
-  if (maps.places?.AutocompleteSuggestion) {
-    try {
-      const { suggestions } = await maps.places.AutocompleteSuggestion.fetchAutocompleteSuggestions({
-        input: text,
-        includedRegionCodes: ['vn'],
-      });
-      if (!suggestions?.length) return [];
-      const results = await Promise.all(suggestions.slice(0, 6).map(async s => {
-        try {
-          const place = new maps.places.Place({ id: s.placePrediction.placeId });
-          await place.fetchFields({ fields: ['location', 'formattedAddress'] });
-          if (!place.location) return null;
-          return {
-            text: (place.formattedAddress || s.placePrediction.text.text).replace(/,?\s*Việt Nam$/i, "").trim(),
-            lat: place.location.lat(),
-            lng: place.location.lng(),
-          };
-        } catch { return null; }
-      }));
-      return results.filter(Boolean);
-    } catch (e) { /* fall through to legacy */ }
-  }
-
-  // Legacy AutocompleteService (older keys)
-  if (maps.places?.AutocompleteService) {
-    return new Promise(resolve => {
-      new maps.places.AutocompleteService().getPlacePredictions(
-        { input: text, componentRestrictions: { country: 'vn' } },
-        (predictions, status) => {
-          if (!predictions?.length) { resolve([]); return; }
-          const geocoder = new maps.Geocoder();
-          Promise.all(predictions.slice(0, 6).map(p => new Promise(res => {
-            geocoder.geocode({ placeId: p.place_id }, (results, s) => {
-              if (s === 'OK' && results?.length) {
-                const loc = results[0].geometry.location;
-                res({ text: p.description.replace(/,?\s*Việt Nam$/i, "").trim(), lat: loc.lat(), lng: loc.lng() });
-              } else res(null);
-            });
-          }))).then(list => resolve(list.filter(Boolean)));
-        }
-      );
-    });
-  }
-
-  return [];
+  if (!maps?.places?.AutocompleteService) return [];
+  return new Promise(resolve => {
+    new maps.places.AutocompleteService().getPlacePredictions(
+      { input: text, componentRestrictions: { country: 'vn' } },
+      (predictions, status) => {
+        if (!predictions?.length) { resolve([]); return; }
+        const geocoder = new maps.Geocoder();
+        Promise.all(predictions.slice(0, 6).map(p => new Promise(res => {
+          geocoder.geocode({ placeId: p.place_id }, (results, s) => {
+            if (s === 'OK' && results?.length) {
+              const loc = results[0].geometry.location;
+              res({ text: p.description.replace(/,?\s*Việt Nam$/i, "").trim(), lat: loc.lat(), lng: loc.lng() });
+            } else res(null);
+          });
+        }))).then(list => resolve(list.filter(Boolean)));
+      }
+    );
+  });
 }
 
 async function cascadeGeocode(text) {
