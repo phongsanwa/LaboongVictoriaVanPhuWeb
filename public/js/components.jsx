@@ -39,6 +39,7 @@ function Icon({ name, size = 20, stroke = 2.1, color = "currentColor", fill = "n
     logout: <><path d="M14 4H6.5A1.5 1.5 0 0 0 5 5.5v13A1.5 1.5 0 0 0 6.5 20H14"/><path d="M17 8l4 4-4 4M9 12h12"/></>,
     edit: <path d="M16.5 4.5 19.5 7.5 8 19l-4 1 1-4z"/>,
     plus: <path d="M12 5v14M5 12h14"/>,
+    minus: <path d="M5 12h14"/>,
     check: <path d="m5 12.5 4.5 4.5L19 6.5"/>,
     chart: <><path d="M4 20V4M20 20H4"/><path d="M8 16v-4M12 16V8M16 16v-6"/></>,
     ext: <><path d="M14 4h6v6"/><path d="M20 4 11 13"/><path d="M18 14v4.5A1.5 1.5 0 0 1 16.5 20h-11A1.5 1.5 0 0 1 4 18.5v-11A1.5 1.5 0 0 1 5.5 6H10"/></>,

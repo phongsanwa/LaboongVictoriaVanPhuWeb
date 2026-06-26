@@ -32,8 +32,10 @@ const CATS = {
   all:     { label: "Tất cả", ic: "grid" },
   voucher: { label: "Voucher", ic: "percent" },
   drink:   { label: "Đồ uống", ic: "cup" },
-  upgrade: { label: "Nâng cấp", ic: "sparkle2" },
   gift:    { label: "Quà tặng", ic: "gift" },
+  topping: { label: "Freetopping", ic: "spark" },
+  upsize:  { label: "Upsize", ic: "arrowup" },
+  upgrade: { label: "Nâng cấp", ic: "spark" },
 };
 
 /* gradient palette, cycled by reward id */
@@ -56,7 +58,7 @@ function gradFor(id) { return GRADIENTS[id % GRADIENTS.length]; }
 const TAG_META = { hot: { label: "Hot", ic: "spark" }, new: { label: "Mới", ic: "sparkle2" }, low: { label: "Sắp hết", ic: "clock" } };
 
 function GiftCard({ g, can, balance, onRedeem }) {
-  const cat = CATS[g.cat];
+  const cat = CATS[g.cat] || CATS.gift;
   const hasStock = g.stock !== null && g.stock >= 0;
   return (
     <div className={"gift" + (can ? "" : " locked")}>
@@ -197,7 +199,7 @@ function App() {
           <div className="rd" onClick={e => e.stopPropagation()}>
             <div className="rd-thumb" style={{ background: gradFor(redeem.id) }}>
               <button className="rd-x" onClick={() => setRedeem(null)}>×</button>
-              <span className="ti"><Icon name={CATS[redeem.cat].ic} size={48} color="#fff" /></span>
+              <span className="ti"><Icon name={(CATS[redeem.cat] || CATS.gift).ic} size={48} color="#fff" /></span>
             </div>
             <div className="rd-b">
               <div className="rd-name">{redeem.name}</div>
