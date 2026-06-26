@@ -65,7 +65,7 @@ function GiftCard({ g, can, balance, onRedeem }) {
       <div className="gift-thumb" style={{ background: gradFor(g.id) }}>
         <span className="ti"><Icon name={cat.ic} size={42} color="#fff" /></span>
         <div className="gift-tags">
-          {g.tags.map(t => <span key={t} className={"tag " + t}><Icon name={TAG_META[t].ic} size={11} color="#fff" /> {TAG_META[t].label}</span>)}
+          {g.tags.filter(t => TAG_META[t]).map(t => <span key={t} className={"tag " + t}><Icon name={TAG_META[t].ic} size={11} color="#fff" /> {TAG_META[t].label}</span>)}
         </div>
         {!can && <span className="gift-locklbl"><Icon name="info" size={15} color="#fff" /></span>}
       </div>
