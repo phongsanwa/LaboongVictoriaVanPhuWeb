@@ -153,7 +153,7 @@ function RewardEditor({ initial, onClose, onSave }) {
                       min="0"
                       step="500"
                       value={toppingValue}
-                      onChange={e => setToppingValue(Math.max(0, parseInt(e.target.value, 10) || 0))}
+                      onChange={e => setToppingValue(e.target.value === "" ? "" : Math.max(0, parseInt(e.target.value, 10) || 0))}
                     />
                   </div>
                   <div className="fld">
@@ -164,7 +164,7 @@ function RewardEditor({ initial, onClose, onSave }) {
                       min="1"
                       max="99"
                       value={freeQty}
-                      onChange={e => setFreeQty(Math.max(1, parseInt(e.target.value, 10) || 1))}
+                      onChange={e => setFreeQty(e.target.value === "" ? "" : Math.max(1, parseInt(e.target.value, 10) || 1))}
                     />
                   </div>
                 </div>
@@ -184,7 +184,7 @@ function RewardEditor({ initial, onClose, onSave }) {
                     min="1"
                     max="99"
                     value={freeQty}
-                    onChange={e => setFreeQty(Math.max(1, parseInt(e.target.value, 10) || 1))}
+                    onChange={e => setFreeQty(e.target.value === "" ? "" : Math.max(1, parseInt(e.target.value, 10) || 1))}
                   />
                   <div style={{ fontSize: 11.5, color: "var(--ink-3)", marginTop: 4 }}>
                     Voucher sẽ miễn phí tối đa <b>{freeQty}</b> sản phẩm trong đơn hàng.
