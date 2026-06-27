@@ -18,7 +18,8 @@
 <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
 <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" crossorigin="anonymous"></script>
 @if(config('services.google_maps.key'))
-<script src="https://maps.googleapis.com/maps/api/js?key={{ config('services.google_maps.key') }}&libraries=places&language=vi&region=VN"></script>
+<script>window.__gmapsReady = false; window.__gmapsCallbacks = []; window.initGoogleMaps = function(){ window.__gmapsReady = true; window.__gmapsCallbacks.forEach(fn => fn()); };</script>
+<script src="https://maps.googleapis.com/maps/api/js?key={{ config('services.google_maps.key') }}&libraries=places&language=vi&region=VN&callback=initGoogleMaps" async defer></script>
 @endif
 
 <script>

@@ -316,6 +316,12 @@ function App() {
 
 function gmaps() { return window.google?.maps; }
 
+function onGmapsReady(fn) {
+  if (window.__gmapsReady || window.google?.maps) { fn(); return; }
+  if (window.__gmapsCallbacks) { window.__gmapsCallbacks.push(fn); }
+  else { fn(); } // fallback nếu không dùng async load
+}
+
 async function reverseGeocode(lat, lng) {
   const maps = gmaps();
   if (!maps) return null;
@@ -438,34 +444,38 @@ function AddrModal({ init, onClose, onSave }) {
 
   /* ---- Google Maps ---- */
   useEffect(() => {
-    const maps = gmaps();
-    if (!maps || !mapDivRef.current || mapRef.current) return;
-    const center = (f.lat && f.lng) ? { lat: f.lat, lng: f.lng } : { lat: 20.9833, lng: 105.8412 };
-    const map = new maps.Map(mapDivRef.current, {
-      center, zoom: f.lat ? 16 : 11,
-      mapTypeControl: false, streetViewControl: false, fullscreenControl: false,
-    });
-    const addMarker = (lat, lng) => {
-      markerRef.current = new maps.Marker({
-        position: { lat, lng }, map, draggable: true,
-        icon: { path: maps.SymbolPath.CIRCLE, scale: 9, fillColor: '#0F623F', fillOpacity: 1, strokeColor: '#fff', strokeWeight: 2 },
+    let destroyed = false;
+    onGmapsReady(() => {
+      if (destroyed || !mapDivRef.current || mapRef.current) return;
+      const maps = gmaps();
+      if (!maps) return;
+      const center = (f.lat && f.lng) ? { lat: f.lat, lng: f.lng } : { lat: 20.9833, lng: 105.8412 };
+      const map = new maps.Map(mapDivRef.current, {
+        center, zoom: f.lat ? 16 : 11,
+        mapTypeControl: false, streetViewControl: false, fullscreenControl: false,
       });
-      markerRef.current.addListener('dragend', e => {
-        const la = e.latLng.lat(), lo = e.latLng.lng();
-        setF(prev => ({ ...prev, lat: la, lng: lo }));
-        reverseGeocode(la, lo).then(addr => { if (addr) { setAddrText(addr); setPickedFull(addr); } });
+      const addMarker = (lat, lng) => {
+        markerRef.current = new maps.Marker({
+          position: { lat, lng }, map, draggable: true,
+          icon: { path: maps.SymbolPath.CIRCLE, scale: 9, fillColor: '#0F623F', fillOpacity: 1, strokeColor: '#fff', strokeWeight: 2 },
+        });
+        markerRef.current.addListener('dragend', e => {
+          const la = e.latLng.lat(), lo = e.latLng.lng();
+          setF(prev => ({ ...prev, lat: la, lng: lo }));
+          reverseGeocode(la, lo).then(addr => { if (addr) { setAddrText(addr); setPickedFull(addr); } });
+        });
+      };
+      if (f.lat && f.lng) addMarker(f.lat, f.lng);
+      map.addListener('click', e => {
+        const lat = e.latLng.lat(), lng = e.latLng.lng();
+        setF(prev => ({ ...prev, lat, lng }));
+        if (markerRef.current) markerRef.current.setPosition({ lat, lng });
+        else addMarker(lat, lng);
+        reverseGeocode(lat, lng).then(addr => { if (addr) { setAddrText(addr); setPickedFull(addr); } });
       });
-    };
-    if (f.lat && f.lng) addMarker(f.lat, f.lng);
-    map.addListener('click', e => {
-      const lat = e.latLng.lat(), lng = e.latLng.lng();
-      setF(prev => ({ ...prev, lat, lng }));
-      if (markerRef.current) markerRef.current.setPosition({ lat, lng });
-      else addMarker(lat, lng);
-      reverseGeocode(lat, lng).then(addr => { if (addr) { setAddrText(addr); setPickedFull(addr); } });
+      mapRef.current = map;
     });
-    mapRef.current = map;
-    return () => { mapRef.current = null; markerRef.current = null; };
+    return () => { destroyed = true; mapRef.current = null; markerRef.current = null; };
   }, []); // eslint-disable-line
 
   useEffect(() => {
