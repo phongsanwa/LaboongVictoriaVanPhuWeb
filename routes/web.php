@@ -14,6 +14,8 @@ use App\Http\Controllers\CheckinController;
 use App\Http\Controllers\StoreController;
 use Illuminate\Support\Facades\Route;
 
+Route::get('/test-maps', fn() => view('test-maps'));
+
 Route::get('/', [HomeController::class, 'index'])->middleware('auth')->name('home');
 Route::get('/menu', [MenuPageController::class, 'index'])->middleware('auth')->name('menu');
 Route::post('/orders', [OrderController::class, 'place'])->middleware('auth')->name('orders.place');
