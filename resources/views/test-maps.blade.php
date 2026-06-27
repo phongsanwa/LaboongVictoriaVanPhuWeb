@@ -7,6 +7,7 @@
         body { font-family: Arial, sans-serif; max-width: 700px; margin: 30px auto; padding: 0 20px; color:#222; }
         h2 { margin-bottom: 4px; }
         .hint { color:#555; font-size: 14px; margin-bottom: 20px; }
+        .key-info { background:#e8f4fd; border:1px solid #b3d7f5; border-radius:6px; padding:10px 14px; font-size:13px; margin-bottom:20px; }
         .test-block { border: 1px solid #ddd; border-radius: 8px; padding: 16px; margin-bottom: 16px; }
         .status { font-weight: bold; padding: 6px 10px; border-radius: 4px; display: inline-block; margin-top: 8px; font-size: 13px; }
         .ok { background: #d4edda; color: #155724; }
@@ -22,7 +23,15 @@
 <body>
 
 <h2>🧪 Test Google Maps API Key — Laboong</h2>
-<p class="hint">Mở DevTools Console (F12) trước khi test để xem chi tiết lỗi đầy đủ. Mỗi khối dưới đây test độc lập 1 API.</p>
+<p class="hint">Mở DevTools Console (F12) trước khi test để xem chi tiết lỗi đầy đủ.</p>
+
+<div class="key-info">
+    🔑 Key đang dùng từ <code>.env</code>:
+    <strong>{{ config('services.google_maps.key') ? substr(config('services.google_maps.key'), 0, 8) . '...' . substr(config('services.google_maps.key'), -4) : '❌ CHƯA CÀI GOOGLE_MAPS_KEY' }}</strong>
+    @if(!config('services.google_maps.key'))
+        <br><span style="color:red">→ Cần thêm GOOGLE_MAPS_KEY vào .env và chạy php artisan config:clear</span>
+    @endif
+</div>
 
 <div class="test-block">
     <h3>Test 1: Tải bản đồ (Maps JavaScript API)</h3>
@@ -31,13 +40,13 @@
 </div>
 
 <div class="test-block">
-    <h3>Test 2: Autocomplete địa chỉ (Places widget - cũ)</h3>
+    <h3>Test 2: Autocomplete địa chỉ (Places API cũ)</h3>
     <input id="autocomplete-input" type="text" placeholder="Gõ thử một địa chỉ ở Việt Nam...">
     <div id="status-autocomplete" class="status pending">Đang chờ widget khởi tạo...</div>
 </div>
 
 <div class="test-block">
-    <h3>Test 3: Geocoding API (địa chỉ → tọa độ, gọi qua fetch)</h3>
+    <h3>Test 3: Geocoding API (địa chỉ → tọa độ)</h3>
     <input id="geocode-input" type="text" value="36 Hoang Dieu, Ha Noi">
     <button onclick="testGeocode()">Test Geocode</button>
     <div id="status-geocode" class="status pending">Chưa test</div>
@@ -45,15 +54,14 @@
 </div>
 
 <div class="test-block">
-    <h3>Test 4: Places API (New) — gọi trực tiếp qua fetch</h3>
+    <h3>Test 4: Places API (New) — fetch trực tiếp</h3>
     <button onclick="testPlacesNew()">Test Places API (New)</button>
     <div id="status-placesnew" class="status pending">Chưa test</div>
     <pre id="placesnew-result"></pre>
 </div>
 
 <script>
-    // ⚠️ Đây là key bạn đã dán trong chat trước đó. Thay lại nếu key đã đổi.
-    const API_KEY = "AIzaSyBZhNfV44wZX_6FIzjcfBXhsQq8AFek3Kw";
+    const API_KEY = "{{ config('services.google_maps.key') }}";
 
     function setStatus(id, ok, text) {
         const el = document.getElementById(id);
@@ -69,57 +77,61 @@
             });
             setStatus("status-map", true, "✅ Bản đồ tải thành công");
         } catch (e) {
-            setStatus("status-map", false, "❌ Lỗi tải bản đồ: " + e.message);
+            setStatus("status-map", false, "❌ Lỗi: " + e.message);
         }
 
         try {
             const input = document.getElementById("autocomplete-input");
-            const autocomplete = new google.maps.places.Autocomplete(input, {
+            const ac = new google.maps.places.Autocomplete(input, {
                 componentRestrictions: { country: "vn" },
             });
-            autocomplete.addListener("place_changed", () => {
-                const place = autocomplete.getPlace();
-                if (place && place.formatted_address) {
-                    setStatus("status-autocomplete", true, "✅ Autocomplete OK: " + place.formatted_address);
+            ac.addListener("place_changed", () => {
+                const place = ac.getPlace();
+                if (place?.formatted_address) {
+                    setStatus("status-autocomplete", true, "✅ OK: " + place.formatted_address);
                 } else {
-                    setStatus("status-autocomplete", false, "⚠️ Không lấy được place (xem console)");
+                    setStatus("status-autocomplete", false, "⚠️ Không lấy được place");
                 }
             });
-            setStatus("status-autocomplete", true, "✅ Widget khởi tạo OK — gõ thử để test request thật");
+            setStatus("status-autocomplete", true, "✅ Widget khởi tạo OK — gõ thử để test");
         } catch (e) {
-            setStatus("status-autocomplete", false, "❌ Lỗi khởi tạo Autocomplete: " + e.message);
+            setStatus("status-autocomplete", false, "❌ Lỗi: " + e.message);
         }
     }
 
-    function loadMapScript() {
-        const script = document.createElement("script");
-        script.src = `https://maps.googleapis.com/maps/api/js?key=${API_KEY}&libraries=places&language=vi&region=VN&callback=initMap`;
-        script.onerror = () => setStatus("status-map", false, "❌ Script load thất bại (xem tab Network/Console)");
-        document.head.appendChild(script);
-    }
+    @if(config('services.google_maps.key'))
     window.initMap = initMap;
-    loadMapScript();
+    const s = document.createElement("script");
+    s.src = "https://maps.googleapis.com/maps/api/js?key=" + API_KEY + "&libraries=places&language=vi&region=VN&callback=initMap";
+    s.async = true; s.defer = true;
+    s.onerror = () => setStatus("status-map", false, "❌ Script load thất bại — xem Console");
+    document.head.appendChild(s);
+    @else
+    setStatus("status-map", false, "❌ Chưa có GOOGLE_MAPS_KEY trong .env");
+    setStatus("status-autocomplete", false, "❌ Chưa có GOOGLE_MAPS_KEY trong .env");
+    @endif
 
     async function testGeocode() {
+        if (!API_KEY) { setStatus("status-geocode", false, "❌ Chưa có API key"); return; }
         const address = document.getElementById("geocode-input").value;
         setStatus("status-geocode", true, "⏳ Đang gọi...");
         try {
-            const url = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(address)}&key=${API_KEY}`;
+            const url = "https://maps.googleapis.com/maps/api/geocode/json?address=" + encodeURIComponent(address) + "&key=" + API_KEY;
             const res = await fetch(url);
             const data = await res.json();
             document.getElementById("geocode-result").textContent = JSON.stringify(data, null, 2);
             if (data.status === "OK") {
                 setStatus("status-geocode", true, "✅ Geocoding thành công");
             } else {
-                setStatus("status-geocode", false, "❌ status: " + data.status + (data.error_message ? " — " + data.error_message : ""));
+                setStatus("status-geocode", false, "❌ " + data.status + (data.error_message ? " — " + data.error_message : ""));
             }
         } catch (e) {
-            setStatus("status-geocode", false, "❌ Lỗi: " + e.message);
-            document.getElementById("geocode-result").textContent = e.message;
+            setStatus("status-geocode", false, "❌ " + e.message);
         }
     }
 
     async function testPlacesNew() {
+        if (!API_KEY) { setStatus("status-placesnew", false, "❌ Chưa có API key"); return; }
         setStatus("status-placesnew", true, "⏳ Đang gọi...");
         try {
             const res = await fetch("https://places.googleapis.com/v1/places:searchText", {
@@ -129,18 +141,17 @@
                     "X-Goog-Api-Key": API_KEY,
                     "X-Goog-FieldMask": "places.displayName,places.formattedAddress",
                 },
-                body: JSON.stringify({ textQuery: "Tra sua Laboong Ha Noi" }),
+                body: JSON.stringify({ textQuery: "Tra sua Ha Noi" }),
             });
             const data = await res.json();
             document.getElementById("placesnew-result").textContent = JSON.stringify(data, null, 2);
             if (res.ok && !data.error) {
                 setStatus("status-placesnew", true, "✅ Places API (New) thành công");
             } else {
-                setStatus("status-placesnew", false, "❌ HTTP " + res.status + " — " + (data.error && data.error.message ? data.error.message : "lỗi không rõ"));
+                setStatus("status-placesnew", false, "❌ HTTP " + res.status + " — " + (data.error?.message || "lỗi không rõ"));
             }
         } catch (e) {
-            setStatus("status-placesnew", false, "❌ Lỗi: " + e.message);
-            document.getElementById("placesnew-result").textContent = e.message;
+            setStatus("status-placesnew", false, "❌ " + e.message);
         }
     }
 </script>
