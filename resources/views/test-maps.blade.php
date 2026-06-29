@@ -19,6 +19,9 @@
         button:hover { background:#1558b0; }
         pre { background: #f5f5f5; padding: 10px; border-radius: 4px; overflow-x: auto; font-size: 12px; white-space: pre-wrap; max-height: 200px; }
         .note { font-size: 12px; color: #666; margin-top: 6px; font-style: italic; }
+        .url-box { font-family: monospace; font-size: 12px; background:#f0f0f0; padding:4px 8px; border-radius:4px; word-break:break-all; }
+        .fix-hint { background:#fff8e1; border:1px solid #ffe082; border-radius:6px; padding:10px 14px; font-size:13px; margin-top:10px; display:none; }
+        .fix-hint.show { display:block; }
     </style>
 </head>
 <body>
@@ -34,11 +37,32 @@
     @endif
 </div>
 
-{{-- Test 1: Bản đồ --}}
+{{-- Test 0: Chẩn đoán URL / referrer --}}
 <div class="test-block">
-    <h3>Test 1: Bản đồ (Maps JavaScript API)</h3>
+    <h3>Test 0: Chẩn đoán URL (kiểm tra Website Restriction)</h3>
+    <p style="margin:4px 0 6px;font-size:13px;">URL trang này (referrer Google Maps sẽ nhận):</p>
+    <div class="url-box" id="page-url"></div>
+    <p style="margin:8px 0 4px;font-size:13px;">Trong Google Cloud Console, <strong>HTTP referrer restriction</strong> phải khớp URL trên. Ví dụ đúng:</p>
+    <ul style="font-size:13px;margin:4px 0;">
+        <li><code>https://laboongvictoriavanphu.demowebsitestore.com/*</code></li>
+        <li><code>*.demowebsitestore.com/*</code></li>
+    </ul>
+    <p style="font-size:12px;color:#c00;margin-top:6px;">⚠️ Nếu nhập <code>https://laboongvictoriavanphu.demowebsitestore.com</code> (không có <code>/*</code>) thì sẽ KHÔNG khớp với bất kỳ trang nào!</p>
+    <div id="status-url" class="status pending">Đang kiểm tra...</div>
+</div>
+
+{{-- Test 1: Auth & Bản đồ --}}
+<div class="test-block">
+    <h3>Test 1: Auth API Key + Bản đồ (Maps JavaScript API)</h3>
     <div id="map">Đang tải...</div>
     <div id="status-map" class="status pending">Đang kiểm tra...</div>
+    <div id="fix-auth" class="fix-hint">
+        <strong>🔧 Nguyên nhân có thể:</strong><br>
+        1. Key trong .env là IP-restricted key (chỉ dùng cho server, không dùng cho browser).<br>
+        2. Website restriction chưa thêm <code>/*</code> ở cuối URL.<br>
+        3. Maps JavaScript API hoặc Places API chưa được bật cho key này.<br>
+        4. Cần xoá cache: <kbd>Ctrl+Shift+R</kbd> (hard reload).
+    </div>
 </div>
 
 {{-- Test 2: Autocomplete --}}
@@ -69,18 +93,47 @@
 </div>
 
 <script>
+    // Hiện URL trang để kiểm tra website restriction
+    const pageUrl = window.location.href;
+    document.getElementById("page-url").textContent = pageUrl;
+    const isLocal = pageUrl.startsWith("http://localhost") || pageUrl.startsWith("http://127.");
+    const urlEl = document.getElementById("status-url");
+    if (isLocal) {
+        urlEl.className = "status fail";
+        urlEl.textContent = "⚠️ Đang test trên localhost — website restriction không áp dụng ở đây, phải test trên domain thật";
+    } else {
+        urlEl.className = "status ok";
+        urlEl.textContent = "✅ Domain: " + window.location.hostname + " — đảm bảo restriction có dạng https://" + window.location.hostname + "/*";
+    }
+
     function setStatus(id, ok, text) {
         const el = document.getElementById(id);
         el.className = "status " + (ok ? "ok" : "fail");
         el.textContent = text;
     }
 
+    // Google Maps gọi hàm này khi API key bị từ chối (AuthFailure)
+    window.gm_authFailure = function() {
+        setStatus("status-map", false, "❌ AuthFailure — API key bị từ chối (sai key, sai domain restriction, hoặc API chưa bật)");
+        document.getElementById("fix-auth").classList.add("show");
+        setStatus("status-autocomplete", false, "❌ Auth thất bại — xem Test 1");
+    };
+
     function initMap() {
         // Test 1: Bản đồ
         try {
-            new google.maps.Map(document.getElementById("map"), {
+            const map = new google.maps.Map(document.getElementById("map"), {
                 center: { lat: 21.0278, lng: 105.8342 }, zoom: 13,
+                mapTypeControl: false, streetViewControl: false,
             });
+            // Nếu không có gm_authFailure sau 2s thì auth OK
+            setTimeout(() => {
+                const el = document.getElementById("status-map");
+                if (el.classList.contains("pending")) {
+                    setStatus("status-map", true, "✅ Bản đồ tải thành công — auth OK");
+                }
+                // Nếu vẫn hiện "Rất tiếc! Đã xảy ra lỗi" nhưng badge xanh: kiểm tra Console xem có lỗi không
+            }, 2000);
             setStatus("status-map", true, "✅ Bản đồ tải thành công");
         } catch (e) {
             setStatus("status-map", false, "❌ " + e.message);
