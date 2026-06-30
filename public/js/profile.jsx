@@ -314,66 +314,51 @@ function App() {
   );
 }
 
-function gmaps() { return window.google?.maps; }
+const VIETMAP_KEY = window.VIETMAP_KEY || "";
 
-function onGmapsReady(fn) {
-  if (window.__gmapsReady || window.google?.maps) { fn(); return; }
-  if (window.__gmapsCallbacks) { window.__gmapsCallbacks.push(fn); }
-  else { fn(); } // fallback nếu không dùng async load
+function vmapReady() { return !!window.vietmapgl; }
+
+async function vmFetch(path) {
+  try {
+    const res = await fetch(`https://maps.vietmap.vn/api/${path}${path.includes('?') ? '&' : '?'}apikey=${VIETMAP_KEY}`);
+    if (!res.ok) return null;
+    return await res.json();
+  } catch { return null; }
 }
 
 async function reverseGeocode(lat, lng) {
-  const maps = gmaps();
-  if (!maps) return null;
-  return new Promise(resolve => {
-    new maps.Geocoder().geocode({ location: { lat, lng } }, (results, status) => {
-      if (status === 'OK' && results?.length) {
-        resolve(results[0].formatted_address.replace(/,?\s*Việt Nam$/i, "").trim());
-      } else resolve(null);
-    });
-  });
+  if (!VIETMAP_KEY) return null;
+  const json = await vmFetch(`reverse/v3?lat=${lat}&lng=${lng}`);
+  if (Array.isArray(json) && json.length) {
+    return (json[0].display || json[0].address || "").replace(/,?\s*Việt Nam$/i, "").trim() || null;
+  }
+  return null;
 }
 
 async function smartNominatimSearch(text) {
-  const maps = gmaps();
-  if (!maps?.places?.AutocompleteService) return [];
-  return new Promise(resolve => {
-    new maps.places.AutocompleteService().getPlacePredictions(
-      { input: text, componentRestrictions: { country: 'vn' } },
-      (predictions, status) => {
-        if (!predictions?.length) { resolve([]); return; }
-        const geocoder = new maps.Geocoder();
-        Promise.all(predictions.slice(0, 6).map(p => new Promise(res => {
-          geocoder.geocode({ placeId: p.place_id }, (results, s) => {
-            if (s === 'OK' && results?.length) {
-              const loc = results[0].geometry.location;
-              res({ text: p.description.replace(/,?\s*Việt Nam$/i, "").trim(), lat: loc.lat(), lng: loc.lng() });
-            } else res(null);
-          });
-        }))).then(list => resolve(list.filter(Boolean)));
-      }
-    );
-  });
+  if (!VIETMAP_KEY) return [];
+  const json = await vmFetch(`autocomplete/v3?text=${encodeURIComponent(text)}`);
+  if (!Array.isArray(json) || !json.length) return [];
+  const list = await Promise.all(json.slice(0, 6).map(async p => {
+    if (!p.ref_id) return null;
+    const place = await vmFetch(`place/v3?refid=${encodeURIComponent(p.ref_id)}`);
+    if (!place || place.lat == null || place.lng == null) return null;
+    return { text: (p.display || "").replace(/,?\s*Việt Nam$/i, "").trim(), lat: place.lat, lng: place.lng };
+  }));
+  return list.filter(Boolean);
 }
 
 async function cascadeGeocode(text) {
-  const maps = gmaps();
-  if (!maps) return null;
-  const geocoder = new maps.Geocoder();
+  if (!VIETMAP_KEY) return null;
   const parts = text.split(",").map(p => p.trim()).filter(Boolean);
   const queries = [text];
   for (let i = 1; i < parts.length; i++) queries.push(parts.slice(i).join(", "));
   for (const q of queries) {
     if (q.trim().length < 3) continue;
-    const result = await new Promise(resolve => {
-      geocoder.geocode({ address: q + ', Việt Nam', region: 'VN' }, (results, status) => {
-        if (status === 'OK' && results?.length) {
-          const loc = results[0].geometry.location;
-          resolve({ lat: loc.lat(), lng: loc.lng() });
-        } else resolve(null);
-      });
-    });
-    if (result) return result;
+    const json = await vmFetch(`search/v3?text=${encodeURIComponent(q + ', Việt Nam')}`);
+    if (Array.isArray(json) && json.length && json[0].lat != null && json[0].lng != null) {
+      return { lat: json[0].lat, lng: json[0].lng };
+    }
   }
   return null;
 }
@@ -442,55 +427,45 @@ function AddrModal({ init, onClose, onSave }) {
     return () => window.removeEventListener("keydown", h);
   }, [onClose, sugg.length]);
 
-  /* ---- Google Maps ---- */
+  /* ---- Vietmap ---- */
   useEffect(() => {
     let destroyed = false;
-    onGmapsReady(() => {
-      if (destroyed || !mapDivRef.current || mapRef.current) return;
-      const maps = gmaps();
-      if (!maps) return;
-      const center = (f.lat && f.lng) ? { lat: f.lat, lng: f.lng } : { lat: 20.9833, lng: 105.8412 };
-      const map = new maps.Map(mapDivRef.current, {
-        center, zoom: f.lat ? 16 : 11,
-        mapTypeControl: false, streetViewControl: false, fullscreenControl: false,
-      });
-      const addMarker = (lat, lng) => {
-        markerRef.current = new maps.Marker({
-          position: { lat, lng }, map, draggable: true,
-          icon: { path: maps.SymbolPath.CIRCLE, scale: 9, fillColor: '#0F623F', fillOpacity: 1, strokeColor: '#fff', strokeWeight: 2 },
-        });
-        markerRef.current.addListener('dragend', e => {
-          const la = e.latLng.lat(), lo = e.latLng.lng();
-          setF(prev => ({ ...prev, lat: la, lng: lo }));
-          reverseGeocode(la, lo).then(addr => { if (addr) { setAddrText(addr); setPickedFull(addr); } });
-        });
-      };
-      if (f.lat && f.lng) addMarker(f.lat, f.lng);
-      map.addListener('click', e => {
-        const lat = e.latLng.lat(), lng = e.latLng.lng();
-        setF(prev => ({ ...prev, lat, lng }));
-        if (markerRef.current) markerRef.current.setPosition({ lat, lng });
-        else addMarker(lat, lng);
-        reverseGeocode(lat, lng).then(addr => { if (addr) { setAddrText(addr); setPickedFull(addr); } });
-      });
-      mapRef.current = map;
+    if (destroyed || !mapDivRef.current || mapRef.current || !vmapReady()) return;
+    const center = (f.lat && f.lng) ? [f.lng, f.lat] : [105.8412, 20.9833];
+    const map = new window.vietmapgl.Map({
+      container: mapDivRef.current,
+      style: `https://maps.vietmap.vn/maps/styles/tm/style.json?apikey=${VIETMAP_KEY}`,
+      center, zoom: f.lat ? 16 : 11,
     });
-    return () => { destroyed = true; mapRef.current = null; markerRef.current = null; };
+    const addMarker = (lat, lng) => {
+      markerRef.current = new window.vietmapgl.Marker({ color: '#0F623F', draggable: true })
+        .setLngLat([lng, lat]).addTo(map);
+      markerRef.current.on('dragend', () => {
+        const { lat: la, lng: lo } = markerRef.current.getLngLat();
+        setF(prev => ({ ...prev, lat: la, lng: lo }));
+        reverseGeocode(la, lo).then(addr => { if (addr) { setAddrText(addr); setPickedFull(addr); } });
+      });
+    };
+    if (f.lat && f.lng) addMarker(f.lat, f.lng);
+    map.on('click', e => {
+      const { lat, lng } = e.lngLat;
+      setF(prev => ({ ...prev, lat, lng }));
+      if (markerRef.current) markerRef.current.setLngLat([lng, lat]);
+      else addMarker(lat, lng);
+      reverseGeocode(lat, lng).then(addr => { if (addr) { setAddrText(addr); setPickedFull(addr); } });
+    });
+    mapRef.current = map;
+    return () => { destroyed = true; mapRef.current?.remove(); mapRef.current = null; markerRef.current = null; };
   }, []); // eslint-disable-line
 
   useEffect(() => {
     const map = mapRef.current;
     if (!map || f.lat == null || f.lng == null) return;
-    const pos = { lat: f.lat, lng: f.lng };
+    const pos = [f.lng, f.lat];
     if (markerRef.current) {
-      markerRef.current.setPosition(pos);
+      markerRef.current.setLngLat(pos);
     } else {
-      const maps = gmaps();
-      if (!maps) return;
-      markerRef.current = new maps.Marker({
-        position: pos, map, draggable: true,
-        icon: { path: maps.SymbolPath.CIRCLE, scale: 9, fillColor: '#0F623F', fillOpacity: 1, strokeColor: '#fff', strokeWeight: 2 },
-      });
+      markerRef.current = new window.vietmapgl.Marker({ color: '#0F623F', draggable: true }).setLngLat(pos).addTo(map);
     }
     map.panTo(pos);
   }, [f.lat, f.lng]); // eslint-disable-line
