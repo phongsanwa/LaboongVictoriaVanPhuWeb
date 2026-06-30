@@ -321,13 +321,13 @@ function vmapReady() { return !!window.vietmapgl; }
 async function vmFetch(path) {
   try {
     const res = await fetch(`https://maps.vietmap.vn/api/${path}${path.includes('?') ? '&' : '?'}apikey=${VIETMAP_KEY}`);
-    if (!res.ok) return null;
+    if (!res.ok) { console.error('[vietmap] HTTP', res.status, path); return null; }
     return await res.json();
-  } catch { return null; }
+  } catch (e) { console.error('[vietmap] fetch failed', path, e); return null; }
 }
 
 async function reverseGeocode(lat, lng) {
-  if (!VIETMAP_KEY) return null;
+  if (!VIETMAP_KEY) { console.error('[vietmap] VIETMAP_KEY is missing — check services.vietmap.key / .env'); return null; }
   const json = await vmFetch(`reverse/v3?lat=${lat}&lng=${lng}`);
   if (Array.isArray(json) && json.length) {
     return (json[0].display || json[0].address || "").replace(/,?\s*Việt Nam$/i, "").trim() || null;
@@ -336,7 +336,7 @@ async function reverseGeocode(lat, lng) {
 }
 
 async function smartNominatimSearch(text) {
-  if (!VIETMAP_KEY) return [];
+  if (!VIETMAP_KEY) { console.error('[vietmap] VIETMAP_KEY is missing — check services.vietmap.key / .env'); return []; }
   const json = await vmFetch(`autocomplete/v3?text=${encodeURIComponent(text)}`);
   if (!Array.isArray(json) || !json.length) return [];
   const list = await Promise.all(json.slice(0, 6).map(async p => {
@@ -349,15 +349,18 @@ async function smartNominatimSearch(text) {
 }
 
 async function cascadeGeocode(text) {
-  if (!VIETMAP_KEY) return null;
+  if (!VIETMAP_KEY) { console.error('[vietmap] VIETMAP_KEY is missing — check services.vietmap.key / .env'); return null; }
   const parts = text.split(",").map(p => p.trim()).filter(Boolean);
   const queries = [text];
   for (let i = 1; i < parts.length; i++) queries.push(parts.slice(i).join(", "));
   for (const q of queries) {
     if (q.trim().length < 3) continue;
     const json = await vmFetch(`search/v3?text=${encodeURIComponent(q + ', Việt Nam')}`);
-    if (Array.isArray(json) && json.length && json[0].lat != null && json[0].lng != null) {
-      return { lat: json[0].lat, lng: json[0].lng };
+    const refId = Array.isArray(json) && json.length ? json[0].ref_id : null;
+    if (!refId) continue;
+    const place = await vmFetch(`place/v3?refid=${encodeURIComponent(refId)}`);
+    if (place && place.lat != null && place.lng != null) {
+      return { lat: place.lat, lng: place.lng };
     }
   }
   return null;

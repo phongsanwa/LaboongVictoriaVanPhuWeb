@@ -53,15 +53,20 @@ async function geocodeAddress(text) {
   } catch(e) { /* ignore */ }
 
   const key = window.VIETMAP_KEY;
-  if (!key) return null;
+  if (!key) { console.error('[vietmap] VIETMAP_KEY is missing — check services.vietmap.key / .env'); return null; }
   let loc = null;
   try {
     const res = await fetch(`https://maps.vietmap.vn/api/search/v3?apikey=${key}&text=${encodeURIComponent(text + ', Việt Nam')}`);
     const json = await res.json().catch(() => null);
-    if (Array.isArray(json) && json.length && json[0].lat != null && json[0].lng != null) {
-      loc = { lat: json[0].lat, lng: json[0].lng };
+    const refId = Array.isArray(json) && json.length ? json[0].ref_id : null;
+    if (refId) {
+      const placeRes = await fetch(`https://maps.vietmap.vn/api/place/v3?apikey=${key}&refid=${encodeURIComponent(refId)}`);
+      const place = await placeRes.json().catch(() => null);
+      if (place && place.lat != null && place.lng != null) {
+        loc = { lat: place.lat, lng: place.lng };
+      }
     }
-  } catch (e) { /* ignore */ }
+  } catch (e) { console.error('[vietmap] geocodeAddress failed', e); }
   if (loc) {
     try {
       const cache = JSON.parse(localStorage.getItem(GEO_CACHE_KEY) || '{}');
