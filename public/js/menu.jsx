@@ -52,16 +52,16 @@ async function geocodeAddress(text) {
     if (cache[text]) return cache[text];
   } catch(e) { /* ignore */ }
 
-  const maps = window.google?.maps;
-  if (!maps) return null;
-  const loc = await new Promise(resolve => {
-    new maps.Geocoder().geocode({ address: text + ', Việt Nam', region: 'VN' }, (results, status) => {
-      if (status === 'OK' && results?.length) {
-        const l = results[0].geometry.location;
-        resolve({ lat: l.lat(), lng: l.lng() });
-      } else resolve(null);
-    });
-  });
+  const key = window.VIETMAP_KEY;
+  if (!key) return null;
+  let loc = null;
+  try {
+    const res = await fetch(`https://maps.vietmap.vn/api/search/v3?apikey=${key}&text=${encodeURIComponent(text + ', Việt Nam')}`);
+    const json = await res.json().catch(() => null);
+    if (Array.isArray(json) && json.length && json[0].lat != null && json[0].lng != null) {
+      loc = { lat: json[0].lat, lng: json[0].lng };
+    }
+  } catch (e) { /* ignore */ }
   if (loc) {
     try {
       const cache = JSON.parse(localStorage.getItem(GEO_CACHE_KEY) || '{}');

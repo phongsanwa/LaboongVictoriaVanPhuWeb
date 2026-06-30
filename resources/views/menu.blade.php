@@ -14,14 +14,12 @@
 <body>
 <div id="root"></div>
 
-@if(config('services.google_maps.key'))
-<script src="https://maps.googleapis.com/maps/api/js?key={{ config('services.google_maps.key') }}&libraries=places&language=vi&region=VN"></script>
-@endif
 <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
 <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
 <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" crossorigin="anonymous"></script>
 <script>
 window.MENU_PAGE_DATA = @json($menuPageData);
+window.VIETMAP_KEY = @json(config('services.vietmap.key'));
 </script>
 
 <script type="text/babel" src="{{ asset('js/tweaks-panel.jsx') }}?v={{ filemtime(public_path('js/tweaks-panel.jsx')) }}"></script>

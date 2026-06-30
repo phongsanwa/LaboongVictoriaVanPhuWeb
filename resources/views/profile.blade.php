@@ -10,6 +10,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&family=Baloo+2:wght@600;700;800&display=swap" rel="stylesheet" />
 <link rel="stylesheet" href="{{ asset('css/profile.css') }}?v={{ time() }}" />
+<link href="https://unpkg.com/@vietmap/vietmap-gl-js@4.2.0/dist/vietmap-gl.css" rel="stylesheet" />
 </head>
 <body>
 <div id="root"></div>
@@ -17,13 +18,11 @@
 <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
 <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
 <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" crossorigin="anonymous"></script>
-@if(config('services.google_maps.key'))
-<script>window.__gmapsReady = false; window.__gmapsCallbacks = []; window.initGoogleMaps = function(){ window.__gmapsReady = true; window.__gmapsCallbacks.forEach(fn => fn()); };</script>
-<script src="https://maps.googleapis.com/maps/api/js?key={{ config('services.google_maps.key') }}&libraries=places&language=vi&region=VN&callback=initGoogleMaps" async defer></script>
-@endif
+<script src="https://unpkg.com/@vietmap/vietmap-gl-js@4.2.0/dist/vietmap-gl.js"></script>
 
 <script>
   window.PROFILE_DATA = @json($profileData);
+  window.VIETMAP_KEY = @json(config('services.vietmap.key'));
 </script>
 
 <script type="text/babel" src="{{ asset('js/tweaks-panel.jsx') }}?v={{ time() }}"></script>
