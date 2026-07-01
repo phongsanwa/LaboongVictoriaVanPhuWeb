@@ -52,21 +52,16 @@ async function geocodeAddress(text) {
     if (cache[text]) return cache[text];
   } catch(e) { /* ignore */ }
 
-  const key = window.VIETMAP_KEY;
-  if (!key) { console.error('[vietmap] VIETMAP_KEY is missing — check services.vietmap.key / .env'); return null; }
-  let loc = null;
-  try {
-    const res = await fetch(`https://maps.vietmap.vn/api/search/v3?apikey=${key}&text=${encodeURIComponent(text + ', Việt Nam')}`);
-    const json = await res.json().catch(() => null);
-    const refId = Array.isArray(json) && json.length ? json[0].ref_id : null;
-    if (refId) {
-      const placeRes = await fetch(`https://maps.vietmap.vn/api/place/v3?apikey=${key}&refid=${encodeURIComponent(refId)}`);
-      const place = await placeRes.json().catch(() => null);
-      if (place && place.lat != null && place.lng != null) {
-        loc = { lat: place.lat, lng: place.lng };
-      }
-    }
-  } catch (e) { console.error('[vietmap] geocodeAddress failed', e); }
+  const maps = window.google?.maps;
+  if (!maps) return null;
+  const loc = await new Promise(resolve => {
+    new maps.Geocoder().geocode({ address: text + ', Việt Nam', region: 'VN' }, (results, status) => {
+      if (status === 'OK' && results?.length) {
+        const l = results[0].geometry.location;
+        resolve({ lat: l.lat(), lng: l.lng() });
+      } else resolve(null);
+    });
+  });
   if (loc) {
     try {
       const cache = JSON.parse(localStorage.getItem(GEO_CACHE_KEY) || '{}');

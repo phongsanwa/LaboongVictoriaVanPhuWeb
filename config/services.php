@@ -35,8 +35,8 @@ return [
         ],
     ],
 
-    'vietmap' => [
-        'key' => env('VIETMAP_KEY', ''),
+    'google_maps' => [
+        'key' => env('GOOGLE_MAPS_KEY', ''),
     ],
 
 ];
