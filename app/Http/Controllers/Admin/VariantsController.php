@@ -173,13 +173,13 @@ class VariantsController extends Controller
             ->where('name', $oldName)
             ->update(['name' => $newName, 'extra_price' => $extra]);
 
-        $allAvail = !ProductVariant::where('variant_type', $type)
+        $anyAvail = ProductVariant::where('variant_type', $type)
             ->where('name', $newName)
-            ->where('is_available', false)
+            ->where('is_available', true)
             ->exists();
 
         return response()->json([
-            'option' => $this->presentOption($newName, $extra, $allAvail),
+            'option' => $this->presentOption($newName, $extra, $anyAvail),
         ]);
     }
 
@@ -269,14 +269,16 @@ class VariantsController extends Controller
 
         $type = $data['group_key'];
 
-        $allAvail = !ProductVariant::where('variant_type', $type)
-            ->where('is_available', false)
+        // Any-on semantics: if any product sells any option in this group,
+        // the toggle turns the whole group off; otherwise it turns it all on.
+        $anyAvail = ProductVariant::where('variant_type', $type)
+            ->where('is_available', true)
             ->exists();
 
         ProductVariant::where('variant_type', $type)
-            ->update(['is_available' => !$allAvail]);
+            ->update(['is_available' => !$anyAvail]);
 
-        return response()->json(['available' => !$allAvail]);
+        return response()->json(['available' => !$anyAvail]);
     }
 
     /* ─── Helpers ─── */
@@ -311,14 +313,16 @@ class VariantsController extends Controller
         $byName = ($all[$key] ?? collect())->groupBy('name');
 
         $options = $byName->map(function ($records, $name) {
-            $allAvail = $records->every(fn (ProductVariant $v) => $v->is_available);
+            // Globally "on" if at least one product still sells this option;
+            // per-product offs (set in the menu editor) must not read as a global off.
+            $anyAvail = $records->contains(fn (ProductVariant $v) => $v->is_available);
             $extra    = (int) $records->first()->extra_price;
 
             return [
                 'id'        => $name,
                 'label'     => $name,
                 'extra'     => $extra,
-                'available' => $allAvail,
+                'available' => $anyAvail,
                 'def'       => false,
             ];
         })

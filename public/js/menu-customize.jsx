@@ -8,8 +8,9 @@ function makeDefaultSelections(variantGroups) {
     if (g.type === 'addon') {
       sel[g.key] = [];
     } else {
+      // Never preselect a sold-out option; leave null when nothing is available
       const availOpts = g.options.filter(o => o.available !== false);
-      const def = availOpts.find(o => o.def) || availOpts[0] || g.options[0];
+      const def = availOpts.find(o => o.def) || availOpts[0];
       sel[g.key] = def ? def.id : null;
     }
   });
@@ -40,6 +41,11 @@ function CustomizeSheet({ item, variantGroups, onClose, onAdd }) {
 
   const unit  = calcUnit(item.price, variantGroups, selections);
   const total = unit * qty;
+
+  // Block ordering when a required single-choice group has no option left in stock
+  const soldOut = variantGroups.some(g =>
+    g.type !== 'addon' && g.required && g.options.length > 0 && !g.options.some(o => o.available !== false)
+  );
 
   const selectSingle = (gKey, optId) => setSelections(s => ({ ...s, [gKey]: optId }));
   const toggleAddon  = (gKey, optId) => setSelections(s => {
@@ -142,7 +148,9 @@ function CustomizeSheet({ item, variantGroups, onClose, onAdd }) {
             <span className="qn">{qty}</span>
             <button onClick={() => setQty(q => q + 1)}><Icon name="plus" size={17} color="currentColor" /></button>
           </div>
-          <button className="cz-add" onClick={submit}><Icon name="bag" size={17} color="#fff" /> Thêm · {fmt(total)}đ</button>
+          <button className="cz-add" onClick={submit} disabled={soldOut} style={soldOut ? { opacity: 0.5, cursor: "not-allowed" } : {}}>
+            <Icon name="bag" size={17} color="#fff" /> {soldOut ? "Tạm hết" : `Thêm · ${fmt(total)}đ`}
+          </button>
         </div>
       </div>
     </div>

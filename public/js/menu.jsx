@@ -104,7 +104,9 @@ function getLiveVariantGroups() {
 /* Filter global variantGroups to only the options a specific product has.
    item.variants = { SIZE: { M: {extra, available}, L: {...} }, TOPPING: {...} } */
 function getProductVariantGroups(item, variantGroups) {
-  if (!item.variants) return variantGroups;
+  // A product with no variant rows serializes as [] (empty JSON array) — fall
+  // back to the global groups instead of hiding every option.
+  if (!item.variants || Object.keys(item.variants).length === 0) return variantGroups;
   return variantGroups.map(g => {
     const productOpts = item.variants[g.key];
     if (!productOpts) return null; // product has no variants of this type
