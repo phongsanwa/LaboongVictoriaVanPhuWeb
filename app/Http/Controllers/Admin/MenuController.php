@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Category;
 use App\Models\Product;
 use App\Models\ProductVariant;
+use App\Models\VariantGroup;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -28,8 +29,9 @@ class MenuController extends Controller
                     'email'    => $admin->email,
                     'initials' => $this->initials($admin->name),
                 ],
-                'categories' => $this->buildCategories(),
-                'products'   => $this->buildProducts(),
+                'categories'    => $this->buildCategories(),
+                'products'      => $this->buildProducts(),
+                'variantGroups' => $this->buildVariantGroups(),
                 'urls'       => [
                     'storeProduct'   => route('admin.menu.products.store'),
                     'updateProduct'  => route('admin.menu.products.update', ['product' => '__ID__']),
@@ -87,7 +89,7 @@ class MenuController extends Controller
             $this->createDefaultVariants($product);
         }
 
-        $product->load(['category', 'sizes']);
+        $product->load(['category', 'variants' => fn ($q) => $q->orderBy('sort_order')]);
 
         return response()->json(['product' => $this->presentProduct($product)], 201);
     }
@@ -137,7 +139,7 @@ class MenuController extends Controller
             'is_available' => (bool) ($request->input('is_available', '1')),
         ]);
 
-        $product->load(['category', 'sizes']);
+        $product->load(['category', 'variants' => fn ($q) => $q->orderBy('sort_order')]);
 
         return response()->json(['product' => $this->presentProduct($product)]);
     }
@@ -159,7 +161,7 @@ class MenuController extends Controller
     public function toggleProduct(Product $product): JsonResponse
     {
         $product->update(['is_available' => !$product->is_available]);
-        $product->load(['category', 'sizes']);
+        $product->load(['category', 'variants' => fn ($q) => $q->orderBy('sort_order')]);
 
         return response()->json(['product' => $this->presentProduct($product)]);
     }
@@ -168,19 +170,37 @@ class MenuController extends Controller
     public function updateVariants(Request $request, Product $product): JsonResponse
     {
         $data = $request->validate([
-            'variants'             => ['required', 'array'],
-            'variants.*.name'      => ['required', 'string'],
-            'variants.*.available' => ['required', 'boolean'],
+            'variants'              => ['required', 'array'],
+            'variants.*.type'       => ['required', 'string'],
+            'variants.*.name'       => ['required', 'string'],
+            'variants.*.available'  => ['required', 'boolean'],
         ]);
 
         foreach ($data['variants'] as $v) {
             ProductVariant::where('product_id', $product->id)
-                ->where('variant_type', 'SIZE')
+                ->where('variant_type', $v['type'])
                 ->where('name', $v['name'])
                 ->update(['is_available' => $v['available']]);
         }
 
         return response()->json(['ok' => true]);
+    }
+
+    private function groupVariants(Product $product): array
+    {
+        if (! $product->relationLoaded('variants')) {
+            return [];
+        }
+
+        $map = [];
+        foreach ($product->variants as $v) {
+            $map[$v->variant_type][] = [
+                'name'      => $v->name,
+                'available' => (bool) $v->is_available,
+            ];
+        }
+
+        return $map;
     }
 
     /* ─── API: Category CRUD ─── */
@@ -250,11 +270,25 @@ class MenuController extends Controller
 
     private function buildProducts(): array
     {
-        return Product::with(['category', 'sizes'])
+        return Product::with(['category', 'variants' => fn ($q) => $q->orderBy('sort_order')])
             ->orderBy('category_id')
             ->orderBy('sort_order')
             ->get()
             ->map(fn (Product $p) => $this->presentProduct($p))
+            ->values()
+            ->toArray();
+    }
+
+    private function buildVariantGroups(): array
+    {
+        return VariantGroup::orderBy('sort_order')
+            ->get()
+            ->map(fn (VariantGroup $g) => [
+                'key'   => $g->key,
+                'label' => $g->label,
+                'ic'    => $g->ic,
+                'type'  => $g->type,
+            ])
             ->values()
             ->toArray();
     }
@@ -275,14 +309,9 @@ class MenuController extends Controller
             'grad'      => $product->color ?? 'linear-gradient(150deg,#6B4A2B,#9B7150)',
             'img'       => $product->image_url,
             'tags'      => $tags,
-            'available'    => (bool) $product->is_available,
-            'sold'         => 0,
-            'sizes' => $product->relationLoaded('sizes')
-                ? $product->sizes->map(fn ($v) => [
-                    'name'      => $v->name,
-                    'available' => (bool) $v->is_available,
-                ])->values()->toArray()
-                : [],
+            'available' => (bool) $product->is_available,
+            'sold'      => 0,
+            'variants'  => $this->groupVariants($product),
         ];
     }
 
