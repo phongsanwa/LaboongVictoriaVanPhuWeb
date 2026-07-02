@@ -582,6 +582,7 @@ function App() {
           ship_promo_id:       selectedShipPromo?.id  || null,
           store_id: selectedStoreId || null,
           shipping_fee: shipFee || 0,
+          delivery_address: selectedAddr ? selectedAddr.text : null,
         }),
       });
       const json = await res.json();

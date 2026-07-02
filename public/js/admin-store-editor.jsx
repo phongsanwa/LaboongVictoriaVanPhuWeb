@@ -1,57 +1,75 @@
 /* global React, Icon */
 const { useState: useStateSt, useEffect: useEffectSt, useRef: useRefSt } = React;
 
-async function reverseGeocodeSt(lat, lng) {
-  try {
-    const r = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json&accept-language=vi`, {
-      headers: { "Accept-Language": "vi" },
-    });
-    const d = await r.json();
-    if (!d.display_name) return null;
-    return d.display_name.replace(/,\s*Việt Nam$/i, "").trim();
-  } catch { return null; }
+/* ---- Google Maps (loaded async in stores.blade.php) ---- */
+function gmapsSt() { return window.google?.maps; }
+
+function onGmapsReadySt(fn) {
+  if (window.__gmapsReady || window.google?.maps) { fn(); return; }
+  if (window.__gmapsCallbacks) { window.__gmapsCallbacks.push(fn); }
 }
 
+async function reverseGeocodeSt(lat, lng) {
+  const maps = gmapsSt();
+  if (!maps) return null;
+  return new Promise(resolve => {
+    new maps.Geocoder().geocode({ location: { lat, lng } }, (results, status) => {
+      if (status === 'OK' && results?.length) {
+        resolve(results[0].formatted_address.replace(/,?\s*Việt Nam$/i, "").trim());
+      } else resolve(null);
+    });
+  });
+}
+
+/* Gợi ý địa chỉ từ Places predictions — toạ độ lấy khi chọn (geocodePlaceIdSt) */
 async function smartNominatimSearchSt(text) {
-  const headers = { "Accept-Language": "vi" };
-  const base = "https://nominatim.openstreetmap.org/search";
-  const queries = [text];
-  const noNum = text.replace(/^[A-Za-zÀ-ỹ]?\d+[A-Za-zÀ-ỹ]?\s+/, "").trim();
-  if (noNum && noNum !== text) queries.push(noNum);
-  const seen = new Set();
-  const results = [];
-  for (const q of queries) {
-    try {
-      const r = await fetch(`${base}?q=${encodeURIComponent(q + ", Việt Nam")}&format=json&limit=5&countrycodes=vn`, { headers });
-      const items = await r.json();
-      for (const d of items) {
-        if (!seen.has(d.place_id)) {
-          seen.add(d.place_id);
-          results.push({ text: d.display_name, lat: parseFloat(d.lat), lng: parseFloat(d.lon) });
-        }
+  const maps = gmapsSt();
+  if (!maps?.places?.AutocompleteService || text.trim().length < 3) return [];
+  return new Promise(resolve => {
+    new maps.places.AutocompleteService().getPlacePredictions(
+      { input: text, componentRestrictions: { country: 'vn' } },
+      (predictions) => {
+        if (!predictions?.length) { resolve([]); return; }
+        resolve(predictions.slice(0, 6).map(p => ({
+          text: p.description.replace(/,?\s*Việt Nam$/i, "").trim(),
+          placeId: p.place_id,
+        })));
       }
-    } catch { /* ignore */ }
-    if (results.length >= 6) break;
-  }
-  return results.slice(0, 6);
+    );
+  });
+}
+
+async function geocodePlaceIdSt(placeId) {
+  const maps = gmapsSt();
+  if (!maps) return null;
+  return new Promise(resolve => {
+    new maps.Geocoder().geocode({ placeId }, (results, status) => {
+      if (status === 'OK' && results?.length) {
+        const l = results[0].geometry.location;
+        resolve({ lat: l.lat(), lng: l.lng() });
+      } else resolve(null);
+    });
+  });
 }
 
 async function cascadeGeocodeSt(text) {
-  const headers = { "Accept-Language": "vi" };
-  const base = "https://nominatim.openstreetmap.org/search";
+  const maps = gmapsSt();
+  if (!maps) return null;
+  const geocoder = new maps.Geocoder();
   const parts = text.split(",").map(p => p.trim()).filter(Boolean);
-  const noNum = text.replace(/^[A-Za-zÀ-ỹ]?\d+[A-Za-zÀ-ỹ]?\s+/, "").trim();
   const queries = [text];
-  if (noNum !== text) queries.push(noNum);
   for (let i = 1; i < parts.length; i++) queries.push(parts.slice(i).join(", "));
-
   for (const q of queries) {
     if (q.trim().length < 3) continue;
-    try {
-      const r = await fetch(`${base}?q=${encodeURIComponent(q + ", Việt Nam")}&format=json&limit=1&countrycodes=vn`, { headers });
-      const items = await r.json();
-      if (items.length) return { lat: parseFloat(items[0].lat), lng: parseFloat(items[0].lon) };
-    } catch { /* continue */ }
+    const result = await new Promise(resolve => {
+      geocoder.geocode({ address: q + ', Việt Nam', region: 'VN' }, (results, status) => {
+        if (status === 'OK' && results?.length) {
+          const loc = results[0].geometry.location;
+          resolve({ lat: loc.lat(), lng: loc.lng() });
+        } else resolve(null);
+      });
+    });
+    if (result) return result;
   }
   return null;
 }
@@ -96,59 +114,72 @@ function StoreEditor({ initial, onClose, onSave }) {
     return () => window.removeEventListener("keydown", h);
   }, [onClose]);
 
-  // Init Leaflet map
+  // Init Google Map
   useEffectSt(() => {
-    const L = window.L;
-    if (!L || !mapDivRef.current || mapRef.current) return;
+    let destroyed = false;
+    onGmapsReadySt(() => {
+      if (destroyed || !mapDivRef.current || mapRef.current) return;
+      const maps = gmapsSt();
+      if (!maps) return;
 
-    delete L.Icon.Default.prototype._getIconUrl;
-    L.Icon.Default.mergeOptions({
-      iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
-      iconRetinaUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
-      shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
-    });
-
-    const hasCoords = latitude != null && longitude != null;
-    const center = hasCoords ? [latitude, longitude] : [20.9833, 105.8412];
-    const map = L.map(mapDivRef.current, { zoomControl: true }).setView(center, hasCoords ? 16 : 11);
-    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-      attribution: "© OpenStreetMap",
-    }).addTo(map);
-
-    if (hasCoords) {
-      markerRef.current = L.marker([latitude, longitude]).addTo(map);
-    }
-
-    map.on("click", e => {
-      const { lat, lng } = e.latlng;
-      setLatitude(lat);
-      setLongitude(lng);
-      if (markerRef.current) {
-        markerRef.current.setLatLng([lat, lng]);
-      } else {
-        markerRef.current = L.marker([lat, lng]).addTo(map);
-      }
-      reverseGeocodeSt(lat, lng).then(addr => {
-        if (addr) setAddress(addr);
+      const hasCoords = latitude != null && longitude != null;
+      const center = hasCoords
+        ? { lat: Number(latitude), lng: Number(longitude) }
+        : { lat: 20.9833, lng: 105.8412 };
+      const map = new maps.Map(mapDivRef.current, {
+        center, zoom: hasCoords ? 16 : 11,
+        mapTypeControl: false, streetViewControl: false, fullscreenControl: false,
       });
-    });
 
-    mapRef.current = map;
-    return () => { map.remove(); mapRef.current = null; markerRef.current = null; };
-  }, []);
+      const addMarker = (lat, lng) => {
+        markerRef.current = new maps.Marker({
+          position: { lat, lng }, map, draggable: true,
+          icon: { path: maps.SymbolPath.CIRCLE, scale: 9, fillColor: '#0F623F', fillOpacity: 1, strokeColor: '#fff', strokeWeight: 2 },
+        });
+        markerRef.current.addListener('dragend', e => {
+          const la = e.latLng.lat(), lo = e.latLng.lng();
+          setLatitude(la); setLongitude(lo);
+          reverseGeocodeSt(la, lo).then(addr => { if (addr) setAddress(addr); });
+        });
+      };
+
+      if (hasCoords) addMarker(Number(latitude), Number(longitude));
+
+      map.addListener('click', e => {
+        const lat = e.latLng.lat(), lng = e.latLng.lng();
+        setLatitude(lat); setLongitude(lng);
+        if (markerRef.current) markerRef.current.setPosition({ lat, lng });
+        else addMarker(lat, lng);
+        reverseGeocodeSt(lat, lng).then(addr => { if (addr) setAddress(addr); });
+      });
+
+      mapRef.current = map;
+    });
+    return () => { destroyed = true; mapRef.current = null; markerRef.current = null; };
+  }, []); // eslint-disable-line
 
   // Pan + update marker when lat/lng change from suggestion
   useEffectSt(() => {
     const map = mapRef.current;
-    const L = window.L;
-    if (!map || !L || latitude == null || longitude == null) return;
+    const maps = gmapsSt();
+    if (!map || !maps || latitude == null || longitude == null) return;
+    const pos = { lat: Number(latitude), lng: Number(longitude) };
     if (markerRef.current) {
-      markerRef.current.setLatLng([latitude, longitude]);
+      markerRef.current.setPosition(pos);
     } else {
-      markerRef.current = L.marker([latitude, longitude]).addTo(map);
+      markerRef.current = new maps.Marker({
+        position: pos, map, draggable: true,
+        icon: { path: maps.SymbolPath.CIRCLE, scale: 9, fillColor: '#0F623F', fillOpacity: 1, strokeColor: '#fff', strokeWeight: 2 },
+      });
+      markerRef.current.addListener('dragend', e => {
+        const la = e.latLng.lat(), lo = e.latLng.lng();
+        setLatitude(la); setLongitude(lo);
+        reverseGeocodeSt(la, lo).then(addr => { if (addr) setAddress(addr); });
+      });
     }
-    map.setView([latitude, longitude], 16, { animate: true });
-  }, [latitude, longitude]);
+    map.panTo(pos);
+    if (map.getZoom() < 15) map.setZoom(16);
+  }, [latitude, longitude]); // eslint-disable-line
 
   const onAddressChange = e => {
     const val = e.target.value;
@@ -163,11 +194,11 @@ function StoreEditor({ initial, onClose, onSave }) {
     }, 450);
   };
 
-  const pickSugg = s => {
+  const pickSugg = async s => {
     setAddress(s.text);
-    setLatitude(s.lat);
-    setLongitude(s.lng);
     setSugg([]);
+    const loc = await geocodePlaceIdSt(s.placeId);
+    if (loc) { setLatitude(loc.lat); setLongitude(loc.lng); }
   };
 
   const onMapSearchChange = e => {
@@ -183,11 +214,11 @@ function StoreEditor({ initial, onClose, onSave }) {
     }, 400);
   };
 
-  const pickMapSugg = s => {
-    setLatitude(s.lat);
-    setLongitude(s.lng);
+  const pickMapSugg = async s => {
     setMapSearch("");
     setMapSugg([]);
+    const loc = await geocodePlaceIdSt(s.placeId);
+    if (loc) { setLatitude(loc.lat); setLongitude(loc.lng); }
   };
 
   const toggleDay = (i) => {

@@ -42,6 +42,7 @@ class OrderController extends Controller
             'shipping_voucher_id' => ['nullable', 'integer'],
             'order_promo_id'      => ['nullable', 'integer'],
             'ship_promo_id'       => ['nullable', 'integer'],
+            'delivery_address'    => ['nullable', 'string', 'max:500'],
         ]);
 
         $user     = Auth::user();
@@ -206,6 +207,7 @@ class OrderController extends Controller
                 'total_amount'    => $totalAmount,
                 'points_earned'   => $pointsEarned,
                 'note'            => $data['note'] ?? null,
+                'delivery_address' => $data['delivery_address'] ?? null,
             ]);
 
             foreach ($itemData as $item) {

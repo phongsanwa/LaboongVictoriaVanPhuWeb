@@ -23,6 +23,11 @@
   window.HOME_DATA = @json($homeData);
 </script>
 
+@if(config('services.google_maps.key'))
+<script>window.__gmapsReady = false; window.__gmapsCallbacks = []; window.initGoogleMaps = function(){ window.__gmapsReady = true; window.__gmapsCallbacks.forEach(fn => fn()); };</script>
+<script src="https://maps.googleapis.com/maps/api/js?key={{ config('services.google_maps.key') }}&language=vi&region=VN&callback=initGoogleMaps" async defer></script>
+@endif
+
 <script type="text/babel" src="{{ asset('js/tweaks-panel.jsx') }}?v={{ filemtime(public_path('js/tweaks-panel.jsx')) }}"></script>
 <script type="text/babel" src="{{ asset('js/components.jsx') }}?v={{ filemtime(public_path('js/components.jsx')) }}"></script>
 <script type="text/babel" src="{{ asset('js/app.jsx') }}?v={{ time() }}"></script>

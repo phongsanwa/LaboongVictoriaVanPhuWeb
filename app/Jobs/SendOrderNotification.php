@@ -24,7 +24,7 @@ class SendOrderNotification implements ShouldQueue
 
     public function handle(): void
     {
-        $order = Order::with(['customer.user', 'items.product', 'items.toppings'])
+        $order = Order::with(['customer.user', 'items.product', 'items.toppings', 'discounts'])
             ->findOrFail($this->orderId);
 
         $adminEmails = User::where('user_type', 'admin')

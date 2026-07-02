@@ -84,6 +84,9 @@ class HomeController extends Controller
                 'bg' => $this->campaignBg($c->campaign_type),
                 'title' => $c->name,
                 'sub' => $c->description,
+                'benefit' => $this->campaignBenefit($c),
+                'start' => $c->start_date?->format('d/m/Y'),
+                'end' => $c->end_date?->format('d/m/Y'),
             ];
         })->values()->all();
 
@@ -125,6 +128,23 @@ class HomeController extends Controller
         }
 
         return $date->format('d/m') . " · {$time}";
+    }
+
+    private function campaignBenefit(Campaign $c): ?string
+    {
+        $fmt = fn ($n) => number_format((float) $n, 0, ',', '.');
+
+        return match ($c->campaign_type) {
+            'double_points' => 'Nhân ×' . ($c->multiplier ?: 2) . ' điểm tích luỹ cho mỗi đơn hàng',
+            'bonus_points' => $c->bonus_points
+                ? 'Tặng thêm ' . $fmt($c->bonus_points) . ' điểm thưởng'
+                : null,
+            'discount_promotion' => $c->discount_percent
+                ? 'Giảm ' . rtrim(rtrim(number_format((float) $c->discount_percent, 1, '.', ''), '0'), '.') . '%'
+                    . ($c->min_purchase ? ' cho đơn từ ' . $fmt($c->min_purchase) . 'đ' : '')
+                : null,
+            default => null,
+        };
     }
 
     private function campaignTag(string $type): string
