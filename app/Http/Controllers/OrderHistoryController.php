@@ -84,8 +84,14 @@ class OrderHistoryController extends Controller
 
         $isShip = !empty($o->delivery_address) || (int) $o->shipping_fee > 0;
 
+        // Dự kiến hoàn thành kiểu ShopeeFood: 5' chuẩn bị + 2'/ly (tối đa 30'),
+        // đơn giao thêm 15' di chuyển. Frontend đếm ngược theo mốc này.
+        $cups    = (int) $o->items->sum('quantity');
+        $prepMin = min(30, 5 + 2 * $cups) + ($isShip ? 15 : 0);
+
         return [
             'code'      => 'LB-' . str_pad($o->id, 4, '0', STR_PAD_LEFT),
+            'etaAt'     => $o->created_at->clone()->addMinutes($prepMin)->toIso8601String(),
             'daysAgo'   => (int) $o->created_at->startOfDay()->diffInDays(now()->startOfDay()),
             'time'      => $o->created_at->setTimezone('Asia/Ho_Chi_Minh')->format('H:i d/m/Y'),
             'status'    => self::STATUS_MAP[$o->status] ?? 'done',

@@ -65,6 +65,19 @@ const FILTERS = [{ key: "all", label: "Tất cả" }, { key: "active", label: "�
 function dayKey(d) { if (d === 0) return "Hôm nay"; if (d === 1) return "Hôm qua"; if (d < 7) return `${d} ngày trước`; if (d < 30) return `${Math.floor(d / 7)} tuần trước`; return "Trước đó"; }
 function itemSummary(o) { const first = o.items[0]; const more = o.items.length - 1; return { first: `${first.qty}× ${first.name}`, more }; }
 
+/* Đếm ngược thời gian dự kiến xong (kiểu ShopeeFood) theo trạng thái đơn */
+function etaInfo(o, now) {
+  if (o.status === "ready") {
+    return o.type === "ship"
+      ? { e: "Đang giao", el: "đơn đang trên đường", small: true }
+      : { e: "Sẵn sàng", el: "đến quầy nhận ngay", small: true };
+  }
+  if (!o.etaAt) return { e: "~12'", el: "dự kiến xong" }; // demo fallback
+  const mins = Math.ceil((new Date(o.etaAt).getTime() - now) / 60000);
+  if (mins <= 1) return { e: "Sắp xong", el: "chờ chút nữa nhé", small: true };
+  return { e: `~${mins}'`, el: o.type === "ship" ? "dự kiến giao đến" : "dự kiến xong" };
+}
+
 function App() {
   const [tw, setTweak] = useTweaks(TW_DEFAULTS);
   const [filter, setFilter] = useState("all");
@@ -85,6 +98,14 @@ function App() {
   }, []);
 
   const live = ORDERS.find(o => ACTIVE_STATUSES.includes(o.status));
+
+  /* tick mỗi 30s để cập nhật đếm ngược */
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    if (!live) return;
+    const id = setInterval(() => setNow(Date.now()), 30000);
+    return () => clearInterval(id);
+  }, [live]);
 
   const counts = useMemo(() => {
     const c = { all: ORDERS.length, active: 0, done: 0, cancel: 0 };
@@ -143,7 +164,12 @@ function App() {
                 <div className="lt">Đơn đang xử lý</div>
                 <div className="lc">{live.code}</div>
               </div>
-              <div className="live-eta"><div className="e">~12'</div><div className="el">dự kiến xong</div></div>
+              {(() => { const eta = etaInfo(live, now); return (
+                <div className="live-eta">
+                  <div className="e" style={eta.small ? { fontSize: 15, lineHeight: "26px" } : {}}>{eta.e}</div>
+                  <div className="el">{eta.el}</div>
+                </div>
+              ); })()}
             </div>
             <div className="live-prog">
               <div className="lp-bar">
