@@ -124,14 +124,16 @@ class MenuPageController extends Controller
 
             $options = $byName->map(function ($rows, string $name) use ($group) {
                 $first      = $rows->first();
-                $allAvail   = $rows->every(fn ($r) => (bool) $r->is_available);
+                // Global fallback: option counts as "on" if any product still sells it;
+                // per-product availability overrides this client-side.
+                $anyAvail   = $rows->contains(fn ($r) => (bool) $r->is_available);
                 $extraPrice = (int) ($first->extra_price ?? 0);
 
                 return [
                     'id'        => $name,
                     'label'     => $name,
                     'extra'     => $extraPrice,
-                    'available' => $allAvail,
+                    'available' => $anyAvail,
                     'def'       => false,
                 ];
             })->values()->toArray();

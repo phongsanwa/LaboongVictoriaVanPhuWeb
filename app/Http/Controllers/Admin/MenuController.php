@@ -336,8 +336,9 @@ class MenuController extends Controller
             return;
         }
 
+        // Copy every variant type the source product has, but always start
+        // all-on: per-product offs on the source must not leak into new products.
         $variants = ProductVariant::where('product_id', $sourceProduct->id)
-            ->whereIn('variant_type', ['SIZE', 'TOPPING'])
             ->orderBy('variant_type')
             ->orderBy('sort_order')
             ->get();
@@ -348,7 +349,7 @@ class MenuController extends Controller
                 'variant_type' => $variant->variant_type,
                 'name'         => $variant->name,
                 'extra_price'  => $variant->extra_price,
-                'is_available' => $variant->is_available,
+                'is_available' => true,
                 'sort_order'   => $variant->sort_order,
             ]);
         }

@@ -214,7 +214,9 @@ function App() {
   const toggleAllAvail = async (gKey) => {
     const g = groups.find(x => x.key === gKey);
     if (!g) return;
-    const allOn = g.options.length > 0 && g.options.every(o => o.available);
+    // any-on semantics: must match the server (toggleAllOptions) which turns
+    // the group off if any row is still available, otherwise turns all on
+    const anyOn = g.options.some(o => o.available);
 
     if (LIVE) {
       setSaving(true);
@@ -228,8 +230,8 @@ function App() {
         setSaving(false);
       }
     } else {
-      setGroup(gKey, g => ({ ...g, options: g.options.map(o => ({ ...o, available: !allOn })) }));
-      flash(allOn ? `Đã báo hết toàn bộ "${g.label}"` : `Đã bật lại toàn bộ "${g.label}"`);
+      setGroup(gKey, g => ({ ...g, options: g.options.map(o => ({ ...o, available: !anyOn })) }));
+      flash(anyOn ? `Đã báo hết toàn bộ "${g.label}"` : `Đã bật lại toàn bộ "${g.label}"`);
     }
   };
 
@@ -457,7 +459,7 @@ function App() {
           )}
 
           {filteredGroups.map(g => {
-            const allOn  = g.options.length > 0 && g.options.every(o => o.available);
+            const anyOn  = g.options.some(o => o.available);
             const gIdx   = groups.findIndex(x => x.key === g.key);
             const isFirst = gIdx === 0;
             const isLast  = gIdx === groups.length - 1;
@@ -483,10 +485,10 @@ function App() {
                         </button>
                       </>
                     )}
-                    <button className="vopt-edit" title={allOn ? "Báo hết cả nhóm" : "Bật lại cả nhóm"}
+                    <button className="vopt-edit" title={anyOn ? "Báo hết cả nhóm" : "Bật lại cả nhóm"}
                       disabled={saving || g.options.length === 0}
                       onClick={() => toggleAllAvail(g.key)}>
-                      <Icon name={allOn ? "eyeoff" : "eye"} size={15} />
+                      <Icon name={anyOn ? "eyeoff" : "eye"} size={15} />
                     </button>
                     <>
                       <button className="vopt-edit" title="Sửa nhóm" disabled={saving} onClick={() => setGroupEditor(g)}>
