@@ -388,6 +388,63 @@ function App() {
     setCustomize(null);
   };
 
+  /* "Đặt lại" từ trang lịch sử đơn hàng — dựng lại giỏ theo GIÁ HIỆN TẠI */
+  useEffect(() => {
+    let payload = null;
+    try { payload = JSON.parse(localStorage.getItem('laboong_reorder') || 'null'); } catch (e) { /* ignore */ }
+    if (!payload?.items?.length) return;
+    try { localStorage.removeItem('laboong_reorder'); } catch (e) { /* ignore */ }
+
+    const added = [];
+    payload.items.forEach(it => {
+      const m = liveMenu.find(x => x.id === it.id);
+      if (!m || m.available === false) return; // món đã bị xoá / hết hàng
+      const basePrice = m.salePrice != null ? m.salePrice : m.price;
+
+      // Giữ lại lựa chọn cũ nhưng chỉ những option còn tồn tại & còn bán
+      let extra = 0;
+      let sel = null;
+      if (it.selections && m.variants) {
+        sel = {};
+        Object.entries(it.selections).forEach(([gk, val]) => {
+          const opts = m.variants[gk];
+          if (!opts) { sel[gk] = val; return; } // nhóm không theo món (đường/đá)
+          if (Array.isArray(val)) {
+            const keep = val.filter(n => opts[n] && opts[n].available !== false);
+            keep.forEach(n => { extra += opts[n].extra || 0; });
+            sel[gk] = keep;
+          } else if (val && opts[val] && opts[val].available !== false) {
+            extra += opts[val].extra || 0;
+            sel[gk] = val;
+          }
+        });
+      } else if (it.selections) {
+        sel = it.selections;
+      }
+
+      added.push({
+        id: m.id, name: m.name, base: basePrice,
+        origPrice: m.salePrice != null ? m.price : null,
+        grad: m.grad, img: m.img || null, cat: m.cat,
+        selections: sel, unit: basePrice + extra, qty: it.qty || 1,
+      });
+    });
+
+    if (added.length) {
+      setLines(ls => {
+        const next = [...ls];
+        added.forEach(line => {
+          const key = lineKey(line);
+          const i = next.findIndex(l => l.key === key);
+          if (i >= 0) next[i] = { ...next[i], qty: next[i].qty + line.qty };
+          else next.push({ ...line, key });
+        });
+        return next;
+      });
+      setDrawer(true);
+    }
+  }, []); // eslint-disable-line
+
   const changeQty = (key, delta) => setLines(ls => ls.flatMap(l => {
     if (l.key !== key) return [l];
     const nq = l.qty + delta;

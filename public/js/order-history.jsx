@@ -9,6 +9,10 @@ const TW_DEFAULTS = /*EDITMODE-BEGIN*/{
 const PER_POINT = 10000;
 const STORE_ADDR = "S2.03 KĐT Văn Phú, P. Phú La, Hà Đông, Hà Nội";
 
+/* LIVE mode: dữ liệu thật từ server; fallback dữ liệu demo khi mở tĩnh */
+const LIVE_OH = !!window.ORDER_HISTORY_DATA;
+const REORDER_KEY = "laboong_reorder";
+
 const FLOW = ["new", "making", "ready", "done"];
 const STEP_META = [
   { key: "new", label: "Xác nhận", ic: "check" },
@@ -17,11 +21,13 @@ const STEP_META = [
   { key: "done", label: "Hoàn tất", ic: "truck" },
 ];
 const STATUS = {
+  new:    { label: "Chờ xác nhận", cls: "making" },
   making: { label: "Đang pha", cls: "making" },
   ready:  { label: "Sẵn sàng", cls: "ready" },
   done:   { label: "Hoàn tất", cls: "done" },
   cancel: { label: "Đã huỷ", cls: "cancel" },
 };
+const ACTIVE_STATUSES = ["new", "making", "ready"];
 const GRADS = ["linear-gradient(150deg,#6B4A2B,#9B7150)", "linear-gradient(150deg,#0F623F,#1AA86A)", "linear-gradient(150deg,#FF8A3D,#FFB85C)", "linear-gradient(150deg,#F2598A,#FF8FB3)", "linear-gradient(150deg,#1E8FA8,#4FC3D9)"];
 
 function mk(code, daysAgo, status, store, type, items, discount) {
@@ -30,7 +36,7 @@ function mk(code, daysAgo, status, store, type, items, discount) {
   return { code, daysAgo, status, store, type, items, discount: discount || 0, sub, total, points: Math.floor(total / PER_POINT), grad: GRADS[code.charCodeAt(4) % GRADS.length] };
 }
 
-const ORDERS = [
+const DEMO_ORDERS = [
   mk("LB-2418", 0, "making", "Victoria Văn Phú", "ship",
     [{ name: "Trà sữa trân châu đường đen", opt: "Size L · Đường 70% · Đá 70% · Trân châu", unit: 53000, qty: 2 }, { name: "Macchiato kem phô mai", opt: "Size M · Đường 50%", unit: 48000, qty: 1 }], 0),
   mk("LB-2402", 0, "done", "Victoria Văn Phú", "pickup",
@@ -46,6 +52,13 @@ const ORDERS = [
   mk("LB-2240", 33, "done", "Victoria Văn Phú", "ship",
     [{ name: "Trà sữa khoai môn", opt: "Size M · Đường 50%", unit: 42000, qty: 3 }], 0),
 ];
+
+const ORDERS = LIVE_OH
+  ? (window.ORDER_HISTORY_DATA.orders || []).map(o => ({
+      ...o,
+      grad: GRADS[o.code.charCodeAt(4) % GRADS.length],
+    }))
+  : DEMO_ORDERS;
 
 const FILTERS = [{ key: "all", label: "Tất cả" }, { key: "active", label: "Đang xử lý" }, { key: "done", label: "Hoàn tất" }, { key: "cancel", label: "Đã huỷ" }];
 
@@ -71,7 +84,7 @@ function App() {
     window.addEventListener("keydown", h); return () => window.removeEventListener("keydown", h);
   }, []);
 
-  const live = ORDERS.find(o => o.status === "making" || o.status === "ready");
+  const live = ORDERS.find(o => ACTIVE_STATUSES.includes(o.status));
 
   const counts = useMemo(() => {
     const c = { all: ORDERS.length, active: 0, done: 0, cancel: 0 };
@@ -80,7 +93,7 @@ function App() {
   }, []);
 
   const list = useMemo(() => ORDERS.filter(o =>
-    filter === "all" ? true : filter === "active" ? (o.status === "making" || o.status === "ready") : o.status === filter
+    filter === "all" ? true : filter === "active" ? ACTIVE_STATUSES.includes(o.status) : o.status === filter
   ), [filter]);
 
   const groups = useMemo(() => {
@@ -89,7 +102,22 @@ function App() {
     return [...m.entries()];
   }, [list]);
 
-  const reorder = (o, e) => { if (e) e.stopPropagation(); setToast(`Đã thêm ${o.items.reduce((s, it) => s + it.qty, 0)} món từ ${o.code} vào giỏ`); setTimeout(() => setToast(null), 3000); };
+  const reorder = (o, e) => {
+    if (e) e.stopPropagation();
+    if (LIVE_OH) {
+      // Gửi danh sách món sang trang thực đơn — giá được tính lại theo giá hiện tại
+      try {
+        localStorage.setItem(REORDER_KEY, JSON.stringify({
+          code: o.code,
+          items: o.items.map(it => ({ id: it.id, qty: it.qty, selections: it.selections || null })),
+        }));
+      } catch (err) { /* ignore */ }
+      location.href = NAV_URLS.menu;
+      return;
+    }
+    setToast(`Đã thêm ${o.items.reduce((s, it) => s + it.qty, 0)} món từ ${o.code} vào giỏ`);
+    setTimeout(() => setToast(null), 3000);
+  };
 
   const liveIdx = live ? FLOW.indexOf(live.status) : -1;
 
@@ -202,7 +230,7 @@ function OrderDetail({ o, onClose, onReorder }) {
         <div className="od-h">
           <button className="od-x" onClick={onClose}><Icon name="close" size={18} color="#fff" /></button>
           <div className="od-code">{o.code}</div>
-          <div className="od-when">{dayKey(o.daysAgo)} · {o.type === "ship" ? "Giao đi" : "Nhận tại quầy"}</div>
+          <div className="od-when">{o.time || dayKey(o.daysAgo)} · {o.type === "ship" ? "Giao đi" : "Nhận tại quầy"}</div>
           <span className="od-chip"><Icon name="bag" size={14} color="#fff" /> {st.label}</span>
         </div>
         <div className="od-b">
@@ -210,8 +238,8 @@ function OrderDetail({ o, onClose, onReorder }) {
           <div className="od-store">
             <span className="si"><Icon name={o.type === "ship" ? "truck" : "pin"} size={18} color="currentColor" /></span>
             <div style={{ minWidth: 0 }}>
-              <div className="sn">Laboong {o.store}</div>
-              <div className="sa">{o.type === "ship" ? STORE_ADDR : "Quầy " + o.store}</div>
+              <div className="sn">{o.type === "ship" ? (o.addr || "Địa chỉ giao hàng") : o.store}</div>
+              <div className="sa">{o.type === "ship" ? `Giao từ ${o.store}` : (o.storeAddr || STORE_ADDR)}</div>
             </div>
           </div>
 
@@ -229,7 +257,17 @@ function OrderDetail({ o, onClose, onReorder }) {
           <div className="od-sec">Thanh toán</div>
           <div className="od-tot">
             <div className="tr"><span>Tạm tính</span><span className="v">{fmt(o.sub)}đ</span></div>
-            {o.discount > 0 && <div className="tr discount"><span>Giảm giá</span><span className="v">−{fmt(o.discount)}đ</span></div>}
+            {(o.discounts && o.discounts.length > 0) ? (
+              o.discounts.filter(d => !d.ship).map((d, i) => (
+                <div className="tr discount" key={i}><span>{d.label}</span><span className="v">−{fmt(d.amount)}đ</span></div>
+              ))
+            ) : (o.discount > 0 && (
+              <div className="tr discount"><span>Giảm giá</span><span className="v">−{fmt(o.discount)}đ</span></div>
+            ))}
+            {(o.ship || 0) > 0 && <div className="tr"><span>Phí giao hàng</span><span className="v">{fmt(o.ship)}đ</span></div>}
+            {(o.discounts || []).filter(d => d.ship).map((d, i) => (
+              <div className="tr discount" key={"s" + i}><span>{d.label}</span><span className="v">−{fmt(d.amount)}đ</span></div>
+            ))}
             <div className="tr grand"><span>Tổng cộng</span><span className="v">{fmt(o.total)}đ</span></div>
           </div>
           {o.status === "done" && (

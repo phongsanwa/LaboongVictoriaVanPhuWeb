@@ -6,6 +6,7 @@ use App\Http\Controllers\Auth\RegisterController;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\MenuPageController;
 use App\Http\Controllers\OrderController;
+use App\Http\Controllers\OrderHistoryController;
 use App\Http\Controllers\PointsController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\PromotionController;
@@ -19,7 +20,7 @@ Route::get('/test-maps', fn() => view('test-maps'));
 Route::get('/', [HomeController::class, 'index'])->middleware('auth')->name('home');
 Route::get('/menu', [MenuPageController::class, 'index'])->middleware('auth')->name('menu');
 Route::post('/orders', [OrderController::class, 'place'])->middleware('auth')->name('orders.place');
-Route::view('/orders/history', 'order-history')->middleware('auth')->name('orders.history');
+Route::get('/orders/history', [OrderHistoryController::class, 'index'])->middleware('auth')->name('orders.history');
 Route::get('/points', [PointsController::class, 'index'])->middleware('auth')->name('points');
 Route::get('/store', [StoreController::class, 'index'])->middleware('auth')->name('store');
 
