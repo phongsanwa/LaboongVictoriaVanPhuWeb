@@ -40,7 +40,7 @@ class RegisterController extends Controller
             $user = User::create([
                 'name' => $request->input('name'),
                 'phone' => $phone,
-                'email' => $request->input('email') ?: $phone . '@laboong.local',
+                'email' => $request->input('email'),
                 'phone_verified_at' => now(),
                 'password' => Hash::make($request->input('password')),
                 'user_type' => 'customer',
@@ -89,8 +89,8 @@ class RegisterController extends Controller
             'phone' => ['required', 'regex:/^0(3|5|7|8|9)\d{8}$/', Rule::unique('users', 'phone')],
             'name' => ['required', 'string', 'min:2'],
             'password' => ['required', 'string', 'min:6', 'confirmed'],
-            'email' => ['nullable', 'email'],
-            'dob' => ['nullable', 'date'],
+            'email' => ['required', 'email', Rule::unique('users', 'email')],
+            'dob' => ['nullable', 'date', 'before:today'],
         ], [
             'phone.regex' => 'Số điện thoại không hợp lệ',
             'phone.unique' => 'Số điện thoại này đã được đăng ký',
@@ -98,6 +98,11 @@ class RegisterController extends Controller
             'password.required' => 'Vui lòng nhập mật khẩu',
             'password.min' => 'Mật khẩu phải có ít nhất 6 ký tự',
             'password.confirmed' => 'Mật khẩu xác nhận không khớp',
+            'email.required' => 'Vui lòng nhập email',
+            'email.email' => 'Email không hợp lệ',
+            'email.unique' => 'Email này đã được đăng ký',
+            'dob.date' => 'Ngày sinh không hợp lệ',
+            'dob.before' => 'Ngày sinh không hợp lệ',
         ]);
     }
 }
