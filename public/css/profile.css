@@ -169,7 +169,16 @@ input { font-family: inherit; }
 }
 
 /* address autocomplete dropdown */
-.suggest-address { display: none;background: var(--card); border: 1.5px solid var(--brand); border-radius: var(--r-sm); z-index: 99999; box-shadow: 0 8px 28px rgba(0,0,0,.2); max-height: 260px; overflow-y: auto; }
+.suggest-address { background: var(--card);
+    border: 1.5px solid var(--brand);
+    border-radius: var(--r-sm);
+    z-index: 99999;
+    box-shadow: 0 8px 28px rgba(0,0,0,.2);
+    max-height: fit-content;
+    overflow-y: auto;
+    bottom: auto !important;
+    top: auto !important;
+}
 .suggest-address button { display: flex; align-items: flex-start; gap: 8px; width: 100%; padding: 9px 12px; text-align: left; font-size: 13px; color: var(--ink); line-height: 1.4; border-bottom: 1px solid var(--line); }
 .suggest-address button:last-child { border-bottom: none; }
 .suggest-address button:hover { background: var(--brand-soft); }

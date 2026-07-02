@@ -8,6 +8,7 @@ return new class extends Migration
 {
     public function up(): void
     {
+
         Schema::table('rewards', function (Blueprint $table) {
             $table->unsignedSmallInteger('free_item_quantity')->default(1)->after('product_id');
         });
