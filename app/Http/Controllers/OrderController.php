@@ -69,6 +69,26 @@ class OrderController extends Controller
 
         $variantGroups = VariantGroup::all()->keyBy('key');
 
+        // Khuyến mãi gạch giá (kind=price) — phải trừ vào giá món giống trang thực đơn,
+        // nếu không đơn lưu giá gốc và điểm tích bị tính trên giá chưa giảm
+        $pricePromos = Promotion::where('is_active', true)
+            ->where('kind', 'price')
+            ->orderBy('sort_order')
+            ->with('products:id')
+            ->get();
+
+        $specificPricePromoMap = [];
+        foreach ($pricePromos as $promo) {
+            if ($promo->scope === 'specific') {
+                foreach ($promo->products as $prod) {
+                    if (!isset($specificPricePromoMap[$prod->id])) {
+                        $specificPricePromoMap[$prod->id] = $promo;
+                    }
+                }
+            }
+        }
+        $allScopePricePromo = $pricePromos->firstWhere('scope', 'all');
+
         $itemData = [];
         foreach ($data['lines'] as $line) {
             $productId = $this->parseProductId($line['id']);
@@ -83,8 +103,13 @@ class OrderController extends Controller
             [$sizeExtra, $sizeName, $addonTops, $sugarLevel, $iceLevel]
                 = $this->resolveSelections($productId, $selections, $variantGroups);
 
+            $pricePromo    = $specificPricePromoMap[$productId] ?? $allScopePricePromo;
+            $effectiveBase = $pricePromo
+                ? $pricePromo->calcSalePrice((int) $product->base_price)
+                : (float) $product->base_price;
+
             $addonTotal = array_sum(array_column($addonTops, 'extra'));
-            $unitPrice  = round((float) $product->base_price + $sizeExtra + $addonTotal, 2);
+            $unitPrice  = round($effectiveBase + $sizeExtra + $addonTotal, 2);
             $itemTotal  = round($unitPrice * $qty, 2);
 
             $itemData[] = [
