@@ -84,6 +84,7 @@ function MenuEditor({ initial, groups, onClose, onSave, saving }) {
   const [tags, setTags] = useState(initial.tags || []);
   const [available, setAvailable] = useState(initial.available !== false);
   const [opts, setOpts] = useState(initial.opts || defaultOpts(initial.cat || groups[0].key));
+  const [sizeVariants, setSizeVariants] = useState(initial.sizeVariants || []);
   const fileRef = useRef(null);
 
   useEffect(() => {
@@ -94,9 +95,11 @@ function MenuEditor({ initial, groups, onClose, onSave, saving }) {
   const grpIcon = (groups.find(g => g.key === cat) || groups[0]).ic;
   const toggleTag = (t) => setTags(ts => ts.includes(t) ? ts.filter(x => x !== t) : [...ts, t]);
   const valid = name.trim() && Number(price) > 0;
+  const toggleVariantAvail = (vname) => setSizeVariants(vs => vs.map(v => v.name === vname ? { ...v, available: !v.available } : v));
+
   const submit = () => {
     if (!valid) return;
-    onSave({ ...initial, id: initial.id || (LIVE ? null : ("new" + Date.now())), name: name.trim(), cat, price: Number(price), desc: desc.trim(), grad, img: imgPrev, imgFile, hadImg: !!initial.img, tags, available, opts, sold: initial.sold || 0 });
+    onSave({ ...initial, id: initial.id || (LIVE ? null : ("new" + Date.now())), name: name.trim(), cat, price: Number(price), desc: desc.trim(), grad, img: imgPrev, imgFile, hadImg: !!initial.img, tags, available, opts, sizeVariants, sold: initial.sold || 0 });
   };
 
   const onFile = (e) => {
@@ -185,6 +188,21 @@ function MenuEditor({ initial, groups, onClose, onSave, saving }) {
             <div><div className="sl">Còn hàng</div><div className="sd">Hiển thị & cho phép khách đặt món này</div></div>
             <div className={"switch" + (available ? " on" : "")} />
           </div>
+
+          {sizeVariants.length > 0 && (
+            <div className="fld" style={{ marginTop: 4 }}>
+              <label style={{ marginBottom: 6 }}>Size cốc</label>
+              {sizeVariants.map(v => (
+                <div key={v.name} className="switch-row" onClick={() => toggleVariantAvail(v.name)} style={{ cursor: "pointer", paddingTop: 8, paddingBottom: 8 }}>
+                  <div>
+                    <div className="sl">{v.name}</div>
+                    <div className="sd">{v.available ? "Đang bán" : "Đã tắt"}</div>
+                  </div>
+                  <div className={"switch" + (v.available ? " on" : "")} />
+                </div>
+              ))}
+            </div>
+          )}
         </div>
         <div className="modal-f">
           <button className="btn ghost" onClick={onClose}>Huỷ</button>
@@ -355,9 +373,17 @@ function App() {
       try {
         setSaving(true);
         const json = await apiFetchForm(url, form);
+        const savedProduct = json.product;
+
+        if (item.sizeVariants && item.sizeVariants.length > 0) {
+          const varUrl = LIVE_URLS.updateVariants.replace('__ID__', savedProduct.id);
+          await apiFetch('POST', varUrl, { variants: item.sizeVariants });
+          savedProduct.sizeVariants = item.sizeVariants;
+        }
+
         setItems(list => isEdit
-          ? list.map(m => m.id === json.product.id ? json.product : m)
-          : [json.product, ...list]);
+          ? list.map(m => m.id === savedProduct.id ? savedProduct : m)
+          : [savedProduct, ...list]);
         flash({ type: 'ok', msg: isEdit ? `Đã cập nhật "${item.name}"` : `Đã thêm "${item.name}"` });
         setEditor(null);
       } catch (err) {
