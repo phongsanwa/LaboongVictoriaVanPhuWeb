@@ -35,6 +35,7 @@ class MenuController extends Controller
                     'updateProduct'  => route('admin.menu.products.update', ['product' => '__ID__']),
                     'deleteProduct'  => route('admin.menu.products.destroy', ['product' => '__ID__']),
                     'toggleProduct'  => route('admin.menu.products.toggle', ['product' => '__ID__']),
+                    'updateVariants' => route('admin.menu.products.variants', ['product' => '__ID__']),
                     'storeCategory'  => route('admin.menu.categories.store'),
                     'updateCategory' => route('admin.menu.categories.update', ['category' => '__ID__']),
                     'deleteCategory' => route('admin.menu.categories.destroy', ['category' => '__ID__']),
@@ -86,7 +87,7 @@ class MenuController extends Controller
             $this->createDefaultVariants($product);
         }
 
-        $product->load('category');
+        $product->load(['category', 'sizeVariants']);
 
         return response()->json(['product' => $this->presentProduct($product)], 201);
     }
@@ -136,7 +137,7 @@ class MenuController extends Controller
             'is_available' => (bool) ($request->input('is_available', '1')),
         ]);
 
-        $product->load('category');
+        $product->load(['category', 'sizeVariants']);
 
         return response()->json(['product' => $this->presentProduct($product)]);
     }
@@ -158,9 +159,28 @@ class MenuController extends Controller
     public function toggleProduct(Product $product): JsonResponse
     {
         $product->update(['is_available' => !$product->is_available]);
-        $product->load('category');
+        $product->load(['category', 'sizeVariants']);
 
         return response()->json(['product' => $this->presentProduct($product)]);
+    }
+
+    /** POST /admin/menu/products/{product}/variants */
+    public function updateVariants(Request $request, Product $product): JsonResponse
+    {
+        $data = $request->validate([
+            'variants'             => ['required', 'array'],
+            'variants.*.name'      => ['required', 'string'],
+            'variants.*.available' => ['required', 'boolean'],
+        ]);
+
+        foreach ($data['variants'] as $v) {
+            ProductVariant::where('product_id', $product->id)
+                ->where('variant_type', 'SIZE')
+                ->where('name', $v['name'])
+                ->update(['is_available' => $v['available']]);
+        }
+
+        return response()->json(['ok' => true]);
     }
 
     /* ─── API: Category CRUD ─── */
@@ -230,7 +250,7 @@ class MenuController extends Controller
 
     private function buildProducts(): array
     {
-        return Product::with('category')
+        return Product::with(['category', 'sizeVariants'])
             ->orderBy('category_id')
             ->orderBy('sort_order')
             ->get()
@@ -255,8 +275,14 @@ class MenuController extends Controller
             'grad'      => $product->color ?? 'linear-gradient(150deg,#6B4A2B,#9B7150)',
             'img'       => $product->image_url,
             'tags'      => $tags,
-            'available' => (bool) $product->is_available,
-            'sold'      => 0,
+            'available'    => (bool) $product->is_available,
+            'sold'         => 0,
+            'sizeVariants' => $product->relationLoaded('sizeVariants')
+                ? $product->sizeVariants->map(fn ($v) => [
+                    'name'      => $v->name,
+                    'available' => (bool) $v->is_available,
+                ])->values()->toArray()
+                : [],
         ];
     }
 

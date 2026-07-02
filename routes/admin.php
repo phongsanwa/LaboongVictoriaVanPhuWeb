@@ -87,6 +87,7 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
     Route::post('/menu/products/{product}', [MenuController::class, 'updateProduct'])->name('menu.products.update');
     Route::delete('/menu/products/{product}', [MenuController::class, 'destroyProduct'])->name('menu.products.destroy');
     Route::post('/menu/products/{product}/toggle', [MenuController::class, 'toggleProduct'])->name('menu.products.toggle');
+    Route::post('/menu/products/{product}/variants', [MenuController::class, 'updateVariants'])->name('menu.products.variants');
     Route::post('/menu/categories', [MenuController::class, 'storeCategory'])->name('menu.categories.store');
     Route::post('/menu/categories/{category}', [MenuController::class, 'updateCategory'])->name('menu.categories.update');
     Route::delete('/menu/categories/{category}', [MenuController::class, 'destroyCategory'])->name('menu.categories.destroy');
