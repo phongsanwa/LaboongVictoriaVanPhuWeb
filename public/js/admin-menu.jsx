@@ -5,6 +5,7 @@ const { useState, useEffect, useMemo, useRef } = React;
 // LIVE mode detection
 const LIVE = !!window.ADMIN_MENU_DATA;
 const LIVE_URLS = window.ADMIN_MENU_DATA?.urls || {};
+const VARIANT_GROUPS = window.ADMIN_MENU_DATA?.variantGroups || [];
 
 function csrfToken() {
   return document.querySelector('meta[name="csrf-token"]')?.content ?? '';
@@ -84,7 +85,7 @@ function MenuEditor({ initial, groups, onClose, onSave, saving }) {
   const [tags, setTags] = useState(initial.tags || []);
   const [available, setAvailable] = useState(initial.available !== false);
   const [opts, setOpts] = useState(initial.opts || defaultOpts(initial.cat || groups[0].key));
-  const [sizeVariants, setSizeVariants] = useState(initial.sizeVariants || []);
+  const [productVariants, setProductVariants] = useState(initial.variants || {});
   const fileRef = useRef(null);
 
   useEffect(() => {
@@ -95,11 +96,14 @@ function MenuEditor({ initial, groups, onClose, onSave, saving }) {
   const grpIcon = (groups.find(g => g.key === cat) || groups[0]).ic;
   const toggleTag = (t) => setTags(ts => ts.includes(t) ? ts.filter(x => x !== t) : [...ts, t]);
   const valid = name.trim() && Number(price) > 0;
-  const toggleVariantAvail = (vname) => setSizeVariants(vs => vs.map(v => v.name === vname ? { ...v, available: !v.available } : v));
+  const toggleVariantAvail = (type, vname) => setProductVariants(pv => ({
+    ...pv,
+    [type]: (pv[type] || []).map(v => v.name === vname ? { ...v, available: !v.available } : v),
+  }));
 
   const submit = () => {
     if (!valid) return;
-    onSave({ ...initial, id: initial.id || (LIVE ? null : ("new" + Date.now())), name: name.trim(), cat, price: Number(price), desc: desc.trim(), grad, img: imgPrev, imgFile, hadImg: !!initial.img, tags, available, opts, sizeVariants, sold: initial.sold || 0 });
+    onSave({ ...initial, id: initial.id || (LIVE ? null : ("new" + Date.now())), name: name.trim(), cat, price: Number(price), desc: desc.trim(), grad, img: imgPrev, imgFile, hadImg: !!initial.img, tags, available, opts, variants: productVariants, sold: initial.sold || 0 });
   };
 
   const onFile = (e) => {
@@ -189,20 +193,22 @@ function MenuEditor({ initial, groups, onClose, onSave, saving }) {
             <div className={"switch" + (available ? " on" : "")} />
           </div>
 
-          {sizeVariants.length > 0 && (
-            <div className="fld" style={{ marginTop: 4 }}>
-              <label style={{ marginBottom: 6 }}>Size cốc</label>
-              {sizeVariants.map(v => (
-                <div key={v.name} className="switch-row" onClick={() => toggleVariantAvail(v.name)} style={{ cursor: "pointer", paddingTop: 8, paddingBottom: 8 }}>
+          {VARIANT_GROUPS.filter(g => (productVariants[g.key] || []).length > 0).map(g => (
+            <div key={g.key} className="fld" style={{ marginTop: 4 }}>
+              <label style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 2 }}>
+                <Icon name={g.ic} size={14} color="currentColor" /> {g.label}
+              </label>
+              {(productVariants[g.key] || []).map(v => (
+                <div key={v.name} className="switch-row" onClick={() => toggleVariantAvail(g.key, v.name)} style={{ cursor: "pointer", paddingTop: 8, paddingBottom: 8 }}>
                   <div>
                     <div className="sl">{v.name}</div>
-                    <div className="sd">{v.available ? "Đang bán" : "Đã tắt"}</div>
+                    <div className="sd">{v.available ? "Đang bán" : "Đã tắt (chỉ món này)"}</div>
                   </div>
                   <div className={"switch" + (v.available ? " on" : "")} />
                 </div>
               ))}
             </div>
-          )}
+          ))}
         </div>
         <div className="modal-f">
           <button className="btn ghost" onClick={onClose}>Huỷ</button>
@@ -375,10 +381,15 @@ function App() {
         const json = await apiFetchForm(url, form);
         const savedProduct = json.product;
 
-        if (item.sizeVariants && item.sizeVariants.length > 0) {
+        if (item.variants && Object.keys(item.variants).length > 0) {
           const varUrl = LIVE_URLS.updateVariants.replace('__ID__', savedProduct.id);
-          await apiFetch('POST', varUrl, { variants: item.sizeVariants });
-          savedProduct.sizeVariants = item.sizeVariants;
+          const flatVariants = Object.entries(item.variants).flatMap(([type, opts]) =>
+            (opts || []).map(o => ({ type, name: o.name, available: o.available }))
+          );
+          if (flatVariants.length > 0) {
+            await apiFetch('POST', varUrl, { variants: flatVariants });
+          }
+          savedProduct.variants = item.variants;
         }
 
         setItems(list => isEdit
