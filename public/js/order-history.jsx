@@ -73,9 +73,12 @@ function etaInfo(o, now) {
       : { e: "Sẵn sàng", el: "đến quầy nhận ngay", small: true };
   }
   if (!o.etaAt) return { e: "~12'", el: "dự kiến xong" }; // demo fallback
-  const mins = Math.ceil((new Date(o.etaAt).getTime() - now) / 60000);
-  if (mins <= 1) return { e: "Sắp xong", el: "chờ chút nữa nhé", small: true };
-  return { e: `~${mins}'`, el: o.type === "ship" ? "dự kiến giao đến" : "dự kiến xong" };
+  const remain = new Date(o.etaAt).getTime() - now;
+  if (remain <= 0) return { e: "Sắp xong", el: "chờ chút nữa nhé", small: true };
+  // Đồng hồ đếm ngược mm:ss chạy theo thời gian thực
+  const m = Math.floor(remain / 60000);
+  const s = Math.floor((remain % 60000) / 1000);
+  return { e: `${m}:${String(s).padStart(2, "0")}`, el: o.type === "ship" ? "dự kiến giao đến" : "dự kiến xong" };
 }
 
 function App() {
@@ -99,11 +102,11 @@ function App() {
 
   const live = ORDERS.find(o => ACTIVE_STATUSES.includes(o.status));
 
-  /* tick mỗi 30s để cập nhật đếm ngược */
+  /* tick mỗi giây để đồng hồ đếm ngược chạy mượt */
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
-    if (!live) return;
-    const id = setInterval(() => setNow(Date.now()), 30000);
+    if (!live || live.status === "ready" || !live.etaAt) return;
+    const id = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(id);
   }, [live]);
 
