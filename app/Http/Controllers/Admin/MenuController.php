@@ -87,7 +87,7 @@ class MenuController extends Controller
             $this->createDefaultVariants($product);
         }
 
-        $product->load(['category', 'sizeVariants']);
+        $product->load(['category', 'sizes']);
 
         return response()->json(['product' => $this->presentProduct($product)], 201);
     }
@@ -137,7 +137,7 @@ class MenuController extends Controller
             'is_available' => (bool) ($request->input('is_available', '1')),
         ]);
 
-        $product->load(['category', 'sizeVariants']);
+        $product->load(['category', 'sizes']);
 
         return response()->json(['product' => $this->presentProduct($product)]);
     }
@@ -159,7 +159,7 @@ class MenuController extends Controller
     public function toggleProduct(Product $product): JsonResponse
     {
         $product->update(['is_available' => !$product->is_available]);
-        $product->load(['category', 'sizeVariants']);
+        $product->load(['category', 'sizes']);
 
         return response()->json(['product' => $this->presentProduct($product)]);
     }
@@ -250,7 +250,7 @@ class MenuController extends Controller
 
     private function buildProducts(): array
     {
-        return Product::with(['category', 'sizeVariants'])
+        return Product::with(['category', 'sizes'])
             ->orderBy('category_id')
             ->orderBy('sort_order')
             ->get()
@@ -277,8 +277,8 @@ class MenuController extends Controller
             'tags'      => $tags,
             'available'    => (bool) $product->is_available,
             'sold'         => 0,
-            'sizeVariants' => $product->relationLoaded('sizeVariants')
-                ? $product->sizeVariants->map(fn ($v) => [
+            'sizes' => $product->relationLoaded('sizes')
+                ? $product->sizes->map(fn ($v) => [
                     'name'      => $v->name,
                     'available' => (bool) $v->is_available,
                 ])->values()->toArray()
