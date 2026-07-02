@@ -10,6 +10,7 @@ use App\Models\OrderDiscount;
 use App\Models\Product;
 use App\Models\ProductVariant;
 use App\Models\Promotion;
+use App\Models\ShippingPromotion;
 use App\Models\Store;
 use App\Models\VariantGroup;
 use App\Models\Voucher;
@@ -39,6 +40,8 @@ class OrderController extends Controller
             'shipping_fee'        => ['nullable', 'integer', 'min:0'],
             'voucher_id'          => ['nullable', 'integer'],
             'shipping_voucher_id' => ['nullable', 'integer'],
+            'order_promo_id'      => ['nullable', 'integer'],
+            'ship_promo_id'       => ['nullable', 'integer'],
         ]);
 
         $user     = Auth::user();
@@ -144,11 +147,42 @@ class OrderController extends Controller
             }
         }
 
+        // --- Resolve public promotions (combinable with vouchers) ---
+        $orderPromo = null;
+        if (!empty($data['order_promo_id'])) {
+            $p = Promotion::where('id', $data['order_promo_id'])
+                ->where('is_active', true)
+                ->where('kind', 'voucher')
+                ->first();
+            if ($p
+                && ($p->valid_until === null || $p->valid_until->isFuture())
+                && $subtotal >= (float) ($p->min_purchase ?? 0)) {
+                $orderPromo = $p;
+            }
+        }
+
+        $shipPromo = null;
+        if (!empty($data['ship_promo_id'])) {
+            $sp = ShippingPromotion::where('id', $data['ship_promo_id'])
+                ->where('is_active', true)
+                ->first();
+            if ($sp && $subtotal >= (float) $sp->min_order_amount) {
+                $shipPromo = $sp;
+            }
+        }
+
         // --- Calculate discounts ---
         $discSvc      = app(DiscountCalculationService::class);
         $shippingFee  = (int) ($data['shipping_fee'] ?? 0);
-        $orderDiscAmt = $orderVoucher    ? $discSvc->calcVoucherDiscount($orderVoucher, $subtotal)    : 0;
-        $shipDiscAmt  = $shippingVoucher ? $discSvc->calcVoucherDiscount($shippingVoucher, $shippingFee) : 0;
+
+        $voucherDiscAmt    = $orderVoucher ? $discSvc->calcVoucherDiscount($orderVoucher, $subtotal) : 0;
+        $orderPromoDiscAmt = $orderPromo   ? $this->calcPromotionDiscount($orderPromo, $subtotal)    : 0;
+        $orderDiscAmt      = min($subtotal, $voucherDiscAmt + $orderPromoDiscAmt);
+
+        $shipVoucherDiscAmt = $shippingVoucher ? $discSvc->calcVoucherDiscount($shippingVoucher, $shippingFee) : 0;
+        $shipPromoDiscAmt   = $shipPromo       ? $this->calcShipPromoDiscount($shipPromo, $shippingFee)        : 0;
+        $shipDiscAmt        = min($shippingFee, $shipVoucherDiscAmt + $shipPromoDiscAmt);
+
         $discountAmt  = $orderDiscAmt + $shipDiscAmt;
         $totalAmount  = max(0.0, round($subtotal - $orderDiscAmt + $shippingFee - $shipDiscAmt, 2));
         $pointsEarned = (int) floor($totalAmount / self::PER_POINT);
@@ -158,7 +192,8 @@ class OrderController extends Controller
         DB::transaction(function () use (
             $customer, $store, $data, $itemData,
             $subtotal, $discountAmt, $shippingFee, $totalAmount, $pointsEarned,
-            $orderVoucher, $shippingVoucher, $orderDiscAmt, $shipDiscAmt,
+            $orderVoucher, $shippingVoucher, $orderPromo, $shipPromo,
+            $voucherDiscAmt, $orderPromoDiscAmt, $shipVoucherDiscAmt, $shipPromoDiscAmt,
             &$orderId
         ) {
             $order = Order::create([
@@ -188,12 +223,12 @@ class OrderController extends Controller
             }
 
             // Save OrderDiscount records + mark vouchers used
-            if ($orderVoucher && $orderDiscAmt > 0) {
+            if ($orderVoucher && $voucherDiscAmt > 0) {
                 OrderDiscount::create([
                     'order_id'          => $order->id,
                     'discount_category' => $orderVoucher->source_type === 'PROMOTION_CLAIM' ? 'PROMOTION_VOUCHER' : 'GIFT_VOUCHER',
                     'voucher_id'        => $orderVoucher->id,
-                    'discount_amount'   => $orderDiscAmt,
+                    'discount_amount'   => $voucherDiscAmt,
                     'description'       => match($orderVoucher->discount_type) {
                         'free_item'  => "Miễn phí: " . ($orderVoucher->freeItemProduct?->name ?? 'sản phẩm'),
                         'percentage' => "Giảm {$orderVoucher->discount_value}%",
@@ -203,15 +238,35 @@ class OrderController extends Controller
                 $orderVoucher->update(['status' => 'used', 'used_at' => now()]);
             }
 
-            if ($shippingVoucher && $shipDiscAmt > 0) {
+            if ($orderPromo && $orderPromoDiscAmt > 0) {
+                OrderDiscount::create([
+                    'order_id'          => $order->id,
+                    'discount_category' => 'PROMOTION_VOUCHER',
+                    'voucher_id'        => null,
+                    'discount_amount'   => $orderPromoDiscAmt,
+                    'description'       => $orderPromo->name . ' (' . $orderPromo->badgeLabel() . ')',
+                ]);
+            }
+
+            if ($shippingVoucher && $shipVoucherDiscAmt > 0) {
                 OrderDiscount::create([
                     'order_id'          => $order->id,
                     'discount_category' => 'SHIPPING',
                     'voucher_id'        => $shippingVoucher->id,
-                    'discount_amount'   => $shipDiscAmt,
+                    'discount_amount'   => $shipVoucherDiscAmt,
                     'description'       => "Giảm phí ship",
                 ]);
                 $shippingVoucher->update(['status' => 'used', 'used_at' => now()]);
+            }
+
+            if ($shipPromo && $shipPromoDiscAmt > 0) {
+                OrderDiscount::create([
+                    'order_id'          => $order->id,
+                    'discount_category' => 'SHIPPING',
+                    'voucher_id'        => null,
+                    'discount_amount'   => $shipPromoDiscAmt,
+                    'description'       => $shipPromo->name,
+                ]);
             }
 
             if ($pointsEarned > 0) {
@@ -322,8 +377,22 @@ class OrderController extends Controller
             return min((float) $promo->value, $subtotal);
         } elseif ($promo->type === 'percent') {
             $discount = floor($subtotal * (float) $promo->value / 100);
+            if ($promo->max_discount) {
+                $discount = min($discount, (float) $promo->max_discount);
+            }
             return (float) min($discount, $subtotal);
         }
         return 0;
+    }
+
+    private function calcShipPromoDiscount(ShippingPromotion $promo, int $shippingFee): float
+    {
+        if ($shippingFee <= 0) return 0;
+
+        return match ($promo->discount_type) {
+            'free'    => (float) $shippingFee,
+            'percent' => (float) min(floor($shippingFee * (float) $promo->discount_value / 100), $shippingFee),
+            default   => (float) min((float) $promo->discount_value, $shippingFee),
+        };
     }
 }
