@@ -234,7 +234,7 @@ function App() {
         <section className="sec">
           <div className="sec-h">
             <span className="sic"><Icon name="pin" size={17} color="currentColor" /></span><h2>Địa chỉ giao hàng</h2>
-            <button className="add" onClick={() => setAddrModal({ label: "Nhà", name: "", text: "", def: data.addresses.length === 0 })}><Icon name="plus2" size={15} color="var(--brand)" /> Thêm</button>
+            <button className="add" onClick={() => setAddrModal({ label: "Nhà", name: [data.name.trim(), MEMBER.phone].filter(Boolean).join(' · '), text: "", def: data.addresses.length === 0 })}><Icon name="plus2" size={15} color="var(--brand)" /> Thêm</button>
           </div>
           <div className="panel">
             {data.addresses.length === 0 && <div className="addr-empty">Chưa có địa chỉ giao hàng nào. Thêm địa chỉ để đặt giao hàng nhanh hơn.</div>}
@@ -334,25 +334,35 @@ async function reverseGeocode(lat, lng) {
   });
 }
 
+/* Hiện gợi ý ngay từ predictions (không geocode trước) — đầy đủ và nhanh hơn.
+   Toạ độ chỉ lấy khi người dùng chọn một gợi ý (geocodePlaceId). */
 async function smartNominatimSearch(text) {
   const maps = gmaps();
   if (!maps?.places?.AutocompleteService) return [];
   return new Promise(resolve => {
     new maps.places.AutocompleteService().getPlacePredictions(
       { input: text, componentRestrictions: { country: 'vn' } },
-      (predictions, status) => {
+      (predictions) => {
         if (!predictions?.length) { resolve([]); return; }
-        const geocoder = new maps.Geocoder();
-        Promise.all(predictions.slice(0, 6).map(p => new Promise(res => {
-          geocoder.geocode({ placeId: p.place_id }, (results, s) => {
-            if (s === 'OK' && results?.length) {
-              const loc = results[0].geometry.location;
-              res({ text: p.description.replace(/,?\s*Việt Nam$/i, "").trim(), lat: loc.lat(), lng: loc.lng() });
-            } else res(null);
-          });
-        }))).then(list => resolve(list.filter(Boolean)));
+        resolve(predictions.slice(0, 6).map(p => ({
+          text: p.description.replace(/,?\s*Việt Nam$/i, "").trim(),
+          placeId: p.place_id,
+        })));
       }
     );
+  });
+}
+
+async function geocodePlaceId(placeId) {
+  const maps = gmaps();
+  if (!maps) return null;
+  return new Promise(resolve => {
+    new maps.Geocoder().geocode({ placeId }, (results, status) => {
+      if (status === 'OK' && results?.length) {
+        const loc = results[0].geometry.location;
+        resolve({ lat: loc.lat(), lng: loc.lng() });
+      } else resolve(null);
+    });
   });
 }
 
@@ -409,7 +419,7 @@ function AddrModal({ init, onClose, onSave }) {
     if (val.trim().length < 3) { setSugg([]); setSearching(false); return; }
     setSearching(true);
     debRef.current = setTimeout(async () => {
-      const results = await smartNominatimSearch(val.trim() + ', Việt Nam');
+      const results = await smartNominatimSearch(val.trim());
       setSugg(results);
       setSearching(false);
       if (results.length > 0 && inputRef.current) {
@@ -419,11 +429,14 @@ function AddrModal({ init, onClose, onSave }) {
     }, 400);
   };
 
-  const pickSugg = (s) => {
+  const pickSugg = async (s) => {
     setAddrText(s.text);
     setPickedFull(s.text);
     setSugg([]);
-    setF(prev => ({ ...prev, lat: s.lat, lng: s.lng }));
+    setGeocoding(true);
+    const loc = await geocodePlaceId(s.placeId);
+    if (loc) setF(prev => ({ ...prev, lat: loc.lat, lng: loc.lng }));
+    setGeocoding(false);
   };
 
   /* ---- fallback geocode on blur ---- */
