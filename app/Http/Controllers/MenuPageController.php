@@ -256,8 +256,10 @@ class MenuPageController extends Controller
             'perPoint'      => 10000,
             'promos'        => $promoCodes,
             'addresses'     => $addresses,
+            'customerName'  => Auth::user()?->name ?? '',
             'urls'          => [
-                'placeOrder' => route('orders.place'),
+                'placeOrder'   => route('orders.place'),
+                'storeAddress' => route('profile.addresses.store'),
             ],
             'tagMeta'       => [
                 'hot' => ['l' => 'Best',   'ic' => 'flame'],

@@ -244,6 +244,12 @@ function App() {
   const [addresses, setAddresses] = useState(getLiveAddresses);
   const [addrId, setAddrId] = useState(null);
   const [addrView, setAddrView] = useState(false);
+  /* quick-add address form (right inside the cart) */
+  const [addrFormOpen,   setAddrFormOpen]   = useState(false);
+  const [addrFormName,   setAddrFormName]   = useState(LIVE_D.customerName || "");
+  const [addrFormText,   setAddrFormText]   = useState("");
+  const [addrFormSaving, setAddrFormSaving] = useState(false);
+  const [addrFormErr,    setAddrFormErr]    = useState("");
   const [liveStores,        ] = useState(getLiveStores);
   const [liveShippingTiers,  ] = useState(getLiveShippingTiers);
   const [liveShippingPromos, ] = useState(getLiveShippingPromos);
@@ -446,6 +452,43 @@ function App() {
   };
 
   const clearShipDiscount = () => { setShippingVoucher(null); setSelectedShipPromo(null); };
+
+  /* Save a new delivery address without leaving the cart */
+  const saveNewAddress = async () => {
+    const nm   = addrFormName.trim();
+    const text = addrFormText.trim();
+    if (nm.length < 2)   { setAddrFormErr("Vui lòng nhập tên người nhận"); return; }
+    if (text.length < 6) { setAddrFormErr("Vui lòng nhập địa chỉ đầy đủ (số nhà, đường, quận…)"); return; }
+
+    if (!LIVE) {
+      const a = { id: 'a' + Date.now(), label: 'Nhà', text, def: addresses.length === 0 };
+      setAddresses(list => [...list, a]); setAddrId(a.id);
+      setAddrFormOpen(false); setAddrFormText(""); setAddrFormErr(""); setAddrView(false);
+      return;
+    }
+
+    setAddrFormSaving(true); setAddrFormErr("");
+    try {
+      const res = await fetch(LIVE_D.urls?.storeAddress, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || '',
+          'Accept': 'application/json',
+        },
+        body: JSON.stringify({ label: 'Nhà', name: nm, text, def: addresses.length === 0 }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.message || 'Không lưu được địa chỉ');
+      setAddresses(list => [...list, json.address]);
+      setAddrId(json.address.id);
+      setAddrFormOpen(false); setAddrFormText(""); setAddrView(false);
+    } catch (e) {
+      setAddrFormErr(e.message);
+    } finally {
+      setAddrFormSaving(false);
+    }
+  };
 
   const jumpCat = (key) => {
     setActiveCat(key);
@@ -941,8 +984,40 @@ function App() {
                         <span className="aradio" />
                       </button>
                     ))}
-                    {addresses.length === 0 && <div className="cp-empty">Bạn chưa có địa chỉ nào. Thêm địa chỉ trong mục Hồ sơ.</div>}
+                    {addresses.length === 0 && !addrFormOpen && (
+                      <div className="cp-empty">Bạn chưa có địa chỉ giao hàng — thêm ngay bên dưới nhé!</div>
+                    )}
                   </div>
+
+                  {addrFormOpen ? (
+                    <div style={{ border: "1.5px solid var(--brand)", borderRadius: 14, padding: 13, background: "var(--brand-soft, rgba(15,98,63,.06))", marginTop: 8, display: "flex", flexDirection: "column", gap: 8 }}>
+                      <div style={{ fontSize: 13.5, fontWeight: 700 }}>Thêm địa chỉ giao hàng</div>
+                      <input className="inp" placeholder="Tên người nhận" value={addrFormName}
+                        onChange={e => { setAddrFormName(e.target.value); setAddrFormErr(""); }}
+                        style={{ width: "100%", boxSizing: "border-box", padding: "10px 12px", borderRadius: 10, border: "1px solid var(--line, #ddd)", fontSize: 14 }} />
+                      <textarea className="inp" placeholder="Địa chỉ nhận hàng (số nhà, đường, phường/quận…)" value={addrFormText} rows={2} autoFocus
+                        onChange={e => { setAddrFormText(e.target.value); setAddrFormErr(""); }}
+                        style={{ width: "100%", boxSizing: "border-box", padding: "10px 12px", borderRadius: 10, border: "1px solid var(--line, #ddd)", fontSize: 14, resize: "none", fontFamily: "inherit" }} />
+                      {addrFormErr && <div style={{ fontSize: 12.5, color: "var(--danger, #e53)", fontWeight: 600 }}>{addrFormErr}</div>}
+                      <div style={{ display: "flex", gap: 8 }}>
+                        <button onClick={() => { setAddrFormOpen(false); setAddrFormErr(""); }}
+                          style={{ flex: 1, padding: "10px 0", borderRadius: 10, border: "1px solid var(--line, #ddd)", background: "transparent", fontWeight: 600, fontSize: 14 }}>Huỷ</button>
+                        <button onClick={saveNewAddress} disabled={addrFormSaving}
+                          style={{ flex: 2, padding: "10px 0", borderRadius: 10, border: "none", background: "var(--brand)", color: "#fff", fontWeight: 700, fontSize: 14, opacity: addrFormSaving ? 0.6 : 1 }}>
+                          {addrFormSaving ? "Đang lưu…" : "Lưu & giao đến đây"}
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <button className="aopt" onClick={() => { setAddrFormOpen(true); setAddrFormErr(""); }} style={{ marginTop: 8 }}>
+                      <span className="ai"><Icon name="plus" size={19} color="currentColor" /></span>
+                      <div style={{ minWidth: 0, flex: 1 }}>
+                        <div className="albl"><span className="atag">Thêm địa chỉ mới</span></div>
+                        <div className="atext">Nhập địa chỉ giao hàng ngay tại đây</div>
+                      </div>
+                      <span className="dchev"><Icon name="chev" size={17} /></span>
+                    </button>
+                  )}
 
                   <div className="cp-sec">Hoặc</div>
                   <button className={"aopt pickup" + (addrId === "pickup" ? " on" : "")}
@@ -970,7 +1045,7 @@ function App() {
                 <div className="cart-empty"><div className="cei"><Icon name="bag" size={26} /></div>Giỏ hàng trống. Hãy chọn món bạn thích nhé!</div>
               ) : (<>
                 <div className="cart-b">
-                  <button className="deliv" onClick={() => selectedAddr ? setAddrView(true) : (liveStores.length > 1 ? setStoreView(true) : setAddrView(true))}>
+                  <button className="deliv" onClick={() => setAddrView(true)}>
                     <span className="di"><Icon name={selectedAddr ? addrIcon(selectedAddr.label) : "pin"} size={19} color="currentColor" /></span>
                     <div style={{ minWidth: 0, flex: 1 }}>
                       {selectedAddr ? (<>
@@ -988,6 +1063,9 @@ function App() {
                       </>) : (<>
                         <div className="dl">Nhận tại quầy</div>
                         <div className="dt">{pickupLabel}</div>
+                        <div className="dt" style={{ marginTop: 2, fontSize: 12.5, fontWeight: 600, color: "var(--brand)" }}>
+                          Muốn giao tận nơi? Bấm để thêm địa chỉ
+                        </div>
                       </>)}
                     </div>
                     <span className="dchev"><Icon name="chev" size={18} /></span>
