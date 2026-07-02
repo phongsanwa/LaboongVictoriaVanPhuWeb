@@ -72,6 +72,37 @@ async function geocodeAddress(text) {
   return loc;
 }
 
+/* Gợi ý địa chỉ khi gõ (Google Places AutocompleteService) */
+async function fetchAddressSuggestions(text) {
+  const maps = window.google?.maps;
+  if (!maps?.places?.AutocompleteService || text.trim().length < 3) return [];
+  return new Promise(resolve => {
+    new maps.places.AutocompleteService().getPlacePredictions(
+      { input: text, componentRestrictions: { country: 'vn' } },
+      (predictions) => {
+        if (!predictions?.length) { resolve([]); return; }
+        resolve(predictions.slice(0, 5).map(p => ({
+          text: p.description.replace(/,?\s*Việt Nam$/i, "").trim(),
+          placeId: p.place_id,
+        })));
+      }
+    );
+  });
+}
+
+async function geocodePlaceId(placeId) {
+  const maps = window.google?.maps;
+  if (!maps) return null;
+  return new Promise(resolve => {
+    new maps.Geocoder().geocode({ placeId }, (results, status) => {
+      if (status === 'OK' && results?.length) {
+        const l = results[0].geometry.location;
+        resolve({ lat: l.lat(), lng: l.lng() });
+      } else resolve(null);
+    });
+  });
+}
+
 function distRangeLabel(km) {
   return km < 1 ? 'dưới 1km' : `trên ${Math.floor(km)}km`;
 }
@@ -250,6 +281,25 @@ function App() {
   const [addrFormText,   setAddrFormText]   = useState("");
   const [addrFormSaving, setAddrFormSaving] = useState(false);
   const [addrFormErr,    setAddrFormErr]    = useState("");
+  const [addrSuggests,   setAddrSuggests]   = useState([]);
+  const [addrFormCoords, setAddrFormCoords] = useState(null); // {lat,lng} khi chọn từ gợi ý
+  const addrSuggestTimer = useRef(null);
+
+  const onAddrFormTextChange = (value) => {
+    setAddrFormText(value); setAddrFormErr(""); setAddrFormCoords(null);
+    if (addrSuggestTimer.current) clearTimeout(addrSuggestTimer.current);
+    if (value.trim().length < 3) { setAddrSuggests([]); return; }
+    addrSuggestTimer.current = setTimeout(async () => {
+      const list = await fetchAddressSuggestions(value);
+      setAddrSuggests(list);
+    }, 350);
+  };
+
+  const pickAddrSuggest = async (s) => {
+    setAddrFormText(s.text); setAddrSuggests([]); setAddrFormErr("");
+    const loc = await geocodePlaceId(s.placeId);
+    if (loc) setAddrFormCoords(loc);
+  };
   const [liveStores,        ] = useState(getLiveStores);
   const [liveShippingTiers,  ] = useState(getLiveShippingTiers);
   const [liveShippingPromos, ] = useState(getLiveShippingPromos);
@@ -461,9 +511,9 @@ function App() {
     if (text.length < 6) { setAddrFormErr("Vui lòng nhập địa chỉ đầy đủ (số nhà, đường, quận…)"); return; }
 
     if (!LIVE) {
-      const a = { id: 'a' + Date.now(), label: 'Nhà', text, def: addresses.length === 0 };
+      const a = { id: 'a' + Date.now(), label: 'Nhà', text, def: addresses.length === 0, lat: addrFormCoords?.lat ?? null, lng: addrFormCoords?.lng ?? null };
       setAddresses(list => [...list, a]); setAddrId(a.id);
-      setAddrFormOpen(false); setAddrFormText(""); setAddrFormErr(""); setAddrView(false);
+      setAddrFormOpen(false); setAddrFormText(""); setAddrFormErr(""); setAddrSuggests([]); setAddrView(false);
       return;
     }
 
@@ -476,13 +526,16 @@ function App() {
           'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || '',
           'Accept': 'application/json',
         },
-        body: JSON.stringify({ label: 'Nhà', name: nm, text, def: addresses.length === 0 }),
+        body: JSON.stringify({
+          label: 'Nhà', name: nm, text, def: addresses.length === 0,
+          lat: addrFormCoords?.lat ?? null, lng: addrFormCoords?.lng ?? null,
+        }),
       });
       const json = await res.json();
       if (!res.ok) throw new Error(json.message || 'Không lưu được địa chỉ');
       setAddresses(list => [...list, json.address]);
       setAddrId(json.address.id);
-      setAddrFormOpen(false); setAddrFormText(""); setAddrView(false);
+      setAddrFormOpen(false); setAddrFormText(""); setAddrSuggests([]); setAddrView(false);
     } catch (e) {
       setAddrFormErr(e.message);
     } finally {
@@ -997,11 +1050,27 @@ function App() {
                         onChange={e => { setAddrFormName(e.target.value); setAddrFormErr(""); }}
                         style={{ width: "100%", boxSizing: "border-box", padding: "10px 12px", borderRadius: 10, border: "1px solid var(--line, #ddd)", fontSize: 16 }} />
                       <textarea className="inp" placeholder="Địa chỉ nhận hàng (số nhà, đường, phường/quận…)" value={addrFormText} rows={2} autoFocus
-                        onChange={e => { setAddrFormText(e.target.value); setAddrFormErr(""); }}
+                        onChange={e => onAddrFormTextChange(e.target.value)}
                         style={{ width: "100%", boxSizing: "border-box", padding: "10px 12px", borderRadius: 10, border: "1px solid var(--line, #ddd)", fontSize: 16, resize: "none", fontFamily: "inherit" }} />
+                      {addrSuggests.length > 0 && (
+                        <div style={{ border: "1px solid var(--line, #ddd)", borderRadius: 10, overflow: "hidden", background: "var(--card, #fff)" }}>
+                          {addrSuggests.map(s => (
+                            <button key={s.placeId} onClick={() => pickAddrSuggest(s)}
+                              style={{ display: "flex", alignItems: "flex-start", gap: 8, width: "100%", textAlign: "left", padding: "10px 12px", border: "none", borderBottom: "1px solid var(--line, #eee)", background: "transparent", fontSize: 13.5, lineHeight: 1.4, cursor: "pointer", color: "var(--ink, #222)" }}>
+                              <span style={{ flexShrink: 0, marginTop: 1 }}><Icon name="pin" size={14} color="var(--brand)" /></span>
+                              {s.text}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                      {addrFormCoords && (
+                        <div style={{ fontSize: 12, color: "var(--brand)", fontWeight: 600, display: "flex", alignItems: "center", gap: 5 }}>
+                          <Icon name="check" size={13} color="var(--brand)" /> Đã xác định vị trí — phí ship sẽ tính chính xác
+                        </div>
+                      )}
                       {addrFormErr && <div style={{ fontSize: 12.5, color: "var(--danger, #e53)", fontWeight: 600 }}>{addrFormErr}</div>}
                       <div style={{ display: "flex", gap: 8 }}>
-                        <button onClick={() => { setAddrFormOpen(false); setAddrFormErr(""); }}
+                        <button onClick={() => { setAddrFormOpen(false); setAddrFormErr(""); setAddrSuggests([]); }}
                           style={{ flex: 1, padding: "10px 0", borderRadius: 10, border: "1px solid var(--line, #ddd)", background: "transparent", fontWeight: 600, fontSize: 14 }}>Huỷ</button>
                         <button onClick={saveNewAddress} disabled={addrFormSaving}
                           style={{ flex: 2, padding: "10px 0", borderRadius: 10, border: "none", background: "var(--brand)", color: "#fff", fontWeight: 700, fontSize: 14, opacity: addrFormSaving ? 0.6 : 1 }}>
