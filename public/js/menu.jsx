@@ -101,6 +101,29 @@ function getLiveVariantGroups() {
   return typeof VARIANT_GROUPS !== 'undefined' ? VARIANT_GROUPS : [];
 }
 
+/* Filter global variantGroups to only the options a specific product has.
+   item.variants = { SIZE: { M: {extra, available}, L: {...} }, TOPPING: {...} } */
+function getProductVariantGroups(item, variantGroups) {
+  if (!item.variants) return variantGroups;
+  return variantGroups.map(g => {
+    const productOpts = item.variants[g.key];
+    if (!productOpts) return null; // product has no variants of this type
+    const options = g.options
+      .filter(o => productOpts[o.id] !== undefined)
+      .map(o => ({ ...o, extra: productOpts[o.id].extra, available: productOpts[o.id].available, def: false }));
+    if (options.length === 0) return null;
+    // Re-apply default selection
+    const availOpts = options.filter(o => o.available);
+    const defaultId = g.options.find(o => o.def)?.id;
+    if (defaultId && options.some(o => o.id === defaultId)) {
+      options.forEach(o => { o.def = o.id === defaultId; });
+    } else if (g.required && availOpts.length > 0) {
+      options.forEach(o => { o.def = o.id === availOpts[0].id; });
+    }
+    return { ...g, options };
+  }).filter(Boolean);
+}
+
 /* ─── Voucher discount calculation ─────────────────────────────── */
 function calcVoucherDiscount(v, base, cartLines) {
   if (!v) return 0;
@@ -617,7 +640,7 @@ function App() {
       {customize && (
         <CustomizeSheet
           item={customize}
-          variantGroups={variantGroups}
+          variantGroups={getProductVariantGroups(customize, variantGroups)}
           onClose={() => setCustomize(null)}
           onAdd={addLine}
         />
