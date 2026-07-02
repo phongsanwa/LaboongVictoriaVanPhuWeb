@@ -8,9 +8,15 @@
 
   $sub   = (int) $o->subtotal;
   $disc  = (int) $o->discount_amount;
+  $ship  = (int) $o->shipping_fee;
   $total = (int) $o->total_amount;
   $pts   = (int) $o->points_earned;
   $created = $o->created_at->setTimezone('Asia/Ho_Chi_Minh')->format('H:i d/m/Y');
+
+  $discRows      = $o->discounts;
+  $shipDiscRows  = $discRows->where('discount_category', 'SHIPPING');
+  $orderDiscRows = $discRows->where('discount_category', '!=', 'SHIPPING');
+  $method        = $ship > 0 ? 'Giao hang' : 'Nhan tai quay';
 
   $fmt = fn(int $n): string => number_format($n, 0, ',', '.');
 @endphp
@@ -24,7 +30,7 @@ KHACH HANG
 ----------
 Ten      : {{ $name }}
 SDT      : {{ $phone }}
-Hinh thuc: Nhan tai quay
+Hinh thuc: {{ $method }}
 
 MON DAT
 -------
@@ -50,9 +56,19 @@ GHI CHU: {{ $o->note }}
 TONG TIEN
 ---------
 Tam tinh : {{ $fmt($sub) }}d
-@if ($disc > 0)
+@if ($discRows->isNotEmpty())
+@foreach ($orderDiscRows as $d)
+Giam gia : -{{ $fmt((int) $d->discount_amount) }}d ({{ $d->description ?: 'Giam gia' }})
+@endforeach
+@elseif ($disc > 0)
 Giam gia : -{{ $fmt($disc) }}d
 @endif
+@if ($ship > 0)
+Phi ship : {{ $fmt($ship) }}d
+@endif
+@foreach ($shipDiscRows as $d)
+Giam ship: -{{ $fmt((int) $d->discount_amount) }}d
+@endforeach
 Tong cong: {{ $fmt($total) }}d
 @if ($pts > 0)
 Diem tich: +{{ $pts }} diem
