@@ -992,12 +992,13 @@ function App() {
                   {addrFormOpen ? (
                     <div style={{ border: "1.5px solid var(--brand)", borderRadius: 14, padding: 13, background: "var(--brand-soft, rgba(15,98,63,.06))", marginTop: 8, display: "flex", flexDirection: "column", gap: 8 }}>
                       <div style={{ fontSize: 13.5, fontWeight: 700 }}>Thêm địa chỉ giao hàng</div>
+                      {/* fontSize ≥ 16px: iOS Safari tự zoom vào input có chữ nhỏ hơn 16px */}
                       <input className="inp" placeholder="Tên người nhận" value={addrFormName}
                         onChange={e => { setAddrFormName(e.target.value); setAddrFormErr(""); }}
-                        style={{ width: "100%", boxSizing: "border-box", padding: "10px 12px", borderRadius: 10, border: "1px solid var(--line, #ddd)", fontSize: 14 }} />
+                        style={{ width: "100%", boxSizing: "border-box", padding: "10px 12px", borderRadius: 10, border: "1px solid var(--line, #ddd)", fontSize: 16 }} />
                       <textarea className="inp" placeholder="Địa chỉ nhận hàng (số nhà, đường, phường/quận…)" value={addrFormText} rows={2} autoFocus
                         onChange={e => { setAddrFormText(e.target.value); setAddrFormErr(""); }}
-                        style={{ width: "100%", boxSizing: "border-box", padding: "10px 12px", borderRadius: 10, border: "1px solid var(--line, #ddd)", fontSize: 14, resize: "none", fontFamily: "inherit" }} />
+                        style={{ width: "100%", boxSizing: "border-box", padding: "10px 12px", borderRadius: 10, border: "1px solid var(--line, #ddd)", fontSize: 16, resize: "none", fontFamily: "inherit" }} />
                       {addrFormErr && <div style={{ fontSize: 12.5, color: "var(--danger, #e53)", fontWeight: 600 }}>{addrFormErr}</div>}
                       <div style={{ display: "flex", gap: 8 }}>
                         <button onClick={() => { setAddrFormOpen(false); setAddrFormErr(""); }}
