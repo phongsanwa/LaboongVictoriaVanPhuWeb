@@ -70,8 +70,12 @@ class MenuPageController extends Controller
         }
         $allScopePromo = $activePromos->firstWhere('scope', 'all');
 
+        // --- Per-product variants (keyed by product id) ---
+        $allVariantRows = ProductVariant::orderBy('sort_order')->get();
+        $variantsByProduct = $allVariantRows->groupBy('product_id');
+
         // --- Menu items ---
-        $menu = $products->map(function (Product $p) use ($allScopePromo, $specificPromoMap) {
+        $menu = $products->map(function (Product $p) use ($allScopePromo, $specificPromoMap, $variantsByProduct) {
             $catSlug = $p->category?->slug ?? '';
             $grad    = $p->color ?? (self::GRAD_FALLBACKS[$catSlug] ?? self::DEFAULT_GRAD);
 
@@ -83,6 +87,15 @@ class MenuPageController extends Controller
             $basePrice = (int) $p->base_price;
             $promo     = $specificPromoMap[$p->id] ?? $allScopePromo;
             $salePrice = $promo ? $promo->calcSalePrice($basePrice) : null;
+
+            // Build per-product variant map: {TYPE: {name: {extra, available}}}
+            $variants = [];
+            foreach ($variantsByProduct->get($p->id, collect()) as $v) {
+                $variants[$v->variant_type][$v->name] = [
+                    'extra'     => (int) $v->extra_price,
+                    'available' => (bool) $v->is_available,
+                ];
+            }
 
             return [
                 'id'         => 'p' . $p->id,
@@ -96,17 +109,16 @@ class MenuPageController extends Controller
                 'img'        => $p->image_url ?: null,
                 'tags'       => $tags,
                 'available'  => (bool) $p->is_available,
+                'variants'   => $variants,
             ];
         })->values()->toArray();
 
-        // --- Variant groups ---
+        // --- Variant groups (global option list — per-product filtering done client-side) ---
         $variantGroups = VariantGroup::orderBy('sort_order')->get();
 
-        $variantRows = ProductVariant::orderBy('sort_order')->get();
-
-        $variantGroupsData = $variantGroups->map(function (VariantGroup $group) use ($variantRows) {
+        $variantGroupsData = $variantGroups->map(function (VariantGroup $group) use ($allVariantRows) {
             // Get all variants for this group's type, grouped by name
-            $byName = $variantRows
+            $byName = $allVariantRows
                 ->where('variant_type', $group->key)
                 ->groupBy('name');
 
