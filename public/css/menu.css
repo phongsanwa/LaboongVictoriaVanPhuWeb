@@ -149,7 +149,13 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
 .cart-note input { width: 100%; border: 1px solid var(--line); background: var(--card); border-radius: var(--r-sm); padding: 12px 14px; font: inherit; font-size: 14px; color: var(--ink); outline: none; }
 .cart-note input:focus { border-color: var(--brand); box-shadow: 0 0 0 3px var(--brand-soft); }
 
-.cart-f { background: var(--card); border-top: 1px solid var(--line); padding: 16px 20px 20px; }
+.cart-f {
+    background: var(--card);
+    border-top: 1px solid var(--line);
+    padding: 16px 20px 20px;
+    max-height: 300px;
+    overflow: auto;
+}
 .csum { display: flex; justify-content: space-between; padding: 4px 0; font-size: 13.5px; color: var(--ink-2); font-weight: 500; }
 .csum .v { font-weight: 600; color: var(--ink); font-variant-numeric: tabular-nums; }
 .csum.earn .v { color: var(--brand); }

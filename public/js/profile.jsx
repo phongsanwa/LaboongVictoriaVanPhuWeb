@@ -525,7 +525,7 @@ function AddrModal({ init, onClose, onSave }) {
           </div>
 
           {/* Địa chỉ — free text + autocomplete */}
-          <div className="fld">
+          <div className="fld search-places">
             <label style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
               <span>Địa chỉ</span>
               {searching && <span style={{ fontWeight: 400, color: "var(--ink-3)", fontSize: 12 }}>Đang tìm…</span>}
