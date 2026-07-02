@@ -97,6 +97,7 @@ function App() {
   const [t, setTweak] = useTweaks(TWEAK_DEFAULTS);
   const [qrOpen, setQrOpen] = useState(false);
   const [slide, setSlide] = useState(0);
+  const [promoDetail, setPromoDetail] = useState(null);
   const [tab, setTab] = useState("home");
 
   const serverCi = HOME.checkin || { streak: 0, last: null, today: false };
@@ -157,7 +158,7 @@ function App() {
 
   // esc closes modal
   useEffect(() => {
-    const h = e => { if (e.key === "Escape") setQrOpen(false); };
+    const h = e => { if (e.key === "Escape") { setQrOpen(false); setPromoDetail(null); } };
     window.addEventListener("keydown", h); return () => window.removeEventListener("keydown", h);
   }, []);
 
@@ -241,14 +242,15 @@ function App() {
                 <div className="promo-track">
                   {PROMOS.map((p, i) => (
                     <div className="promo-slide" key={i}
-                      style={{ background: p.bg, transform: `translateX(-${slide * 100}%)` }}>
+                      style={{ background: p.bg, transform: `translateX(-${slide * 100}%)`, cursor: "pointer" }}
+                      onClick={() => setPromoDetail(p)}>
                       <div className="pico"><Icon name={p.icon} size={30} color="#fff"/></div>
                       <div style={{ minWidth: 0 }}>
                         <span className="promo-tag">{p.tag}</span>
                         <h4>{p.title}</h4>
                         <p>{p.sub}</p>
                       </div>
-                      <button className="promo-go">Xem <Icon name="arrow" size={15}/></button>
+                      <button className="promo-go" onClick={e => { e.stopPropagation(); setPromoDetail(p); }}>Xem <Icon name="arrow" size={15}/></button>
                     </div>
                   ))}
                 </div>
@@ -382,6 +384,43 @@ function App() {
                 <Icon name="info" size={18} color="var(--brand)" />
                 <span>Mỗi 10.000đ hóa đơn = 1 điểm. Điểm được cộng ngay sau khi nhân viên quét mã.</span>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ---------- Promo detail modal ---------- */}
+      {promoDetail && (
+        <div className="scrim" onClick={() => setPromoDetail(null)}>
+          <div className="qr-modal" onClick={e => e.stopPropagation()}>
+            <div className="qr-modal-h" style={{ background: promoDetail.bg }}>
+              <button className="qr-close" onClick={() => setPromoDetail(null)}>×</button>
+              <span className="promo-tag" style={{ marginBottom: 8, display: "inline-block" }}>{promoDetail.tag}</span>
+              <h3>{promoDetail.title}</h3>
+              {promoDetail.sub && <p>{promoDetail.sub}</p>}
+            </div>
+            <div className="qr-body" style={{ textAlign: "left" }}>
+              {promoDetail.benefit && (
+                <div style={{ display: "flex", alignItems: "flex-start", gap: 10, marginBottom: 12 }}>
+                  <Icon name="gift" size={18} color="var(--brand)" />
+                  <div style={{ fontSize: 14, fontWeight: 600 }}>{promoDetail.benefit}</div>
+                </div>
+              )}
+              {(promoDetail.start || promoDetail.end) && (
+                <div style={{ display: "flex", alignItems: "flex-start", gap: 10, marginBottom: 14 }}>
+                  <Icon name="cal" size={18} color="var(--brand)" />
+                  <div style={{ fontSize: 13.5, color: "var(--ink-2)" }}>
+                    Áp dụng {promoDetail.start ? `từ ${promoDetail.start}` : ""}{promoDetail.end ? ` đến ${promoDetail.end}` : ""}
+                  </div>
+                </div>
+              )}
+              <div className="qr-hint" style={{ marginBottom: 14 }}>
+                <Icon name="info" size={18} color="var(--brand)" />
+                <span>Ưu đãi được áp dụng tự động khi bạn đặt món trong thời gian diễn ra chương trình.</span>
+              </div>
+              <a href={NAV_URLS.menu} className="qr-cta" style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, textDecoration: "none" }}>
+                <Icon name="cup" size={18} color="#fff" /> Đặt món ngay
+              </a>
             </div>
           </div>
         </div>
