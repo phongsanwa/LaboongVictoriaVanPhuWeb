@@ -36,8 +36,29 @@ function validatePhone(raw) {
   return { ok: true };
 }
 function validateEmail(raw) {
-  if (!raw.trim()) return { ok: true }; // optional
+  if (!raw.trim()) return { ok: false, msg: "Vui lòng nhập email" };
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(raw.trim()) ? { ok: true } : { ok: false, msg: "Email không hợp lệ" };
+}
+/* Ngày sinh: nhập tay dd/mm/yyyy, tự chèn dấu "/" */
+function formatDobInput(raw) {
+  const d = raw.replace(/\D/g, "").slice(0, 8);
+  if (d.length <= 2) return d;
+  if (d.length <= 4) return d.slice(0, 2) + "/" + d.slice(2);
+  return d.slice(0, 2) + "/" + d.slice(2, 4) + "/" + d.slice(4);
+}
+function validateDob(raw) {
+  if (!raw.trim()) return { ok: true }; // optional
+  const m = raw.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+  if (!m) return { ok: false, msg: "Nhập đủ ngày sinh theo dạng dd/mm/yyyy" };
+  const d = +m[1], mo = +m[2], y = +m[3];
+  const dt = new Date(y, mo - 1, d);
+  const valid = dt.getFullYear() === y && dt.getMonth() === mo - 1 && dt.getDate() === d;
+  if (!valid || y < 1900 || dt >= new Date()) return { ok: false, msg: "Ngày sinh không hợp lệ" };
+  return { ok: true };
+}
+function dobToISO(raw) {
+  const m = raw.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+  return m ? `${m[3]}-${m[2]}-${m[1]}` : "";
 }
 function validatePassword(raw) {
   if (!raw) return { ok: false, msg: "Vui lòng nhập mật khẩu" };
@@ -59,19 +80,20 @@ function FormStep({ data, setData, onNext }) {
   const [showPw2, setShowPw2] = useState(false);
   const phoneRes = validatePhone(data.phone);
   const emailRes = validateEmail(data.email);
+  const dobRes = validateDob(data.dob);
   const pwRes = validatePassword(data.password);
   const pw2Res = validatePasswordConfirm(data.password, data.password_confirmation);
   const nameOk = data.name.trim().length >= 2;
-  const canSubmit = phoneRes.ok && emailRes.ok && nameOk && pwRes.ok && pw2Res.ok;
+  const canSubmit = phoneRes.ok && emailRes.ok && dobRes.ok && nameOk && pwRes.ok && pw2Res.ok;
 
   const submit = async () => {
-    setTouched({ phone: true, name: true, email: true, password: true, password_confirmation: true });
+    setTouched({ phone: true, name: true, email: true, dob: true, password: true, password_confirmation: true });
     setServerError("");
     if (!canSubmit) return;
 
     setLoading(true);
     const { ok, data: res } = await apiPost("/register", {
-      phone: normalizePhone(data.phone), name: data.name, email: data.email, dob: data.dob,
+      phone: normalizePhone(data.phone), name: data.name, email: data.email, dob: dobToISO(data.dob),
       password: data.password, password_confirmation: data.password_confirmation,
     });
     setLoading(false);
@@ -145,13 +167,14 @@ function FormStep({ data, setData, onNext }) {
       </div>
 
       <div className="fld">
-        <label>Email<span className="opt">(không bắt buộc)</span></label>
+        <label>Email<span className="req">*</span></label>
         <div className="inp-wrap">
           <span className="lic"><Icon name="mail" size={18} /></span>
           <input className={"inp" + (touched.email && !emailRes.ok ? " bad" : "")} inputMode="email"
             placeholder="ban@email.com" value={data.email}
             onChange={e => setData({ ...data, email: e.target.value })}
             onBlur={() => setTouched(t => ({ ...t, email: true }))} />
+          {emailRes.ok && data.email && <span className="okmark"><Icon name="check" size={18} /></span>}
         </div>
         {touched.email && !emailRes.ok && <div className="err"><Icon name="info" size={14} color="var(--danger)" /> {emailRes.msg}</div>}
       </div>
@@ -160,10 +183,15 @@ function FormStep({ data, setData, onNext }) {
         <label>Ngày sinh<span className="opt">(không bắt buộc)</span></label>
         <div className="inp-wrap">
           <span className="lic"><Icon name="cal" size={18} /></span>
-          <input className="inp" type="date" max="2012-12-31" value={data.dob}
-            onChange={e => setData({ ...data, dob: e.target.value })} />
+          <input className={"inp" + (touched.dob && !dobRes.ok ? " bad" : "")} inputMode="numeric"
+            placeholder="dd/mm/yyyy — VD: 20/10/1997" value={data.dob} maxLength={10}
+            onChange={e => setData({ ...data, dob: formatDobInput(e.target.value) })}
+            onBlur={() => setTouched(t => ({ ...t, dob: true }))} />
+          {dobRes.ok && data.dob.length === 10 && <span className="okmark"><Icon name="check" size={18} /></span>}
         </div>
-        <div className="hint">Nhận quà sinh nhật đặc biệt từ Laboong 🎂</div>
+        {touched.dob && !dobRes.ok
+          ? <div className="err"><Icon name="info" size={14} color="var(--danger)" /> {dobRes.msg}</div>
+          : <div className="hint">Nhận quà sinh nhật đặc biệt từ Laboong 🎂</div>}
       </div>
 
       <button className="btn primary" disabled={!canSubmit || loading} onClick={submit} style={{ marginTop: 6 }}>
