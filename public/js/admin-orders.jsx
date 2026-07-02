@@ -353,7 +353,7 @@ function OrderDrawer({ o, saving, onClose, onAdvance, onCancel }) {
             <div className="od-ir"><span className="odi"><Icon name={o.type === "ship" ? "truck" : "bag"} size={16} /></span>
               <div style={{ minWidth: 0 }}>
                 <div className="odk">{o.type === "ship" ? "Giao đến" : "Hình thức"}</div>
-                <div className="odv">{o.type === "ship" ? o.addr : "Nhận tại quầy · Victoria Văn Phú"}</div>
+                <div className="odv">{o.type === "ship" ? (o.addr || "Giao hàng (chưa lưu địa chỉ)") : `Nhận tại quầy${o.store ? " · " + o.store : ""}`}</div>
               </div>
             </div>
           </div>
@@ -381,7 +381,17 @@ function OrderDrawer({ o, saving, onClose, onAdvance, onCancel }) {
 
           <div className="od-totals">
             <div className="od-trow"><span>Tạm tính</span><span className="v">{fmt(o.sub)}đ</span></div>
-            {o.discount > 0 && <div className="od-trow discount"><span>Giảm giá</span><span className="v">−{fmt(o.discount)}đ</span></div>}
+            {(o.discounts && o.discounts.length > 0) ? (
+              o.discounts.filter(d => !d.ship).map((d, i) => (
+                <div className="od-trow discount" key={i}><span>{d.label}</span><span className="v">−{fmt(d.amount)}đ</span></div>
+              ))
+            ) : (o.discount > 0 && (
+              <div className="od-trow discount"><span>Giảm giá</span><span className="v">−{fmt(o.discount)}đ</span></div>
+            ))}
+            {o.ship > 0 && <div className="od-trow"><span>Phí giao hàng</span><span className="v">{fmt(o.ship)}đ</span></div>}
+            {(o.discounts || []).filter(d => d.ship).map((d, i) => (
+              <div className="od-trow discount" key={"s" + i}><span>{d.label}</span><span className="v">−{fmt(d.amount)}đ</span></div>
+            ))}
             <div className="od-trow grand"><span>Tổng cộng</span><span className="v">{fmt(o.total)}đ</span></div>
           </div>
         </div>

@@ -59,7 +59,7 @@ class OrdersController extends Controller
         $order->update(array_merge(['status' => $nextDb], $extra));
 
         return response()->json([
-            'order'   => $this->presentOrder($order->fresh(['customer.user', 'items.product', 'items.toppings'])),
+            'order'   => $this->presentOrder($order->fresh(['customer.user', 'items.product', 'items.toppings', 'discounts', 'store'])),
             'message' => 'Đã cập nhật trạng thái',
         ]);
     }
@@ -74,7 +74,7 @@ class OrdersController extends Controller
         $order->update(['status' => 'CANCELLED', 'cancelled_at' => now()]);
 
         return response()->json([
-            'order'   => $this->presentOrder($order->fresh(['customer.user', 'items.product', 'items.toppings'])),
+            'order'   => $this->presentOrder($order->fresh(['customer.user', 'items.product', 'items.toppings', 'discounts', 'store'])),
             'message' => 'Đã huỷ đơn hàng',
         ]);
     }
@@ -87,7 +87,7 @@ class OrdersController extends Controller
 
     private function buildOrders(): array
     {
-        $orders = Order::with(['customer.user', 'items.product', 'items.toppings'])
+        $orders = Order::with(['customer.user', 'items.product', 'items.toppings', 'discounts', 'store'])
             ->where(function ($q) {
                 $q->whereIn('status', ['PENDING', 'CONFIRMED', 'PREPARING', 'READY'])
                   ->orWhere('created_at', '>=', now()->startOfDay());
@@ -125,16 +125,28 @@ class OrdersController extends Controller
             ];
         })->values()->toArray();
 
+        $isShip = !empty($o->delivery_address) || (int) $o->shipping_fee > 0;
+
+        // Từng mã giảm giá khách đã áp dụng (đơn + phí ship)
+        $discountLines = $o->discounts->map(fn ($d) => [
+            'label'  => $d->description ?: ($d->discount_category === 'SHIPPING' ? 'Giảm phí ship' : 'Giảm giá'),
+            'amount' => (int) $d->discount_amount,
+            'ship'   => $d->discount_category === 'SHIPPING',
+        ])->values()->toArray();
+
         return [
             'id'        => 'LB-' . str_pad($o->id, 4, '0', STR_PAD_LEFT),
             'dbId'      => $o->id,
             'status'    => self::STATUS_MAP[$o->status] ?? 'new',
             'cust'      => $user?->name ?? 'Khách hàng',
             'phone'     => $user?->phone ?? '',
-            'type'      => 'pickup',
-            'addr'      => null,
+            'type'      => $isShip ? 'ship' : 'pickup',
+            'addr'      => $o->delivery_address,
+            'store'     => $o->store?->name,
             'items'     => $items,
             'discount'  => (int) $o->discount_amount,
+            'discounts' => $discountLines,
+            'ship'      => (int) $o->shipping_fee,
             'sub'       => (int) $o->subtotal,
             'total'     => (int) $o->total_amount,
             'note'      => $o->note ?? '',

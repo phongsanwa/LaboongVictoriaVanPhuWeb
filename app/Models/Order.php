@@ -20,6 +20,7 @@ class Order extends Model
         'total_amount',
         'points_earned',
         'note',
+        'delivery_address',
         'completed_at',
         'cancelled_at',
         'cancel_reason',
