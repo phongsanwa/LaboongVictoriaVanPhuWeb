@@ -15,6 +15,60 @@ const REWARD = HOME.reward || "";
 const PROMOS = HOME.promos || [];
 const TX = HOME.transactions || [];
 const STORE = HOME.store || null;
+
+/* ---- Google Maps (loaded async in welcome.blade.php) ---- */
+function onGmapsReady(fn) {
+  if (window.__gmapsReady || window.google?.maps) { fn(); return; }
+  if (window.__gmapsCallbacks) { window.__gmapsCallbacks.push(fn); }
+}
+
+function storeCoords(s) {
+  const lat = parseFloat(s?.latitude), lng = parseFloat(s?.longitude);
+  return (isFinite(lat) && isFinite(lng)) ? { lat, lng } : null;
+}
+
+function directionsUrl(s) {
+  const c = storeCoords(s);
+  return c
+    ? `https://www.google.com/maps/dir/?api=1&destination=${c.lat},${c.lng}`
+    : `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(s?.address || s?.name || '')}`;
+}
+
+/* Bản đồ vị trí cửa hàng — fallback về placeholder khi chưa có toạ độ / chưa có API key */
+function StoreMap({ store }) {
+  const divRef = useRef(null);
+  const [ready, setReady] = useState(false);
+  const coords = storeCoords(store);
+
+  useEffect(() => {
+    if (!coords) return;
+    let destroyed = false;
+    onGmapsReady(() => {
+      if (destroyed || !divRef.current) return;
+      const maps = window.google?.maps;
+      if (!maps) return;
+      const map = new maps.Map(divRef.current, {
+        center: coords, zoom: 16,
+        disableDefaultUI: true, gestureHandling: "none",
+        clickableIcons: false, keyboardShortcuts: false,
+      });
+      new maps.Marker({ position: coords, map, title: store.name });
+      setReady(true);
+    });
+    return () => { destroyed = true; };
+  }, []); // eslint-disable-line
+
+  return (
+    <div className="store-map" onClick={() => window.open(directionsUrl(store), "_blank")}
+      style={{ cursor: "pointer" }} title="Mở bản đồ chỉ đường">
+      <div ref={divRef} style={{ position: "absolute", inset: 0, zIndex: 1, display: ready ? "block" : "none" }} />
+      {!ready && (<>
+        <div className="pin" />
+        <span className="maplabel">{coords ? "Đang tải bản đồ…" : store.address}</span>
+      </>)}
+    </div>
+  );
+}
 const POINTS_THIS_WEEK = HOME.pointsThisWeek || 0;
 const CHECKIN_CONFIG = HOME.checkinConfig || [
   { d: "Ngày 1", pts: 5 }, { d: "Ngày 2", pts: 5 }, { d: "Ngày 3", pts: 10 },
@@ -252,10 +306,7 @@ function App() {
                   <h3>Cửa hàng của bạn</h3>
                   <a className="link" href={NAV_URLS.store}>Tất cả <Icon name="chev" size={15}/></a>
                 </div>
-                <div className="store-map">
-                  <div className="pin" />
-                  <span className="maplabel">// bản đồ vị trí cửa hàng</span>
-                </div>
+                <StoreMap store={STORE} />
                 <div className="store-body">
                   <div className="store-row">
                     <div style={{ minWidth: 0 }}>
@@ -268,8 +319,8 @@ function App() {
                   </div>
                 </div>
                 <div className="store-btns">
-                  <button className="sbtn primary"><Icon name="nav" size={17} color="#fff"/> Chỉ đường</button>
-                  <button className="sbtn ghost"><Icon name="phone" size={17}/> Gọi cửa hàng</button>
+                  <button className="sbtn primary" onClick={() => window.open(directionsUrl(STORE), "_blank")}><Icon name="nav" size={17} color="#fff"/> Chỉ đường</button>
+                  <button className="sbtn ghost" onClick={() => STORE.phone && (location.href = "tel:" + STORE.phone.replace(/[\s.]/g, ""))} disabled={!STORE.phone}><Icon name="phone" size={17}/> Gọi cửa hàng</button>
                 </div>
               </section>
             )}
