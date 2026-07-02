@@ -31,6 +31,9 @@ KHACH HANG
 Ten      : {{ $name }}
 SDT      : {{ $phone }}
 Hinh thuc: {{ $method }}
+@if ($o->store?->name)
+Cua hang : {{ $o->store->name }}
+@endif
 @if ($o->delivery_address)
 Dia chi  : {{ $o->delivery_address }}
 @endif

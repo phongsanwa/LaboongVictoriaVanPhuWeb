@@ -40,6 +40,7 @@
   $shipDiscRows  = $discRows->where('discount_category', 'SHIPPING');
   $orderDiscRows = $discRows->where('discount_category', '!=', 'SHIPPING');
   $method        = $ship > 0 ? 'Giao hàng' : 'Nhận tại quầy';
+  $storeName     = $o->store?->name;
 
   $adminUrl = url('/admin/orders');
 
@@ -89,6 +90,12 @@
               <td style="padding:3px 14px 3px 0;font-size:13.5px;color:#6B7280;white-space:nowrap;">Hình thức</td>
               <td style="padding:3px 0;font-size:14px;font-weight:600;color:#1A1A1A;">{{ $method }}</td>
             </tr>
+            @if ($storeName)
+            <tr>
+              <td style="padding:3px 14px 3px 0;font-size:13.5px;color:#6B7280;white-space:nowrap;">{{ $ship > 0 ? 'Giao từ' : 'Cửa hàng' }}</td>
+              <td style="padding:3px 0;font-size:14px;font-weight:600;color:#1A1A1A;">{{ $storeName }}</td>
+            </tr>
+            @endif
             @if ($o->delivery_address)
             <tr>
               <td style="padding:3px 14px 3px 0;font-size:13.5px;color:#6B7280;white-space:nowrap;vertical-align:top;">Địa chỉ giao</td>
