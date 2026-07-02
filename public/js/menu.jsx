@@ -388,9 +388,10 @@ function App() {
   const shipFee = geoInfo?.fee ?? 0;
   const dist    = geoInfo?.dist ?? null;
 
-  const orderDiscount   = orderVoucher
-    ? calcVoucherDiscount(orderVoucher, subtotal, lines)
-    : calcOrderPromoDiscount(selectedOrderPromo, subtotal);
+  /* Quà tích điểm (voucher) và Voucher giảm đơn hàng (promo) cộng dồn được */
+  const voucherDiscount = orderVoucher ? calcVoucherDiscount(orderVoucher, subtotal, lines) : 0;
+  const promoDiscount   = selectedOrderPromo ? calcOrderPromoDiscount(selectedOrderPromo, subtotal) : 0;
+  const orderDiscount   = Math.min(subtotal, voucherDiscount + promoDiscount);
   const shipDiscount    = shippingVoucher
     ? calcVoucherDiscount(shippingVoucher, shipFee)
     : calcShipPromoDiscount(selectedShipPromo, shipFee, subtotal, dist);
@@ -427,12 +428,13 @@ function App() {
         return;
       }
     }
-    setOrderVoucher(v); setSelectedOrderPromo(null); setCouponErr(""); setCouponView(false);
+    // Cộng dồn được với voucher giảm đơn hàng — không xoá lựa chọn kia
+    setOrderVoucher(v); setCouponErr(""); setCouponView(false);
   };
 
   const applyOrderPromo = (p) => {
     if (subtotal < (p.min_purchase || 0)) { setCouponErr(`Áp dụng cho đơn từ ${fmt(p.min_purchase)}đ`); return; }
-    setSelectedOrderPromo(p); setOrderVoucher(null); setCouponErr(""); setCouponView(false);
+    setSelectedOrderPromo(p); setCouponErr(""); setCouponView(false);
   };
 
   const applyShippingVoucher = (v) => {
@@ -1034,7 +1036,7 @@ function App() {
                                 : (orderVoucher.code || 'Quà tích điểm')}
                             </div>
                           </div>
-                          <span className="cav">−{fmt(orderDiscount)}đ</span>
+                          <span className="cav">−{fmt(voucherDiscount)}đ</span>
                           <button className="cax" onClick={() => setOrderVoucher(null)} title="Bỏ voucher"><Icon name="close" size={16} /></button>
                         </div>
                       )}
@@ -1045,7 +1047,7 @@ function App() {
                             <div className="can">{selectedOrderPromo.name}</div>
                             <div className="cac">Khuyến mãi đơn hàng</div>
                           </div>
-                          <span className="cav">−{fmt(orderDiscount)}đ</span>
+                          <span className="cav">−{fmt(promoDiscount)}đ</span>
                           <button className="cax" onClick={() => setSelectedOrderPromo(null)} title="Bỏ khuyến mãi"><Icon name="close" size={16} /></button>
                         </div>
                       )}
@@ -1075,7 +1077,7 @@ function App() {
                     </button>
                   )}
                   <div className="csum"><span>Tạm tính</span><span className="v tnum">{fmt(subtotal)}đ</span></div>
-                  {orderDiscount > 0 && <div className="csum" style={{ color: "var(--pink)" }}><span>{selectedOrderPromo ? selectedOrderPromo.name : orderVoucher?.discount_type === 'free_item' ? `Miễn phí ${(orderVoucher.free_item_quantity || 1) > 1 ? orderVoucher.free_item_quantity + '× ' : ''}${orderVoucher.free_item_product_id ? (orderVoucher.free_item_product_name || 'sản phẩm') : 'topping'}` : "Giảm đơn hàng"}</span><span className="v tnum" style={{ color: "var(--pink)" }}>−{fmt(orderDiscount)}đ</span></div>}
+                  {orderDiscount > 0 && <div className="csum" style={{ color: "var(--pink)" }}><span>{orderVoucher && selectedOrderPromo ? "Giảm đơn hàng (2 ưu đãi)" : selectedOrderPromo ? selectedOrderPromo.name : orderVoucher?.discount_type === 'free_item' ? `Miễn phí ${(orderVoucher.free_item_quantity || 1) > 1 ? orderVoucher.free_item_quantity + '× ' : ''}${orderVoucher.free_item_product_id ? (orderVoucher.free_item_product_name || 'sản phẩm') : 'topping'}` : "Giảm đơn hàng"}</span><span className="v tnum" style={{ color: "var(--pink)" }}>−{fmt(orderDiscount)}đ</span></div>}
                   {geoInfo?.dist != null && (
                     <div className="csum" style={{ color: "var(--ink-3)", fontSize: 13 }}>
                       <span>Khoảng cách</span>
