@@ -494,6 +494,10 @@ function App() {
   const qtyOfItem = (id) => lines.filter(l => l.id === id).reduce((s, l) => s + l.qty, 0);
   const count    = lines.reduce((s, l) => s + l.qty, 0);
   const subtotal = lines.reduce((s, l) => s + l.unit * l.qty, 0);
+  /* Kiểu ShopeeFood: Tạm tính hiện GIÁ GỐC, phần gạch giá tách thành dòng
+     "Khuyến mãi gạch giá". origUnit = unit + (giá gốc − giá đã gạch). */
+  const origSubtotal = lines.reduce((s, l) => s + (l.unit + (l.origPrice != null ? l.origPrice - l.base : 0)) * l.qty, 0);
+  const saleSavings  = Math.max(0, origSubtotal - subtotal);
 
   const selectedAddr  = addrId === "pickup" ? null : addresses.find(a => a.id === addrId);
   const selectedStore = liveStores.find(s => s.id === selectedStoreId) || liveStores[0] || null;
@@ -1323,7 +1327,8 @@ function App() {
                       <span className="ctchev"><Icon name="chev" size={17} /></span>
                     </button>
                   )}
-                  <div className="csum"><span>Tạm tính</span><span className="v tnum">{fmt(subtotal)}đ</span></div>
+                  <div className="csum"><span>Tạm tính</span><span className="v tnum">{fmt(origSubtotal)}đ</span></div>
+                  {saleSavings > 0 && <div className="csum" style={{ color: "var(--pink)" }}><span>Khuyến mãi gạch giá</span><span className="v tnum" style={{ color: "var(--pink)" }}>−{fmt(saleSavings)}đ</span></div>}
                   {orderDiscount > 0 && <div className="csum" style={{ color: "var(--pink)" }}><span>{orderVoucher && selectedOrderPromo ? "Giảm đơn hàng (2 ưu đãi)" : selectedOrderPromo ? selectedOrderPromo.name : orderVoucher?.discount_type === 'free_item' ? `Miễn phí ${(orderVoucher.free_item_quantity || 1) > 1 ? orderVoucher.free_item_quantity + '× ' : ''}${orderVoucher.free_item_product_id ? (orderVoucher.free_item_product_name || 'sản phẩm') : 'topping'}` : "Giảm đơn hàng"}</span><span className="v tnum" style={{ color: "var(--pink)" }}>−{fmt(orderDiscount)}đ</span></div>}
                   {geoInfo?.dist != null && (
                     <div className="csum" style={{ color: "var(--ink-3)", fontSize: 13 }}>

@@ -109,14 +109,18 @@ class OrderController extends Controller
                 : (float) $product->base_price;
 
             $addonTotal = array_sum(array_column($addonTops, 'extra'));
-            $unitPrice  = round($effectiveBase + $sizeExtra + $addonTotal, 2);
-            $itemTotal  = round($unitPrice * $qty, 2);
+            // Kiểu ShopeeFood: đơn lưu GIÁ GỐC; phần gạch giá tách thành dòng
+            // "Khuyến mãi gạch giá" riêng. sale_* chỉ dùng để tính khuyến mãi.
+            $origUnit   = round((float) $product->base_price + $sizeExtra + $addonTotal, 2);
+            $saleUnit   = round($effectiveBase + $sizeExtra + $addonTotal, 2);
 
             $itemData[] = [
                 'product_id'       => $productId,
                 'quantity'         => $qty,
-                'unit_price'       => $unitPrice,
-                'item_total'       => $itemTotal,
+                'unit_price'       => $origUnit,
+                'item_total'       => round($origUnit * $qty, 2),
+                'sale_unit'        => $saleUnit,
+                'sale_total'       => round($saleUnit * $qty, 2),
                 'sugar_level'      => $sugarLevel,
                 'ice_level'        => $iceLevel,
                 'size_name'        => $sizeName,
@@ -129,7 +133,9 @@ class OrderController extends Controller
             return response()->json(['message' => 'Không có sản phẩm hợp lệ trong đơn hàng'], 422);
         }
 
-        $subtotal = round(array_sum(array_column($itemData, 'item_total')), 2);
+        $subtotal     = round(array_sum(array_column($itemData, 'item_total')), 2); // giá gốc (hiển thị Tạm tính)
+        $saleSubtotal = round(array_sum(array_column($itemData, 'sale_total')), 2); // giá đã gạch (tính khuyến mãi)
+        $badgeDiscAmt = round($subtotal - $saleSubtotal, 2); // dòng "Khuyến mãi gạch giá"
 
         // --- Resolve vouchers ---
         $orderVoucher    = null;
@@ -182,7 +188,7 @@ class OrderController extends Controller
                 ->first();
             if ($p
                 && ($p->valid_until === null || $p->valid_until->isFuture())
-                && $subtotal >= (float) ($p->min_purchase ?? 0)) {
+                && $saleSubtotal >= (float) ($p->min_purchase ?? 0)) {
                 $orderPromo = $p;
             }
         }
@@ -192,7 +198,7 @@ class OrderController extends Controller
             $sp = ShippingPromotion::where('id', $data['ship_promo_id'])
                 ->where('is_active', true)
                 ->first();
-            if ($sp && $subtotal >= (float) $sp->min_order_amount) {
+            if ($sp && $saleSubtotal >= (float) $sp->min_order_amount) {
                 $shipPromo = $sp;
             }
         }
@@ -204,17 +210,17 @@ class OrderController extends Controller
         $voucherDiscAmt    = $orderVoucher
             ? ($orderVoucher->discount_type === 'buy_get'
                 ? $this->calcBuyGetDiscount($orderVoucher, $itemData)
-                : $discSvc->calcVoucherDiscount($orderVoucher, $subtotal))
+                : $discSvc->calcVoucherDiscount($orderVoucher, $saleSubtotal))
             : 0;
-        $orderPromoDiscAmt = $orderPromo   ? $this->calcPromotionDiscount($orderPromo, $subtotal)    : 0;
-        $orderDiscAmt      = min($subtotal, $voucherDiscAmt + $orderPromoDiscAmt);
+        $orderPromoDiscAmt = $orderPromo   ? $this->calcPromotionDiscount($orderPromo, $saleSubtotal)    : 0;
+        $orderDiscAmt      = min($saleSubtotal, $voucherDiscAmt + $orderPromoDiscAmt);
 
         $shipVoucherDiscAmt = $shippingVoucher ? $discSvc->calcVoucherDiscount($shippingVoucher, $shippingFee) : 0;
         $shipPromoDiscAmt   = $shipPromo       ? $this->calcShipPromoDiscount($shipPromo, $shippingFee)        : 0;
         $shipDiscAmt        = min($shippingFee, $shipVoucherDiscAmt + $shipPromoDiscAmt);
 
-        $discountAmt  = $orderDiscAmt + $shipDiscAmt;
-        $totalAmount  = max(0.0, round($subtotal - $orderDiscAmt + $shippingFee - $shipDiscAmt, 2));
+        $discountAmt  = $badgeDiscAmt + $orderDiscAmt + $shipDiscAmt;
+        $totalAmount  = max(0.0, round($saleSubtotal - $orderDiscAmt + $shippingFee - $shipDiscAmt, 2));
         $pointsEarned = (int) floor($totalAmount / self::PER_POINT);
 
         $orderId = null;
@@ -222,7 +228,7 @@ class OrderController extends Controller
         DB::transaction(function () use (
             $customer, $store, $data, $itemData,
             $subtotal, $discountAmt, $shippingFee, $totalAmount, $pointsEarned,
-            $orderVoucher, $shippingVoucher, $orderPromo, $shipPromo,
+            $orderVoucher, $shippingVoucher, $orderPromo, $shipPromo, $badgeDiscAmt,
             $voucherDiscAmt, $orderPromoDiscAmt, $shipVoucherDiscAmt, $shipPromoDiscAmt,
             &$orderId
         ) {
@@ -241,7 +247,7 @@ class OrderController extends Controller
 
             foreach ($itemData as $item) {
                 $toppings = $item['toppings'];
-                unset($item['toppings']);
+                unset($item['toppings'], $item['sale_unit'], $item['sale_total']);
                 $orderItem = $order->items()->create($item);
 
                 foreach ($toppings as $top) {
@@ -251,6 +257,17 @@ class OrderController extends Controller
                         'price_at_order' => $top['extra'],
                     ]);
                 }
+            }
+
+            // Dòng "Khuyến mãi gạch giá" — chênh lệch giá gốc và giá đang giảm
+            if ($badgeDiscAmt > 0) {
+                OrderDiscount::create([
+                    'order_id'          => $order->id,
+                    'discount_category' => 'PROMOTION_VOUCHER',
+                    'voucher_id'        => null,
+                    'discount_amount'   => $badgeDiscAmt,
+                    'description'       => 'Khuyến mãi gạch giá',
+                ]);
             }
 
             // Save OrderDiscount records + mark vouchers used.
@@ -439,8 +456,9 @@ class OrderController extends Controller
 
         $units = [];
         foreach ($itemData as $it) {
+            // Dùng giá đã gạch (khách thực trả) — khớp với cách giỏ hàng tính
             for ($i = 0; $i < $it['quantity']; $i++) {
-                $units[] = (float) $it['unit_price'];
+                $units[] = (float) ($it['sale_unit'] ?? $it['unit_price']);
             }
         }
         if (count($units) < $buy + $free) return 0;

@@ -56,6 +56,7 @@ function CustomizeSheet({ item, variantGroups, onClose, onAdd }) {
   const submit = () => {
     onAdd({
       id: item.id, name: item.name, base: item.price,
+      origPrice: item.origPrice ?? null, // giá gốc khi món đang gạch giá
       grad: item.grad, img: item.img || null, cat: item.cat,
       selections: { ...selections }, unit, qty,
     });
