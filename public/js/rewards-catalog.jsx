@@ -33,6 +33,7 @@ const CATS = {
   voucher: { label: "Voucher", ic: "percent" },
   drink:   { label: "Đồ uống", ic: "cup" },
   gift:    { label: "Quà tặng", ic: "gift" },
+  buyget:  { label: "Mua X tặng Y", ic: "cart" },
   topping: { label: "Freetopping", ic: "spark" },
   upsize:  { label: "Upsize", ic: "arrowup" },
   upgrade: { label: "Nâng cấp", ic: "spark" },

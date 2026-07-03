@@ -137,6 +137,26 @@ class RewardsCatalogController extends Controller
                     'usage_count'           => 0,
                     'status'                => 'active',
                 ]);
+            } elseif ($reward->category === 'buyget') {
+                // Mua X tặng Y: giảm tiền Y món rẻ nhất khi giỏ có đủ X+Y món.
+                // X lưu ở reward->value, Y ở free_item_quantity; số tiền tính lúc đặt đơn.
+                Voucher::create([
+                    'voucher_code'          => 'BXG' . now()->format('Ymd') . strtoupper(Str::random(6)),
+                    'customer_id'           => $customer->id,
+                    'redemption_id'         => $redemption->id,
+                    'applies_to'            => 'ORDER',
+                    'discount_type'         => 'buy_get',
+                    'discount_value'        => 0,
+                    'free_item_product_id'  => null,
+                    'free_item_quantity'    => max(1, (int) ($reward->free_item_quantity ?? 1)),
+                    'buy_quantity'          => max(1, (int) ($reward->value ?? 2)),
+                    'min_purchase'          => null,
+                    'max_discount'          => null,
+                    'valid_from'            => now()->toDateString(),
+                    'valid_until'           => now()->addMonths(3)->toDateString(),
+                    'usage_count'           => 0,
+                    'status'                => 'active',
+                ]);
             } elseif ($reward->category === 'gift') {
                 // Quà vật phẩm (gấu bông, kẹp tóc…): không trừ tiền đơn — chỉ gắn kèm
                 // đơn hàng để quán chuẩn bị quà, nên discount_value = 0

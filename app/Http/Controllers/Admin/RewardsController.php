@@ -13,7 +13,7 @@ use Illuminate\Support\Facades\Storage;
 class RewardsController extends Controller
 {
     /** Reward categories shown in the admin catalogue; anything else (e.g. tier_benefit) is hidden here. */
-    private const CATEGORIES = ['voucher', 'drink', 'gift', 'topping', 'upsize', 'upgrade'];
+    private const CATEGORIES = ['voucher', 'drink', 'gift', 'buyget', 'topping', 'upsize', 'upgrade'];
 
     private const GRADS = [
         'linear-gradient(135deg,#0F623F,#1AA86A)',
@@ -57,6 +57,7 @@ class RewardsController extends Controller
             'reward_type' => match (true) {
                 $data['category'] === 'voucher' => 'discount_voucher',
                 $data['category'] === 'gift'    => 'other', // quà vật phẩm (gấu bông, kẹp tóc…) — không gắn sản phẩm menu
+                $data['category'] === 'buyget'  => 'other', // mua X tặng Y — giảm giá món rẻ nhất trong giỏ
                 default                         => 'free_item',
             },
             'quantity_available' => $data['quantity_total'],
@@ -133,6 +134,7 @@ class RewardsController extends Controller
 
         $isFreeItem = $data['cat'] === 'drink';
         $isGift     = $data['cat'] === 'gift';
+        $isBuyGet   = $data['cat'] === 'buyget'; // value = số món phải mua (X), free_item_quantity = số món tặng (Y)
         $isUpgrade  = in_array($data['cat'], ['topping', 'upsize', 'upgrade']);
 
         return [
@@ -145,8 +147,9 @@ class RewardsController extends Controller
             'gradient'           => $data['grad'] ?? null,
             'image_url'          => $data['img'] ?? null,
             'product_id'         => $isFreeItem ? ($data['product_id'] ?? null) : null,
-            'free_item_quantity' => ($isFreeItem || $isGift || $isUpgrade) ? (int) ($data['free_item_quantity'] ?? 1) : 1,
-            'value'              => $isUpgrade ? (float) ($data['value'] ?? 0) : null,
+            'free_item_quantity' => ($isFreeItem || $isGift || $isBuyGet || $isUpgrade) ? (int) ($data['free_item_quantity'] ?? 1) : 1,
+            'value'              => $isUpgrade ? (float) ($data['value'] ?? 0)
+                                  : ($isBuyGet ? max(1, (float) ($data['value'] ?? 2)) : null),
         ];
     }
 

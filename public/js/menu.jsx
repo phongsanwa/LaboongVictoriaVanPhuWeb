@@ -158,9 +158,21 @@ function getProductVariantGroups(item, variantGroups) {
 }
 
 /* ─── Voucher discount calculation ─────────────────────────────── */
+/* Mua X tặng Y: giỏ đủ X+Y món thì được trừ tiền Y món rẻ nhất */
+function calcBuyGetDiscount(v, cartLines) {
+  const buyQty  = Math.max(1, v.buy_quantity || 2);
+  const freeQty = Math.max(1, v.free_item_quantity || 1);
+  const units = [];
+  (cartLines || []).forEach(l => { for (let i = 0; i < l.qty; i++) units.push(l.unit || 0); });
+  if (units.length < buyQty + freeQty) return 0;
+  units.sort((a, b) => a - b);
+  return units.slice(0, freeQty).reduce((s, u) => s + u, 0);
+}
+
 function calcVoucherDiscount(v, base, cartLines) {
   if (!v) return 0;
   if (base < (v.min_purchase || 0)) return 0;
+  if (v.discount_type === 'buy_get') return calcBuyGetDiscount(v, cartLines);
   if (v.discount_type === 'free_item') {
     if (!v.free_item_product_id) return Math.min(v.discount_value, base);
     const productCartId = 'p' + v.free_item_product_id;
@@ -523,6 +535,10 @@ function App() {
       const productCartId = 'p' + orderVoucher.free_item_product_id;
       if (!lines.some(l => l.id === productCartId)) setOrderVoucher(null);
     }
+    if (orderVoucher?.discount_type === 'buy_get') {
+      const need = Math.max(1, orderVoucher.buy_quantity || 2) + Math.max(1, orderVoucher.free_item_quantity || 1);
+      if (lines.reduce((s, l) => s + l.qty, 0) < need) setOrderVoucher(null);
+    }
   }, [lines]); // eslint-disable-line
 
   /* Clear selectedShipPromo if it becomes ineligible */
@@ -538,6 +554,14 @@ function App() {
       const productCartId = 'p' + v.free_item_product_id;
       if (!lines.some(l => l.id === productCartId)) {
         setCouponErr(`Vui lòng thêm "${v.free_item_product_name || 'sản phẩm'}" vào đơn để dùng voucher này`);
+        return;
+      }
+    }
+    if (v.discount_type === 'buy_get') {
+      const need = Math.max(1, v.buy_quantity || 2) + Math.max(1, v.free_item_quantity || 1);
+      const have = lines.reduce((s, l) => s + l.qty, 0);
+      if (have < need) {
+        setCouponErr(`Giỏ hàng cần tối thiểu ${need} món để dùng ưu đãi này (hiện có ${have})`);
         return;
       }
     }
@@ -867,13 +891,18 @@ function App() {
                           const canApply   = !!v;
                           const isFreeItem = canApply && v.discount_type === 'free_item';
                           const isGiftItem = canApply && v.discount_type === 'gift_item';
+                          const isBuyGet   = canApply && v.discount_type === 'buy_get';
                           const freeCartLine = isFreeItem && v.free_item_product_id
                             ? lines.find(l => l.id === 'p' + v.free_item_product_id)
                             : null;
                           const freeProductInCart = !isFreeItem || !v.free_item_product_id || !!freeCartLine;
                           const notEnough  = canApply && subtotal < (v.min_purchase || 0);
                           const notInCart  = isFreeItem && !freeProductInCart;
-                          const isDisabled = notEnough || notInCart;
+                          // Mua X tặng Y: cần đủ X+Y món trong giỏ
+                          const cartCount  = lines.reduce((s, l) => s + l.qty, 0);
+                          const bgNeed     = isBuyGet ? Math.max(1, v.buy_quantity || 2) + Math.max(1, v.free_item_quantity || 1) : 0;
+                          const bgMissing  = isBuyGet ? Math.max(0, bgNeed - cartCount) : 0;
+                          const isDisabled = notEnough || notInCart || bgMissing > 0;
                           // Effective quantity actually free (capped at what's in cart)
                           const freeQty    = isFreeItem ? (v.free_item_quantity || 1) : 0;
                           const cartQty    = freeCartLine ? freeCartLine.qty : 0;
@@ -893,7 +922,9 @@ function App() {
 
                           const disc = calcVoucherDiscount(v, subtotal, lines);
                           // Label for free_item: "Miễn phí N× [product]" or "Miễn phí N× topping"
-                          const freeLabel = isGiftItem
+                          const freeLabel = isBuyGet
+                            ? `Mua ${v.buy_quantity || 2} tặng ${v.free_item_quantity || 1} — tặng món giá thấp nhất`
+                            : isGiftItem
                             ? `Quà tặng kèm đơn${(v.free_item_quantity || 1) > 1 ? ` ×${v.free_item_quantity}` : ''} — không trừ tiền`
                             : isFreeItem
                             ? `Miễn phí ${freeQty > 1 ? freeQty + '× ' : ''}${v.free_item_product_id ? (v.free_item_product_name || 'sản phẩm') : 'topping'}`
@@ -922,10 +953,12 @@ function App() {
                                 {r.expires_at && <div className="vd" style={{ color: 'var(--ink-3)' }}>HSD: {r.expires_at}</div>}
                                 {notEnough && <div style={{ fontSize: 11, color: 'var(--hot)', marginTop: 2 }}>Còn thiếu {fmt((v.min_purchase || 0) - subtotal)}đ</div>}
                                 {notInCart && <div style={{ fontSize: 11, color: 'var(--hot)', marginTop: 2 }}>Thêm "{v.free_item_product_name || 'sản phẩm'}" vào đơn để dùng</div>}
+                                {bgMissing > 0 && <div style={{ fontSize: 11, color: 'var(--hot)', marginTop: 2 }}>Thêm {bgMissing} món nữa để dùng (cần {bgNeed} món)</div>}
                               </div>
                               <span className="vgo">
                                 {notEnough ? `Còn thiếu ${fmt((v.min_purchase || 0) - subtotal)}đ`
                                   : notInCart ? <Icon name="lock" size={14} />
+                                  : bgMissing > 0 ? <Icon name="lock" size={14} />
                                   : isSelected ? <><Icon name="check" size={14} /> Đang dùng</>
                                   : isGiftItem ? <>Nhận kèm đơn <Icon name="chev" size={14} /></>
                                   : <>−{fmt(disc)}đ <Icon name="chev" size={14} /></>}
@@ -1241,7 +1274,9 @@ function App() {
                           <div style={{ minWidth: 0 }}>
                             <div className="can">{orderVoucher.name}</div>
                             <div className="cac">
-                              {orderVoucher.discount_type === 'gift_item'
+                              {orderVoucher.discount_type === 'buy_get'
+                                ? `Mua ${orderVoucher.buy_quantity || 2} tặng ${orderVoucher.free_item_quantity || 1} — tặng món giá thấp nhất`
+                                : orderVoucher.discount_type === 'gift_item'
                                 ? 'Quà tặng kèm đơn — đã đổi bằng điểm'
                                 : orderVoucher.discount_type === 'free_item'
                                 ? `Miễn phí ${(orderVoucher.free_item_quantity || 1) > 1 ? (orderVoucher.free_item_quantity + '× ') : ''}${orderVoucher.free_item_product_id ? (orderVoucher.free_item_product_name || 'sản phẩm') : 'topping'}`

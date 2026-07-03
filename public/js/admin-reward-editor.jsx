@@ -39,7 +39,12 @@ function RewardEditor({ initial, onClose, onSave }) {
   const [toppingValue, setToppingValue] = useStateEd(initial?.value != null ? Number(initial.value) : 5000);
   const isFreeItem  = cat === "drink";
   const isGift      = cat === "gift"; // quà vật phẩm — không gắn sản phẩm menu
+  const isBuyGet    = cat === "buyget"; // mua X tặng Y
   const isUpgrade   = cat === "topping" || cat === "upsize";
+  const [buyQty, setBuyQty] = useStateEd(() => {
+    const v = Number(initial?.value);
+    return (initial?.cat === "buyget" && v >= 1) ? v : 2;
+  });
 
   useEffectEd(() => {
     const h = (e) => { if (e.key === "Escape") onClose(); };
@@ -75,7 +80,8 @@ function RewardEditor({ initial, onClose, onSave }) {
 
   const valid = name.trim() && points > 0 && qty > 0 && expiry
     && (!isFreeItem || productId !== null)
-    && (!isUpgrade || (toppingValue > 0));
+    && (!isUpgrade || (toppingValue > 0))
+    && (!isBuyGet || (Number(buyQty) >= 1 && Number(freeQty) >= 1));
   const submit = () => {
     if (!valid) return;
     onSave({
@@ -83,8 +89,9 @@ function RewardEditor({ initial, onClose, onSave }) {
       name: name.trim(), cat, points: Number(points), qty: Number(qty),
       expiry, status: status ? "on" : "off", grad, img,
       product_id:          isFreeItem ? (productId ?? null) : null,
-      free_item_quantity:  (isFreeItem || isGift || isUpgrade) ? Math.max(1, Number(freeQty) || 1) : 1,
-      value:               isUpgrade ? Math.max(0, Number(toppingValue) || 0) : undefined,
+      free_item_quantity:  (isFreeItem || isGift || isBuyGet || isUpgrade) ? Math.max(1, Number(freeQty) || 1) : 1,
+      value:               isUpgrade ? Math.max(0, Number(toppingValue) || 0)
+                          : isBuyGet ? Math.max(1, Number(buyQty) || 2) : undefined,
     });
   };
 
@@ -217,6 +224,38 @@ function RewardEditor({ initial, onClose, onSave }) {
                   <div style={{ fontSize: 11.5, color: "var(--ink-3)", marginTop: 4 }}>
                     Voucher sẽ miễn phí tối đa <b>{freeQty}</b> sản phẩm trong đơn hàng.
                   </div>
+                </div>
+              )}
+
+              {isBuyGet && (
+                <div className="two-col">
+                  <div className="fld">
+                    <label>Mua bao nhiêu món (X) <span style={{ color: "var(--hot)", fontWeight: 700 }}>*</span></label>
+                    <input
+                      className="inp" type="text" inputMode="numeric" value={buyQty}
+                      onChange={e => {
+                        const v = e.target.value.replace(/[^0-9]/g, "");
+                        setBuyQty(v === "" ? "" : Math.max(1, Number(v)));
+                      }}
+                    />
+                  </div>
+                  <div className="fld">
+                    <label>Tặng bao nhiêu món (Y) <span style={{ color: "var(--hot)", fontWeight: 700 }}>*</span></label>
+                    <input
+                      className="inp" type="text" inputMode="numeric" value={freeQty}
+                      onChange={e => {
+                        const v = e.target.value.replace(/[^0-9]/g, "");
+                        setFreeQty(v === "" ? "" : Math.max(1, Number(v)));
+                      }}
+                    />
+                  </div>
+                </div>
+              )}
+              {isBuyGet && (
+                <div style={{ fontSize: 11.5, color: "var(--ink-3)", marginBottom: 12, marginTop: -4 }}>
+                  Khách mua <b>{buyQty || "X"}</b> món sẽ được tặng <b>{freeQty || "Y"}</b> món —
+                  giỏ hàng cần tối thiểu <b>{(Number(buyQty) || 0) + (Number(freeQty) || 0)}</b> món,
+                  hệ thống tự trừ tiền <b>{freeQty || "Y"}</b> món có giá thấp nhất.
                 </div>
               )}
 
