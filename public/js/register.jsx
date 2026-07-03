@@ -60,6 +60,58 @@ function dobToISO(raw) {
   const m = raw.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
   return m ? `${m[3]}-${m[2]}-${m[1]}` : "";
 }
+
+/* Bảng chọn ngày sinh: 3 ô chọn Ngày / Tháng / Năm — chọn thẳng năm, không phải lùi lịch */
+function DobPicker({ value, onPick, onClose }) {
+  const thisYear = new Date().getFullYear();
+  const parsed = (() => {
+    const m = (value || "").match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+    return m ? { d: +m[1], mo: +m[2], y: +m[3] } : { d: 1, mo: 1, y: 2000 };
+  })();
+  const [d, setD]   = useState(parsed.d);
+  const [mo, setMo] = useState(parsed.mo);
+  const [y, setY]   = useState(parsed.y);
+
+  const daysInMonth = new Date(y, mo, 0).getDate();
+  const day = Math.min(d, daysInMonth);
+  const years = [];
+  for (let yy = thisYear; yy >= 1925; yy--) years.push(yy);
+
+  const selStyle = { flex: 1, padding: "11px 8px", borderRadius: 10, border: "1.5px solid var(--line, #ddd)", background: "var(--card, #fff)", color: "inherit", fontSize: 16, fontFamily: "inherit", outline: "none" };
+
+  const confirm = () => {
+    onPick(`${String(day).padStart(2, "0")}/${String(mo).padStart(2, "0")}/${y}`);
+    onClose();
+  };
+
+  return (
+    <>
+      <div style={{ position: "fixed", inset: 0, zIndex: 60 }} onClick={onClose} />
+      <div style={{ position: "absolute", top: "100%", left: 0, right: 0, zIndex: 61, marginTop: 6, background: "var(--card, #fff)", border: "1.5px solid var(--brand)", borderRadius: 14, padding: 14, boxShadow: "0 14px 34px rgba(0,0,0,.16)" }}
+        onClick={e => e.stopPropagation()}>
+        <div style={{ display: "flex", gap: 8 }}>
+          <select style={selStyle} value={day} onChange={e => setD(+e.target.value)} aria-label="Ngày">
+            {Array.from({ length: daysInMonth }, (_, i) => i + 1).map(v => <option key={v} value={v}>{v}</option>)}
+          </select>
+          <select style={selStyle} value={mo} onChange={e => setMo(+e.target.value)} aria-label="Tháng">
+            {Array.from({ length: 12 }, (_, i) => i + 1).map(v => <option key={v} value={v}>Tháng {v}</option>)}
+          </select>
+          <select style={selStyle} value={y} onChange={e => setY(+e.target.value)} aria-label="Năm">
+            {years.map(v => <option key={v} value={v}>{v}</option>)}
+          </select>
+        </div>
+        <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
+          <button type="button" onClick={onClose}
+            style={{ flex: 1, padding: "10px 0", borderRadius: 10, border: "1.5px solid var(--line, #ddd)", background: "transparent", fontWeight: 600, fontSize: 14, color: "inherit" }}>Huỷ</button>
+          <button type="button" onClick={confirm}
+            style={{ flex: 2, padding: "10px 0", borderRadius: 10, border: "none", background: "var(--brand)", color: "#fff", fontWeight: 700, fontSize: 14 }}>
+            Chọn {String(day).padStart(2, "0")}/{String(mo).padStart(2, "0")}/{y}
+          </button>
+        </div>
+      </div>
+    </>
+  );
+}
 function validatePassword(raw) {
   if (!raw) return { ok: false, msg: "Vui lòng nhập mật khẩu" };
   if (raw.length < 6) return { ok: false, msg: "Mật khẩu phải có ít nhất 6 ký tự" };
@@ -78,6 +130,7 @@ function FormStep({ data, setData, onNext }) {
   const [loading, setLoading] = useState(false);
   const [showPw, setShowPw] = useState(false);
   const [showPw2, setShowPw2] = useState(false);
+  const [dobPicker, setDobPicker] = useState(false);
   const phoneRes = validatePhone(data.phone);
   const emailRes = validateEmail(data.email);
   const dobRes = validateDob(data.dob);
@@ -179,19 +232,25 @@ function FormStep({ data, setData, onNext }) {
         {touched.email && !emailRes.ok && <div className="err"><Icon name="info" size={14} color="var(--danger)" /> {emailRes.msg}</div>}
       </div>
 
-      <div className="fld">
+      <div className="fld" style={{ position: "relative" }}>
         <label>Ngày sinh<span className="opt">(không bắt buộc)</span></label>
         <div className="inp-wrap">
           <span className="lic"><Icon name="cal" size={18} /></span>
           <input className={"inp" + (touched.dob && !dobRes.ok ? " bad" : "")} inputMode="numeric"
             placeholder="dd/mm/yyyy — VD: 20/10/1997" value={data.dob} maxLength={10}
+            onClick={() => setDobPicker(true)}
             onChange={e => setData({ ...data, dob: formatDobInput(e.target.value) })}
             onBlur={() => setTouched(t => ({ ...t, dob: true }))} />
           {dobRes.ok && data.dob.length === 10 && <span className="okmark"><Icon name="check" size={18} /></span>}
         </div>
+        {dobPicker && (
+          <DobPicker value={data.dob}
+            onPick={v => { setData({ ...data, dob: v }); setTouched(t => ({ ...t, dob: true })); }}
+            onClose={() => setDobPicker(false)} />
+        )}
         {touched.dob && !dobRes.ok
           ? <div className="err"><Icon name="info" size={14} color="var(--danger)" /> {dobRes.msg}</div>
-          : <div className="hint">Nhận quà sinh nhật đặc biệt từ Laboong 🎂</div>}
+          : <div className="hint">Bấm để chọn ngày hoặc gõ trực tiếp · Nhận quà sinh nhật từ Laboong 🎂</div>}
       </div>
 
       <button className="btn primary" disabled={!canSubmit || loading} onClick={submit} style={{ marginTop: 6 }}>
