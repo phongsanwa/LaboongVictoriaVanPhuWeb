@@ -56,6 +56,10 @@ class OrdersController extends Controller
         }
 
         $extra = $nextDb === 'COMPLETED' ? ['completed_at' => now()] : [];
+        // "Xác nhận" đơn: mốc bắt đầu tính thời gian pha chế / đếm ngược cho khách
+        if ($nextDb === 'PREPARING' && !$order->confirmed_at) {
+            $extra['confirmed_at'] = now();
+        }
         $order->update(array_merge(['status' => $nextDb], $extra));
 
         return response()->json([

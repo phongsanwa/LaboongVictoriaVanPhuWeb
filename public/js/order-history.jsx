@@ -65,14 +65,22 @@ const FILTERS = [{ key: "all", label: "Tất cả" }, { key: "active", label: "�
 function dayKey(d) { if (d === 0) return "Hôm nay"; if (d === 1) return "Hôm qua"; if (d < 7) return `${d} ngày trước`; if (d < 30) return `${Math.floor(d / 7)} tuần trước`; return "Trước đó"; }
 function itemSummary(o) { const first = o.items[0]; const more = o.items.length - 1; return { first: `${first.qty}× ${first.name}`, more }; }
 
-/* Đếm ngược thời gian dự kiến xong (kiểu ShopeeFood) theo trạng thái đơn */
+/* Đếm ngược thời gian dự kiến xong (kiểu ShopeeFood) theo trạng thái đơn.
+   Đồng hồ chỉ bắt đầu khi quán bấm Xác nhận (etaAt tính từ confirmed_at). */
 function etaInfo(o, now) {
   if (o.status === "ready") {
     return o.type === "ship"
       ? { e: "Đang giao", el: "đơn đang trên đường", small: true }
       : { e: "Sẵn sàng", el: "đến quầy nhận ngay", small: true };
   }
-  if (!o.etaAt) return { e: "~12'", el: "dự kiến xong" }; // demo fallback
+  if (o.status === "new") {
+    return { e: "Chờ nhận đơn", el: "quán sắp xác nhận", small: true };
+  }
+  if (!o.etaAt) {
+    return LIVE_OH
+      ? { e: "Đang pha", el: "quán đang chuẩn bị", small: true } // đơn cũ chưa có mốc xác nhận
+      : { e: "~12'", el: "dự kiến xong" }; // demo fallback
+  }
   const remain = new Date(o.etaAt).getTime() - now;
   if (remain <= 0) return { e: "Sắp xong", el: "chờ chút nữa nhé", small: true };
   // Đồng hồ đếm ngược mm:ss chạy theo thời gian thực
