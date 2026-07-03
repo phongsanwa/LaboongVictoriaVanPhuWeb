@@ -27,6 +27,9 @@ function AdminSidebar({ activeLabel, badges: pageBadges = {}, admin, sideOpen, o
       .catch(() => {});
   }, []);
   const badges = { ...globalBadges, ...pageBadges };
+  // _access: null/undefined = admin (thấy tất cả); mảng = staff chỉ thấy mục được cấp quyền
+  const access = globalBadges._access;
+  const canSee = (n) => !Array.isArray(access) || access.includes(n.label);
 
   const logout = async (e) => {
     e.preventDefault();
@@ -34,8 +37,8 @@ function AdminSidebar({ activeLabel, badges: pageBadges = {}, admin, sideOpen, o
     location.href = NAV_URLS.login;
   };
 
-  const mgmt = SIDEBAR_NAV.slice(0, 11);
-  const sys  = SIDEBAR_NAV.slice(11);
+  const mgmt = SIDEBAR_NAV.slice(0, 11).filter(canSee);
+  const sys  = SIDEBAR_NAV.slice(11).filter(canSee);
 
   const renderLink = (n) => (
     <a key={n.label}

@@ -394,6 +394,8 @@ class DashboardController extends Controller
             'Khách hàng'       => (string) Customer::count(),
             'Phí ship'         => (string) ShippingTier::count(),
             'Cửa hàng'         => (string) Store::where('status', 'active')->count(),
+            // Danh sách mục sidebar user hiện tại được thấy (null = admin, thấy hết)
+            '_access'          => \App\Support\AdminAccess::allowedNavLabels(request()->user()),
         ]);
     }
 }
