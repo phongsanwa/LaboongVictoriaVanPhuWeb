@@ -54,7 +54,11 @@ class RewardsController extends Controller
         $reward = Reward::create([
             ...$data,
             'description' => $data['name'],
-            'reward_type' => in_array($data['category'], ['topping', 'upsize', 'upgrade']) ? 'free_item' : ($data['category'] === 'voucher' ? 'discount_voucher' : 'free_item'),
+            'reward_type' => match (true) {
+                $data['category'] === 'voucher' => 'discount_voucher',
+                $data['category'] === 'gift'    => 'other', // quà vật phẩm (gấu bông, kẹp tóc…) — không gắn sản phẩm menu
+                default                         => 'free_item',
+            },
             'quantity_available' => $data['quantity_total'],
             'valid_from' => Carbon::now()->toDateString(),
         ]);
@@ -127,7 +131,8 @@ class RewardsController extends Controller
             'value'               => ['nullable', 'numeric', 'min:0'],
         ]);
 
-        $isFreeItem = in_array($data['cat'], ['drink', 'gift']);
+        $isFreeItem = $data['cat'] === 'drink';
+        $isGift     = $data['cat'] === 'gift';
         $isUpgrade  = in_array($data['cat'], ['topping', 'upsize', 'upgrade']);
 
         return [
@@ -140,7 +145,7 @@ class RewardsController extends Controller
             'gradient'           => $data['grad'] ?? null,
             'image_url'          => $data['img'] ?? null,
             'product_id'         => $isFreeItem ? ($data['product_id'] ?? null) : null,
-            'free_item_quantity' => ($isFreeItem || $isUpgrade) ? (int) ($data['free_item_quantity'] ?? 1) : 1,
+            'free_item_quantity' => ($isFreeItem || $isGift || $isUpgrade) ? (int) ($data['free_item_quantity'] ?? 1) : 1,
             'value'              => $isUpgrade ? (float) ($data['value'] ?? 0) : null,
         ];
     }

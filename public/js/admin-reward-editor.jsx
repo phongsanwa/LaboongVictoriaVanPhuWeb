@@ -37,7 +37,8 @@ function RewardEditor({ initial, onClose, onSave }) {
   const [productId, setProductId] = useStateEd(initial?.product_id ?? null);
   const [freeQty, setFreeQty]     = useStateEd(Number(initial?.free_item_quantity ?? 1) || 1);
   const [toppingValue, setToppingValue] = useStateEd(initial?.value != null ? Number(initial.value) : 5000);
-  const isFreeItem  = cat === "drink" || cat === "gift";
+  const isFreeItem  = cat === "drink";
+  const isGift      = cat === "gift"; // quà vật phẩm — không gắn sản phẩm menu
   const isUpgrade   = cat === "topping" || cat === "upsize";
 
   useEffectEd(() => {
@@ -48,7 +49,7 @@ function RewardEditor({ initial, onClose, onSave }) {
 
   // Reset product/quantity when switching category
   useEffectEd(() => {
-    if (cat === "voucher" || cat === "topping" || cat === "upsize") { setProductId(null); }
+    if (cat !== "drink") { setProductId(null); }
     if (cat === "voucher") setFreeQty(1);
   }, [cat]);
 
@@ -82,7 +83,7 @@ function RewardEditor({ initial, onClose, onSave }) {
       name: name.trim(), cat, points: Number(points), qty: Number(qty),
       expiry, status: status ? "on" : "off", grad, img,
       product_id:          isFreeItem ? (productId ?? null) : null,
-      free_item_quantity:  (isFreeItem || isUpgrade) ? Math.max(1, Number(freeQty) || 1) : 1,
+      free_item_quantity:  (isFreeItem || isGift || isUpgrade) ? Math.max(1, Number(freeQty) || 1) : 1,
       value:               isUpgrade ? Math.max(0, Number(toppingValue) || 0) : undefined,
     });
   };
@@ -215,6 +216,27 @@ function RewardEditor({ initial, onClose, onSave }) {
                   />
                   <div style={{ fontSize: 11.5, color: "var(--ink-3)", marginTop: 4 }}>
                     Voucher sẽ miễn phí tối đa <b>{freeQty}</b> sản phẩm trong đơn hàng.
+                  </div>
+                </div>
+              )}
+
+              {isGift && (
+                <div className="fld">
+                  <label>Số lượng quà mỗi lần đổi</label>
+                  <input
+                    className="inp"
+                    type="text"
+                    inputMode="numeric"
+                    value={freeQty}
+                    onChange={e => {
+                      const v = e.target.value.replace(/[^0-9]/g, "");
+                      setFreeQty(v === "" ? "" : Math.max(1, Number(v)));
+                    }}
+                  />
+                  <div style={{ fontSize: 11.5, color: "var(--ink-3)", marginTop: 4 }}>
+                    Quà vật phẩm (gấu bông, kẹp tóc…) — đặt tên quà ở ô "Tên phần thưởng".
+                    Khách áp dụng vào đơn hàng sẽ <b>không bị trừ tiền</b>; quà hiển thị trên
+                    đơn để quán chuẩn bị kèm theo.
                   </div>
                 </div>
               )}

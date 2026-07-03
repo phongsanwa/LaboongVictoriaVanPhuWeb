@@ -866,6 +866,7 @@ function App() {
                           const v          = r.voucher;
                           const canApply   = !!v;
                           const isFreeItem = canApply && v.discount_type === 'free_item';
+                          const isGiftItem = canApply && v.discount_type === 'gift_item';
                           const freeCartLine = isFreeItem && v.free_item_product_id
                             ? lines.find(l => l.id === 'p' + v.free_item_product_id)
                             : null;
@@ -892,7 +893,9 @@ function App() {
 
                           const disc = calcVoucherDiscount(v, subtotal, lines);
                           // Label for free_item: "Miễn phí N× [product]" or "Miễn phí N× topping"
-                          const freeLabel = isFreeItem
+                          const freeLabel = isGiftItem
+                            ? `Quà tặng kèm đơn${(v.free_item_quantity || 1) > 1 ? ` ×${v.free_item_quantity}` : ''} — không trừ tiền`
+                            : isFreeItem
                             ? `Miễn phí ${freeQty > 1 ? freeQty + '× ' : ''}${v.free_item_product_id ? (v.free_item_product_name || 'sản phẩm') : 'topping'}`
                             : v.discount_type === 'percentage'
                               ? `Giảm ${v.discount_value}%` + (v.max_discount ? ` (tối đa ${fmt(v.max_discount)}đ)` : '')
@@ -924,6 +927,7 @@ function App() {
                                 {notEnough ? `Còn thiếu ${fmt((v.min_purchase || 0) - subtotal)}đ`
                                   : notInCart ? <Icon name="lock" size={14} />
                                   : isSelected ? <><Icon name="check" size={14} /> Đang dùng</>
+                                  : isGiftItem ? <>Nhận kèm đơn <Icon name="chev" size={14} /></>
                                   : <>−{fmt(disc)}đ <Icon name="chev" size={14} /></>}
                               </span>
                             </button>
@@ -1237,12 +1241,14 @@ function App() {
                           <div style={{ minWidth: 0 }}>
                             <div className="can">{orderVoucher.name}</div>
                             <div className="cac">
-                              {orderVoucher.discount_type === 'free_item'
+                              {orderVoucher.discount_type === 'gift_item'
+                                ? 'Quà tặng kèm đơn — đã đổi bằng điểm'
+                                : orderVoucher.discount_type === 'free_item'
                                 ? `Miễn phí ${(orderVoucher.free_item_quantity || 1) > 1 ? (orderVoucher.free_item_quantity + '× ') : ''}${orderVoucher.free_item_product_id ? (orderVoucher.free_item_product_name || 'sản phẩm') : 'topping'}`
                                 : (orderVoucher.code || 'Quà tích điểm')}
                             </div>
                           </div>
-                          <span className="cav">−{fmt(voucherDiscount)}đ</span>
+                          <span className="cav">{orderVoucher.discount_type === 'gift_item' ? 'Quà tặng' : `−${fmt(voucherDiscount)}đ`}</span>
                           <button className="cax" onClick={() => setOrderVoucher(null)} title="Bỏ voucher"><Icon name="close" size={16} /></button>
                         </div>
                       )}

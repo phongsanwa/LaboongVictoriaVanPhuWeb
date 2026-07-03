@@ -137,6 +137,26 @@ class RewardsCatalogController extends Controller
                     'usage_count'           => 0,
                     'status'                => 'active',
                 ]);
+            } elseif ($reward->category === 'gift') {
+                // Quà vật phẩm (gấu bông, kẹp tóc…): không trừ tiền đơn — chỉ gắn kèm
+                // đơn hàng để quán chuẩn bị quà, nên discount_value = 0
+                $qty = max(1, (int) ($reward->free_item_quantity ?? 1));
+                Voucher::create([
+                    'voucher_code'          => 'GIF' . now()->format('Ymd') . strtoupper(Str::random(6)),
+                    'customer_id'           => $customer->id,
+                    'redemption_id'         => $redemption->id,
+                    'applies_to'            => 'ORDER',
+                    'discount_type'         => 'gift_item',
+                    'discount_value'        => 0,
+                    'free_item_product_id'  => null,
+                    'free_item_quantity'    => $qty,
+                    'min_purchase'          => null,
+                    'max_discount'          => null,
+                    'valid_from'            => now()->toDateString(),
+                    'valid_until'           => now()->addMonths(3)->toDateString(),
+                    'usage_count'           => 0,
+                    'status'                => 'active',
+                ]);
             } elseif (in_array($reward->category, ['topping', 'upsize', 'upgrade']) && (int) ($reward->value ?? 0) > 0) {
                 $qty       = max(1, (int) ($reward->free_item_quantity ?? 1));
                 $unitValue = (int) $reward->value;
