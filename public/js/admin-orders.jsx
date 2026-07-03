@@ -383,7 +383,7 @@ function OrderDrawer({ o, saving, onClose, onAdvance, onCancel }) {
             <div className="od-trow"><span>Tạm tính</span><span className="v">{fmt(o.sub)}đ</span></div>
             {(o.discounts && o.discounts.length > 0) ? (
               o.discounts.filter(d => !d.ship).map((d, i) => (
-                <div className="od-trow discount" key={i}><span>{d.label}</span><span className="v">−{fmt(d.amount)}đ</span></div>
+                <div className="od-trow discount" key={i}><span>{d.label}</span><span className="v">{d.amount > 0 ? `−${fmt(d.amount)}đ` : "Kèm đơn"}</span></div>
               ))
             ) : (o.discount > 0 && (
               <div className="od-trow discount"><span>Giảm giá</span><span className="v">−{fmt(o.discount)}đ</span></div>

@@ -39,7 +39,7 @@ class RolesController extends Controller
      * default state used the first time a permission is seen (before any
      * row exists in role_permissions).
      */
-    private const PERM_GROUPS = [
+    public const PERM_GROUPS = [
         ['title' => 'Tích điểm & giao dịch', 'ic' => 'receipt', 'perms' => [
             ['id' => 'scan', 'name' => 'Quét mã QR tích điểm', 'desc' => 'Quét mã thành viên để cộng điểm khi bán hàng', 'cashier' => true, 'manager' => true],
             ['id' => 'adjust', 'name' => 'Cộng / trừ điểm thủ công', 'desc' => 'Điều chỉnh điểm kèm lý do', 'cashier' => false, 'manager' => true],

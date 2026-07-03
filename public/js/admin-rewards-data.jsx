@@ -5,6 +5,7 @@ const REWARD_CATS = {
   voucher: { label: "Voucher giảm giá", ic: "percent" },
   drink:   { label: "Miễn phí món",     ic: "cup" },
   gift:    { label: "Quà vật phẩm",     ic: "gift" },
+  buyget:  { label: "Mua X tặng Y",     ic: "cart" },
   topping: { label: "Freetopping",      ic: "spark" },
   upsize:  { label: "Upsize",           ic: "arrowup" },
 };

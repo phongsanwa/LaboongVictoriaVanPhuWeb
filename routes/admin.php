@@ -16,81 +16,118 @@ use App\Http\Controllers\Admin\PromotionsController;
 use App\Http\Controllers\Admin\VariantsController;
 use Illuminate\Support\Facades\Route;
 
-Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(function () {
+/*
+ * Khu admin: admin toàn quyền; tài khoản quản lý (staff cashier/manager,
+ * status active) vào theo ma trận phân quyền trên trang /admin/roles.
+ * 'admin.perm'       = chỉ cần là admin / staff active
+ * 'admin.perm:key'   = thêm điều kiện vai trò có quyền `key`
+ */
+Route::middleware(['auth', 'admin.perm'])->prefix('admin')->name('admin.')->group(function () {
+    // Tổng quan — mọi tài khoản quản lý đều xem được
     Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
     Route::get('/badges', [DashboardController::class, 'badges'])->name('badges');
-    Route::get('/customers', [CustomersController::class, 'index'])->name('customers.index');
-    Route::put('/customers/{customer}', [CustomersController::class, 'update'])->name('customers.update');
-    Route::post('/customers/{customer}/toggle', [CustomersController::class, 'toggle'])->name('customers.toggle');
-    Route::get('/orders', [OrdersController::class, 'index'])->name('orders.index');
-    Route::get('/orders/refresh', [OrdersController::class, 'refresh'])->name('orders.refresh');
-    Route::post('/orders/{order}/advance', [OrdersController::class, 'advance'])->name('orders.advance');
-    Route::post('/orders/{order}/cancel', [OrdersController::class, 'cancel'])->name('orders.cancel');
-    Route::get('/points', [PointsController::class, 'index'])->name('points.index');
-    Route::post('/points/adjust', [PointsController::class, 'adjust'])->name('points.adjust');
-    Route::get('/rewards', [RewardsController::class, 'index'])->name('rewards.index');
-    Route::post('/rewards', [RewardsController::class, 'store'])->name('rewards.store');
-    Route::put('/rewards/{reward}', [RewardsController::class, 'update'])->name('rewards.update');
-    Route::post('/rewards/{reward}/toggle', [RewardsController::class, 'toggle'])->name('rewards.toggle');
-    Route::post('/rewards/{reward}/duplicate', [RewardsController::class, 'duplicate'])->name('rewards.duplicate');
-    Route::delete('/rewards/{reward}', [RewardsController::class, 'destroy'])->name('rewards.destroy');
-    Route::post('/rewards/upload-image', [RewardsController::class, 'uploadImage'])->name('rewards.upload-image');
-    Route::get('/campaigns', [CampaignsController::class, 'index'])->name('campaigns.index');
-    Route::post('/campaigns', [CampaignsController::class, 'store'])->name('campaigns.store');
-    Route::put('/campaigns/{campaign}', [CampaignsController::class, 'update'])->name('campaigns.update');
-    Route::post('/campaigns/{campaign}/toggle', [CampaignsController::class, 'toggle'])->name('campaigns.toggle');
-    Route::post('/campaigns/{campaign}/push', [CampaignsController::class, 'push'])->name('campaigns.push');
-    Route::get('/roles', [RolesController::class, 'index'])->name('roles.index');
-    Route::post('/roles', [RolesController::class, 'update'])->name('roles.update');
-    Route::post('/roles/assign', [RolesController::class, 'assign'])->name('roles.assign');
-    Route::delete('/roles/staff/{staff}', [RolesController::class, 'removeStaff'])->name('roles.staff.remove');
-    Route::get('/settings', [SettingsController::class, 'index'])->name('settings.index');
-    Route::post('/settings', [SettingsController::class, 'update'])->name('settings.update');
-    Route::post('/settings/logo', [SettingsController::class, 'uploadLogo'])->name('settings.logo.upload');
-    Route::delete('/settings/logo', [SettingsController::class, 'deleteLogo'])->name('settings.logo.delete');
-    Route::post('/settings/favicon', [SettingsController::class, 'uploadFavicon'])->name('settings.favicon.upload');
-    Route::delete('/settings/favicon', [SettingsController::class, 'deleteFavicon'])->name('settings.favicon.delete');
-    Route::get('/stores', [StoresController::class, 'index'])->name('stores.index');
-    Route::post('/stores', [StoresController::class, 'store'])->name('stores.store');
-    Route::put('/stores/{store}', [StoresController::class, 'update'])->name('stores.update');
-    Route::post('/stores/{store}/toggle', [StoresController::class, 'toggle'])->name('stores.toggle');
-    Route::delete('/stores/{store}', [StoresController::class, 'destroy'])->name('stores.destroy');
-    Route::post('/stores/{store}/photos', [StoresController::class, 'uploadPhoto'])->name('stores.photos.upload');
-    Route::delete('/stores/{store}/photos', [StoresController::class, 'deletePhoto'])->name('stores.photos.delete');
-    Route::get('/promotions', [PromotionsController::class, 'index'])->name('promotions.index');
-    Route::post('/promotions', [PromotionsController::class, 'store'])->name('promotions.store');
-    Route::post('/promotions/{promotion}', [PromotionsController::class, 'update'])->name('promotions.update');
-    Route::delete('/promotions/{promotion}', [PromotionsController::class, 'destroy'])->name('promotions.destroy');
-    Route::post('/promotions/{promotion}/toggle', [PromotionsController::class, 'toggle'])->name('promotions.toggle');
-    Route::get('/shipping', [ShippingController::class, 'index'])->name('shipping.index');
-    Route::post('/shipping', [ShippingController::class, 'store'])->name('shipping.store');
-    Route::put('/shipping/{shipping}', [ShippingController::class, 'update'])->name('shipping.update');
-    Route::delete('/shipping/{shipping}', [ShippingController::class, 'destroy'])->name('shipping.destroy');
-    Route::post('/shipping/reorder', [ShippingController::class, 'reorder'])->name('shipping.reorder');
-    Route::post('/shipping/promos', [ShippingController::class, 'storePromo'])->name('shipping.promos.store');
-    Route::put('/shipping/promos/{promo}', [ShippingController::class, 'updatePromo'])->name('shipping.promos.update');
-    Route::delete('/shipping/promos/{promo}', [ShippingController::class, 'destroyPromo'])->name('shipping.promos.destroy');
-    Route::post('/shipping/promos/{promo}/toggle', [ShippingController::class, 'togglePromo'])->name('shipping.promos.toggle');
-    Route::get('/variants', [VariantsController::class, 'index'])->name('variants.index');
-    Route::post('/variants/groups', [VariantsController::class, 'storeGroup'])->name('variants.groups.store');
-    Route::post('/variants/groups/reorder', [VariantsController::class, 'reorderGroups'])->name('variants.groups.reorder');
-    Route::post('/variants/groups/{group}', [VariantsController::class, 'updateGroup'])->name('variants.groups.update');
-    Route::delete('/variants/groups/{group}', [VariantsController::class, 'destroyGroup'])->name('variants.groups.destroy');
-    Route::post('/variants/options', [VariantsController::class, 'storeOption'])->name('variants.options.store');
-    Route::put('/variants/options', [VariantsController::class, 'updateOption'])->name('variants.options.update');
-    Route::delete('/variants/options', [VariantsController::class, 'destroyOption'])->name('variants.options.destroy');
-    Route::post('/variants/options/toggle', [VariantsController::class, 'toggleOption'])->name('variants.options.toggle');
-    Route::post('/variants/options/toggle-all', [VariantsController::class, 'toggleAllOptions'])->name('variants.options.toggle-all');
-    Route::post('/variants/groups/{group}/set-default', [VariantsController::class, 'setDefault'])->name('variants.groups.setDefault');
-    Route::get('/menu', [MenuController::class, 'index'])->name('menu.index');
-    Route::post('/menu/products', [MenuController::class, 'storeProduct'])->name('menu.products.store');
-    Route::post('/menu/products/{product}', [MenuController::class, 'updateProduct'])->name('menu.products.update');
-    Route::delete('/menu/products/{product}', [MenuController::class, 'destroyProduct'])->name('menu.products.destroy');
-    Route::post('/menu/products/{product}/toggle', [MenuController::class, 'toggleProduct'])->name('menu.products.toggle');
-    Route::post('/menu/products/{product}/variants', [MenuController::class, 'updateVariants'])->name('menu.products.variants');
-    Route::post('/menu/categories', [MenuController::class, 'storeCategory'])->name('menu.categories.store');
-    Route::post('/menu/categories/{category}', [MenuController::class, 'updateCategory'])->name('menu.categories.update');
-    Route::delete('/menu/categories/{category}', [MenuController::class, 'destroyCategory'])->name('menu.categories.destroy');
-    Route::get('/checkin', [CheckinController::class, 'index'])->name('checkin.index');
-    Route::post('/checkin', [CheckinController::class, 'update'])->name('checkin.update');
+
+    // Khách hàng
+    Route::get('/customers', [CustomersController::class, 'index'])->middleware('admin.perm:cust_list')->name('customers.index');
+    Route::put('/customers/{customer}', [CustomersController::class, 'update'])->middleware('admin.perm:cust_edit')->name('customers.update');
+    Route::post('/customers/{customer}/toggle', [CustomersController::class, 'toggle'])->middleware('admin.perm:cust_edit')->name('customers.toggle');
+
+    // Đơn hàng
+    Route::get('/orders', [OrdersController::class, 'index'])->middleware('admin.perm:tx_view')->name('orders.index');
+    Route::get('/orders/refresh', [OrdersController::class, 'refresh'])->middleware('admin.perm:tx_view')->name('orders.refresh');
+    Route::post('/orders/{order}/advance', [OrdersController::class, 'advance'])->middleware('admin.perm:scan')->name('orders.advance');
+    Route::post('/orders/{order}/cancel', [OrdersController::class, 'cancel'])->middleware('admin.perm:tx_void')->name('orders.cancel');
+
+    // Điểm & giao dịch
+    Route::get('/points', [PointsController::class, 'index'])->middleware('admin.perm:tx_view')->name('points.index');
+    Route::post('/points/adjust', [PointsController::class, 'adjust'])->middleware('admin.perm:adjust')->name('points.adjust');
+
+    // Đổi quà
+    Route::get('/rewards', [RewardsController::class, 'index'])->middleware('admin.perm:gift_edit')->name('rewards.index');
+    Route::post('/rewards', [RewardsController::class, 'store'])->middleware('admin.perm:gift_edit')->name('rewards.store');
+    Route::put('/rewards/{reward}', [RewardsController::class, 'update'])->middleware('admin.perm:gift_edit')->name('rewards.update');
+    Route::post('/rewards/{reward}/toggle', [RewardsController::class, 'toggle'])->middleware('admin.perm:gift_edit')->name('rewards.toggle');
+    Route::post('/rewards/{reward}/duplicate', [RewardsController::class, 'duplicate'])->middleware('admin.perm:gift_edit')->name('rewards.duplicate');
+    Route::delete('/rewards/{reward}', [RewardsController::class, 'destroy'])->middleware('admin.perm:gift_del')->name('rewards.destroy');
+    Route::post('/rewards/upload-image', [RewardsController::class, 'uploadImage'])->middleware('admin.perm:gift_edit')->name('rewards.upload-image');
+
+    // Chiến dịch & marketing
+    Route::get('/campaigns', [CampaignsController::class, 'index'])->middleware('admin.perm:camp_view')->name('campaigns.index');
+    Route::post('/campaigns', [CampaignsController::class, 'store'])->middleware('admin.perm:camp_edit')->name('campaigns.store');
+    Route::put('/campaigns/{campaign}', [CampaignsController::class, 'update'])->middleware('admin.perm:camp_edit')->name('campaigns.update');
+    Route::post('/campaigns/{campaign}/toggle', [CampaignsController::class, 'toggle'])->middleware('admin.perm:camp_edit')->name('campaigns.toggle');
+    Route::post('/campaigns/{campaign}/push', [CampaignsController::class, 'push'])->middleware('admin.perm:push')->name('campaigns.push');
+
+    // Phân quyền
+    Route::get('/roles', [RolesController::class, 'index'])->middleware('admin.perm:staff')->name('roles.index');
+    Route::post('/roles', [RolesController::class, 'update'])->middleware('admin.perm:staff')->name('roles.update');
+    Route::post('/roles/assign', [RolesController::class, 'assign'])->middleware('admin.perm:staff')->name('roles.assign');
+    Route::delete('/roles/staff/{staff}', [RolesController::class, 'removeStaff'])->middleware('admin.perm:staff')->name('roles.staff.remove');
+
+    // Cài đặt hệ thống
+    Route::get('/settings', [SettingsController::class, 'index'])->middleware('admin.perm:settings')->name('settings.index');
+    Route::post('/settings', [SettingsController::class, 'update'])->middleware('admin.perm:settings')->name('settings.update');
+    Route::post('/settings/logo', [SettingsController::class, 'uploadLogo'])->middleware('admin.perm:settings')->name('settings.logo.upload');
+    Route::delete('/settings/logo', [SettingsController::class, 'deleteLogo'])->middleware('admin.perm:settings')->name('settings.logo.delete');
+    Route::post('/settings/favicon', [SettingsController::class, 'uploadFavicon'])->middleware('admin.perm:settings')->name('settings.favicon.upload');
+    Route::delete('/settings/favicon', [SettingsController::class, 'deleteFavicon'])->middleware('admin.perm:settings')->name('settings.favicon.delete');
+
+    // Cửa hàng
+    Route::get('/stores', [StoresController::class, 'index'])->middleware('admin.perm:settings')->name('stores.index');
+    Route::post('/stores', [StoresController::class, 'store'])->middleware('admin.perm:settings')->name('stores.store');
+    Route::put('/stores/{store}', [StoresController::class, 'update'])->middleware('admin.perm:settings')->name('stores.update');
+    Route::post('/stores/{store}/toggle', [StoresController::class, 'toggle'])->middleware('admin.perm:settings')->name('stores.toggle');
+    Route::delete('/stores/{store}', [StoresController::class, 'destroy'])->middleware('admin.perm:settings')->name('stores.destroy');
+    Route::post('/stores/{store}/photos', [StoresController::class, 'uploadPhoto'])->middleware('admin.perm:settings')->name('stores.photos.upload');
+    Route::delete('/stores/{store}/photos', [StoresController::class, 'deletePhoto'])->middleware('admin.perm:settings')->name('stores.photos.delete');
+
+    // Khuyến mãi
+    Route::get('/promotions', [PromotionsController::class, 'index'])->middleware('admin.perm:camp_view')->name('promotions.index');
+    Route::post('/promotions', [PromotionsController::class, 'store'])->middleware('admin.perm:camp_edit')->name('promotions.store');
+    Route::post('/promotions/{promotion}', [PromotionsController::class, 'update'])->middleware('admin.perm:camp_edit')->name('promotions.update');
+    Route::delete('/promotions/{promotion}', [PromotionsController::class, 'destroy'])->middleware('admin.perm:camp_edit')->name('promotions.destroy');
+    Route::post('/promotions/{promotion}/toggle', [PromotionsController::class, 'toggle'])->middleware('admin.perm:camp_edit')->name('promotions.toggle');
+
+    // Phí ship
+    Route::get('/shipping', [ShippingController::class, 'index'])->middleware('admin.perm:settings')->name('shipping.index');
+    Route::post('/shipping', [ShippingController::class, 'store'])->middleware('admin.perm:settings')->name('shipping.store');
+    Route::put('/shipping/{shipping}', [ShippingController::class, 'update'])->middleware('admin.perm:settings')->name('shipping.update');
+    Route::delete('/shipping/{shipping}', [ShippingController::class, 'destroy'])->middleware('admin.perm:settings')->name('shipping.destroy');
+    Route::post('/shipping/reorder', [ShippingController::class, 'reorder'])->middleware('admin.perm:settings')->name('shipping.reorder');
+    Route::post('/shipping/promos', [ShippingController::class, 'storePromo'])->middleware('admin.perm:settings')->name('shipping.promos.store');
+    Route::put('/shipping/promos/{promo}', [ShippingController::class, 'updatePromo'])->middleware('admin.perm:settings')->name('shipping.promos.update');
+    Route::delete('/shipping/promos/{promo}', [ShippingController::class, 'destroyPromo'])->middleware('admin.perm:settings')->name('shipping.promos.destroy');
+    Route::post('/shipping/promos/{promo}/toggle', [ShippingController::class, 'togglePromo'])->middleware('admin.perm:settings')->name('shipping.promos.toggle');
+
+    // Variant / tuỳ chọn món
+    Route::middleware('admin.perm:settings')->group(function () {
+        Route::get('/variants', [VariantsController::class, 'index'])->name('variants.index');
+        Route::post('/variants/groups', [VariantsController::class, 'storeGroup'])->name('variants.groups.store');
+        Route::post('/variants/groups/reorder', [VariantsController::class, 'reorderGroups'])->name('variants.groups.reorder');
+        Route::post('/variants/groups/{group}', [VariantsController::class, 'updateGroup'])->name('variants.groups.update');
+        Route::delete('/variants/groups/{group}', [VariantsController::class, 'destroyGroup'])->name('variants.groups.destroy');
+        Route::post('/variants/options', [VariantsController::class, 'storeOption'])->name('variants.options.store');
+        Route::put('/variants/options', [VariantsController::class, 'updateOption'])->name('variants.options.update');
+        Route::delete('/variants/options', [VariantsController::class, 'destroyOption'])->name('variants.options.destroy');
+        Route::post('/variants/options/toggle', [VariantsController::class, 'toggleOption'])->name('variants.options.toggle');
+        Route::post('/variants/options/toggle-all', [VariantsController::class, 'toggleAllOptions'])->name('variants.options.toggle-all');
+        Route::post('/variants/groups/{group}/set-default', [VariantsController::class, 'setDefault'])->name('variants.groups.setDefault');
+    });
+
+    // Thực đơn
+    Route::middleware('admin.perm:settings')->group(function () {
+        Route::get('/menu', [MenuController::class, 'index'])->name('menu.index');
+        Route::post('/menu/products', [MenuController::class, 'storeProduct'])->name('menu.products.store');
+        Route::post('/menu/products/{product}', [MenuController::class, 'updateProduct'])->name('menu.products.update');
+        Route::delete('/menu/products/{product}', [MenuController::class, 'destroyProduct'])->name('menu.products.destroy');
+        Route::post('/menu/products/{product}/toggle', [MenuController::class, 'toggleProduct'])->name('menu.products.toggle');
+        Route::post('/menu/products/{product}/variants', [MenuController::class, 'updateVariants'])->name('menu.products.variants');
+        Route::post('/menu/categories', [MenuController::class, 'storeCategory'])->name('menu.categories.store');
+        Route::post('/menu/categories/{category}', [MenuController::class, 'updateCategory'])->name('menu.categories.update');
+        Route::delete('/menu/categories/{category}', [MenuController::class, 'destroyCategory'])->name('menu.categories.destroy');
+    });
+
+    // Điểm danh
+    Route::get('/checkin', [CheckinController::class, 'index'])->middleware('admin.perm:settings')->name('checkin.index');
+    Route::post('/checkin', [CheckinController::class, 'update'])->middleware('admin.perm:settings')->name('checkin.update');
 });

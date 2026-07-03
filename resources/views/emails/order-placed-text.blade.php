@@ -64,7 +64,11 @@ TONG TIEN
 Tam tinh : {{ $fmt($sub) }}d
 @if ($discRows->isNotEmpty())
 @foreach ($orderDiscRows as $d)
+@if ((int) $d->discount_amount > 0)
 Giam gia : -{{ $fmt((int) $d->discount_amount) }}d ({{ $d->description ?: 'Giam gia' }})
+@else
+Qua tang : {{ $d->description ?: 'Qua doi diem' }} (kem theo don)
+@endif
 @endforeach
 @elseif ($disc > 0)
 Giam gia : -{{ $fmt($disc) }}d

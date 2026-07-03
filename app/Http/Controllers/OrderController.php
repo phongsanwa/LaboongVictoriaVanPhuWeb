@@ -201,7 +201,11 @@ class OrderController extends Controller
         $discSvc      = app(DiscountCalculationService::class);
         $shippingFee  = (int) ($data['shipping_fee'] ?? 0);
 
-        $voucherDiscAmt    = $orderVoucher ? $discSvc->calcVoucherDiscount($orderVoucher, $subtotal) : 0;
+        $voucherDiscAmt    = $orderVoucher
+            ? ($orderVoucher->discount_type === 'buy_get'
+                ? $this->calcBuyGetDiscount($orderVoucher, $itemData)
+                : $discSvc->calcVoucherDiscount($orderVoucher, $subtotal))
+            : 0;
         $orderPromoDiscAmt = $orderPromo   ? $this->calcPromotionDiscount($orderPromo, $subtotal)    : 0;
         $orderDiscAmt      = min($subtotal, $voucherDiscAmt + $orderPromoDiscAmt);
 
@@ -249,14 +253,24 @@ class OrderController extends Controller
                 }
             }
 
-            // Save OrderDiscount records + mark vouchers used
-            if ($orderVoucher && $voucherDiscAmt > 0) {
+            // Save OrderDiscount records + mark vouchers used.
+            // Quà vật phẩm (gift_item) không trừ tiền nhưng vẫn phải ghi vào đơn
+            // để hiển thị cho quán chuẩn bị và in trên hoá đơn.
+            if ($orderVoucher && ($voucherDiscAmt > 0 || $orderVoucher->discount_type === 'gift_item')) {
+                $giftName = $orderVoucher->discount_type === 'gift_item'
+                    ? ($orderVoucher->redemption?->reward?->name ?? 'quà đổi điểm')
+                    : null;
+                $giftQty  = max(1, (int) ($orderVoucher->free_item_quantity ?? 1));
+
                 OrderDiscount::create([
                     'order_id'          => $order->id,
                     'discount_category' => $orderVoucher->source_type === 'PROMOTION_CLAIM' ? 'PROMOTION_VOUCHER' : 'GIFT_VOUCHER',
                     'voucher_id'        => $orderVoucher->id,
                     'discount_amount'   => $voucherDiscAmt,
                     'description'       => match($orderVoucher->discount_type) {
+                        'gift_item'  => 'Quà tặng: ' . ($giftQty > 1 ? "{$giftQty}× " : '') . $giftName,
+                        'buy_get'    => 'Mua ' . max(1, (int) ($orderVoucher->buy_quantity ?? 2))
+                                        . ' tặng ' . max(1, (int) ($orderVoucher->free_item_quantity ?? 1)),
                         'free_item'  => "Miễn phí: " . ($orderVoucher->freeItemProduct?->name ?? 'sản phẩm'),
                         'percentage' => "Giảm {$orderVoucher->discount_value}%",
                         default      => "Giảm " . number_format($orderVoucher->discount_value, 0, ',', '.') . "đ",
@@ -410,6 +424,30 @@ class OrderController extends Controller
             return (float) min($discount, $subtotal);
         }
         return 0;
+    }
+
+    /**
+     * Mua X tặng Y: giỏ đủ X+Y món thì được trừ tiền Y món có đơn giá thấp nhất.
+     * Tính lại từ item đã xác thực phía server — không tin số client gửi.
+     */
+    private function calcBuyGetDiscount(Voucher $v, array $itemData): float
+    {
+        if ($v->valid_until && now()->startOfDay()->gt($v->valid_until)) return 0;
+
+        $buy  = max(1, (int) ($v->buy_quantity ?? 2));
+        $free = max(1, (int) ($v->free_item_quantity ?? 1));
+
+        $units = [];
+        foreach ($itemData as $it) {
+            for ($i = 0; $i < $it['quantity']; $i++) {
+                $units[] = (float) $it['unit_price'];
+            }
+        }
+        if (count($units) < $buy + $free) return 0;
+
+        sort($units);
+
+        return round(array_sum(array_slice($units, 0, $free)), 2);
     }
 
     private function calcShipPromoDiscount(ShippingPromotion $promo, int $shippingFee): float

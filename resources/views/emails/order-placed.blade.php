@@ -156,7 +156,7 @@
             @foreach ($orderDiscRows as $d)
             <tr>
               <td style="padding:5px 0;font-size:13.5px;color:#E0518A;">{{ $d->description ?: 'Giảm giá' }}</td>
-              <td style="padding:5px 0;font-size:13.5px;color:#E0518A;text-align:right;font-weight:600;">−{{ $fmtVnd((int) $d->discount_amount) }}đ</td>
+              <td style="padding:5px 0;font-size:13.5px;color:#E0518A;text-align:right;font-weight:600;">{{ (int) $d->discount_amount > 0 ? '−' . $fmtVnd((int) $d->discount_amount) . 'đ' : 'Kèm theo đơn' }}</td>
             </tr>
             @endforeach
           @elseif ($disc > 0)
