@@ -21,6 +21,7 @@ class Order extends Model
         'points_earned',
         'note',
         'delivery_address',
+        'confirmed_at',
         'completed_at',
         'cancelled_at',
         'cancel_reason',
@@ -30,6 +31,7 @@ class Order extends Model
     {
         return [
             'completed_at' => 'datetime',
+            'confirmed_at' => 'datetime',
             'cancelled_at' => 'datetime',
         ];
     }
