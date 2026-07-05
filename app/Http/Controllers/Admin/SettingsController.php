@@ -29,6 +29,12 @@ class SettingsController extends Controller
         'rounding' => 'down',
     ];
 
+    public const TIMING_DEFAULTS = [
+        'prep_base'    => 5,  // phút chuẩn bị chung mỗi đơn
+        'prep_per_cup' => 2,  // phút/ly mặc định (món không cài riêng)
+        'ship_minutes' => 15, // thời gian giao hàng
+    ];
+
     private const NOTIF_DEFAULTS = [
         'earn' => true,
         'expiry' => true,
@@ -60,6 +66,7 @@ class SettingsController extends Controller
         $general = AppSetting::get('general', self::GENERAL_DEFAULTS);
         $points = AppSetting::get('points', self::POINTS_DEFAULTS);
         $notif = AppSetting::get('notifications', self::NOTIF_DEFAULTS);
+        $timing = AppSetting::get('timing', self::TIMING_DEFAULTS);
         $integEnabled = AppSetting::get('integrations', collect(self::INTEGRATIONS)->mapWithKeys(fn ($i) => [$i['id'] => $i['default']])->all());
 
         $tiers = CustomerTier::orderBy('level')->get()->values()->map(function (CustomerTier $tier, int $i) {
@@ -95,6 +102,7 @@ class SettingsController extends Controller
                 'points' => $points,
                 'tiers' => $tiers,
                 'notifications' => array_merge(self::NOTIF_DEFAULTS, $notif),
+                'timing' => $timing,
                 'integrations' => $integrations,
             ],
         ]);
@@ -114,6 +122,11 @@ class SettingsController extends Controller
             'points.welcome' => ['required', 'integer', 'min:0'],
             'points.expiry' => ['required', 'integer', 'min:0'],
             'points.rounding' => ['required', 'in:down,nearest,up'],
+
+            'timing' => ['required', 'array'],
+            'timing.prep_base' => ['required', 'integer', 'min:0', 'max:120'],
+            'timing.prep_per_cup' => ['required', 'integer', 'min:0', 'max:60'],
+            'timing.ship_minutes' => ['required', 'integer', 'min:0', 'max:180'],
 
             'tiers' => ['required', 'array'],
             'tiers.*.id' => ['required', 'integer', 'exists:customer_tiers,id'],
@@ -139,6 +152,7 @@ class SettingsController extends Controller
         $general['favicon_url'] = $current['favicon_url'] ?? null;
         AppSetting::set('general', $general);
         AppSetting::set('points', $data['points']);
+        AppSetting::set('timing', $data['timing']);
         AppSetting::set('notifications', $data['notifications']);
 
         $integEnabled = collect($data['integrations'])->mapWithKeys(fn ($i) => [$i['id'] => (bool) $i['on']])->all();

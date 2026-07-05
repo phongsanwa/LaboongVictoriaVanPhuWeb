@@ -84,6 +84,7 @@ function MenuEditor({ initial, groups, onClose, onSave, saving }) {
   const [imgFile, setImgFile] = useState(null);
   const [tags, setTags] = useState(initial.tags || []);
   const [available, setAvailable] = useState(initial.available !== false);
+  const [prepMin, setPrepMin] = useState(initial.prep_minutes ?? "");
   const [opts, setOpts] = useState(initial.opts || defaultOpts(initial.cat || groups[0].key));
   const [productVariants, setProductVariants] = useState(initial.variants || {});
   const fileRef = useRef(null);
@@ -103,7 +104,7 @@ function MenuEditor({ initial, groups, onClose, onSave, saving }) {
 
   const submit = () => {
     if (!valid) return;
-    onSave({ ...initial, id: initial.id || (LIVE ? null : ("new" + Date.now())), name: name.trim(), cat, price: Number(price), desc: desc.trim(), grad, img: imgPrev, imgFile, hadImg: !!initial.img, tags, available, opts, variants: productVariants, sold: initial.sold || 0 });
+    onSave({ ...initial, id: initial.id || (LIVE ? null : ("new" + Date.now())), name: name.trim(), cat, price: Number(price), desc: desc.trim(), grad, img: imgPrev, imgFile, hadImg: !!initial.img, tags, available, opts, variants: productVariants, prep_minutes: prepMin === "" ? null : Number(prepMin), sold: initial.sold || 0 });
   };
 
   const onFile = (e) => {
@@ -175,6 +176,16 @@ function MenuEditor({ initial, groups, onClose, onSave, saving }) {
           <div className="fld">
             <label>Mô tả</label>
             <textarea className="inp" value={desc} onChange={e => setDesc(e.target.value)} placeholder="Mô tả ngắn về món…" />
+          </div>
+
+          <div className="fld">
+            <label>Thời gian pha chế (phút/ly)</label>
+            <input className="inp tnum" inputMode="numeric" value={prepMin}
+              onChange={e => setPrepMin(e.target.value.replace(/[^\d]/g, ""))}
+              placeholder="Bỏ trống = dùng mặc định trong Cài đặt" />
+            <div style={{ fontSize: 11.5, color: "var(--ink-3)", marginTop: 4 }}>
+              Dùng để tính "dự kiến xong" cho khách — món pha lâu đặt số phút cao hơn.
+            </div>
           </div>
 
           <div className="fld">
@@ -370,6 +381,7 @@ function App() {
       form.append('color', item.grad || '');
       form.append('tags', JSON.stringify(item.tags || []));
       form.append('is_available', item.available ? '1' : '0');
+      form.append('prep_minutes', item.prep_minutes != null ? String(item.prep_minutes) : '');
       if (item.imgFile) form.append('image', item.imgFile);
       else if (item.hadImg && !item.img) form.append('remove_image', '1');
 

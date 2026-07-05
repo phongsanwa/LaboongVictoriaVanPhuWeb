@@ -18,6 +18,7 @@ const DATA = window.ADMIN_SETTINGS_DATA || {
   admin: { name: "Quản trị viên", email: "", initials: "QT" },
   general: { brand: "Laboong", tagline: "", email: "", hotline: "" },
   points: { per_point: 10000, welcome: 50, expiry: 12, rounding: "down" },
+  timing: { prep_base: 5, prep_per_cup: 2, ship_minutes: 15 },
   tiers: [],
   notifications: { earn: true, expiry: true, promo: true, tier: true, birthday: true, weekly: false },
   integrations: [],
@@ -54,6 +55,9 @@ function buildState() {
     welcome: DATA.points.welcome,
     expiry: DATA.points.expiry,
     rounding: DATA.points.rounding,
+    prepBase: (DATA.timing || {}).prep_base ?? 5,
+    prepPerCup: (DATA.timing || {}).prep_per_cup ?? 2,
+    shipMinutes: (DATA.timing || {}).ship_minutes ?? 15,
     tiers: DATA.tiers,
     notif: DATA.notifications,
     integ: DATA.integrations,
@@ -98,6 +102,7 @@ function App() {
     const { ok, data } = await apiCall("POST", "/admin/settings", {
       general: { brand: form.brand, tagline: form.tagline, email: form.email, hotline: form.hotline },
       points: { per_point: form.perPoint, welcome: form.welcome, expiry: form.expiry, rounding: form.rounding },
+      timing: { prep_base: form.prepBase, prep_per_cup: form.prepPerCup, ship_minutes: form.shipMinutes },
       tiers: form.tiers.map(t => ({ id: t.id, min: t.min, mult: t.mult })),
       notifications: form.notif,
       integrations: form.integ.map(g => ({ id: g.id, on: g.on })),
@@ -271,6 +276,23 @@ function App() {
                       <div className="frow">
                         <div className="flabel">Thời hạn điểm</div>
                         <div className="fcontrol"><div className="sinp-affix"><input className="sinp tnum" type="number" value={form.expiry} onChange={e => set("expiry", +e.target.value || 0)} /><span className="suffix">tháng</span></div></div>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="scard">
+                    <div className="scard-h"><div className="st">Thời gian đơn hàng</div><div className="sd">Dùng để đếm ngược "dự kiến xong" cho khách. Món có thể cài thời gian pha riêng trong Thực đơn.</div></div>
+                    <div className="scard-b">
+                      <div className="frow">
+                        <div className="flabel">Chuẩn bị chung<div className="fsub">Cộng 1 lần cho mỗi đơn</div></div>
+                        <div className="fcontrol"><div className="sinp-affix"><input className="sinp tnum" type="number" value={form.prepBase} onChange={e => set("prepBase", +e.target.value || 0)} /><span className="suffix">phút</span></div></div>
+                      </div>
+                      <div className="frow">
+                        <div className="flabel">Pha chế mỗi ly<div className="fsub">Mặc định khi món không cài riêng</div></div>
+                        <div className="fcontrol"><div className="sinp-affix"><input className="sinp tnum" type="number" value={form.prepPerCup} onChange={e => set("prepPerCup", +e.target.value || 0)} /><span className="suffix">phút/ly</span></div></div>
+                      </div>
+                      <div className="frow">
+                        <div className="flabel">Thời gian giao hàng<div className="fsub">Cộng thêm với đơn giao tận nơi</div></div>
+                        <div className="fcontrol"><div className="sinp-affix"><input className="sinp tnum" type="number" value={form.shipMinutes} onChange={e => set("shipMinutes", +e.target.value || 0)} /><span className="suffix">phút</span></div></div>
                       </div>
                     </div>
                   </div>

@@ -59,6 +59,7 @@ class MenuController extends Controller
             'color'         => ['nullable', 'string', 'max:255'],
             'tags'          => ['nullable', 'string'],
             'is_available'  => ['nullable'],
+            'prep_minutes'  => ['nullable', 'integer', 'min:0', 'max:120'],
             'image'         => ['nullable', 'image', 'max:4096', 'mimes:jpg,jpeg,png,webp'],
         ]);
 
@@ -82,6 +83,7 @@ class MenuController extends Controller
             'tags'         => $this->parseTags($data['tags'] ?? '[]'),
             'image_url'    => $imageUrl,
             'is_available' => (bool) ($request->input('is_available', '1')),
+            'prep_minutes' => $request->filled('prep_minutes') ? (int) $request->input('prep_minutes') : null,
             'sort_order'   => $sortOrder,
         ]);
 
@@ -105,6 +107,7 @@ class MenuController extends Controller
             'color'         => ['nullable', 'string', 'max:255'],
             'tags'          => ['nullable', 'string'],
             'is_available'  => ['nullable'],
+            'prep_minutes'  => ['nullable', 'integer', 'min:0', 'max:120'],
             'image'         => ['nullable', 'image', 'max:4096', 'mimes:jpg,jpeg,png,webp'],
             'remove_image'  => ['nullable'],
         ]);
@@ -137,6 +140,7 @@ class MenuController extends Controller
             'tags'         => $this->parseTags($data['tags'] ?? '[]'),
             'image_url'    => $imageUrl,
             'is_available' => (bool) ($request->input('is_available', '1')),
+            'prep_minutes' => $request->filled('prep_minutes') ? (int) $request->input('prep_minutes') : null,
         ]);
 
         $product->load(['category', 'variants' => fn ($q) => $q->orderBy('sort_order')]);
@@ -310,6 +314,7 @@ class MenuController extends Controller
             'img'       => $product->image_url,
             'tags'      => $tags,
             'available' => (bool) $product->is_available,
+            'prep_minutes' => $product->prep_minutes,
             'sold'      => 0,
             'variants'  => $this->groupVariants($product),
         ];

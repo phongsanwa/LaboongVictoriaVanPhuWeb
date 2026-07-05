@@ -14,6 +14,7 @@ class Product extends Model
         'slug',
         'description',
         'base_price',
+        'prep_minutes',
         'color',
         'tags',
         'image_url',
