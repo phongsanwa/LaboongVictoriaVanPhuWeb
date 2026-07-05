@@ -65,28 +65,41 @@ const FILTERS = [{ key: "all", label: "Tất cả" }, { key: "active", label: "�
 function dayKey(d) { if (d === 0) return "Hôm nay"; if (d === 1) return "Hôm qua"; if (d < 7) return `${d} ngày trước`; if (d < 30) return `${Math.floor(d / 7)} tuần trước`; return "Trước đó"; }
 function itemSummary(o) { const first = o.items[0]; const more = o.items.length - 1; return { first: `${first.qty}× ${first.name}`, more }; }
 
-/* Đếm ngược thời gian dự kiến xong (kiểu ShopeeFood) theo trạng thái đơn.
-   Đồng hồ chỉ bắt đầu khi quán bấm Xác nhận (etaAt tính từ confirmed_at). */
+/* Đếm ngược theo 2 giai đoạn TÁCH RIÊNG (kiểu ShopeeFood):
+   - Đang pha  → đếm ngược đến prepEtaAt (thời gian pha chế)
+   - Đang giao → đếm ngược đến etaAt (pha chế + giao hàng)
+   Đồng hồ chỉ bắt đầu khi quán bấm Xác nhận (mốc tính từ confirmed_at). */
+function fmtCountdown(remainMs) {
+  const m = Math.floor(remainMs / 60000);
+  const s = Math.floor((remainMs % 60000) / 1000);
+  return `${m}:${String(s).padStart(2, "0")}`;
+}
+
 function etaInfo(o, now) {
-  if (o.status === "ready") {
-    return o.type === "ship"
-      ? { e: "Đang giao", el: "đơn đang trên đường", small: true }
-      : { e: "Sẵn sàng", el: "đến quầy nhận ngay", small: true };
-  }
   if (o.status === "new") {
     return { e: "Chờ nhận đơn", el: "quán sắp xác nhận", small: true };
   }
-  if (!o.etaAt) {
+
+  if (o.status === "ready") {
+    if (o.type !== "ship") return { e: "Sẵn sàng", el: "đến quầy nhận ngay", small: true };
+    // Đang giao: đếm ngược riêng phần giao hàng
+    if (o.etaAt) {
+      const remain = new Date(o.etaAt).getTime() - now;
+      if (remain > 0) return { e: fmtCountdown(remain), el: "đang giao — dự kiến đến" };
+    }
+    return { e: "Sắp đến nơi", el: "đơn đang trên đường", small: true };
+  }
+
+  // Đang pha: đếm ngược riêng phần pha chế
+  if (!o.prepEtaAt && !o.etaAt) {
     return LIVE_OH
       ? { e: "Đang pha", el: "quán đang chuẩn bị", small: true } // đơn cũ chưa có mốc xác nhận
       : { e: "~12'", el: "dự kiến xong" }; // demo fallback
   }
-  const remain = new Date(o.etaAt).getTime() - now;
-  if (remain <= 0) return { e: "Sắp xong", el: "chờ chút nữa nhé", small: true };
-  // Đồng hồ đếm ngược mm:ss chạy theo thời gian thực
-  const m = Math.floor(remain / 60000);
-  const s = Math.floor((remain % 60000) / 1000);
-  return { e: `${m}:${String(s).padStart(2, "0")}`, el: o.type === "ship" ? "dự kiến giao đến" : "dự kiến xong" };
+  const target = o.prepEtaAt || o.etaAt;
+  const remain = new Date(target).getTime() - now;
+  if (remain <= 0) return { e: "Sắp xong", el: "pha chế sắp hoàn tất", small: true };
+  return { e: fmtCountdown(remain), el: "pha chế xong sau" };
 }
 
 function App() {
@@ -110,10 +123,10 @@ function App() {
 
   const live = ORDERS.find(o => ACTIVE_STATUSES.includes(o.status));
 
-  /* tick mỗi giây để đồng hồ đếm ngược chạy mượt */
+  /* tick mỗi giây để đồng hồ đếm ngược chạy mượt (cả pha chế lẫn giao hàng) */
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
-    if (!live || live.status === "ready" || !live.etaAt) return;
+    if (!live || !(live.prepEtaAt || live.etaAt)) return;
     const id = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(id);
   }, [live]);

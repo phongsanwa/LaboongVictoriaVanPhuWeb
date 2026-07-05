@@ -84,15 +84,23 @@ class OrderHistoryController extends Controller
 
         $isShip = !empty($o->delivery_address) || (int) $o->shipping_fee > 0;
 
-        // Dự kiến hoàn thành kiểu ShopeeFood: 5' chuẩn bị + 2'/ly (tối đa 30'),
-        // đơn giao thêm 15' di chuyển. Đồng hồ chỉ chạy từ lúc admin bấm
-        // "Xác nhận" (confirmed_at) — trước đó khách thấy "chờ quán xác nhận".
-        $cups    = (int) $o->items->sum('quantity');
-        $prepMin = min(30, 5 + 2 * $cups) + ($isShip ? 15 : 0);
+        // Thời gian pha chế và giao hàng TÁCH RIÊNG, cấu hình được:
+        // - Cài đặt chung: phút chuẩn bị/đơn, phút/ly mặc định, phút giao hàng
+        // - Mỗi món có thể cài thời gian pha riêng (products.prep_minutes)
+        // Đồng hồ chạy từ lúc admin bấm "Xác nhận" (confirmed_at).
+        $timing = \App\Models\AppSetting::get('timing', \App\Http\Controllers\Admin\SettingsController::TIMING_DEFAULTS);
+        $prepMin = (int) $timing['prep_base'];
+        foreach ($o->items as $item) {
+            $perCup   = $item->product?->prep_minutes ?? (int) $timing['prep_per_cup'];
+            $prepMin += $perCup * (int) $item->quantity;
+        }
+        $prepMin = min(90, $prepMin);
+        $shipMin = $isShip ? (int) $timing['ship_minutes'] : 0;
 
         return [
             'code'      => 'LB-' . str_pad($o->id, 4, '0', STR_PAD_LEFT),
-            'etaAt'     => $o->confirmed_at?->clone()->addMinutes($prepMin)->toIso8601String(),
+            'prepEtaAt' => $o->confirmed_at?->clone()->addMinutes($prepMin)->toIso8601String(),
+            'etaAt'     => $o->confirmed_at?->clone()->addMinutes($prepMin + $shipMin)->toIso8601String(),
             'daysAgo'   => (int) $o->created_at->startOfDay()->diffInDays(now()->startOfDay()),
             'time'      => $o->created_at->setTimezone('Asia/Ho_Chi_Minh')->format('H:i d/m/Y'),
             'status'    => self::STATUS_MAP[$o->status] ?? 'done',
