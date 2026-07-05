@@ -1214,21 +1214,29 @@ function App() {
                 <div className="cart-empty"><div className="cei"><Icon name="bag" size={26} /></div>Giỏ hàng trống. Hãy chọn món bạn thích nhé!</div>
               ) : (<>
                 <div className="cart-b">
+                  {/* Giao từ chi nhánh nào — dòng riêng, bấm là mở danh sách cửa hàng */}
+                  {selectedAddr && liveStores.length > 0 && (
+                    <button className="deliv" style={{ marginBottom: 8 }}
+                      onClick={() => { setStoreViewMode("delivery"); setStoreView(true); }}>
+                      <span className="di"><Icon name="truck" size={19} color="currentColor" /></span>
+                      <div style={{ minWidth: 0, flex: 1 }}>
+                        <div className="dl">Giao từ</div>
+                        <div className="dt">{selectedStore ? selectedStore.name : "Chưa chọn chi nhánh"}</div>
+                        {liveStores.length > 1 && (
+                          <div className="dt" style={{ marginTop: 2, fontSize: 12.5, fontWeight: 600, color: "var(--brand)" }}>
+                            Bấm để chọn chi nhánh giao hàng
+                          </div>
+                        )}
+                      </div>
+                      <span className="dchev"><Icon name="chev" size={18} /></span>
+                    </button>
+                  )}
                   <button className="deliv" onClick={() => setAddrView(true)}>
                     <span className="di"><Icon name={selectedAddr ? addrIcon(selectedAddr.label) : "pin"} size={19} color="currentColor" /></span>
                     <div style={{ minWidth: 0, flex: 1 }}>
                       {selectedAddr ? (<>
                         <div className="dl">Giao đến <span className="dtag">{selectedAddr.label}</span>{selectedAddr.def && <span className="dtag" style={{ background: "var(--bg-2)", color: "var(--ink-2)" }}>Mặc định</span>}</div>
                         <div className="dt">{selectedAddr.text}</div>
-                        {liveStores.length > 0 && (
-                          <div className="dt" style={{ marginTop: 3, display: "flex", alignItems: "center", gap: 5 }}>
-                            <Icon name="pin" size={12} color="var(--ink-3)" />
-                            <span style={{ color: "var(--ink-3)", fontSize: 12.5 }}>Từ</span>
-                            <button onClick={e => { e.stopPropagation(); setStoreViewMode("delivery"); setStoreView(true); }} style={{ fontSize: 12.5, fontWeight: 600, color: "var(--brand)", textDecoration: "underline", textDecorationStyle: "dashed", textUnderlineOffset: 3 }}>
-                              {selectedStore ? selectedStore.name : "Chọn chi nhánh"}
-                            </button>
-                          </div>
-                        )}
                       </>) : (<>
                         <div className="dl">Nhận tại quầy</div>
                         <div className="dt">{pickupLabel}</div>
