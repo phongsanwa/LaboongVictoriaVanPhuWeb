@@ -667,10 +667,18 @@ function App() {
     if (el) { const y = el.getBoundingClientRect().top + window.scrollY - 124; window.scrollTo({ top: y, behavior: "smooth" }); }
   };
 
-  const reset = () => {
+  /* Xoá giỏ hàng + cache localStorage + ưu đãi đã áp (giữ nguyên màn hình
+     "đặt thành công"). Gọi ngay khi đặt hàng xong để không khôi phục lại
+     đơn cũ khi khách đóng giỏ / tải lại trang. */
+  const clearCart = () => {
     clearCartState();
-    setLines([]); setPlaced(false); setDrawer(false); setNote(""); setOrderErr("");
+    setLines([]); setNote("");
     setOrderVoucher(null); setSelectedOrderPromo(null); setShippingVoucher(null); setSelectedShipPromo(null);
+  };
+
+  const reset = () => {
+    clearCart();
+    setPlaced(false); setDrawer(false); setOrderErr("");
     setCouponView(false); setCouponErr("");
     setStoreView(false); setAddrView(false);
     setActualPts(0);
@@ -680,7 +688,7 @@ function App() {
     if (placing) return;
     setOrderErr("");
 
-    if (!LIVE) { setActualPts(earnPts); setPlaced(true); return; }
+    if (!LIVE) { setActualPts(earnPts); setPlaced(true); clearCart(); return; }
 
     setPlacing(true);
     try {
@@ -707,6 +715,7 @@ function App() {
       if (!res.ok) throw new Error(json.message || 'Có lỗi xảy ra');
       setActualPts(json.points_earned ?? earnPts);
       setPlaced(true);
+      clearCart(); // xoá giỏ + cache ngay khi đặt thành công
     } catch (e) {
       setOrderErr(e.message);
     } finally {
