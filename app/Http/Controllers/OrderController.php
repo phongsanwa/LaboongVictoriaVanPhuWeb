@@ -207,11 +207,26 @@ class OrderController extends Controller
         $discSvc      = app(DiscountCalculationService::class);
         $shippingFee  = (int) ($data['shipping_fee'] ?? 0);
 
-        $voucherDiscAmt    = $orderVoucher
-            ? ($orderVoucher->discount_type === 'buy_get'
-                ? $this->calcBuyGetDiscount($orderVoucher, $itemData)
-                : $discSvc->calcVoucherDiscount($orderVoucher, $saleSubtotal))
-            : 0;
+        $voucherDiscAmt = 0;
+        if ($orderVoucher) {
+            if ($orderVoucher->discount_type === 'buy_get') {
+                $voucherDiscAmt = $this->calcBuyGetDiscount($orderVoucher, $itemData);
+            } elseif ($orderVoucher->discount_type === 'free_item' && !$orderVoucher->free_item_product_id) {
+                // Voucher Freetopping: chỉ áp khi món trong đơn CÓ topping,
+                // và không giảm quá tổng tiền topping thực tế
+                $topTotal = 0;
+                foreach ($itemData as $it) {
+                    foreach ($it['toppings'] as $t) {
+                        $topTotal += (float) $t['extra'] * (int) $it['quantity'];
+                    }
+                }
+                $voucherDiscAmt = $topTotal > 0
+                    ? min((float) $orderVoucher->discount_value, $topTotal, $saleSubtotal)
+                    : 0;
+            } else {
+                $voucherDiscAmt = $discSvc->calcVoucherDiscount($orderVoucher, $saleSubtotal);
+            }
+        }
         $orderPromoDiscAmt = $orderPromo   ? $this->calcPromotionDiscount($orderPromo, $saleSubtotal)    : 0;
         $orderDiscAmt      = min($saleSubtotal, $voucherDiscAmt + $orderPromoDiscAmt);
 
@@ -288,7 +303,9 @@ class OrderController extends Controller
                         'gift_item'  => 'Quà tặng: ' . ($giftQty > 1 ? "{$giftQty}× " : '') . $giftName,
                         'buy_get'    => 'Mua ' . max(1, (int) ($orderVoucher->buy_quantity ?? 2))
                                         . ' tặng ' . max(1, (int) ($orderVoucher->free_item_quantity ?? 1)),
-                        'free_item'  => "Miễn phí: " . ($orderVoucher->freeItemProduct?->name ?? 'sản phẩm'),
+                        'free_item'  => $orderVoucher->free_item_product_id
+                            ? "Miễn phí: " . ($orderVoucher->freeItemProduct?->name ?? 'sản phẩm')
+                            : "Miễn phí topping",
                         'percentage' => "Giảm {$orderVoucher->discount_value}%",
                         default      => "Giảm " . number_format($orderVoucher->discount_value, 0, ',', '.') . "đ",
                     },
