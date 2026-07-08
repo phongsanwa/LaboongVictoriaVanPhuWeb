@@ -15,6 +15,7 @@ const REWARD = HOME.reward || "";
 const PROMOS = HOME.promos || [];
 const TX = HOME.transactions || [];
 const STORE = HOME.store || null;
+const NEWS = HOME.news || [];
 
 /* ---- Google Maps (loaded async in welcome.blade.php) ---- */
 function onGmapsReady(fn) {
@@ -98,6 +99,7 @@ function App() {
   const [qrOpen, setQrOpen] = useState(false);
   const [slide, setSlide] = useState(0);
   const [promoDetail, setPromoDetail] = useState(null);
+  const [newsDetail, setNewsDetail] = useState(null);
   const [tab, setTab] = useState("home");
 
   const serverCi = HOME.checkin || { streak: 0, last: null, today: false };
@@ -158,7 +160,7 @@ function App() {
 
   // esc closes modal
   useEffect(() => {
-    const h = e => { if (e.key === "Escape") { setQrOpen(false); setPromoDetail(null); } };
+    const h = e => { if (e.key === "Escape") { setQrOpen(false); setPromoDetail(null); setNewsDetail(null); } };
     window.addEventListener("keydown", h); return () => window.removeEventListener("keydown", h);
   }, []);
 
@@ -328,6 +330,31 @@ function App() {
               </section>
             )}
 
+            {/* ---- Tin tức ---- */}
+            {NEWS.length > 0 && (
+              <section className="card">
+                <div className="card-h"><h3>Tin tức Laboong</h3></div>
+                <div className="news-list">
+                  {NEWS.map(n => {
+                    const cover = n.image_url || (n.youtube_id ? `https://img.youtube.com/vi/${n.youtube_id}/hqdefault.jpg` : null);
+                    return (
+                      <button className="news-card" key={n.id} onClick={() => setNewsDetail(n)}>
+                        <div className="news-thumb">
+                          {cover ? <img src={cover} alt="" /> : <span className="news-ph"><Icon name="star" size={26} color="#fff" /></span>}
+                          {n.media_type !== "image" && <span className="news-play"><Icon name="play" size={18} color="#fff" /></span>}
+                        </div>
+                        <div className="news-body">
+                          <div className="news-title">{n.title}</div>
+                          {n.excerpt && <div className="news-ex">{n.excerpt}</div>}
+                          {n.date && <div className="news-date">{n.date}</div>}
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </section>
+            )}
+
             {/* ---- Recent transactions ---- */}
             <section className="card">
               <div className="card-h">
@@ -422,6 +449,37 @@ function App() {
               <a href={NAV_URLS.menu} className="qr-cta" style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, textDecoration: "none" }}>
                 <Icon name="cup" size={18} color="#fff" /> Đặt món ngay
               </a>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ---------- News detail modal ---------- */}
+      {newsDetail && (
+        <div className="scrim" onClick={() => setNewsDetail(null)}>
+          <div className="qr-modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 560, maxHeight: "92vh", display: "flex", flexDirection: "column" }}>
+            <div className="qr-modal-h" style={{ background: "linear-gradient(150deg,#0F623F,#1AA86A)" }}>
+              <button className="qr-close" onClick={() => setNewsDetail(null)}>×</button>
+              <h3 style={{ paddingRight: 30 }}>{newsDetail.title}</h3>
+              {newsDetail.date && <p>{newsDetail.date}</p>}
+            </div>
+            <div style={{ overflowY: "auto", padding: 0 }}>
+              <div style={{ background: "#000" }}>
+                {newsDetail.media_type === "youtube" && newsDetail.youtube_id ? (
+                  <div style={{ position: "relative", paddingBottom: "56.25%", height: 0 }}>
+                    <iframe src={`https://www.youtube.com/embed/${newsDetail.youtube_id}`} title={newsDetail.title}
+                      style={{ position: "absolute", inset: 0, width: "100%", height: "100%", border: 0 }}
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen />
+                  </div>
+                ) : newsDetail.media_type === "video" && newsDetail.video_url ? (
+                  <video src={newsDetail.video_url} controls poster={newsDetail.image_url || undefined} style={{ width: "100%", maxHeight: 340, display: "block" }} />
+                ) : newsDetail.image_url ? (
+                  <img src={newsDetail.image_url} alt={newsDetail.title} style={{ width: "100%", display: "block" }} />
+                ) : null}
+              </div>
+              {newsDetail.body && (
+                <div style={{ padding: "18px 20px", fontSize: 14.5, lineHeight: 1.7, color: "var(--ink)", whiteSpace: "pre-wrap" }}>{newsDetail.body}</div>
+              )}
             </div>
           </div>
         </div>

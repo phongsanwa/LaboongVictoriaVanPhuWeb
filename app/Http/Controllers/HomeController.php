@@ -30,6 +30,7 @@ class HomeController extends Controller
                 'pointsThisWeek' => 0,
                 'checkin' => ['streak' => 0, 'last' => null, 'today' => false],
                 'checkinConfig' => CheckinController::checkinConfig(),
+                'news' => $this->buildNews(),
             ]]);
         }
 
@@ -112,7 +113,28 @@ class HomeController extends Controller
             'pointsThisWeek' => $pointsThisWeek,
             'checkin' => $checkinState,
             'checkinConfig' => $checkinConfig,
+            'news' => $this->buildNews(),
         ]]);
+    }
+
+    /** Tin tức đang hiển thị cho trang chủ. */
+    private function buildNews(): array
+    {
+        return \App\Models\NewsArticle::where('status', 'active')
+            ->orderBy('sort_order')->orderByDesc('id')
+            ->limit(12)
+            ->get()
+            ->map(fn (\App\Models\NewsArticle $n) => [
+                'id'          => $n->id,
+                'title'       => $n->title,
+                'excerpt'     => $n->excerpt ?? '',
+                'body'        => $n->body ?? '',
+                'media_type'  => $n->media_type,
+                'image_url'   => $n->image_url,
+                'video_url'   => $n->video_url,
+                'youtube_id'  => \App\Models\NewsArticle::youtubeId($n->youtube_url),
+                'date'        => $n->published_at?->format('d/m/Y'),
+            ])->all();
     }
 
     private function formatTxDate(Carbon $date): string

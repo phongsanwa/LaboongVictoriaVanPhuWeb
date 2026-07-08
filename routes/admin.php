@@ -12,6 +12,7 @@ use App\Http\Controllers\Admin\RolesController;
 use App\Http\Controllers\Admin\SettingsController;
 use App\Http\Controllers\Admin\StoresController;
 use App\Http\Controllers\Admin\MenuController;
+use App\Http\Controllers\Admin\NewsController;
 use App\Http\Controllers\Admin\PromotionsController;
 use App\Http\Controllers\Admin\VariantsController;
 use Illuminate\Support\Facades\Route;
@@ -130,4 +131,14 @@ Route::middleware(['auth', 'admin.perm'])->prefix('admin')->name('admin.')->grou
     // Điểm danh
     Route::get('/checkin', [CheckinController::class, 'index'])->middleware('admin.perm:settings')->name('checkin.index');
     Route::post('/checkin', [CheckinController::class, 'update'])->middleware('admin.perm:settings')->name('checkin.update');
+
+    // Tin tức (hiển thị ngoài trang chủ)
+    Route::middleware('admin.perm:camp_edit')->group(function () {
+        Route::get('/news', [NewsController::class, 'index'])->name('news.index');
+        Route::post('/news', [NewsController::class, 'store'])->name('news.store');
+        Route::post('/news/upload', [NewsController::class, 'upload'])->name('news.upload');
+        Route::post('/news/{news}', [NewsController::class, 'update'])->name('news.update');
+        Route::post('/news/{news}/toggle', [NewsController::class, 'toggle'])->name('news.toggle');
+        Route::delete('/news/{news}', [NewsController::class, 'destroy'])->name('news.destroy');
+    });
 });
