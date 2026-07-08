@@ -64,6 +64,8 @@ function Icon({ name, size = 20, stroke = 2.1, color = "currentColor", fill = "n
     pause: <><rect x="7" y="5.5" width="3.5" height="13" rx="1" fill={color} stroke="none"/><rect x="13.5" y="5.5" width="3.5" height="13" rx="1" fill={color} stroke="none"/></>,
     send: <><path d="M21 4 3 11l6 2.5L11.5 20 21 4Z"/><path d="m9 13.5 4-4"/></>,
     sparkle2: <path d="M12 4l1.8 4.7 4.7 1.8-4.7 1.8L12 17l-1.8-4.7L5.5 10.5l4.7-1.8z" fill={color} stroke="none"/>,
+    flame: <path d="M12 2.4c.8 2.6 2.2 3.9 3.4 5.4C16.6 9.3 17.2 10.7 17.2 12.4a5.2 5.2 0 0 1-10.4 0c0-1.3.4-2.4 1.1-3.3.2.9.8 1.6 1.6 1.9-.5-2.5.6-5.4 2.5-8.6Z" fill={color} stroke="none"/>,
+    plant: <><path d="M12 21v-7.5"/><path d="M11.8 14c0-3.1-2-5.1-5.3-5.1-.3 3.1 1.6 5.1 5.3 5.1Z" fill={color} stroke="none"/><path d="M12.2 12c0-2.7 1.8-4.6 4.7-4.6.3 2.8-1.6 4.6-4.7 4.6Z" fill={color} stroke="none"/></>,
     arrowleft: <path d="M19 12H5M11 6l-6 6 6 6"/>,
     shield: <><path d="M12 3 5 6v5.5c0 4 2.9 7.4 7 8.5 4.1-1.1 7-4.5 7-8.5V6z"/><path d="m9 12 2 2 4-4"/></>,
     lock: <><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></>,
