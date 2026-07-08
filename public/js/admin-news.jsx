@@ -73,12 +73,15 @@ function NewsEditor({ initial, onClose, onSaved }) {
       menubar: false,
       language: 'vi',
       branding: false,
-      plugins: 'lists link image media table autolink paste',
-      toolbar: 'undo redo | blocks | bold italic underline | bullist numlist | link image media table | alignleft aligncenter alignright | removeformat',
+      plugins: 'lists link image media table autolink paste code',
+      toolbar: 'undo redo | blocks | bold italic underline | bullist numlist | link image media table | alignleft aligncenter alignright | removeformat | code',
       automatic_uploads: true,
       paste_data_images: false,
       relative_urls: false,
       convert_urls: false,
+      // Cho phép sửa HTML trực tiếp (nút </> Source code) và giữ iframe nhúng
+      extended_valid_elements: 'iframe[src|width|height|frameborder|allow|allowfullscreen|loading|referrerpolicy|style|class|title]',
+      valid_children: '+body[iframe]',
       images_upload_handler: (blobInfo) => new Promise((resolve, reject) => {
         const fd = new FormData();
         fd.append('kind', 'image');
