@@ -4,7 +4,6 @@ namespace App\Http\Controllers;
 
 use App\Jobs\SendOrderNotification;
 use App\Models\Customer;
-use App\Models\CustomerPoint;
 use App\Models\Order;
 use App\Models\OrderDiscount;
 use App\Models\Product;
@@ -43,6 +42,9 @@ class OrderController extends Controller
             'order_promo_id'      => ['nullable', 'integer'],
             'ship_promo_id'       => ['nullable', 'integer'],
             'delivery_address'    => ['nullable', 'string', 'max:500'],
+            'delivery_phone'      => ['nullable', 'string', 'regex:/^0\d{9}$/'],
+        ], [
+            'delivery_phone.regex' => 'Số điện thoại nhận hàng phải gồm 10 số, bắt đầu bằng 0',
         ]);
 
         $user     = Auth::user();
@@ -258,6 +260,8 @@ class OrderController extends Controller
                 'points_earned'   => $pointsEarned,
                 'note'            => $data['note'] ?? null,
                 'delivery_address' => $data['delivery_address'] ?? null,
+                // Chỉ lưu SĐT nhận hàng cho đơn giao; đơn tại quầy để trống
+                'delivery_phone'   => !empty($data['delivery_address']) ? ($data['delivery_phone'] ?? null) : null,
             ]);
 
             foreach ($itemData as $item) {
@@ -344,18 +348,9 @@ class OrderController extends Controller
                 ]);
             }
 
-            if ($pointsEarned > 0) {
-                $customer->increment('total_points',    $pointsEarned);
-                $customer->increment('lifetime_points', $pointsEarned);
-
-                CustomerPoint::create([
-                    'customer_id'  => $customer->id,
-                    'point_type'   => 'purchase',
-                    'points'       => $pointsEarned,
-                    'description'  => "Tích điểm đơn hàng #{$order->id}",
-                    'reference_id' => $order->id,
-                ]);
-            }
+            // Điểm CHƯA cộng lúc này — chỉ cộng khi đơn hoàn tất (giao thành công).
+            // points_earned lưu số điểm SẼ nhận; việc cộng thật do admin duyệt
+            // đơn sang COMPLETED thực hiện (Admin\OrdersController::advance).
 
             $customer->increment('total_orders');
             $customer->increment('total_spent', $totalAmount);
@@ -366,9 +361,12 @@ class OrderController extends Controller
         $this->notifyStaff($orderId);
 
         return response()->json([
-            'order_id'      => $orderId,
-            'points_earned' => $pointsEarned,
-            'message'       => 'Đặt hàng thành công',
+            'order_id'        => $orderId,
+            'points_earned'   => $pointsEarned,   // số điểm sẽ nhận khi đơn hoàn tất
+            'points_pending'  => true,
+            'message'         => $pointsEarned > 0
+                ? "Đặt hàng thành công! Bạn sẽ nhận +{$pointsEarned} điểm khi đơn hoàn tất."
+                : 'Đặt hàng thành công!',
         ], 201);
     }
 

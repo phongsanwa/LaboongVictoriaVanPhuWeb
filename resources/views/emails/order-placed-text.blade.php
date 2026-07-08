@@ -3,7 +3,7 @@
   $ordNo = 'LB-' . str_pad($o->id, 4, '0', STR_PAD_LEFT);
   $user  = $o->customer?->user;
   $name  = $user?->name  ?? 'Khach hang';
-  $phone = $user?->phone ?? '—';
+  $phone = $o->delivery_phone ?: ($user?->phone ?? '—');
   $items = $o->items;
 
   $sub   = (int) $o->subtotal;

@@ -19,8 +19,10 @@ class Order extends Model
         'shipping_fee',
         'total_amount',
         'points_earned',
+        'points_awarded_at',
         'note',
         'delivery_address',
+        'delivery_phone',
         'confirmed_at',
         'completed_at',
         'cancelled_at',
@@ -31,6 +33,7 @@ class Order extends Model
     {
         return [
             'completed_at' => 'datetime',
+            'points_awarded_at' => 'datetime',
             'confirmed_at' => 'datetime',
             'cancelled_at' => 'datetime',
         ];

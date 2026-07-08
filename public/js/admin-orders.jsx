@@ -1,5 +1,52 @@
 /* global React, ReactDOM, Icon, fmt, adminHref, useTweaks, TweaksPanel, TweakSection, TweakColor, TweakToggle */
-const { useState, useEffect, useMemo, useCallback } = React;
+const { useState, useEffect, useMemo, useCallback, useRef } = React;
+
+/* ─── Âm thanh báo đơn mới (kiểu ShopeeFood) ──────────────────────── */
+let _audioCtx = null;
+function ensureAudioCtx() {
+  try {
+    if (!_audioCtx) {
+      const AC = window.AudioContext || window.webkitAudioContext;
+      if (AC) _audioCtx = new AC();
+    }
+    if (_audioCtx && _audioCtx.state === 'suspended') _audioCtx.resume();
+  } catch { /* ignore */ }
+  return _audioCtx;
+}
+/* Chuông "ding-dong" bằng Web Audio (không cần file âm thanh) */
+function playChime() {
+  const ctx = ensureAudioCtx();
+  if (!ctx) return;
+  const now = ctx.currentTime;
+  [[880, 0], [1174.66, 0.20]].forEach(([freq, t]) => {
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = 'sine';
+    osc.frequency.value = freq;
+    gain.gain.setValueAtTime(0.0001, now + t);
+    gain.gain.exponentialRampToValueAtTime(0.6, now + t + 0.02);
+    gain.gain.exponentialRampToValueAtTime(0.0001, now + t + 0.4);
+    osc.connect(gain); gain.connect(ctx.destination);
+    osc.start(now + t); osc.stop(now + t + 0.45);
+  });
+}
+/* Đọc thành tiếng (giọng đọc như ShopeeFood) */
+function speakNewOrder(count) {
+  try {
+    if (!window.speechSynthesis) return;
+    window.speechSynthesis.cancel();
+    const text = count > 1
+      ? `Bạn có ${count} đơn hàng mới từ La-boong`
+      : `Bạn đã có đơn hàng từ La-boong`;
+    const u = new SpeechSynthesisUtterance(text);
+    u.lang = 'vi-VN'; u.rate = 1; u.pitch = 1; u.volume = 1;
+    window.speechSynthesis.speak(u);
+  } catch { /* ignore */ }
+}
+function alertNewOrder(count) {
+  playChime();
+  setTimeout(() => speakNewOrder(count), 500);
+}
 
 const OM_DEFAULTS = /*EDITMODE-BEGIN*/{
   "brand": ["#0F623F", "#07432A"],
@@ -94,6 +141,29 @@ function App() {
   const [toast,    setToast]   = useState(null);
   const [saving,   setSaving]  = useState(false);
 
+  /* Âm thanh báo đơn mới — bật/tắt lưu trong localStorage */
+  const [soundOn, setSoundOn] = useState(() => {
+    try { return localStorage.getItem('laboong_admin_sound') !== '0'; } catch { return true; }
+  });
+  const soundOnRef = useRef(soundOn);
+  useEffect(() => {
+    soundOnRef.current = soundOn;
+    try { localStorage.setItem('laboong_admin_sound', soundOn ? '1' : '0'); } catch { /* ignore */ }
+  }, [soundOn]);
+  // Ghi nhận sẵn các đơn đang hiển thị lúc mở trang để không báo nhầm khi tải lại
+  const seenIdsRef = useRef(LIVE && LIVE_D.orders ? new Set(LIVE_D.orders.map(o => o.dbId)) : null);
+
+  /* Mở khoá âm thanh sau lần tương tác đầu tiên (chính sách autoplay của trình duyệt) */
+  useEffect(() => {
+    const unlock = () => { ensureAudioCtx(); };
+    window.addEventListener('pointerdown', unlock, { once: true });
+    window.addEventListener('keydown', unlock, { once: true });
+    return () => {
+      window.removeEventListener('pointerdown', unlock);
+      window.removeEventListener('keydown', unlock);
+    };
+  }, []);
+
   useEffect(() => {
     const r = document.documentElement;
     const [b, d] = Array.isArray(tw.brand) ? tw.brand : [tw.brand, tw.brand];
@@ -118,6 +188,17 @@ function App() {
       const res = await fetch(LIVE_D.urls?.refresh, { headers: { 'Accept': 'application/json' } });
       const json = await res.json();
       if (json.orders) {
+        // Phát hiện đơn mới → chuông + đọc "Bạn đã có đơn hàng từ Laboong"
+        if (seenIdsRef.current === null) {
+          seenIdsRef.current = new Set(json.orders.map(o => o.dbId)); // lần đầu: chỉ ghi nhận, không báo
+        } else {
+          const fresh = json.orders.filter(o => o.dbId && !seenIdsRef.current.has(o.dbId));
+          fresh.forEach(o => seenIdsRef.current.add(o.dbId));
+          if (fresh.length > 0) {
+            if (soundOnRef.current) alertNewOrder(fresh.length);
+            flash(`🔔 ${fresh.length} đơn hàng mới!`);
+          }
+        }
         setOrders(json.orders.map(o => ({ ...o, mins: minsAgo(o.createdAt) })));
       }
     } catch { /* silent */ }
@@ -125,7 +206,7 @@ function App() {
 
   useEffect(() => {
     if (!LIVE) return;
-    const id = setInterval(refreshOrders, 20000);
+    const id = setInterval(refreshOrders, 12000);
     return () => clearInterval(id);
   }, [refreshOrders]);
 
@@ -169,7 +250,8 @@ function App() {
         const url = LIVE_D.urls.advance.replace('__ID__', o.dbId);
         const json = await apiPost(url, {});
         updateOrder(json.order);
-        flash(`${o.id} → ${STATUS[nx].label}`);
+        // Hoàn tất đơn có cộng điểm → hiện rõ số điểm đã cộng cho khách
+        flash(json.points_awarded > 0 ? `${o.id} hoàn tất · +${json.points_awarded} điểm cho khách` : `${o.id} → ${STATUS[nx].label}`);
       } catch (e) { flash('Lỗi: ' + e.message); }
       finally { setSaving(false); }
     } else {
@@ -214,6 +296,19 @@ function App() {
             <h1>Quản lý đơn hàng</h1>
           </div>
           <div className="topbar-spacer" />
+          {LIVE && (
+            <button className="icon-btn" title={soundOn ? "Âm báo đơn mới: BẬT (bấm để tắt)" : "Âm báo đơn mới: TẮT (bấm để bật)"}
+              onClick={() => {
+                const next = !soundOn;
+                setSoundOn(next);
+                if (next) { ensureAudioCtx(); alertNewOrder(1); } // bật + phát thử (đồng thời mở khoá âm thanh)
+                else if (window.speechSynthesis) window.speechSynthesis.cancel();
+              }}
+              style={{ marginRight: 8, position: "relative", color: soundOn ? "var(--brand)" : "var(--ink-3)" }}>
+              <Icon name="bell" size={18} />
+              {!soundOn && <span style={{ position: "absolute", top: "50%", left: "15%", right: "15%", height: 2, background: "var(--ink-3)", transform: "rotate(-45deg)" }} />}
+            </button>
+          )}
           {LIVE && (
             <button className="icon-btn" title="Tải lại" onClick={refreshOrders} style={{ marginRight: 8 }}>
               <Icon name="refresh" size={18} />
@@ -347,7 +442,13 @@ function OrderDrawer({ o, saving, onClose, onAdvance, onCancel }) {
             </div>
             {o.phone && (
               <div className="od-ir"><span className="odi"><Icon name="phone" size={16} /></span>
-                <div><div className="odk">Số điện thoại</div><div className="odv">{o.phone}</div></div>
+                <div>
+                  <div className="odk">Số điện thoại{o.accountPhone && o.phone !== o.accountPhone ? " (nhận hàng)" : ""}</div>
+                  <div className="odv">{o.phone}</div>
+                  {o.accountPhone && o.phone !== o.accountPhone && (
+                    <div style={{ fontSize: 12, color: "var(--ink-3)", marginTop: 2 }}>SĐT tài khoản: {o.accountPhone}</div>
+                  )}
+                </div>
               </div>
             )}
             <div className="od-ir"><span className="odi"><Icon name={o.type === "ship" ? "truck" : "bag"} size={16} /></span>

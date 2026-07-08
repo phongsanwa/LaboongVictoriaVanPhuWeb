@@ -257,6 +257,7 @@ class MenuPageController extends Controller
             'promos'        => $promoCodes,
             'addresses'     => $addresses,
             'customerName'  => Auth::user()?->name ?? '',
+            'customerPhone' => Auth::user()?->phone ?? '',
             'urls'          => [
                 'placeOrder'   => route('orders.place'),
                 'storeAddress' => route('profile.addresses.store'),
