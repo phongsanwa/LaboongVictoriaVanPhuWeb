@@ -3,9 +3,11 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\CustomerPoint;
 use App\Models\Order;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 
 class OrdersController extends Controller
 {
@@ -62,9 +64,18 @@ class OrdersController extends Controller
         }
         $order->update(array_merge(['status' => $nextDb], $extra));
 
+        // Đơn hoàn tất (giao thành công) → cộng điểm cho khách. Chỉ cộng 1 lần.
+        $pointsAwarded = false;
+        if ($nextDb === 'COMPLETED' && $order->points_earned > 0 && !$order->points_awarded_at) {
+            $pointsAwarded = $this->awardPoints($order->fresh());
+        }
+
         return response()->json([
-            'order'   => $this->presentOrder($order->fresh(['customer.user', 'items.product', 'items.toppings', 'discounts', 'store'])),
-            'message' => 'Đã cập nhật trạng thái',
+            'order'          => $this->presentOrder($order->fresh(['customer.user', 'items.product', 'items.toppings', 'discounts', 'store'])),
+            'points_awarded' => $pointsAwarded ? (int) $order->points_earned : 0,
+            'message'        => $pointsAwarded
+                ? "Đã hoàn tất đơn — cộng +{$order->points_earned} điểm cho khách"
+                : 'Đã cập nhật trạng thái',
         ]);
     }
 
@@ -81,6 +92,41 @@ class OrdersController extends Controller
             'order'   => $this->presentOrder($order->fresh(['customer.user', 'items.product', 'items.toppings', 'discounts', 'store'])),
             'message' => 'Đã huỷ đơn hàng',
         ]);
+    }
+
+    /**
+     * Cộng điểm cho khách khi đơn hoàn tất. An toàn với race: dùng khoá bản ghi
+     * và kiểm tra lại points_awarded_at trong transaction để không cộng 2 lần.
+     */
+    private function awardPoints(Order $order): bool
+    {
+        return DB::transaction(function () use ($order) {
+            $fresh = Order::whereKey($order->id)->lockForUpdate()->first();
+            if (!$fresh || $fresh->points_awarded_at || (int) $fresh->points_earned <= 0) {
+                return false;
+            }
+
+            $customer = $fresh->customer()->first();
+            if (!$customer) {
+                return false;
+            }
+
+            $points = (int) $fresh->points_earned;
+            $customer->increment('total_points',    $points);
+            $customer->increment('lifetime_points', $points);
+
+            CustomerPoint::create([
+                'customer_id'  => $customer->id,
+                'point_type'   => 'purchase',
+                'points'       => $points,
+                'description'  => "Tích điểm đơn hàng #{$fresh->id} (hoàn tất)",
+                'reference_id' => $fresh->id,
+            ]);
+
+            $fresh->update(['points_awarded_at' => now()]);
+
+            return true;
+        });
     }
 
     /** GET /admin/orders/refresh */

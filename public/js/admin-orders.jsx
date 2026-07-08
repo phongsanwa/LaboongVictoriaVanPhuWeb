@@ -169,7 +169,8 @@ function App() {
         const url = LIVE_D.urls.advance.replace('__ID__', o.dbId);
         const json = await apiPost(url, {});
         updateOrder(json.order);
-        flash(`${o.id} → ${STATUS[nx].label}`);
+        // Hoàn tất đơn có cộng điểm → hiện rõ số điểm đã cộng cho khách
+        flash(json.points_awarded > 0 ? `${o.id} hoàn tất · +${json.points_awarded} điểm cho khách` : `${o.id} → ${STATUS[nx].label}`);
       } catch (e) { flash('Lỗi: ' + e.message); }
       finally { setSaving(false); }
     } else {

@@ -247,7 +247,10 @@ function App() {
                     </div>
                     <div className="oc-items"><b>{sum.first}</b>{sum.more > 0 ? ` và ${sum.more} món khác` : ""}</div>
                     <div className="oc-foot">
-                      <div className="oc-total tnum">{fmt(o.total)}đ{o.status === "done" && <span className="pts">+{fmt(o.points)} điểm</span>}</div>
+                      <div className="oc-total tnum">{fmt(o.total)}đ
+                        {o.points > 0 && o.status === "done" && <span className="pts">+{fmt(o.points)} điểm</span>}
+                        {o.points > 0 && o.status !== "done" && o.status !== "cancel" && <span className="pts" style={{ color: "var(--ink-3)" }}>+{fmt(o.points)} điểm khi xong</span>}
+                      </div>
                       {o.status !== "cancel" && <span className="oc-reorder" onClick={(e) => reorder(o, e)}><Icon name="refresh" size={14} color="currentColor" /> Đặt lại</span>}
                     </div>
                   </button>
@@ -320,8 +323,11 @@ function OrderDetail({ o, onClose, onReorder }) {
             ))}
             <div className="tr grand"><span>Tổng cộng</span><span className="v">{fmt(o.total)}đ</span></div>
           </div>
-          {o.status === "done" && (
+          {o.points > 0 && o.status === "done" && (
             <div className="od-earn"><span className="bi"><Icon name="coin" size={19} color="#fff" /></span><span className="bt">Điểm đã tích từ đơn này</span><span className="bv">+{fmt(o.points)}</span></div>
+          )}
+          {o.points > 0 && o.status !== "done" && o.status !== "cancel" && (
+            <div className="od-earn" style={{ background: "var(--bg-2)" }}><span className="bi" style={{ background: "var(--ink-3)" }}><Icon name="coin" size={19} color="#fff" /></span><span className="bt">Sẽ cộng khi đơn hoàn tất</span><span className="bv" style={{ color: "var(--ink-2)" }}>+{fmt(o.points)}</span></div>
           )}
         </div>
         <div className="od-f">

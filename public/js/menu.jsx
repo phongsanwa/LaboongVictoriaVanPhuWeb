@@ -895,10 +895,15 @@ function App() {
                 <div className="ok-ring"><div className="ck"><Icon name="check" size={28} color="#fff" /></div></div>
                 <h3>Đặt hàng thành công! 🎉</h3>
                 <p>{selectedAddr ? <>Đơn của bạn sẽ được giao đến<br /><b>{selectedAddr.text}</b></> : <>Đơn của bạn đang được pha chế tại<br /><b>{pickupLabel}</b>.</>}</p>
-                <div className="ok-earn">
-                  <span className="oi"><Icon name="coin" size={22} color="#fff" /></span>
-                  <div><div className="ot">Bạn vừa tích được</div><div className="ov">+{fmt(actualPts)} điểm</div></div>
-                </div>
+                {actualPts > 0 && (
+                  <div className="ok-earn">
+                    <span className="oi"><Icon name="coin" size={22} color="#fff" /></span>
+                    <div><div className="ot">Sẽ nhận khi đơn hoàn tất</div><div className="ov">+{fmt(actualPts)} điểm</div></div>
+                  </div>
+                )}
+                <p style={{ fontSize: 12.5, color: "var(--ink-3)", marginTop: -4 }}>
+                  Điểm sẽ được cộng vào tài khoản khi đơn giao thành công.
+                </p>
                 <button className="ok-btn" onClick={reset}>Đặt thêm món khác</button>
               </div>
             ) : couponView ? (
