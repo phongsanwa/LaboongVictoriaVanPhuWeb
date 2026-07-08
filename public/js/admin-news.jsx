@@ -60,6 +60,41 @@ function NewsEditor({ initial, onClose, onSaved }) {
   const [saving, setSaving] = useState(false);
   const imgRef = useRef(null);
   const vidRef = useRef(null);
+  const bodyRef = useRef(null);
+  const editorRef = useRef(null);
+
+  /* TinyMCE cho ô nội dung — có fallback textarea nếu CDN bị chặn */
+  useEffect(() => {
+    const tiny = window.tinymce;
+    if (!tiny || !bodyRef.current) return; // fallback: dùng textarea thường
+    tiny.init({
+      target: bodyRef.current,
+      height: 340,
+      menubar: false,
+      language: 'vi',
+      branding: false,
+      plugins: 'lists link image media table autolink paste',
+      toolbar: 'undo redo | blocks | bold italic underline | bullist numlist | link image media table | alignleft aligncenter alignright | removeformat',
+      automatic_uploads: true,
+      paste_data_images: false,
+      relative_urls: false,
+      convert_urls: false,
+      images_upload_handler: (blobInfo) => new Promise((resolve, reject) => {
+        const fd = new FormData();
+        fd.append('kind', 'image');
+        fd.append('file', blobInfo.blob(), blobInfo.filename());
+        fetch(URLS.upload, { method: 'POST', headers: { 'X-CSRF-TOKEN': csrfToken(), 'Accept': 'application/json' }, body: fd })
+          .then(r => r.json().then(j => r.ok ? resolve(j.url) : reject(j.message || 'Tải ảnh lỗi')))
+          .catch(() => reject('Tải ảnh lỗi'));
+      }),
+      setup: (editor) => {
+        editorRef.current = editor;
+        editor.on('init', () => editor.setContent(initial.body || ''));
+        editor.on('Change KeyUp Undo Redo SetContent', () => setBody(editor.getContent()));
+      },
+    });
+    return () => { try { editorRef.current?.remove(); } catch (e) { /* ignore */ } editorRef.current = null; };
+  }, []); // eslint-disable-line
 
   useEffect(() => {
     const h = e => { if (e.key === "Escape") onClose(); };
@@ -176,7 +211,7 @@ function NewsEditor({ initial, onClose, onSaved }) {
 
           <div className="fld">
             <label>Nội dung bài viết</label>
-            <textarea className="inp" value={body} onChange={e => setBody(e.target.value)} rows={6} placeholder="Nội dung chi tiết của tin tức…" style={{ resize: "vertical", minHeight: 120 }} />
+            <textarea ref={bodyRef} className="inp" defaultValue={body} onChange={e => setBody(e.target.value)} rows={8} placeholder="Nội dung chi tiết của tin tức…" style={{ resize: "vertical", minHeight: 160 }} />
           </div>
 
           {err && <div style={{ color: "var(--hot)", fontWeight: 600, fontSize: 13, marginBottom: 8 }}>{err}</div>}
@@ -273,7 +308,7 @@ function App() {
                 </div>
                 <div style={{ padding: 14 }}>
                   <div style={{ fontWeight: 800, fontSize: 15, marginBottom: 4, lineHeight: 1.35 }}>{n.title}</div>
-                  <div style={{ fontSize: 13, color: "var(--ink-2)", lineHeight: 1.5, marginBottom: 6, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>{n.excerpt || n.body}</div>
+                  <div style={{ fontSize: 13, color: "var(--ink-2)", lineHeight: 1.5, marginBottom: 6, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>{n.excerpt || (n.body || "").replace(/<[^>]+>/g, " ").trim()}</div>
                   {n.published_at && <div style={{ fontSize: 11.5, color: "var(--ink-3)", marginBottom: 10 }}>{n.published_at}</div>}
                   <div style={{ display: "flex", gap: 8 }}>
                     <button className="btn ghost tiny" onClick={() => setEditor(n)}><Icon name="edit" size={14} /> Sửa</button>

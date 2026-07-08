@@ -518,3 +518,13 @@ a { color: inherit; text-decoration: none; }
 .news-title { font-weight: 800; font-size: 14.5px; line-height: 1.35; color: var(--ink); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .news-ex { font-size: 12.5px; color: var(--ink-2); line-height: 1.45; margin-top: 3px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .news-date { font-size: 11px; color: var(--ink-3); margin-top: 5px; font-weight: 600; }
+
+/* Nội dung tin tức (HTML từ TinyMCE) */
+.news-detail-body img { max-width: 100%; height: auto; border-radius: 10px; }
+.news-detail-body p { margin: 0 0 10px; }
+.news-detail-body h1, .news-detail-body h2, .news-detail-body h3 { margin: 14px 0 8px; line-height: 1.3; }
+.news-detail-body ul, .news-detail-body ol { margin: 0 0 10px; padding-left: 22px; }
+.news-detail-body a { color: var(--brand); text-decoration: underline; }
+.news-detail-body iframe { max-width: 100%; border-radius: 10px; }
+.news-detail-body table { width: 100%; border-collapse: collapse; }
+.news-detail-body td, .news-detail-body th { border: 1px solid var(--line); padding: 6px 8px; }

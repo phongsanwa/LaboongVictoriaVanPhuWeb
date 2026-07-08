@@ -478,7 +478,8 @@ function App() {
                 ) : null}
               </div>
               {newsDetail.body && (
-                <div style={{ padding: "18px 20px", fontSize: 14.5, lineHeight: 1.7, color: "var(--ink)", whiteSpace: "pre-wrap" }}>{newsDetail.body}</div>
+                <div className="news-detail-body" style={{ padding: "18px 20px", fontSize: 14.5, lineHeight: 1.7, color: "var(--ink)" }}
+                  dangerouslySetInnerHTML={{ __html: newsDetail.body }} />
               )}
             </div>
           </div>
