@@ -37,6 +37,8 @@ class Customer extends Model
             'is_newsletter' => 'boolean',
             'is_push_enabled' => 'boolean',
             'favorite_items' => 'array',
+            'total_points' => 'float',
+            'lifetime_points' => 'float',
         ];
     }
 

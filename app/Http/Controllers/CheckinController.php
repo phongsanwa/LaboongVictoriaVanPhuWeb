@@ -47,7 +47,8 @@ class CheckinController extends Controller {
         $days = self::checkinConfig();
         $dayIdx = ($streak - 1) % 7;
         $ptsEntry = $days[$dayIdx] ?? ['pts' => 5];
-        $pts = (int) ($ptsEntry['pts'] ?? 5);
+        // Điểm danh cho phép số lẻ (vd 0.1) — làm tròn 2 chữ số thập phân
+        $pts = round((float) ($ptsEntry['pts'] ?? 5), 2);
 
         DailyCheckin::create([
             'customer_id' => $customer->id,
