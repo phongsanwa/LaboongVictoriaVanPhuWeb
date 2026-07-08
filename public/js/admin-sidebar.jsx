@@ -1,4 +1,4 @@
-/* global React, Icon, NAV_URLS, adminHref, apiCall */
+/* global React, Icon, NAV_URLS, adminHref */
 const { useState, useEffect } = React;
 
 const SIDEBAR_NAV = [
@@ -20,6 +20,7 @@ const SIDEBAR_NAV = [
 
 function AdminSidebar({ activeLabel, badges: pageBadges = {}, admin, sideOpen, onClose }) {
   const [globalBadges, setGlobalBadges] = useState({});
+  const [loggingOut, setLoggingOut] = useState(false);
   useEffect(() => {
     fetch('/admin/badges', { headers: { Accept: 'application/json' } })
       .then(r => r.ok ? r.json() : {})
@@ -33,7 +34,19 @@ function AdminSidebar({ activeLabel, badges: pageBadges = {}, admin, sideOpen, o
 
   const logout = async (e) => {
     e.preventDefault();
-    await apiCall('POST', '/logout');
+    if (loggingOut) return;
+    setLoggingOut(true);
+    // Tự gọi /logout (không phụ thuộc apiCall — có trang admin không định nghĩa nó)
+    try {
+      await fetch('/logout', {
+        method: 'POST',
+        headers: {
+          'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || '',
+          'Accept': 'application/json',
+        },
+        credentials: 'same-origin',
+      });
+    } catch (_) { /* vẫn chuyển về trang đăng nhập dù lỗi mạng */ }
     location.href = NAV_URLS.login;
   };
 
@@ -70,8 +83,8 @@ function AdminSidebar({ activeLabel, badges: pageBadges = {}, admin, sideOpen, o
               <div className="un">{admin?.name ?? 'Quản trị viên'}</div>
               <div className="ur">{admin?.email ?? ''}</div>
             </div>
-            <button className="icon-btn" style={{ width: 32, height: 32, marginLeft: 'auto' }}
-              onClick={logout} title="Đăng xuất">
+            <button className="icon-btn" style={{ width: 32, height: 32, marginLeft: 'auto', opacity: loggingOut ? 0.5 : 1 }}
+              onClick={logout} disabled={loggingOut} title="Đăng xuất">
               <Icon name="logout" size={16} />
             </button>
           </div>
