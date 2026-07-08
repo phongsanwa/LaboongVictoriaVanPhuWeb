@@ -348,12 +348,10 @@ class OrderController extends Controller
                 ]);
             }
 
-            // Điểm CHƯA cộng lúc này — chỉ cộng khi đơn hoàn tất (giao thành công).
-            // points_earned lưu số điểm SẼ nhận; việc cộng thật do admin duyệt
-            // đơn sang COMPLETED thực hiện (Admin\OrdersController::advance).
-
-            $customer->increment('total_orders');
-            $customer->increment('total_spent', $totalAmount);
+            // Điểm, total_orders và total_spent CHƯA cộng lúc này — chỉ cộng khi đơn
+            // hoàn tất (giao thành công) để đơn bị huỷ không thổi phồng thống kê KH.
+            // points_earned lưu số điểm SẼ nhận; việc cộng thật + cập nhật thống kê
+            // do admin duyệt đơn sang COMPLETED thực hiện (Admin\OrdersController::advance).
 
             $orderId = $order->id;
         });
