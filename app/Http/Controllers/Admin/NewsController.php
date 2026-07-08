@@ -114,7 +114,7 @@ class NewsController extends Controller
         $data = $request->validate([
             'title'       => ['required', 'string', 'max:200'],
             'excerpt'     => ['nullable', 'string', 'max:500'],
-            'body'        => ['nullable', 'string', 'max:20000'],
+            'body'        => ['nullable', 'string', 'max:200000'],
             'media_type'  => ['required', Rule::in(['image', 'video', 'youtube'])],
             'image_url'   => ['nullable', 'string', 'max:500'],
             'video_url'   => ['nullable', 'string', 'max:500'],
@@ -136,7 +136,7 @@ class NewsController extends Controller
         return [
             'title'       => $data['title'],
             'excerpt'     => $data['excerpt'] ?? null,
-            'body'        => $data['body'] ?? null,
+            'body'        => $this->sanitizeBody($data['body'] ?? null),
             'media_type'  => $data['media_type'],
             'image_url'   => $data['image_url'] ?? null,
             'video_url'   => $data['media_type'] === 'video' ? ($data['video_url'] ?? null) : null,
@@ -160,6 +160,20 @@ class NewsController extends Controller
             'status'      => $n->status,
             'published_at'=> $n->published_at?->format('d/m/Y'),
         ];
+    }
+
+    /** Loại bỏ script/handler nguy hiểm khỏi HTML do TinyMCE tạo. */
+    private function sanitizeBody(?string $html): ?string
+    {
+        if ($html === null || trim($html) === '') return null;
+
+        // Bỏ toàn bộ <script>…</script> và thuộc tính sự kiện on*="" / javascript:
+        $html = preg_replace('~<script\b[^>]*>.*?</script>~is', '', $html);
+        $html = preg_replace('~\son\w+\s*=\s*"[^"]*"~i', '', $html);
+        $html = preg_replace("~\son\w+\s*=\s*'[^']*'~i", '', $html);
+        $html = preg_replace('~javascript:~i', '', $html);
+
+        return $html;
     }
 
     private function uniqueSlug(string $title): string
