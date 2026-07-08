@@ -30,12 +30,18 @@ function AdminCheckin() {
   }, [tw.brand, tw.dark]);
 
   const save = async () => {
+    // Chuẩn hoá: ô để trống / gõ dở → tối thiểu 0.1; làm tròn 2 chữ số
+    const cleanDays = days.map(d => {
+      const v = parseFloat(d.pts);
+      return { ...d, pts: isNaN(v) || v < 0.1 ? 0.1 : Math.round(v * 100) / 100 };
+    });
+    setDays(cleanDays);
     setSaving(true); setSaved(false);
     try {
       const res = await fetch("/admin/checkin", {
         method: "POST",
         headers: { "Content-Type": "application/json", "Accept": "application/json", "X-CSRF-TOKEN": csrfToken() },
-        body: JSON.stringify({ days }),
+        body: JSON.stringify({ days: cleanDays }),
       });
       if (res.ok) { setSaved(true); setTimeout(() => setSaved(false), 2500); }
     } catch (e) {}
@@ -116,8 +122,15 @@ function AdminCheckin() {
                     {day.d}
                   </div>
                   <input
-                    type="number" min={1} max={500} value={day.pts}
-                    onChange={e => setDays(ds => ds.map((d, j) => j === i ? { ...d, pts: Math.max(1, parseInt(e.target.value) || 1) } : d))}
+                    type="number" min={0.1} max={500} step="0.1" value={day.pts}
+                    onChange={e => setDays(ds => ds.map((d, j) => {
+                      if (j !== i) return d;
+                      const raw = e.target.value;
+                      // Cho gõ dở (rỗng / đang gõ dấu chấm) — chỉ chặn khi lưu
+                      if (raw === "" || raw === ".") return { ...d, pts: raw };
+                      const v = parseFloat(raw);
+                      return { ...d, pts: isNaN(v) ? "" : Math.min(500, v) };
+                    }))}
                     style={{ width: 72, textAlign: "center", fontWeight: 800, fontSize: 22, border: "1.5px solid var(--line)", borderRadius: 8, padding: "8px 4px", background: "var(--panel)", color: "var(--ink)", fontFamily: "var(--display)", outline: "none" }}
                     onFocus={e => e.target.style.borderColor = "var(--brand)"}
                     onBlur={e => e.target.style.borderColor = "var(--line)"}

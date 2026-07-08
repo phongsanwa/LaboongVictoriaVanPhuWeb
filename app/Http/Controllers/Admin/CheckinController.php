@@ -33,9 +33,10 @@ class CheckinController extends Controller {
     }
 
     public function update(Request $request): JsonResponse {
-        $request->validate(['days' => 'required|array|size:7', 'days.*.pts' => 'required|integer|min:1|max:500']);
+        $request->validate(['days' => 'required|array|size:7', 'days.*.pts' => 'required|numeric|min:0.1|max:500']);
         $days = collect($request->input('days'))->map(function ($d, $i) {
-            return ['d' => 'Ngày ' . ($i + 1), 'pts' => (int) $d['pts'], 'bonus' => $i === 6 ? true : null];
+            // Cho phép điểm lẻ (vd 0.1); số nguyên vẫn lưu bình thường
+            return ['d' => 'Ngày ' . ($i + 1), 'pts' => round((float) $d['pts'], 2), 'bonus' => $i === 6 ? true : null];
         })->map(function ($d) {
             return array_filter($d, fn($v) => $v !== null);
         })->values()->all();

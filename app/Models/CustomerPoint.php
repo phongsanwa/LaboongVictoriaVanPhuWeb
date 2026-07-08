@@ -23,6 +23,7 @@ class CustomerPoint extends Model
     {
         return [
             'expires_at' => 'date',
+            'points' => 'float',
         ];
     }
 
