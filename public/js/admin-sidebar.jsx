@@ -9,6 +9,7 @@ const SIDEBAR_NAV = [
   { ic: 'truck',   label: 'Phí ship',            href: '/admin/shipping' },
   { ic: 'gift',    label: 'Đổi quà',             href: '/admin/rewards' },
   { ic: 'mega',    label: 'Chiến dịch',          href: '/admin/campaigns' },
+  { ic: 'star',    label: 'Tin tức',             href: '/admin/news' },
   { ic: 'cal',     label: 'Điểm danh',           href: '/admin/checkin' },
   { ic: 'cup',     label: 'Thực đơn',            href: '/admin/menu' },
   { ic: 'percent', label: 'Khuyến mãi',          href: '/admin/promotions' },
@@ -50,8 +51,9 @@ function AdminSidebar({ activeLabel, badges: pageBadges = {}, admin, sideOpen, o
     location.href = NAV_URLS.login;
   };
 
-  const mgmt = SIDEBAR_NAV.slice(0, 11).filter(canSee);
-  const sys  = SIDEBAR_NAV.slice(11).filter(canSee);
+  // 3 mục cuối (Cửa hàng, Phân quyền, Cài đặt) thuộc nhóm "Hệ thống", còn lại là "Quản lý"
+  const mgmt = SIDEBAR_NAV.slice(0, SIDEBAR_NAV.length - 3).filter(canSee);
+  const sys  = SIDEBAR_NAV.slice(SIDEBAR_NAV.length - 3).filter(canSee);
 
   const renderLink = (n) => (
     <a key={n.label}

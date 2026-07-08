@@ -22,6 +22,7 @@ class AdminAccess
         'Phí ship'            => 'settings',
         'Đổi quà'             => 'gift_edit',
         'Chiến dịch'          => 'camp_view',
+        'Tin tức'             => 'camp_edit',
         'Điểm danh'           => 'settings',
         'Thực đơn'            => 'settings',
         'Khuyến mãi'          => 'camp_view',
