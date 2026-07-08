@@ -24,7 +24,7 @@
   $ordNo  = 'LB-' . str_pad($o->id, 4, '0', STR_PAD_LEFT);
   $user   = $o->customer?->user;
   $name   = $user?->name   ?? 'Khách hàng';
-  $phone  = $user?->phone  ?? '—';
+  $phone  = $o->delivery_phone ?: ($user?->phone ?? '—');
   $items  = $o->items;
   $note   = $o->note;
 

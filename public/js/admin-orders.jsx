@@ -348,7 +348,13 @@ function OrderDrawer({ o, saving, onClose, onAdvance, onCancel }) {
             </div>
             {o.phone && (
               <div className="od-ir"><span className="odi"><Icon name="phone" size={16} /></span>
-                <div><div className="odk">Số điện thoại</div><div className="odv">{o.phone}</div></div>
+                <div>
+                  <div className="odk">Số điện thoại{o.accountPhone && o.phone !== o.accountPhone ? " (nhận hàng)" : ""}</div>
+                  <div className="odv">{o.phone}</div>
+                  {o.accountPhone && o.phone !== o.accountPhone && (
+                    <div style={{ fontSize: 12, color: "var(--ink-3)", marginTop: 2 }}>SĐT tài khoản: {o.accountPhone}</div>
+                  )}
+                </div>
               </div>
             )}
             <div className="od-ir"><span className="odi"><Icon name={o.type === "ship" ? "truck" : "bag"} size={16} /></span>

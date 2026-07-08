@@ -22,6 +22,7 @@ class Order extends Model
         'points_awarded_at',
         'note',
         'delivery_address',
+        'delivery_phone',
         'confirmed_at',
         'completed_at',
         'cancelled_at',

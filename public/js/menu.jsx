@@ -315,6 +315,11 @@ function App() {
   /* quick-add address form (right inside the cart) */
   const [addrFormOpen,   setAddrFormOpen]   = useState(false);
   const [addrFormName,   setAddrFormName]   = useState(LIVE_D.customerName || "");
+  /* SĐT nhận hàng — mặc định SĐT tài khoản, khách sửa được cho đơn giao */
+  const [deliveryPhone,  setDeliveryPhone]  = useState(LIVE_D.customerPhone || "");
+  const [phoneEditing,   setPhoneEditing]   = useState(false);
+  const [phoneDraft,     setPhoneDraft]     = useState(LIVE_D.customerPhone || "");
+  const [phoneErr,       setPhoneErr]       = useState("");
   const [addrFormText,   setAddrFormText]   = useState("");
   const [addrFormSaving, setAddrFormSaving] = useState(false);
   const [addrFormErr,    setAddrFormErr]    = useState("");
@@ -621,6 +626,13 @@ function App() {
 
   const clearShipDiscount = () => { setShippingVoucher(null); setSelectedShipPromo(null); };
 
+  const startEditPhone = () => { setPhoneDraft(deliveryPhone); setPhoneErr(""); setPhoneEditing(true); };
+  const savePhone = () => {
+    const p = phoneDraft.replace(/[\s.\-]/g, "");
+    if (!/^0\d{9}$/.test(p)) { setPhoneErr("SĐT phải gồm 10 số, bắt đầu bằng 0"); return; }
+    setDeliveryPhone(p); setPhoneEditing(false); setPhoneErr("");
+  };
+
   /* Save a new delivery address without leaving the cart */
   const saveNewAddress = async () => {
     const nm   = addrFormName.trim();
@@ -709,6 +721,7 @@ function App() {
           store_id: selectedStoreId || null,
           shipping_fee: shipFee || 0,
           delivery_address: selectedAddr ? selectedAddr.text : null,
+          delivery_phone: selectedAddr ? (deliveryPhone || null) : null,
         }),
       });
       const json = await res.json();
@@ -1299,6 +1312,42 @@ function App() {
                     </div>
                     <span className="dchev"><Icon name="chev" size={18} /></span>
                   </button>
+                  {/* SĐT nhận hàng — chỉ hiện với đơn giao, khách sửa được */}
+                  {selectedAddr && (
+                    <div className="deliv" style={{ marginTop: 8, alignItems: phoneEditing ? "stretch" : "center", flexDirection: phoneEditing ? "column" : "row", gap: phoneEditing ? 8 : 12 }}>
+                      {phoneEditing ? (
+                        <>
+                          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                            <span className="di"><Icon name="phone" size={19} color="currentColor" /></span>
+                            <div className="dl">Số điện thoại nhận hàng</div>
+                          </div>
+                          <input className="inp" inputMode="numeric" autoFocus
+                            value={phoneDraft} maxLength={15}
+                            onChange={e => { setPhoneDraft(e.target.value.replace(/[^\d\s.\-]/g, "")); setPhoneErr(""); }}
+                            placeholder="VD: 0912 345 678"
+                            style={{ width: "100%", boxSizing: "border-box", padding: "10px 12px", borderRadius: 10, border: "1px solid var(--line, #ddd)", fontSize: 16 }} />
+                          {phoneErr && <div style={{ fontSize: 12.5, color: "var(--danger, #e53)", fontWeight: 600 }}>{phoneErr}</div>}
+                          <div style={{ display: "flex", gap: 8 }}>
+                            <button onClick={() => { setPhoneEditing(false); setPhoneErr(""); }}
+                              style={{ flex: 1, padding: "9px 0", borderRadius: 10, border: "1px solid var(--line, #ddd)", background: "transparent", fontWeight: 600, fontSize: 14 }}>Huỷ</button>
+                            <button onClick={savePhone}
+                              style={{ flex: 2, padding: "9px 0", borderRadius: 10, border: "none", background: "var(--brand)", color: "#fff", fontWeight: 700, fontSize: 14 }}>Lưu số điện thoại</button>
+                          </div>
+                        </>
+                      ) : (
+                        <>
+                          <span className="di"><Icon name="phone" size={19} color="currentColor" /></span>
+                          <div style={{ minWidth: 0, flex: 1 }}>
+                            <div className="dl">Số điện thoại nhận hàng</div>
+                            <div className="dt">{deliveryPhone || "Chưa có số điện thoại"}</div>
+                          </div>
+                          <button onClick={startEditPhone} style={{ flexShrink: 0, fontSize: 12.5, fontWeight: 700, color: "var(--brand)", background: "var(--brand-soft, rgba(15,98,63,.08))", padding: "7px 13px", borderRadius: 999 }}>
+                            <Icon name="edit" size={13} color="currentColor" /> Sửa
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  )}
                   {lines.map(l => (
                     <div className="crow" key={l.key}>
                       <div className="cthumb" style={{ background: l.grad }}>

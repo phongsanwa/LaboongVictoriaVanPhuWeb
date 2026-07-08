@@ -189,7 +189,9 @@ class OrdersController extends Controller
             'dbId'      => $o->id,
             'status'    => self::STATUS_MAP[$o->status] ?? 'new',
             'cust'      => $user?->name ?? 'Khách hàng',
-            'phone'     => $user?->phone ?? '',
+            // SĐT nhận hàng của đơn (khách sửa trong giỏ) — mặc định SĐT tài khoản
+            'phone'     => $o->delivery_phone ?: ($user?->phone ?? ''),
+            'accountPhone' => $user?->phone ?? '',
             'type'      => $isShip ? 'ship' : 'pickup',
             'addr'      => $o->delivery_address,
             'store'     => $o->store?->name,

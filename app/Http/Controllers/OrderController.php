@@ -42,6 +42,9 @@ class OrderController extends Controller
             'order_promo_id'      => ['nullable', 'integer'],
             'ship_promo_id'       => ['nullable', 'integer'],
             'delivery_address'    => ['nullable', 'string', 'max:500'],
+            'delivery_phone'      => ['nullable', 'string', 'regex:/^0\d{9}$/'],
+        ], [
+            'delivery_phone.regex' => 'Số điện thoại nhận hàng phải gồm 10 số, bắt đầu bằng 0',
         ]);
 
         $user     = Auth::user();
@@ -257,6 +260,8 @@ class OrderController extends Controller
                 'points_earned'   => $pointsEarned,
                 'note'            => $data['note'] ?? null,
                 'delivery_address' => $data['delivery_address'] ?? null,
+                // Chỉ lưu SĐT nhận hàng cho đơn giao; đơn tại quầy để trống
+                'delivery_phone'   => !empty($data['delivery_address']) ? ($data['delivery_phone'] ?? null) : null,
             ]);
 
             foreach ($itemData as $item) {
