@@ -81,7 +81,7 @@ Giam ship: -{{ $fmt((int) $d->discount_amount) }}d
 @endforeach
 Tong cong: {{ $fmt($total) }}d
 @if ($pts > 0)
-Diem tich: +{{ $pts }} diem
+Diem se cong khi hoan tat: +{{ $pts }} diem
 @endif
 
 Xem va xu ly don hang tai:

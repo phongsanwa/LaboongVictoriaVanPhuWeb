@@ -64,17 +64,17 @@ class OrdersController extends Controller
         }
         $order->update(array_merge(['status' => $nextDb], $extra));
 
-        // Đơn hoàn tất (giao thành công) → cộng điểm cho khách. Chỉ cộng 1 lần.
-        $pointsAwarded = false;
-        if ($nextDb === 'COMPLETED' && $order->points_earned > 0 && !$order->points_awarded_at) {
-            $pointsAwarded = $this->awardPoints($order->fresh());
+        // Đơn hoàn tất (giao thành công) → cập nhật thống kê KH + cộng điểm. Chỉ 1 lần.
+        $pointsAwarded = 0;
+        if ($nextDb === 'COMPLETED' && !$order->points_awarded_at) {
+            $pointsAwarded = $this->finalizeCompletion($order->fresh());
         }
 
         return response()->json([
             'order'          => $this->presentOrder($order->fresh(['customer.user', 'items.product', 'items.toppings', 'discounts', 'store'])),
-            'points_awarded' => $pointsAwarded ? (int) $order->points_earned : 0,
-            'message'        => $pointsAwarded
-                ? "Đã hoàn tất đơn — cộng +{$order->points_earned} điểm cho khách"
+            'points_awarded' => $pointsAwarded,
+            'message'        => $pointsAwarded > 0
+                ? "Đã hoàn tất đơn — cộng +{$pointsAwarded} điểm cho khách"
                 : 'Đã cập nhật trạng thái',
         ]);
     }
@@ -95,37 +95,46 @@ class OrdersController extends Controller
     }
 
     /**
-     * Cộng điểm cho khách khi đơn hoàn tất. An toàn với race: dùng khoá bản ghi
-     * và kiểm tra lại points_awarded_at trong transaction để không cộng 2 lần.
+     * Hoàn tất đơn: cập nhật thống kê khách (total_orders/total_spent) và cộng điểm.
+     * An toàn với race: khoá bản ghi + kiểm tra lại points_awarded_at trong transaction
+     * để không cộng 2 lần. Trả về số điểm đã cộng (0 nếu đơn không có điểm).
      */
-    private function awardPoints(Order $order): bool
+    private function finalizeCompletion(Order $order): int
     {
         return DB::transaction(function () use ($order) {
             $fresh = Order::whereKey($order->id)->lockForUpdate()->first();
-            if (!$fresh || $fresh->points_awarded_at || (int) $fresh->points_earned <= 0) {
-                return false;
+            if (!$fresh || $fresh->points_awarded_at) {
+                return 0;
             }
 
             $customer = $fresh->customer()->first();
             if (!$customer) {
-                return false;
+                // Vẫn đánh dấu đã xử lý để lần sau không lặp lại.
+                $fresh->update(['points_awarded_at' => now()]);
+                return 0;
             }
 
-            $points = (int) $fresh->points_earned;
-            $customer->increment('total_points',    $points);
-            $customer->increment('lifetime_points', $points);
+            // Thống kê KH cộng lúc hoàn tất (không cộng lúc đặt) — đơn huỷ không tính.
+            $customer->increment('total_orders');
+            $customer->increment('total_spent', (int) $fresh->total_amount);
 
-            CustomerPoint::create([
-                'customer_id'  => $customer->id,
-                'point_type'   => 'purchase',
-                'points'       => $points,
-                'description'  => "Tích điểm đơn hàng #{$fresh->id} (hoàn tất)",
-                'reference_id' => $fresh->id,
-            ]);
+            $points = (int) $fresh->points_earned;
+            if ($points > 0) {
+                $customer->increment('total_points',    $points);
+                $customer->increment('lifetime_points', $points);
+
+                CustomerPoint::create([
+                    'customer_id'  => $customer->id,
+                    'point_type'   => 'purchase',
+                    'points'       => $points,
+                    'description'  => "Tích điểm đơn hàng #{$fresh->id} (hoàn tất)",
+                    'reference_id' => $fresh->id,
+                ]);
+            }
 
             $fresh->update(['points_awarded_at' => now()]);
 
-            return true;
+            return $points;
         });
     }
 

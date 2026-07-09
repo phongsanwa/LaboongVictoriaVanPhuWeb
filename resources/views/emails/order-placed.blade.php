@@ -187,7 +187,7 @@
         @if ($pts > 0)
         {{-- display:flex không được hỗ trợ trong nhiều email client --}}
         <div style="background:#F0FDF4;border:1px solid #BBF7D0;border-radius:10px;padding:12px 16px;margin-bottom:24px;font-size:13.5px;color:#065F46;font-weight:600;">
-          🎯&nbsp; Khách tích được <strong>+{{ $pts }} điểm</strong> từ đơn này.
+          🎯&nbsp; Khách sẽ được cộng <strong>+{{ $pts }} điểm</strong> khi đơn hoàn tất.
         </div>
         @endif
 
