@@ -48,14 +48,14 @@ Route::middleware('auth')->group(function () {
 });
 
 Route::get('/register', [RegisterController::class, 'show'])->name('register');
-Route::post('/register', [RegisterController::class, 'register'])->name('register.submit');
+Route::post('/register', [RegisterController::class, 'register'])->middleware('throttle:register')->name('register.submit');
 
 Route::get('/login', [LoginController::class, 'show'])->name('login');
-Route::post('/login/password', [LoginController::class, 'loginWithPassword'])->name('login.password');
+Route::post('/login/password', [LoginController::class, 'loginWithPassword'])->middleware('throttle:login')->name('login.password');
 Route::post('/logout', [LoginController::class, 'logout'])->name('logout');
 
-Route::post('/forgot-password/send-otp', [ForgotPasswordController::class, 'sendOtp'])->name('forgot.otp');
-Route::post('/forgot-password/reset', [ForgotPasswordController::class, 'reset'])->name('forgot.reset');
+Route::post('/forgot-password/send-otp', [ForgotPasswordController::class, 'sendOtp'])->middleware('throttle:otp')->name('forgot.otp');
+Route::post('/forgot-password/reset', [ForgotPasswordController::class, 'reset'])->middleware('throttle:reset')->name('forgot.reset');
 
 require __DIR__.'/admin.php';
 require __DIR__.'/pos.php';
