@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Http\Controllers\CheckinController;
+use App\Support\AdminAccess;
 use App\Models\Campaign;
 use App\Models\CustomerPoint;
 use App\Models\DailyCheckin;
@@ -31,6 +32,7 @@ class HomeController extends Controller
                 'checkin' => ['streak' => 0, 'last' => null, 'today' => false],
                 'checkinConfig' => CheckinController::checkinConfig(),
                 'news' => $this->buildNews(),
+                'adminAccess' => AdminAccess::canEnter($user),
             ]]);
         }
 
@@ -114,6 +116,7 @@ class HomeController extends Controller
             'checkin' => $checkinState,
             'checkinConfig' => $checkinConfig,
             'news' => $this->buildNews(),
+            'adminAccess' => AdminAccess::canEnter($user),
         ]]);
     }
 

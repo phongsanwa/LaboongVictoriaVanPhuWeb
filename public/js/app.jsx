@@ -10,6 +10,7 @@ const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
 /* ---- data from server ---- */
 const HOME = window.HOME_DATA || {};
 const MEMBER = HOME.member || { name: "", id: "", tier: "" };
+const ADMIN_ACCESS = !!HOME.adminAccess; // admin hoặc quản lý (staff active) mới thấy nút Quản trị
 const GOAL = HOME.goal || 0;
 const REWARD = HOME.reward || "";
 const PROMOS = HOME.promos || [];
@@ -185,7 +186,26 @@ function App() {
             <a href={NAV_URLS.store}>Cửa hàng</a>
             <a href={NAV_URLS.history}>Lịch sử</a>
           </nav>
-          <a className="avatar" href={NAV_URLS.profile} title={MEMBER.name}>{initials}</a>
+          <div className="hdr-actions" style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            {ADMIN_ACCESS && (
+              <a
+                className="admin-enter"
+                href={NAV_URLS.adminHome}
+                title="Vào trang quản trị"
+                style={{
+                  display: "inline-flex", alignItems: "center", gap: 6,
+                  padding: "8px 14px", borderRadius: 999, textDecoration: "none",
+                  fontSize: 13.5, fontWeight: 700, color: "#fff",
+                  background: "linear-gradient(150deg,#0F623F,#1AA86A)",
+                  boxShadow: "0 2px 8px rgba(15,98,63,.25)", whiteSpace: "nowrap",
+                }}
+              >
+                <Icon name="gear" size={16} color="#fff" />
+                <span className="admin-enter-txt">Quản trị</span>
+              </a>
+            )}
+            <a className="avatar" href={NAV_URLS.profile} title={MEMBER.name}>{initials}</a>
+          </div>
         </div>
       </header>
 
