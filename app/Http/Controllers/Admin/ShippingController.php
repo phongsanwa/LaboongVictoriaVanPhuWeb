@@ -93,7 +93,8 @@ class ShippingController extends Controller
     {
         $data = $request->validate([
             'name'             => ['required', 'string', 'max:100'],
-            'min_order_amount' => ['required', 'integer', 'min:0'],
+            // Bỏ trống = 0 = áp dụng cho mọi giá trị hoá đơn
+            'min_order_amount' => ['nullable', 'integer', 'min:0'],
             'max_km'           => ['nullable', 'numeric', 'min:0'],
             'discount_type'    => ['required', Rule::in(['free', 'percent', 'amount'])],
             'discount_value'   => ['nullable', 'integer', 'min:0'],
@@ -101,7 +102,7 @@ class ShippingController extends Controller
 
         $promo = ShippingPromotion::create([
             'name'             => $data['name'],
-            'min_order_amount' => $data['min_order_amount'],
+            'min_order_amount' => $data['min_order_amount'] ?? 0,
             'max_km'           => $data['max_km'] ?? null,
             'discount_type'    => $data['discount_type'],
             'discount_value'   => ($data['discount_type'] === 'free') ? 0 : ($data['discount_value'] ?? 0),
@@ -116,7 +117,8 @@ class ShippingController extends Controller
     {
         $data = $request->validate([
             'name'             => ['required', 'string', 'max:100'],
-            'min_order_amount' => ['required', 'integer', 'min:0'],
+            // Bỏ trống = 0 = áp dụng cho mọi giá trị hoá đơn
+            'min_order_amount' => ['nullable', 'integer', 'min:0'],
             'max_km'           => ['nullable', 'numeric', 'min:0'],
             'discount_type'    => ['required', Rule::in(['free', 'percent', 'amount'])],
             'discount_value'   => ['nullable', 'integer', 'min:0'],
@@ -124,7 +126,7 @@ class ShippingController extends Controller
 
         $promo->update([
             'name'             => $data['name'],
-            'min_order_amount' => $data['min_order_amount'],
+            'min_order_amount' => $data['min_order_amount'] ?? 0,
             'max_km'           => $data['max_km'] ?? null,
             'discount_type'    => $data['discount_type'],
             'discount_value'   => ($data['discount_type'] === 'free') ? 0 : ($data['discount_value'] ?? 0),

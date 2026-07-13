@@ -31,7 +31,8 @@ function fmtFee(fee) {
 }
 function fmtPromoCondition(p) {
   const km = p.max_km !== null ? ` · bán kính ≤ ${p.max_km} km` : '';
-  return `Đơn ≥ ${fmt(p.min_order_amount)}đ${km}`;
+  const amt = p.min_order_amount > 0 ? `Đơn ≥ ${fmt(p.min_order_amount)}đ` : 'Mọi giá trị đơn';
+  return `${amt}${km}`;
 }
 function fmtPromoDiscount(p) {
   if (p.discount_type === 'free') return 'Miễn phí ship';
@@ -133,7 +134,7 @@ function PromoDrawer({ promo, urls, onSave, onClose }) {
   const blank = { name: '', min_order_amount: '', max_km: '', discount_type: 'free', discount_value: '' };
   const [form, setForm] = useState(() => promo ? {
     name: promo.name,
-    min_order_amount: String(promo.min_order_amount),
+    min_order_amount: promo.min_order_amount > 0 ? String(promo.min_order_amount) : '',
     max_km: promo.max_km !== null ? String(promo.max_km) : '',
     discount_type: promo.discount_type,
     discount_value: promo.discount_type === 'free' ? '' : String(promo.discount_value),
@@ -145,7 +146,7 @@ function PromoDrawer({ promo, urls, onSave, onClose }) {
 
   const save = async () => {
     if (!form.name.trim()) { setErr('Vui lòng nhập tên khuyến mãi'); return; }
-    if (form.min_order_amount === '' || isNaN(+form.min_order_amount)) { setErr('Giá trị đơn hàng không hợp lệ'); return; }
+    if (form.min_order_amount !== '' && (isNaN(+form.min_order_amount) || +form.min_order_amount < 0)) { setErr('Giá trị đơn hàng không hợp lệ'); return; }
     if (form.discount_type !== 'free' && (form.discount_value === '' || isNaN(+form.discount_value))) {
       setErr('Giá trị giảm không hợp lệ'); return;
     }
@@ -181,10 +182,10 @@ function PromoDrawer({ promo, urls, onSave, onClose }) {
           <input className="inp" placeholder="VD: Miễn phí ship cuối tuần, Đơn lớn miễn phí…"
             value={form.name} onChange={e => set('name', e.target.value)} />
 
-          <label className="lbl" style={{ marginTop: 16 }}>Đơn hàng tối thiểu (đ)</label>
-          <input className="inp" type="number" min="0" step="1000" placeholder="0"
+          <label className="lbl" style={{ marginTop: 16 }}>Tổng giá hoá đơn tối thiểu (đ) <span style={{ color: 'var(--ink-3)', fontWeight: 400 }}>– để trống = mọi giá trị đơn</span></label>
+          <input className="inp" type="number" min="0" step="1000" placeholder="Không yêu cầu"
             value={form.min_order_amount} onChange={e => set('min_order_amount', e.target.value)} />
-          <div style={{ fontSize: 12, color: 'var(--ink-3)', marginTop: 4 }}>Khách đặt đơn từ số tiền này trở lên mới được áp khuyến mãi</div>
+          <div style={{ fontSize: 12, color: 'var(--ink-3)', marginTop: 4 }}>Nếu điền, khách đặt đơn từ số tiền này trở lên mới được áp khuyến mãi</div>
 
           <label className="lbl" style={{ marginTop: 16 }}>Giới hạn bán kính (km) <span style={{ color: 'var(--ink-3)', fontWeight: 400 }}>– để trống = mọi khoảng cách</span></label>
           <input className="inp" type="number" min="0" step="0.5" placeholder="Không giới hạn"
