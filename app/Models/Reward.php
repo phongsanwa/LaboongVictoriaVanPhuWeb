@@ -23,6 +23,7 @@ class Reward extends Model
         'min_purchase',
         'product_id',
         'free_item_quantity',
+        'free_item_size',
         'category',
         'status',
         'display_order',

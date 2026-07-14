@@ -43,6 +43,9 @@ class RewardsController extends Controller
                 ],
                 'rewards'  => $this->rewardsList(),
                 'products' => $this->buildProducts(),
+                // Danh sách size để chọn khi quà miễn phí món áp dụng mọi sản phẩm
+                'sizes'    => \App\Models\ProductVariant::where('variant_type', 'SIZE')
+                    ->distinct()->orderBy('name')->pluck('name')->values()->all(),
             ],
         ]);
     }
@@ -131,6 +134,8 @@ class RewardsController extends Controller
             'img'        => ['nullable', 'string', 'max:500'],
             'product_id'          => ['nullable', 'integer', 'exists:products,id'],
             'free_item_quantity'  => ['nullable', 'integer', 'min:1', 'max:99'],
+            // Chỉ dùng khi miễn phí món cho MỌI sản phẩm: giới hạn size (null = mọi size)
+            'free_item_size'      => ['nullable', 'string', 'max:30'],
             'value'               => ['nullable', 'numeric', 'min:0'],
         ]);
 
@@ -149,7 +154,9 @@ class RewardsController extends Controller
             'status'             => $data['status'] === 'on' ? 'active' : 'inactive',
             'gradient'           => $data['grad'] ?? null,
             'image_url'          => $data['img'] ?? null,
+            // product_id = null với loại "drink" nghĩa là áp dụng MỌI sản phẩm
             'product_id'         => $isFreeItem ? ($data['product_id'] ?? null) : null,
+            'free_item_size'     => ($isFreeItem && empty($data['product_id'])) ? ($data['free_item_size'] ?? null) : null,
             'free_item_quantity' => ($isFreeItem || $isGift || $isBuyGet || $isUpgrade) ? (int) ($data['free_item_quantity'] ?? 1) : 1,
             'value'              => $isUpgrade ? (float) ($data['value'] ?? 0)
                                   : ($isBuyGet ? max(1, (float) ($data['value'] ?? 2)) : null),
@@ -215,6 +222,7 @@ class RewardsController extends Controller
             'img'                => $reward->image_url,
             'product_id'         => $reward->product_id,
             'free_item_quantity' => $reward->free_item_quantity ?? 1,
+            'free_item_size'     => $reward->free_item_size,
             'value'              => $reward->value,
         ];
     }

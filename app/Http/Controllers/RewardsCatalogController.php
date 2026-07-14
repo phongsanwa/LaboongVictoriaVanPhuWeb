@@ -140,6 +140,27 @@ class RewardsCatalogController extends Controller
                     'usage_count'   => 0,
                     'status'        => 'active',
                 ]);
+            } elseif ($reward->reward_type === 'free_item' && !$reward->product_id && $reward->category === 'drink') {
+                // Miễn phí món BẤT KỲ (mọi sản phẩm), có thể giới hạn size.
+                // Số tiền giảm tính lúc đặt đơn = giá món rẻ nhất đủ điều kiện.
+                Voucher::create([
+                    'voucher_code'          => 'FRA' . now()->format('Ymd') . strtoupper(Str::random(6)),
+                    'customer_id'           => $customer->id,
+                    'redemption_id'         => $redemption->id,
+                    'applies_to'            => 'ORDER',
+                    'discount_type'         => 'free_item',
+                    'discount_value'        => 0,
+                    'free_item_product_id'  => null,
+                    'free_item_scope'       => 'any',
+                    'free_item_size'        => $reward->free_item_size,
+                    'free_item_quantity'    => max(1, (int) ($reward->free_item_quantity ?? 1)),
+                    'min_purchase'          => null,
+                    'max_discount'          => null,
+                    'valid_from'            => now()->toDateString(),
+                    'valid_until'           => now()->addMonths(3)->toDateString(),
+                    'usage_count'           => 0,
+                    'status'                => 'active',
+                ]);
             } elseif ($reward->reward_type === 'free_item' && $reward->product_id && in_array($reward->category, ['drink', 'gift'])) {
                 $product   = \App\Models\Product::find($reward->product_id);
                 $qty       = max(1, (int) ($reward->free_item_quantity ?? 1));

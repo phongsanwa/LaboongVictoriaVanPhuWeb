@@ -177,6 +177,41 @@ function cartToppingTotal(cartLines) {
   return total;
 }
 
+/* Miễn phí món BẤT KỲ (scope=any, có thể giới hạn size): danh sách đơn giá
+   từng món đủ điều kiện (giá món trừ tiền topping), sắp xếp tăng dần.
+   Món chưa chọn size được coi là size mặc định. */
+function freeAnyEligibleUnits(v, cartLines) {
+  const groups    = getLiveVariantGroups();
+  const sizeGroup = groups.find(g => g.type === 'size');
+  // Mặc định = option đánh dấu def, không có thì lấy size không phụ thu (0đ)
+  const defaultSize = sizeGroup
+    ? (sizeGroup.options.find(o => o.def)?.id ?? sizeGroup.options.find(o => !o.extra)?.id ?? null)
+    : null;
+  const addonGroups = groups.filter(g => g.type === 'addon');
+  const units = [];
+  (cartLines || []).forEach(l => {
+    if (v.free_item_size && sizeGroup) {
+      const lineSize = (l.selections && l.selections[sizeGroup.key]) || defaultSize;
+      if (lineSize !== v.free_item_size) return;
+    }
+    let topPerUnit = 0;
+    if (l.selections) {
+      addonGroups.forEach(g => {
+        const sel = l.selections[g.key];
+        if (!Array.isArray(sel)) return;
+        sel.forEach(id => {
+          const opt = g.options.find(o => o.id === id);
+          if (opt) topPerUnit += opt.extra || 0;
+        });
+      });
+    }
+    const unit = Math.max(0, (l.unit || 0) - topPerUnit);
+    for (let i = 0; i < l.qty; i++) units.push(unit);
+  });
+  units.sort((a, b) => a - b);
+  return units;
+}
+
 /* Mua X tặng Y: giỏ đủ X+Y món thì được trừ tiền Y món rẻ nhất */
 function calcBuyGetDiscount(v, cartLines) {
   const buyQty  = Math.max(1, v.buy_quantity || 2);
@@ -193,6 +228,13 @@ function calcVoucherDiscount(v, base, cartLines) {
   if (base < (v.min_purchase || 0)) return 0;
   if (v.discount_type === 'buy_get') return calcBuyGetDiscount(v, cartLines);
   if (v.discount_type === 'free_item') {
+    if (v.free_item_scope === 'any') {
+      // Miễn phí món bất kỳ (giới hạn size nếu có): trừ N món rẻ nhất đủ điều kiện
+      const units = freeAnyEligibleUnits(v, cartLines);
+      if (!units.length) return 0;
+      const freeQty = Math.max(1, v.free_item_quantity || 1);
+      return Math.min(units.slice(0, freeQty).reduce((s, u) => s + u, 0), base);
+    }
     if (!v.free_item_product_id) {
       // Voucher Freetopping: chỉ áp khi trong món CÓ topping, và không giảm
       // quá số tiền topping thực tế trong giỏ
@@ -573,7 +615,12 @@ function App() {
       const need = Math.max(1, orderVoucher.buy_quantity || 2) + Math.max(1, orderVoucher.free_item_quantity || 1);
       if (lines.reduce((s, l) => s + l.qty, 0) < need) setOrderVoucher(null);
     }
+    if (orderVoucher?.discount_type === 'free_item' && orderVoucher.free_item_scope === 'any'
+        && freeAnyEligibleUnits(orderVoucher, lines).length === 0) {
+      setOrderVoucher(null); // giỏ không còn món đúng size của voucher
+    }
     if (orderVoucher?.discount_type === 'free_item' && !orderVoucher.free_item_product_id
+        && orderVoucher.free_item_scope !== 'any'
         && cartToppingTotal(lines) <= 0) {
       setOrderVoucher(null); // voucher topping mà giỏ không còn topping nào
     }
@@ -603,7 +650,15 @@ function App() {
         return;
       }
     }
-    if (v.discount_type === 'free_item' && !v.free_item_product_id && cartToppingTotal(lines) <= 0) {
+    if (v.discount_type === 'free_item' && v.free_item_scope === 'any'
+        && freeAnyEligibleUnits(v, lines).length === 0) {
+      setCouponErr(v.free_item_size
+        ? `Vui lòng thêm món ${v.free_item_size} vào đơn để dùng voucher này`
+        : 'Vui lòng thêm món vào đơn để dùng voucher này');
+      return;
+    }
+    if (v.discount_type === 'free_item' && !v.free_item_product_id && v.free_item_scope !== 'any'
+        && cartToppingTotal(lines) <= 0) {
       setCouponErr('Món trong giỏ phải có topping mới dùng được voucher này');
       return;
     }
@@ -956,20 +1011,23 @@ function App() {
                           const isFreeItem = canApply && v.discount_type === 'free_item';
                           const isGiftItem = canApply && v.discount_type === 'gift_item';
                           const isBuyGet   = canApply && v.discount_type === 'buy_get';
+                          const isAnyItem  = isFreeItem && v.free_item_scope === 'any';
                           const freeCartLine = isFreeItem && v.free_item_product_id
                             ? lines.find(l => l.id === 'p' + v.free_item_product_id)
                             : null;
                           const freeProductInCart = !isFreeItem || !v.free_item_product_id || !!freeCartLine;
                           const notEnough  = canApply && subtotal < (v.min_purchase || 0);
                           const notInCart  = isFreeItem && !freeProductInCart;
+                          // Miễn phí món bất kỳ: giỏ phải có món đúng size (nếu giới hạn size)
+                          const noEligible = isAnyItem && freeAnyEligibleUnits(v, lines).length === 0;
                           // Mua X tặng Y: cần đủ X+Y món trong giỏ
                           const cartCount  = lines.reduce((s, l) => s + l.qty, 0);
                           const bgNeed     = isBuyGet ? Math.max(1, v.buy_quantity || 2) + Math.max(1, v.free_item_quantity || 1) : 0;
                           const bgMissing  = isBuyGet ? Math.max(0, bgNeed - cartCount) : 0;
                           // Voucher Freetopping: món trong giỏ phải có topping mới áp được
-                          const isTopVoucher = isFreeItem && !v.free_item_product_id;
+                          const isTopVoucher = isFreeItem && !v.free_item_product_id && !isAnyItem;
                           const noTopping    = isTopVoucher && cartToppingTotal(lines) <= 0;
-                          const isDisabled = notEnough || notInCart || bgMissing > 0 || noTopping;
+                          const isDisabled = notEnough || notInCart || bgMissing > 0 || noTopping || noEligible;
                           // Effective quantity actually free (capped at what's in cart)
                           const freeQty    = isFreeItem ? (v.free_item_quantity || 1) : 0;
                           const cartQty    = freeCartLine ? freeCartLine.qty : 0;
@@ -993,6 +1051,8 @@ function App() {
                             ? `Mua ${v.buy_quantity || 2} tặng ${v.free_item_quantity || 1} — tặng món giá thấp nhất`
                             : isGiftItem
                             ? `Quà tặng kèm đơn${(v.free_item_quantity || 1) > 1 ? ` ×${v.free_item_quantity}` : ''} — không trừ tiền`
+                            : isAnyItem
+                            ? `Miễn phí ${freeQty > 1 ? freeQty + '× ' : ''}món${v.free_item_size ? ` ${v.free_item_size}` : ''} bất kỳ — trừ tiền món rẻ nhất`
                             : isFreeItem
                             ? `Miễn phí ${freeQty > 1 ? freeQty + '× ' : ''}${v.free_item_product_id ? (v.free_item_product_name || 'sản phẩm') : 'topping'}`
                             : v.discount_type === 'percentage'
@@ -1022,12 +1082,14 @@ function App() {
                                 {notInCart && <div style={{ fontSize: 11, color: 'var(--hot)', marginTop: 2 }}>Thêm "{v.free_item_product_name || 'sản phẩm'}" vào đơn để dùng</div>}
                                 {bgMissing > 0 && <div style={{ fontSize: 11, color: 'var(--hot)', marginTop: 2 }}>Thêm {bgMissing} món nữa để dùng (cần {bgNeed} món)</div>}
                                 {noTopping && <div style={{ fontSize: 11, color: 'var(--hot)', marginTop: 2 }}>Thêm topping vào món để dùng voucher này</div>}
+                                {noEligible && <div style={{ fontSize: 11, color: 'var(--hot)', marginTop: 2 }}>Thêm món{v.free_item_size ? ` ${v.free_item_size}` : ''} vào đơn để dùng voucher này</div>}
                               </div>
                               <span className="vgo">
                                 {notEnough ? `Còn thiếu ${fmt((v.min_purchase || 0) - subtotal)}đ`
                                   : notInCart ? <Icon name="lock" size={14} />
                                   : bgMissing > 0 ? <Icon name="lock" size={14} />
                                   : noTopping ? <Icon name="lock" size={14} />
+                                  : noEligible ? <Icon name="lock" size={14} />
                                   : isSelected ? <><Icon name="check" size={14} /> Đang dùng</>
                                   : isGiftItem ? <>Nhận kèm đơn <Icon name="chev" size={14} /></>
                                   : <>−{fmt(disc)}đ <Icon name="chev" size={14} /></>}
@@ -1391,6 +1453,8 @@ function App() {
                                 ? `Mua ${orderVoucher.buy_quantity || 2} tặng ${orderVoucher.free_item_quantity || 1} — tặng món giá thấp nhất`
                                 : orderVoucher.discount_type === 'gift_item'
                                 ? 'Quà tặng kèm đơn — đã đổi bằng điểm'
+                                : orderVoucher.discount_type === 'free_item' && orderVoucher.free_item_scope === 'any'
+                                ? `Miễn phí ${(orderVoucher.free_item_quantity || 1) > 1 ? (orderVoucher.free_item_quantity + '× ') : ''}món${orderVoucher.free_item_size ? ` ${orderVoucher.free_item_size}` : ''} bất kỳ`
                                 : orderVoucher.discount_type === 'free_item'
                                 ? `Miễn phí ${(orderVoucher.free_item_quantity || 1) > 1 ? (orderVoucher.free_item_quantity + '× ') : ''}${orderVoucher.free_item_product_id ? (orderVoucher.free_item_product_name || 'sản phẩm') : 'topping'}`
                                 : (orderVoucher.code || 'Quà tích điểm')}

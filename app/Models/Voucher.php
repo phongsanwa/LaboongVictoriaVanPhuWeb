@@ -19,6 +19,8 @@ class Voucher extends Model
         'discount_value',
         'free_item_product_id',
         'free_item_quantity',
+        'free_item_scope',
+        'free_item_size',
         'buy_quantity',
         'min_purchase',
         'max_discount',
