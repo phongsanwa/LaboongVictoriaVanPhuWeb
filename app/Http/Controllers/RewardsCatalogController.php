@@ -29,9 +29,18 @@ class RewardsCatalogController extends Controller
             ->orderBy('display_order')
             ->get();
 
+        // Số lần khách này đã đổi từng quà — để chặn quà đã đạt giới hạn mỗi khách.
+        $myCounts = $customer
+            ? Redemption::where('customer_id', $customer->id)
+                ->where('status', '!=', 'cancelled')
+                ->selectRaw('reward_id, COUNT(*) as c')
+                ->groupBy('reward_id')
+                ->pluck('c', 'reward_id')
+            : collect();
+
         return view('rewards-catalog', ['rewardsData' => [
             'balance' => $customer?->total_points ?? 0,
-            'gifts' => $rewards->map(fn (Reward $r) => $this->formatReward($r))->values()->all(),
+            'gifts' => $rewards->map(fn (Reward $r) => $this->formatReward($r, (int) ($myCounts[$r->id] ?? 0)))->values()->all(),
         ]]);
     }
 
@@ -68,6 +77,20 @@ class RewardsCatalogController extends Controller
 
         if ($reward->quantity_available !== null && $reward->quantity_available !== -1 && $reward->quantity_available < 1) {
             return response()->json(['message' => 'Phần quà này đã hết'], 422);
+        }
+
+        // Giới hạn số lần đổi cho mỗi khách (null = không giới hạn).
+        if ($reward->per_customer_limit !== null) {
+            $timesRedeemed = Redemption::where('customer_id', $customer->id)
+                ->where('reward_id', $reward->id)
+                ->where('status', '!=', 'cancelled')
+                ->count();
+
+            if ($timesRedeemed >= $reward->per_customer_limit) {
+                return response()->json([
+                    'message' => "Bạn đã đổi phần quà này đủ {$reward->per_customer_limit} lần cho phép",
+                ], 422);
+            }
         }
 
         DB::transaction(function () use ($customer, $reward) {
@@ -205,7 +228,7 @@ class RewardsCatalogController extends Controller
         ]);
     }
 
-    private function formatReward(Reward $r): array
+    private function formatReward(Reward $r, int $myCount = 0): array
     {
         $tags = [];
         if ($r->is_featured) {
@@ -227,6 +250,9 @@ class RewardsCatalogController extends Controller
             'img'    => $r->image_url,
             'grad'   => $r->gradient,
             'tags'   => $tags,
+            // Giới hạn mỗi khách: null = không giới hạn
+            'perLimit'     => $r->per_customer_limit,
+            'limitReached' => $r->per_customer_limit !== null && $myCount >= $r->per_customer_limit,
         ];
     }
 

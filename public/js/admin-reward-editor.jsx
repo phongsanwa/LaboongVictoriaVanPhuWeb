@@ -30,6 +30,8 @@ function RewardEditor({ initial, onClose, onSave }) {
   });
   const [points, setPoints] = useStateEd(initial?.points ?? 300);
   const [qty, setQty] = useStateEd(initial?.qty ?? 200);
+  // Giới hạn số lần đổi mỗi khách — chuỗi rỗng = không giới hạn
+  const [perLimit, setPerLimit] = useStateEd(initial?.per_customer_limit != null ? String(initial.per_customer_limit) : "");
   const [expiry, setExpiry] = useStateEd(initial?.expiry || "2026-12-31");
   const [status, setStatus] = useStateEd(initial ? initial.status === "on" : true);
   const [grad, setGrad] = useStateEd(initial?.grad || GRADS[0]);
@@ -87,6 +89,7 @@ function RewardEditor({ initial, onClose, onSave }) {
     onSave({
       ...(initial || {}),
       name: name.trim(), cat, points: Number(points), qty: Number(qty),
+      per_customer_limit: perLimit === "" ? null : Math.max(1, Number(perLimit)),
       expiry, status: status ? "on" : "off", grad, img,
       product_id:          isFreeItem ? (productId ?? null) : null,
       free_item_quantity:  (isFreeItem || isGift || isBuyGet || isUpgrade) ? Math.max(1, Number(freeQty) || 1) : 1,
@@ -291,9 +294,22 @@ function RewardEditor({ initial, onClose, onSave }) {
                 </div>
               </div>
 
-              <div className="fld">
-                <label>Hạn đổi</label>
-                <input className="inp" type="date" value={expiry} onChange={e => setExpiry(e.target.value)} />
+              <div className="two-col">
+                <div className="fld">
+                  <label>Hạn đổi</label>
+                  <input className="inp" type="date" value={expiry} onChange={e => setExpiry(e.target.value)} />
+                </div>
+                <div className="fld">
+                  <label>Giới hạn mỗi khách</label>
+                  <input
+                    className="inp" type="text" inputMode="numeric" placeholder="Không giới hạn"
+                    value={perLimit}
+                    onChange={e => setPerLimit(e.target.value.replace(/[^0-9]/g, ""))}
+                  />
+                  <div style={{ fontSize: 11.5, color: "var(--ink-3)", marginTop: 4 }}>
+                    Số lần tối đa mỗi khách được đổi quà này — để trống = không giới hạn.
+                  </div>
+                </div>
               </div>
 
               <div className="switch-row" onClick={() => setStatus(s => !s)} style={{ cursor: "pointer" }}>
