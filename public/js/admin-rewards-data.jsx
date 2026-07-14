@@ -10,9 +10,10 @@ const REWARD_CATS = {
   upsize:  { label: "Upsize",           ic: "arrowup" },
 };
 
-const ADMIN_REWARDS_DATA = window.ADMIN_REWARDS_DATA || { admin: null, rewards: [], products: [] };
+const ADMIN_REWARDS_DATA = window.ADMIN_REWARDS_DATA || { admin: null, rewards: [], products: [], sizes: [] };
 const REWARDS = ADMIN_REWARDS_DATA.rewards;
 const REWARD_PRODUCTS = ADMIN_REWARDS_DATA.products || [];
+const REWARD_SIZES = ADMIN_REWARDS_DATA.sizes || [];
 
 function expStatus(iso, todayISO) {
   if (iso < todayISO) return "expired";
@@ -22,4 +23,4 @@ function expStatus(iso, todayISO) {
   return "ok";
 }
 
-Object.assign(window, { REWARDS, REWARD_CATS, REWARD_PRODUCTS, expStatus, ADMIN_REWARDS_DATA });
+Object.assign(window, { REWARDS, REWARD_CATS, REWARD_PRODUCTS, REWARD_SIZES, expStatus, ADMIN_REWARDS_DATA });

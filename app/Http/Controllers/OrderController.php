@@ -213,6 +213,10 @@ class OrderController extends Controller
         if ($orderVoucher) {
             if ($orderVoucher->discount_type === 'buy_get') {
                 $voucherDiscAmt = $this->calcBuyGetDiscount($orderVoucher, $itemData);
+            } elseif ($orderVoucher->discount_type === 'free_item' && $orderVoucher->free_item_scope === 'any') {
+                // Miễn phí món BẤT KỲ (có thể giới hạn size): trừ giá món rẻ nhất
+                // đủ điều kiện trong giỏ (không tính tiền topping của món đó)
+                $voucherDiscAmt = min($this->calcFreeAnyDiscount($orderVoucher, $itemData), $saleSubtotal);
             } elseif ($orderVoucher->discount_type === 'free_item' && !$orderVoucher->free_item_product_id) {
                 // Voucher Freetopping: chỉ áp khi món trong đơn CÓ topping,
                 // và không giảm quá tổng tiền topping thực tế
@@ -309,7 +313,10 @@ class OrderController extends Controller
                                         . ' tặng ' . max(1, (int) ($orderVoucher->free_item_quantity ?? 1)),
                         'free_item'  => $orderVoucher->free_item_product_id
                             ? "Miễn phí: " . ($orderVoucher->freeItemProduct?->name ?? 'sản phẩm')
-                            : "Miễn phí topping",
+                            : ($orderVoucher->free_item_scope === 'any'
+                                ? 'Miễn phí ' . ($giftQty > 1 ? "{$giftQty} " : '') . 'món'
+                                    . ($orderVoucher->free_item_size ? " {$orderVoucher->free_item_size}" : '') . ' bất kỳ'
+                                : "Miễn phí topping"),
                         'percentage' => "Giảm {$orderVoucher->discount_value}%",
                         default      => "Giảm " . number_format($orderVoucher->discount_value, 0, ',', '.') . "đ",
                     },
@@ -475,6 +482,42 @@ class OrderController extends Controller
             }
         }
         if (count($units) < $buy + $free) return 0;
+
+        sort($units);
+
+        return round(array_sum(array_slice($units, 0, $free)), 2);
+    }
+
+    /**
+     * Miễn phí món BẤT KỲ (voucher free_item scope=any, có thể giới hạn size):
+     * trừ giá của N món rẻ nhất đủ điều kiện. Giá món = giá đã gạch + phụ thu size,
+     * KHÔNG gồm tiền topping (khách vẫn trả topping). Món không chọn size được
+     * coi là size mặc định (phụ thu 0đ).
+     */
+    private function calcFreeAnyDiscount(Voucher $v, array $itemData): float
+    {
+        if ($v->valid_until && now()->startOfDay()->gt($v->valid_until)) return 0;
+
+        $free        = max(1, (int) ($v->free_item_quantity ?? 1));
+        $wantSize    = $v->free_item_size; // null = mọi size
+        // Món không chọn size (thêm nhanh) tính là size mặc định; nếu nhóm SIZE
+        // không khai báo mặc định thì dùng size không phụ thu (giá đúng bằng giá gốc)
+        $defaultSize = VariantGroup::where('type', 'size')->first()?->default_option
+            ?: ProductVariant::where('variant_type', 'SIZE')->where('extra_price', 0)->value('name');
+
+        $units = [];
+        foreach ($itemData as $it) {
+            if ($wantSize !== null) {
+                $itemSize = $it['size_name'] ?? $defaultSize;
+                if ($itemSize !== $wantSize) continue;
+            }
+            $toppingPerUnit = array_sum(array_column($it['toppings'], 'extra'));
+            $unit = max(0.0, (float) ($it['sale_unit'] ?? $it['unit_price']) - $toppingPerUnit);
+            for ($i = 0; $i < $it['quantity']; $i++) {
+                $units[] = $unit;
+            }
+        }
+        if (empty($units)) return 0;
 
         sort($units);
 

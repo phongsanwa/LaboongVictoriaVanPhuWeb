@@ -75,6 +75,8 @@ class PromotionController extends Controller
                         'free_item_product_id'  => $v->free_item_product_id,
                         'free_item_product_name'=> $v->freeItemProduct?->name,
                         'free_item_quantity'    => $v->free_item_quantity ?? 1,
+                        'free_item_scope'       => $v->free_item_scope,
+                        'free_item_size'        => $v->free_item_size,
                         'buy_quantity'          => $v->buy_quantity,
                         'min_purchase'          => $v->min_purchase ? (float) $v->min_purchase : null,
                         'max_discount'          => $v->max_discount ? (float) $v->max_discount : null,

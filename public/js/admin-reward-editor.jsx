@@ -1,4 +1,4 @@
-/* global React, Icon, REWARD_CATS, REWARD_PRODUCTS, fmt */
+/* global React, Icon, REWARD_CATS, REWARD_PRODUCTS, REWARD_SIZES, fmt */
 const { useState: useStateEd, useEffect: useEffectEd } = React;
 
 function csrfTokenEd() {
@@ -36,7 +36,12 @@ function RewardEditor({ initial, onClose, onSave }) {
   const [status, setStatus] = useStateEd(initial ? initial.status === "on" : true);
   const [grad, setGrad] = useStateEd(initial?.grad || GRADS[0]);
   const [img, setImg] = useStateEd(initial?.img || null);
-  const [productId, setProductId] = useStateEd(initial?.product_id ?? null);
+  // "all" = miễn phí món cho MỌI sản phẩm (product_id null); số = sản phẩm cụ thể
+  const [productId, setProductId] = useStateEd(() => {
+    if (initial?.cat === "drink" && initial?.product_id == null) return "all";
+    return initial?.product_id ?? null;
+  });
+  const [freeSize, setFreeSize] = useStateEd(initial?.free_item_size || "");
   const [freeQty, setFreeQty]     = useStateEd(Number(initial?.free_item_quantity ?? 1) || 1);
   const [toppingValue, setToppingValue] = useStateEd(initial?.value != null ? Number(initial.value) : 5000);
   const isFreeItem  = cat === "drink";
@@ -91,7 +96,8 @@ function RewardEditor({ initial, onClose, onSave }) {
       name: name.trim(), cat, points: Number(points), qty: Number(qty),
       per_customer_limit: perLimit === "" ? null : Math.max(1, Number(perLimit)),
       expiry, status: status ? "on" : "off", grad, img,
-      product_id:          isFreeItem ? (productId ?? null) : null,
+      product_id:          isFreeItem ? (productId === "all" ? null : (productId ?? null)) : null,
+      free_item_size:      (isFreeItem && productId === "all" && freeSize) ? freeSize : null,
       free_item_quantity:  (isFreeItem || isGift || isBuyGet || isUpgrade) ? Math.max(1, Number(freeQty) || 1) : 1,
       value:               isUpgrade ? Math.max(0, Number(toppingValue) || 0)
                           : isBuyGet ? Math.max(1, Number(buyQty) || 2) : undefined,
@@ -159,9 +165,10 @@ function RewardEditor({ initial, onClose, onSave }) {
                   <select
                     className="inp"
                     value={productId ?? ""}
-                    onChange={e => setProductId(e.target.value ? Number(e.target.value) : null)}
+                    onChange={e => setProductId(e.target.value === "all" ? "all" : (e.target.value ? Number(e.target.value) : null))}
                   >
                     <option value="">— Chọn sản phẩm —</option>
+                    <option value="all">🌟 Tất cả sản phẩm (món bất kỳ)</option>
                     {(REWARD_PRODUCTS || []).map(p => (
                       <option key={p.id} value={p.id}>
                         {p.name}{p.cat ? ` (${p.cat})` : ""} — {typeof fmt === 'function' ? fmt(p.price) : p.price.toLocaleString()}đ
@@ -169,7 +176,23 @@ function RewardEditor({ initial, onClose, onSave }) {
                     ))}
                   </select>
                   <div style={{ fontSize: 11.5, color: "var(--ink-3)", marginTop: 4 }}>
-                    Khách đổi quà sẽ nhận voucher miễn phí sản phẩm này khi đặt hàng.
+                    {productId === "all"
+                      ? "Khách được miễn phí món bất kỳ trong đơn (hệ thống trừ tiền món rẻ nhất đủ điều kiện)."
+                      : "Khách đổi quà sẽ nhận voucher miễn phí sản phẩm này khi đặt hàng."}
+                  </div>
+                </div>
+              )}
+
+              {isFreeItem && productId === "all" && (
+                <div className="fld">
+                  <label>Size áp dụng</label>
+                  <select className="inp" value={freeSize} onChange={e => setFreeSize(e.target.value)}>
+                    <option value="">Mọi size</option>
+                    {(REWARD_SIZES || []).map(s => <option key={s} value={s}>{s}</option>)}
+                  </select>
+                  <div style={{ fontSize: 11.5, color: "var(--ink-3)", marginTop: 4 }}>
+                    VD: tạo 2 quà — "{(REWARD_SIZES || [])[1] || 'Size M'}" 35 điểm và "{(REWARD_SIZES || [])[0] || 'Size L'}" 42 điểm.
+                    Chỉ món đúng size này trong giỏ mới được miễn phí.
                   </div>
                 </div>
               )}
