@@ -153,7 +153,8 @@ class RewardsController extends Controller
             'valid_until'        => $data['expiry'],
             'status'             => $data['status'] === 'on' ? 'active' : 'inactive',
             'gradient'           => $data['grad'] ?? null,
-            'image_url'          => $data['img'] ?? null,
+            // Chặn URL tạm blob: của trình duyệt — chỉ sống trong phiên upload, lưu vào là ảnh hỏng
+            'image_url'          => (isset($data['img']) && !str_starts_with($data['img'], 'blob:')) ? $data['img'] : null,
             // product_id = null với loại "drink" nghĩa là áp dụng MỌI sản phẩm
             'product_id'         => $isFreeItem ? ($data['product_id'] ?? null) : null,
             'free_item_size'     => ($isFreeItem && empty($data['product_id'])) ? ($data['free_item_size'] ?? null) : null,
