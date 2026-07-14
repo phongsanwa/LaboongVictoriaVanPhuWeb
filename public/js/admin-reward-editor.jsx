@@ -66,10 +66,15 @@ function RewardEditor({ initial, onClose, onSave }) {
   }, [cat]);
 
   const [uploading, setUploading] = useStateEd(false);
+  // Ảnh xem trước tạm (blob:) tách khỏi `img` — chỉ `img` (URL server) được lưu.
+  // Trước đây blob: bị lưu thẳng vào quà khi upload lỗi → ảnh không hiển thị được.
+  const [imgPreview, setImgPreview] = useStateEd(null);
+  const [uploadErr, setUploadErr] = useStateEd("");
   const onFile = async (e) => {
     const f = e.target.files?.[0];
     if (!f) return;
-    setImg(URL.createObjectURL(f)); // preview ngay
+    setImgPreview(URL.createObjectURL(f)); // preview ngay, KHÔNG đụng vào img
+    setUploadErr("");
     setUploading(true);
     try {
       const fd = new FormData();
@@ -80,22 +85,33 @@ function RewardEditor({ initial, onClose, onSave }) {
         body: fd,
       });
       const data = await res.json();
-      if (res.ok && data.url) setImg(data.url);
-    } catch (_) { /* giữ blob preview nếu lỗi */ }
+      if (res.ok && data.url) {
+        setImg(data.url);
+      } else {
+        setImgPreview(null);
+        setUploadErr(data.message || "Tải ảnh thất bại, vui lòng thử lại");
+      }
+    } catch (_) {
+      setImgPreview(null);
+      setUploadErr("Tải ảnh thất bại, vui lòng kiểm tra kết nối và thử lại");
+    }
     setUploading(false);
   };
 
   const valid = name.trim() && points > 0 && qty > 0 && expiry
+    && !uploading // đang tải ảnh thì chưa cho lưu — tránh lưu thiếu/sai URL ảnh
     && (!isFreeItem || productId !== null)
     && (!isUpgrade || (toppingValue > 0))
     && (!isBuyGet || (Number(buyQty) >= 1 && Number(freeQty) >= 1));
   const submit = () => {
     if (!valid) return;
+    // Chốt chặn: không bao giờ lưu URL tạm blob: (chỉ sống trong phiên trình duyệt)
+    const safeImg = img && !String(img).startsWith("blob:") ? img : null;
     onSave({
       ...(initial || {}),
       name: name.trim(), cat, points: Number(points), qty: Number(qty),
       per_customer_limit: perLimit === "" ? null : Math.max(1, Number(perLimit)),
-      expiry, status: status ? "on" : "off", grad, img,
+      expiry, status: status ? "on" : "off", grad, img: safeImg,
       product_id:          isFreeItem ? (productId === "all" ? null : (productId ?? null)) : null,
       free_item_size:      (isFreeItem && productId === "all" && freeSize) ? freeSize : null,
       free_item_quantity:  (isFreeItem || isGift || isBuyGet || isUpgrade) ? Math.max(1, Number(freeQty) || 1) : 1,
@@ -123,14 +139,15 @@ function RewardEditor({ initial, onClose, onSave }) {
             {/* thumbnail */}
             <div className="thumb-pick">
               <label style={{ fontSize: 12.5, fontWeight: 700, color: "var(--ink-2)" }}>Ảnh / Màu thẻ</label>
-              <div className="thumb-preview" style={{ background: img ? `url(${img}) center/cover` : grad }}>
-                {!img && <span className="ti"><Icon name={catIc} size={48} color="#fff" /></span>}
+              <div className="thumb-preview" style={{ background: (imgPreview || img) ? `url(${imgPreview || img}) center/cover` : grad }}>
+                {!(imgPreview || img) && <span className="ti"><Icon name={catIc} size={48} color="#fff" /></span>}
               </div>
               <label className="rw-btn" style={{ cursor: uploading ? "wait" : "pointer", justifyContent: "center", opacity: uploading ? .6 : 1 }}>
                 <Icon name="image" size={15} /> {uploading ? "Đang tải…" : img ? "Đổi ảnh" : "Tải ảnh lên"}
                 <input type="file" accept="image/*" hidden onChange={onFile} disabled={uploading} />
               </label>
-              {img && <button className="rw-btn" onClick={() => setImg(null)}>Bỏ ảnh, dùng màu</button>}
+              {uploadErr && <div style={{ fontSize: 11.5, color: "var(--hot)", marginTop: 4 }}>{uploadErr}</div>}
+              {img && <button className="rw-btn" onClick={() => { setImg(null); setImgPreview(null); }}>Bỏ ảnh, dùng màu</button>}
               {!img && (
                 <div className="swatches">
                   {GRADS.map(g => (
