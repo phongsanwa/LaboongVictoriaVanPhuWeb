@@ -78,7 +78,10 @@ function GiftCard({ g, can, balance, onRedeem }) {
       </div>
       <div className="gift-foot">
         <div className="gift-pts"><span className="p tnum">{fmt(g.points)}</span><span className="u">điểm</span></div>
-        {can
+        {g.limitReached
+          ? <><button className="gift-btn cant" disabled><Icon name="check" size={14} /> Đã đổi tối đa</button>
+              <div className="gift-need">Mỗi khách chỉ đổi được {g.perLimit} lần</div></>
+          : can
           ? <button className="gift-btn can" onClick={() => onRedeem(g)}><Icon name="gift" size={15} color="#fff" /> Đổi ngay</button>
           : <><button className="gift-btn cant" disabled><Icon name="info" size={14} /> Chưa đủ điểm</button>
               <div className="gift-need">Còn thiếu {fmt(g.points - balance)} điểm</div></>}

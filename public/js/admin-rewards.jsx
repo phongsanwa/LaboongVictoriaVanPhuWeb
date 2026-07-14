@@ -125,6 +125,7 @@ function RewardsApp() {
     const payload = {
       name: data.name, cat: data.cat, points: data.points, qty: data.qty,
       expiry: data.expiry, status: data.status, grad: data.grad, img: data.img,
+      per_customer_limit: data.per_customer_limit ?? null,
       product_id:         data.product_id ?? null,
       free_item_quantity: data.free_item_quantity ?? 1,
       value:              data.value ?? null,

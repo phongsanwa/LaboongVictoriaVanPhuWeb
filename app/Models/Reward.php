@@ -15,6 +15,7 @@ class Reward extends Model
         'value',
         'quantity_available',
         'quantity_total',
+        'per_customer_limit',
         'image_url',
         'gradient',
         'valid_from',
