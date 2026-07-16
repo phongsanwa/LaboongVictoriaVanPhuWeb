@@ -117,9 +117,67 @@ function EditCustomerModal({ c, onClose, onSaved }) {
   );
 }
 
+/* ---- Xác nhận xoá khách hàng ---- */
+function ConfirmDeleteCustomer({ c, onClose, onDeleted }) {
+  const [deleting, setDeleting] = React.useState(false);
+  const [err, setErr] = React.useState("");
+
+  React.useEffect(() => {
+    const h = e => { if (e.key === "Escape") onClose(); };
+    window.addEventListener("keydown", h);
+    return () => window.removeEventListener("keydown", h);
+  }, [onClose]);
+
+  const doDelete = async () => {
+    if (deleting) return;
+    setDeleting(true); setErr("");
+    try {
+      const res = await fetch(`/admin/customers/${c.customerId}`, {
+        method: "DELETE",
+        headers: {
+          "Accept": "application/json",
+          "X-CSRF-TOKEN": document.querySelector('meta[name="csrf-token"]')?.content || "",
+        },
+      });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) { setErr(body.message || "Không xoá được, vui lòng thử lại"); setDeleting(false); return; }
+      onDeleted();
+    } catch (e) {
+      setErr("Lỗi kết nối, vui lòng thử lại");
+      setDeleting(false);
+    }
+  };
+
+  return (
+    <div className="scrim" style={{ zIndex: 60, display: "flex", alignItems: "center", justifyContent: "center" }} onClick={onClose}>
+      <div className="modal confirm" style={{ background: "var(--card, #fff)", borderRadius: 16, padding: 24, maxWidth: 400, width: "92%", textAlign: "center" }} onClick={e => e.stopPropagation()}>
+        <div style={{ width: 52, height: 52, borderRadius: "50%", background: "rgba(220,60,60,.12)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 12px" }}>
+          <Icon name="trash" size={26} color="var(--danger, #D4584B)" />
+        </div>
+        <h3 style={{ margin: "0 0 8px" }}>Xoá khách hàng?</h3>
+        <p style={{ margin: "0 0 6px", fontSize: 13.5, color: "var(--ink-2)" }}>
+          Bạn sắp xoá vĩnh viễn <b>{c.name}</b> ({c.id}).
+        </p>
+        <p style={{ margin: "0 0 16px", fontSize: 12.5, color: "var(--danger, #D4584B)" }}>
+          Toàn bộ dữ liệu — đơn hàng, điểm tích luỹ, lịch sử đổi quà, voucher, địa chỉ —
+          sẽ bị xoá và <b>không thể khôi phục</b>.
+        </p>
+        {err && <div style={{ fontSize: 12.5, color: "var(--danger, #D4584B)", marginBottom: 10 }}>{err}</div>}
+        <div style={{ display: "flex", gap: 10 }}>
+          <button className="btn ghost" style={{ flex: 1 }} onClick={onClose} disabled={deleting}>Huỷ</button>
+          <button className="btn primary" style={{ flex: 1, background: "var(--danger, #D4584B)" }} disabled={deleting} onClick={doDelete}>
+            <Icon name="trash" size={15} color="#fff" /> {deleting ? "Đang xoá…" : "Xoá vĩnh viễn"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /* ---- Drawer ---- */
-function Drawer({ c, onClose, onCustomerUpdated }) {
+function Drawer({ c, onClose, onCustomerUpdated, onCustomerDeleted }) {
   const [editing, setEditing] = React.useState(false);
+  const [confirmDel, setConfirmDel] = React.useState(false);
   const [customer, setCustomer] = React.useState(c);
 
   React.useEffect(() => { setCustomer(c); }, [c]);
@@ -198,6 +256,9 @@ function Drawer({ c, onClose, onCustomerUpdated }) {
 
         <div className="dr-foot">
           <button className="btn ghost" style={{ flex: "none" }} onClick={onClose}>Đóng</button>
+          <button className="btn ghost" style={{ flex: "none", color: "var(--danger, #D4584B)" }} title="Xoá khách hàng" onClick={() => setConfirmDel(true)}>
+            <Icon name="trash" size={16} color="var(--danger, #D4584B)" /> Xoá
+          </button>
           <button className="btn ghost"><Icon name="gift" size={16} /> Gửi ưu đãi</button>
           <button className="btn primary" onClick={() => setEditing(true)}><Icon name="edit" size={16} color="#fff" /> Chỉnh sửa</button>
         </div>
@@ -208,6 +269,18 @@ function Drawer({ c, onClose, onCustomerUpdated }) {
           c={customer}
           onClose={() => setEditing(false)}
           onSaved={handleSaved}
+        />
+      )}
+
+      {confirmDel && (
+        <ConfirmDeleteCustomer
+          c={customer}
+          onClose={() => setConfirmDel(false)}
+          onDeleted={() => {
+            setConfirmDel(false);
+            if (onCustomerDeleted) onCustomerDeleted(customer);
+            onClose();
+          }}
         />
       )}
     </>
