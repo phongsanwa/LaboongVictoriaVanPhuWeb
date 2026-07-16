@@ -39,7 +39,8 @@ function App() {
   const [tier, setTier] = useState("all");
   const [store, setStore] = useState("all");
   const [status, setStatus] = useState("all");
-  const [sort, setSort] = useState({ key: "points", dir: "desc" });
+  // Mặc định: khách đăng ký mới nhất hiển thị trên đầu
+  const [sort, setSort] = useState({ key: "joined", dir: "desc" });
   const [page, setPage] = useState(1);
   const [sel, setSel] = useState(null);
   const [customers, setCustomers] = useState(CUSTOMERS);
@@ -70,7 +71,7 @@ function App() {
     const dir = sort.dir === "asc" ? 1 : -1;
     rows = [...rows].sort((a, b) => {
       if (sort.key === "points") return (a.points - b.points) * dir;
-      if (sort.key === "joined") return (a.joined < b.joined ? -1 : 1) * dir;
+      if (sort.key === "joined") return (a.joined === b.joined ? a.customerId - b.customerId : (a.joined < b.joined ? -1 : 1)) * dir;
       if (sort.key === "name") return a.name.localeCompare(b.name, "vi") * dir;
       return 0;
     });
@@ -252,6 +253,9 @@ function App() {
       {sel && <Drawer c={sel} onClose={() => setSel(null)} onCustomerUpdated={updated => {
         setCustomers(cs => cs.map(c => c.customerId === updated.customerId ? { ...c, ...updated } : c));
         setSel(prev => prev?.customerId === updated.customerId ? { ...prev, ...updated } : prev);
+      }} onCustomerDeleted={deleted => {
+        setCustomers(cs => cs.filter(c => c.customerId !== deleted.customerId));
+        setSel(null);
       }} />}
 
       {/* ---------- Tweaks ---------- */}

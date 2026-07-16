@@ -103,6 +103,46 @@ async function geocodePlaceId(placeId) {
   });
 }
 
+/* Khoảng cách ĐƯỜNG BỘ (xe máy) từ cửa hàng → địa chỉ giao, qua Google
+   Distance Matrix (travelMode DRIVING — đi theo đường thực tế, không phải
+   đường chim bay). Cache theo cặp toạ độ; trả null nếu API lỗi/chưa bật
+   (khi đó dùng Haversine dự phòng). */
+const ROUTE_DIST_CACHE_KEY = 'lb_route_dist_v1';
+async function roadDistanceKm(origin, dest) {
+  const key = `${origin.lat.toFixed(5)},${origin.lng.toFixed(5)}|${dest.lat.toFixed(5)},${dest.lng.toFixed(5)}`;
+  try {
+    const cache = JSON.parse(localStorage.getItem(ROUTE_DIST_CACHE_KEY) || '{}');
+    if (typeof cache[key] === 'number') return cache[key];
+  } catch (e) { /* ignore */ }
+
+  const maps = window.google?.maps;
+  if (!maps?.DistanceMatrixService) return null;
+  const km = await new Promise(resolve => {
+    new maps.DistanceMatrixService().getDistanceMatrix({
+      origins:      [new maps.LatLng(origin.lat, origin.lng)],
+      destinations: [new maps.LatLng(dest.lat, dest.lng)],
+      travelMode:   maps.TravelMode.DRIVING, // đường bộ — sát quãng đường xe máy thực tế
+      unitSystem:   maps.UnitSystem.METRIC,
+    }, (res, status) => {
+      const el = res?.rows?.[0]?.elements?.[0];
+      if (status === 'OK' && el?.status === 'OK' && el.distance?.value >= 0) {
+        resolve(el.distance.value / 1000);
+      } else {
+        console.warn('DistanceMatrix không khả dụng (' + (el?.status || status) + ') — dùng khoảng cách đường chim bay');
+        resolve(null);
+      }
+    });
+  });
+  if (km !== null) {
+    try {
+      const cache = JSON.parse(localStorage.getItem(ROUTE_DIST_CACHE_KEY) || '{}');
+      cache[key] = km;
+      localStorage.setItem(ROUTE_DIST_CACHE_KEY, JSON.stringify(cache));
+    } catch (e) { /* ignore */ }
+  }
+  return km;
+}
+
 function distRangeLabel(km) {
   return km < 1 ? 'dưới 1km' : `trên ${Math.floor(km)}km`;
 }
@@ -574,6 +614,22 @@ function App() {
   const selectedAddr  = addrId === "pickup" ? null : addresses.find(a => a.id === addrId);
   const selectedStore = liveStores.find(s => s.id === selectedStoreId) || liveStores[0] || null;
 
+  /* Khoảng cách đường bộ (xe máy) cửa hàng → địa chỉ giao qua Distance
+     Matrix; undefined = đang tính, null = API lỗi (dùng Haversine dự phòng) */
+  const [routeDists, setRouteDists] = useState({});
+  const cachedGeo = (selectedAddr && addrId !== 'pickup') ? addrGeoCache[selectedAddr.id] : null;
+  const routeKey = (cachedGeo?.lat && selectedStore?.lat && selectedStore?.lng)
+    ? `${cachedGeo.lat.toFixed(5)},${cachedGeo.lng.toFixed(5)}|${selectedStore.lat.toFixed(5)},${selectedStore.lng.toFixed(5)}`
+    : null;
+  useEffect(() => {
+    if (!routeKey || routeDists[routeKey] !== undefined) return;
+    let alive = true;
+    roadDistanceKm({ lat: selectedStore.lat, lng: selectedStore.lng }, { lat: cachedGeo.lat, lng: cachedGeo.lng })
+      .then(km => { if (alive) setRouteDists(d => ({ ...d, [routeKey]: km })); })
+      .catch(() => { if (alive) setRouteDists(d => ({ ...d, [routeKey]: null })); });
+    return () => { alive = false; };
+  }, [routeKey]); // eslint-disable-line
+
   /* shipping info: geocode delivery address, compute distance + fee */
   const geoInfo = useMemo(() => {
     if (!selectedAddr || addrId === 'pickup') return null;
@@ -581,10 +637,14 @@ function App() {
     if (!cached) return { geocoding: false, dist: null, fee: 0 };
     if (cached.geocoding) return { geocoding: true, dist: null, fee: 0 };
     if (!cached.lat || !selectedStore?.lat || !selectedStore?.lng) return { geocoding: false, dist: null, fee: 0 };
-    const dist = haversineDist(cached.lat, cached.lng, selectedStore.lat, selectedStore.lng);
+    // Ưu tiên khoảng cách ĐƯỜNG BỘ (xe máy); chưa có/lỗi thì tạm dùng đường chim bay
+    const routeKm = routeKey ? routeDists[routeKey] : undefined;
+    const dist = (typeof routeKm === 'number')
+      ? routeKm
+      : haversineDist(cached.lat, cached.lng, selectedStore.lat, selectedStore.lng);
     const fee  = calcShippingFee(dist, liveShippingTiers);
     return { geocoding: false, dist, fee };
-  }, [addrId, addrGeoCache, selectedStore, liveShippingTiers]); // eslint-disable-line
+  }, [addrId, addrGeoCache, selectedStore, liveShippingTiers, routeDists, routeKey]); // eslint-disable-line
 
   const shipFee = geoInfo?.fee ?? 0;
   const dist    = geoInfo?.dist ?? null;

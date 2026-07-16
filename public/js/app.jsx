@@ -255,7 +255,8 @@ function App() {
               <div className="hero-actions">
                 <a className="hero-act" href={NAV_URLS.catalog}><Icon name="gift" size={17} color="#fff"/> Đổi quà</a>
                 <a className="hero-act" href={NAV_URLS.points}><Icon name="coin" size={17} color="#fff"/> Chi tiết điểm</a>
-                <a className="hero-act" href={NAV_URLS.orderHistory}><Icon name="bag" size={17} color="#fff"/> Đơn hàng</a>
+                <a className="hero-act" href={NAV_URLS.orderHistory} style={{ gridColumn: "1 / -1" }}><Icon name="bag" size={17} color="#fff"/> Theo dõi đơn hàng</a>
+                <a className="hero-act" href={NAV_URLS.wallet} style={{ gridColumn: "1 / -1" }}><Icon name="ticket" size={17} color="#fff"/> Voucher của tôi</a>
               </div>
             </section>
 

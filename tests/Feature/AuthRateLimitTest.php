@@ -25,18 +25,18 @@ class AuthRateLimitTest extends TestCase
         $blocked->assertJson(['message' => 'Bạn đã thử đăng nhập quá nhiều lần. Vui lòng thử lại sau ít phút.']);
     }
 
-    public function test_send_otp_is_throttled_after_three_attempts(): void
+    public function test_forgot_password_is_throttled_after_three_attempts(): void
     {
         $payload = ['phone' => '0900000001'];
 
         for ($i = 0; $i < 3; $i++) {
-            $res = $this->postJson('/forgot-password/send-otp', $payload);
-            $this->assertNotSame(429, $res->getStatusCode(), "Gửi OTP lần #{$i} không được bị throttle");
+            $res = $this->postJson('/forgot-password/send-new-password', $payload);
+            $this->assertNotSame(429, $res->getStatusCode(), "Quên mật khẩu lần #{$i} không được bị throttle");
         }
 
-        $blocked = $this->postJson('/forgot-password/send-otp', $payload);
+        $blocked = $this->postJson('/forgot-password/send-new-password', $payload);
         $blocked->assertStatus(429);
-        $blocked->assertJson(['message' => 'Bạn đã yêu cầu mã OTP quá nhiều lần. Vui lòng thử lại sau vài phút.']);
+        $blocked->assertJson(['message' => 'Bạn đã yêu cầu đặt lại mật khẩu quá nhiều lần. Vui lòng thử lại sau vài phút.']);
     }
 
     public function test_register_is_throttled_after_five_attempts(): void

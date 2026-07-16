@@ -173,6 +173,24 @@ class CustomersController extends Controller
         return response()->json(['customer' => $this->present($customer->fresh(['user', 'store', 'tier']))]);
     }
 
+    /**
+     * Xoá vĩnh viễn khách hàng cùng toàn bộ dữ liệu liên quan.
+     * orders là restrictOnDelete và daily_checkins không có FK nên xoá tay;
+     * phần còn lại (customer, điểm, đổi quà, voucher, địa chỉ…) cascade từ users.
+     */
+    public function destroy(Customer $customer)
+    {
+        $name = $customer->user->name ?? ('KH' . (1000 + $customer->id));
+
+        \Illuminate\Support\Facades\DB::transaction(function () use ($customer) {
+            \App\Models\Order::where('customer_id', $customer->id)->delete();
+            \App\Models\DailyCheckin::where('customer_id', $customer->id)->delete();
+            $customer->user()->delete(); // cascade → customers → points/redemptions/vouchers/addresses…
+        });
+
+        return response()->json(['message' => "Đã xoá khách hàng {$name}"]);
+    }
+
     private function present(Customer $c): array
     {
         $tiers = CustomerTier::orderBy('level')->get();
