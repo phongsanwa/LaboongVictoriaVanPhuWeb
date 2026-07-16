@@ -205,8 +205,6 @@ function App() {
               )}
 
               <button className="btn primary" style={{ marginTop: 6 }} disabled={sending} onClick={loginPw}>{sending ? "Đang đăng nhập…" : <>Đăng nhập <Icon name="arrow" size={18} color="#fff" /></>}</button>
-
-              <div className="demo-hint" style={{ marginTop: 16 }}><Icon name="info" size={15} color="var(--ink-3)" /><span>Demo — SĐT đã đăng ký: <b>0912345678</b> · mật khẩu <b>password</b></span></div>
             </>
           )}
 
