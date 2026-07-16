@@ -39,141 +39,38 @@ function fmtTime(s) { return `${String(Math.floor(s / 60)).padStart(2, "0")}:${S
 
 /* ---------------- Forgot Password Flow ---------------- */
 function ForgotFlow({ onBack }) {
-  const [step, setStep] = useState("phone");   // phone | code | done
+  const [step, setStep] = useState("phone");   // phone | done
   const [phone, setPhone] = useState("");
-  const [otp, setOtp] = useState("");
-  const [pw, setPw] = useState("");
-  const [pwConf, setPwConf] = useState("");
-  const [showPw, setShowPw] = useState(false);
-  const [showPwConf, setShowPwConf] = useState(false);
-  const [debugOtp, setDebugOtp] = useState(null);
-  const [ttl, setTtl] = useState(180);
-  const [countdown, setCountdown] = useState(0);
+  const [maskedEmail, setMaskedEmail] = useState("");
   const [touched, setTouched] = useState(false);
   const [err, setErr] = useState("");
   const [sending, setSending] = useState(false);
-  const timerRef = useRef(null);
 
   const pRes = validPhone(phone);
 
-  function startCountdown(seconds) {
-    setCountdown(seconds);
-    clearInterval(timerRef.current);
-    timerRef.current = setInterval(() => {
-      setCountdown(c => { if (c <= 1) { clearInterval(timerRef.current); return 0; } return c - 1; });
-    }, 1000);
-  }
-  useEffect(() => () => clearInterval(timerRef.current), []);
-
-  const sendOtp = async () => {
+  const sendNewPassword = async () => {
     setTouched(true); setErr("");
     if (!pRes.ok || sending) return;
     setSending(true);
-    const { ok, data } = await apiPost("/forgot-password/send-otp", { phone: normPhone(phone) });
+    const { ok, data } = await apiPost("/forgot-password/send-new-password", { phone: normPhone(phone) });
     setSending(false);
     if (!ok) { setErr(data.message || "Có lỗi xảy ra"); return; }
-    setDebugOtp(data.debug_otp);
-    setTtl(data.ttl || 180);
-    startCountdown(data.ttl || 180);
-    setStep("code");
-  };
-
-  const resendOtp = async () => {
-    if (countdown > 0 || sending) return;
-    setSending(true); setErr("");
-    const { ok, data } = await apiPost("/forgot-password/send-otp", { phone: normPhone(phone) });
-    setSending(false);
-    if (!ok) { setErr(data.message || "Có lỗi xảy ra"); return; }
-    setDebugOtp(data.debug_otp);
-    startCountdown(data.ttl || 180);
-    setOtp("");
-  };
-
-  const resetPw = async () => {
-    setErr("");
-    if (!otp || otp.length !== 6) { setErr("Vui lòng nhập đủ 6 chữ số OTP"); return; }
-    if (!pw) { setErr("Vui lòng nhập mật khẩu mới"); return; }
-    if (pw.length < 6) { setErr("Mật khẩu tối thiểu 6 ký tự"); return; }
-    if (pw !== pwConf) { setErr("Xác nhận mật khẩu không khớp"); return; }
-    if (sending) return;
-    setSending(true);
-    const { ok, data } = await apiPost("/forgot-password/reset", {
-      phone: normPhone(phone), otp_code: otp,
-      password: pw, password_confirmation: pwConf,
-    });
-    setSending(false);
-    if (!ok) { setErr(data.message || "Có lỗi xảy ra"); return; }
+    setMaskedEmail(data.email || "");
     setStep("done");
   };
 
   if (step === "done") return (
     <div className="fp-success">
-      <div className="succ-ring"><div className="ck"><Icon name="check" size={30} color="#fff" /></div></div>
-      <h1>Đặt lại thành công! 🎉</h1>
-      <p>Mật khẩu của bạn đã được cập nhật.<br />Hãy đăng nhập lại bằng mật khẩu mới.</p>
+      <div className="succ-ring"><div className="ck"><Icon name="mail" size={30} color="#fff" /></div></div>
+      <h1>Đã gửi mật khẩu mới! 📧</h1>
+      <p>
+        Mật khẩu mới đã được gửi tới email
+        {maskedEmail ? <> <b>{maskedEmail}</b></> : " của bạn"}.<br />
+        Kiểm tra hộp thư (cả mục Spam) rồi dùng mật khẩu đó để đăng nhập.<br />
+        Sau khi vào được, hãy đổi mật khẩu riêng trong mục Tài khoản nhé.
+      </p>
       <button className="btn primary" style={{ marginTop: 24 }} onClick={onBack}>Đăng nhập ngay <Icon name="arrow" size={18} color="#fff" /></button>
     </div>
-  );
-
-  if (step === "code") return (
-    <>
-      <button className="fp-back" onClick={() => { setStep("phone"); setErr(""); setOtp(""); }}>
-        <Icon name="chev" size={16} /> Quay lại
-      </button>
-      <div className="step-head">
-        <h1>Nhập mã xác minh</h1>
-        <p>Mã OTP đã được gửi đến số <b>{prettyPhone(phone)}</b>. Nhập mã và đặt mật khẩu mới bên dưới.</p>
-      </div>
-
-      <div className="fld">
-        <label>Mã OTP (6 chữ số)</label>
-        <div className="inp-wrap">
-          <span className="lic"><Icon name="lock" size={18} /></span>
-          <input className="inp otp-big" inputMode="numeric" maxLength={6} placeholder="000000" value={otp}
-            onChange={e => { setOtp(e.target.value.replace(/\D/g, "").slice(0, 6)); setErr(""); }} />
-        </div>
-        {debugOtp && (
-          <div className="fp-debug">
-            <Icon name="info" size={15} color="#7A5C00" />
-            <span>Demo — mã của bạn: <b>{debugOtp}</b></span>
-          </div>
-        )}
-        <div className="fp-timer">
-          {countdown > 0
-            ? <>Mã hết hạn sau <b>{fmtTime(countdown)}</b></>
-            : "Mã đã hết hạn"}
-        </div>
-        <button className="fp-resend" disabled={countdown > 0 || sending} onClick={resendOtp}>
-          {countdown > 0 ? `Gửi lại sau ${fmtTime(countdown)}` : "Gửi lại mã"}
-        </button>
-      </div>
-
-      <div className="fld">
-        <label>Mật khẩu mới</label>
-        <div className="inp-wrap">
-          <span className="lic"><Icon name="lock" size={18} /></span>
-          <input className="inp" type={showPw ? "text" : "password"} placeholder="Tối thiểu 6 ký tự" value={pw}
-            style={{ paddingRight: 50 }} onChange={e => { setPw(e.target.value); setErr(""); }} />
-          <button className="eye" onClick={() => setShowPw(s => !s)} tabIndex={-1}><Icon name={showPw ? "eyeoff" : "eye"} size={18} /></button>
-        </div>
-      </div>
-
-      <div className="fld">
-        <label>Xác nhận mật khẩu</label>
-        <div className="inp-wrap">
-          <span className="lic"><Icon name="lock" size={18} /></span>
-          <input className="inp" type={showPwConf ? "text" : "password"} placeholder="Nhập lại mật khẩu" value={pwConf}
-            style={{ paddingRight: 50 }} onChange={e => { setPwConf(e.target.value); setErr(""); }}
-            onKeyDown={e => { if (e.key === "Enter") resetPw(); }} />
-          <button className="eye" onClick={() => setShowPwConf(s => !s)} tabIndex={-1}><Icon name={showPwConf ? "eyeoff" : "eye"} size={18} /></button>
-        </div>
-      </div>
-
-      {err && <div className="err"><Icon name="info" size={14} color="var(--danger)" /> {err}</div>}
-      <button className="btn primary" style={{ marginTop: 6 }} disabled={sending} onClick={resetPw}>
-        {sending ? "Đang đặt lại…" : <>Đặt lại mật khẩu <Icon name="arrow" size={18} color="#fff" /></>}
-      </button>
-    </>
   );
 
   // step === "phone"
@@ -184,7 +81,7 @@ function ForgotFlow({ onBack }) {
       </button>
       <div className="step-head">
         <h1>Quên mật khẩu</h1>
-        <p>Nhập số điện thoại đã đăng ký để nhận mã xác minh.</p>
+        <p>Nhập số điện thoại đã đăng ký — mật khẩu mới sẽ được gửi về email của bạn.</p>
       </div>
       <div className="fld">
         <label>Số điện thoại</label>
@@ -192,13 +89,13 @@ function ForgotFlow({ onBack }) {
           <span className="lic"><Icon name="phone" size={18} /></span>
           <input className={"inp" + (touched && !pRes.ok ? " bad" : "")} inputMode="numeric" placeholder="0912 345 678" value={phone}
             onChange={e => { setPhone(e.target.value.replace(/[^\d\s.\-]/g, "")); setErr(""); }}
-            onKeyDown={e => { if (e.key === "Enter") sendOtp(); }} />
+            onKeyDown={e => { if (e.key === "Enter") sendNewPassword(); }} />
         </div>
         {touched && !pRes.ok && <div className="err"><Icon name="info" size={14} color="var(--danger)" /> {pRes.msg}</div>}
         {err && <div className="err"><Icon name="info" size={14} color="var(--danger)" /> {err}</div>}
       </div>
-      <button className="btn primary" style={{ marginTop: 6 }} disabled={sending} onClick={sendOtp}>
-        {sending ? "Đang gửi…" : <>Gửi mã xác minh <Icon name="arrow" size={18} color="#fff" /></>}
+      <button className="btn primary" style={{ marginTop: 6 }} disabled={sending} onClick={sendNewPassword}>
+        {sending ? "Đang gửi…" : <>Gửi mật khẩu mới về email <Icon name="arrow" size={18} color="#fff" /></>}
       </button>
     </>
   );

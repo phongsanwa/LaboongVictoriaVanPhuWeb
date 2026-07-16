@@ -42,11 +42,11 @@ class AppServiceProvider extends ServiceProvider
                 ->response($tooMany('Bạn đã thử đăng nhập quá nhiều lần. Vui lòng thử lại sau ít phút.'))
         );
 
-        // Gửi OTP: chặt hơn vì mỗi lần tốn SMS/email — 3 lần / 10 phút.
+        // Quên mật khẩu: chặt hơn vì mỗi lần gửi 1 email — 3 lần / 10 phút.
         RateLimiter::for('otp', fn (Request $request) =>
             Limit::perMinutes(10, 3)
                 ->by(Str::lower((string) $request->input('phone')) . '|' . $request->ip())
-                ->response($tooMany('Bạn đã yêu cầu mã OTP quá nhiều lần. Vui lòng thử lại sau vài phút.'))
+                ->response($tooMany('Bạn đã yêu cầu đặt lại mật khẩu quá nhiều lần. Vui lòng thử lại sau vài phút.'))
         );
 
         // Nhập OTP để đặt lại mật khẩu: chống dò mã OTP.

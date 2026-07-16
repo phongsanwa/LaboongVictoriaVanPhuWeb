@@ -54,8 +54,8 @@ Route::get('/login', [LoginController::class, 'show'])->name('login');
 Route::post('/login/password', [LoginController::class, 'loginWithPassword'])->middleware('throttle:login')->name('login.password');
 Route::post('/logout', [LoginController::class, 'logout'])->name('logout');
 
-Route::post('/forgot-password/send-otp', [ForgotPasswordController::class, 'sendOtp'])->middleware('throttle:otp')->name('forgot.otp');
-Route::post('/forgot-password/reset', [ForgotPasswordController::class, 'reset'])->middleware('throttle:reset')->name('forgot.reset');
+// Quên mật khẩu: mật khẩu mới được tạo và gửi về email đã đăng ký
+Route::post('/forgot-password/send-new-password', [ForgotPasswordController::class, 'sendNewPassword'])->middleware('throttle:otp')->name('forgot.password');
 
 require __DIR__.'/admin.php';
 require __DIR__.'/pos.php';
