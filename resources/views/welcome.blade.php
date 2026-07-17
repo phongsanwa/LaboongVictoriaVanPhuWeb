@@ -9,7 +9,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&family=Baloo+2:wght@600;700;800&display=swap" rel="stylesheet" />
-<link rel="stylesheet" href="{{ asset('css/styles.css') }}?v={{ time() }}" />
+<link rel="stylesheet" href="{{ asset('css/styles.css') }}?v={{ filemtime(public_path('css/styles.css')) }}" />
 </head>
 <body>
 <div id="root"></div>
@@ -30,6 +30,6 @@
 
 <script type="text/babel" src="{{ asset('js/tweaks-panel.jsx') }}?v={{ filemtime(public_path('js/tweaks-panel.jsx')) }}"></script>
 <script type="text/babel" src="{{ asset('js/components.jsx') }}?v={{ filemtime(public_path('js/components.jsx')) }}"></script>
-<script type="text/babel" src="{{ asset('js/app.jsx') }}?v={{ time() }}"></script>
+<script type="text/babel" src="{{ asset('js/app.jsx') }}?v={{ filemtime(public_path('js/app.jsx')) }}"></script>
 </body>
 </html>
