@@ -23,6 +23,7 @@ class AdminAccess
         'Đổi quà'             => 'gift_edit',
         'Chiến dịch'          => 'camp_view',
         'Tin tức'             => 'camp_edit',
+        'SEO'                 => 'settings',
         'Điểm danh'           => 'settings',
         'Thực đơn'            => 'settings',
         'Khuyến mãi'          => 'camp_view',

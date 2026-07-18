@@ -66,6 +66,11 @@ Route::middleware(['auth', 'admin.perm'])->prefix('admin')->name('admin.')->grou
     Route::post('/roles/assign', [RolesController::class, 'assign'])->middleware('admin.perm:staff')->name('roles.assign');
     Route::delete('/roles/staff/{staff}', [RolesController::class, 'removeStaff'])->middleware('admin.perm:staff')->name('roles.staff.remove');
 
+    // Quản lý SEO
+    Route::get('/seo', [\App\Http\Controllers\Admin\SeoController::class, 'index'])->middleware('admin.perm:settings')->name('seo.index');
+    Route::post('/seo', [\App\Http\Controllers\Admin\SeoController::class, 'update'])->middleware('admin.perm:settings')->name('seo.update');
+    Route::post('/seo/upload', [\App\Http\Controllers\Admin\SeoController::class, 'upload'])->middleware('admin.perm:settings')->name('seo.upload');
+
     // Cài đặt hệ thống
     Route::get('/settings', [SettingsController::class, 'index'])->middleware('admin.perm:settings')->name('settings.index');
     Route::post('/settings', [SettingsController::class, 'update'])->middleware('admin.perm:settings')->name('settings.update');
