@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <title>Test Google Maps API - Laboong</title>
+<meta name="robots" content="noindex, nofollow" />
     <style>
         body { font-family: Arial, sans-serif; max-width: 700px; margin: 30px auto; padding: 0 20px; color:#222; }
         h2 { margin-bottom: 4px; }
