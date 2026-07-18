@@ -17,6 +17,44 @@ use Illuminate\Support\Facades\Route;
 
 Route::get('/test-maps', fn() => view('test-maps'));
 
+/* ── SEO: robots.txt + sitemap.xml động (URL tuyệt đối tự theo domain) ── */
+Route::get('/robots.txt', function () {
+    $lines = [
+        'User-agent: *',
+        'Disallow: /admin',
+        'Disallow: /pos',
+        'Disallow: /profile',
+        'Disallow: /orders',
+        'Disallow: /rewards/wallet',
+        'Disallow: /points',
+        'Disallow: /checkin',
+        'Disallow: /logout',
+        'Disallow: /test-maps',
+        'Allow: /',
+        '',
+        'Sitemap: ' . url('/sitemap.xml'),
+    ];
+
+    return response(implode("\n", $lines), 200, ['Content-Type' => 'text/plain; charset=utf-8']);
+});
+
+Route::get('/sitemap.xml', function () {
+    $urls = [
+        ['loc' => url('/'),          'priority' => '1.0'],
+        ['loc' => url('/login'),     'priority' => '0.8'],
+        ['loc' => url('/register'),  'priority' => '0.8'],
+    ];
+
+    $xml = '<?xml version="1.0" encoding="UTF-8"?>' . "\n"
+         . '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">' . "\n";
+    foreach ($urls as $u) {
+        $xml .= "  <url><loc>{$u['loc']}</loc><changefreq>weekly</changefreq><priority>{$u['priority']}</priority></url>\n";
+    }
+    $xml .= '</urlset>';
+
+    return response($xml, 200, ['Content-Type' => 'application/xml; charset=utf-8']);
+});
+
 Route::get('/', [HomeController::class, 'index'])->middleware('auth')->name('home');
 Route::get('/menu', [MenuPageController::class, 'index'])->middleware('auth')->name('menu');
 Route::post('/orders', [OrderController::class, 'place'])->middleware('auth')->name('orders.place');

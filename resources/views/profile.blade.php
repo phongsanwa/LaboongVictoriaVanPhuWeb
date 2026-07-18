@@ -6,10 +6,11 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <meta name="csrf-token" content="{{ csrf_token() }}" />
 <title>Laboong · Tài khoản</title>
+@include('partials.seo', ['seoNoindex' => true])
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&family=Baloo+2:wght@600;700;800&display=swap" rel="stylesheet" />
-<link rel="stylesheet" href="{{ asset('css/profile.css') }}?v={{ time() }}" />
+<link rel="stylesheet" href="{{ asset('css/profile.css') }}?v={{ filemtime(public_path('css/profile.css')) }}" />
 </head>
 <body>
 <div id="root"></div>
@@ -24,8 +25,8 @@
   window.PROFILE_DATA = @json($profileData);
 </script>
 
-<script type="text/babel" src="{{ asset('js/tweaks-panel.jsx') }}?v={{ time() }}"></script>
-<script type="text/babel" src="{{ asset('js/components.jsx') }}?v={{ time() }}"></script>
-<script type="text/babel" src="{{ asset('js/profile.jsx') }}?v={{ time() }}"></script>
+<script type="text/babel" src="{{ asset('js/tweaks-panel.jsx') }}?v={{ filemtime(public_path('js/tweaks-panel.jsx')) }}"></script>
+<script type="text/babel" src="{{ asset('js/components.jsx') }}?v={{ filemtime(public_path('js/components.jsx')) }}"></script>
+<script type="text/babel" src="{{ asset('js/profile.jsx') }}?v={{ filemtime(public_path('js/profile.jsx')) }}"></script>
 </body>
 </html>
