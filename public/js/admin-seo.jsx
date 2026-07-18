@@ -78,17 +78,17 @@ function App() {
   const shownOg = ogPreview || ogImage;
 
   return (
-    <div className="layout" style={{ "--brand": tw.brand }}>
+    <div className="shell" style={{ "--brand": tw.brand }}>
       <AdminSidebar activeLabel="SEO" admin={DATA.admin} sideOpen={sideOpen} onClose={() => setSideOpen(false)} />
 
       <main className="main">
         <header className="topbar">
-          <button className="icon-btn menu-toggle" onClick={() => setSideOpen(true)}><Icon name="grid" size={19} /></button>
+          <button className="icon-btn" onClick={() => setSideOpen(true)}><Icon name="grid" size={19} /></button>
           <div>
-            <div className="tb-title">Quản lý SEO</div>
-            <div className="tb-sub">Tiêu đề, mô tả tìm kiếm và ảnh chia sẻ của từng trang</div>
+            <div className="crumb">Quản lý · SEO</div>
+            <h1>Quản lý SEO</h1>
           </div>
-          <div style={{ flex: 1 }} />
+          <div className="topbar-spacer" />
           <button className="btn primary" disabled={saving || uploading} onClick={save}>
             <Icon name="check" size={16} color="#fff" /> {saving ? "Đang lưu…" : "Lưu thay đổi"}
           </button>
@@ -180,7 +180,7 @@ function App() {
         </div>
       </main>
 
-      {toast && <div className="toast on">{toast}</div>}
+      {toast && <div className="toast"><span className="tc"><Icon name="check" size={15} color="#fff" /></span>{toast}</div>}
 
       <TweaksPanel>
         <TweakSection label="Giao diện" />
