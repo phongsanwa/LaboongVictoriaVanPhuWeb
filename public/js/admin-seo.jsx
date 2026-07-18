@@ -25,6 +25,7 @@ function App() {
   const [tw, setTweak] = useTweaks(TW_DEFAULTS);
   const [sideOpen, setSideOpen] = useState(false);
   const [pages, setPages] = useState(DATA.pages);
+  const [tab, setTab] = useState(DATA.pages[0]?.key || 'home');
   const [ogImage, setOgImage] = useState(DATA.og_image || '');
   const [ogPreview, setOgPreview] = useState(null);
   const [uploading, setUploading] = useState(false);
@@ -123,8 +124,18 @@ function App() {
             </div>
           </section>
 
-          {/* ── SEO từng trang ── */}
-          {pages.map(p => (
+          {/* ── SEO từng trang: chọn trang bằng tab ── */}
+          <div className="seg" style={{ marginBottom: 14, flexWrap: "wrap" }}>
+            {pages.map(p => (
+              <button key={p.key} className={tab === p.key ? "on" : ""} onClick={() => setTab(p.key)}>
+                {p.label}
+                {!p.index && <span title="Đang chặn index" style={{ marginLeft: 5, color: "var(--hot, #E0518A)" }}>●</span>}
+                {(p.title || p.desc) && p.index && <span title="Đã tuỳ chỉnh" style={{ marginLeft: 5, color: "var(--brand)" }}>●</span>}
+              </button>
+            ))}
+          </div>
+
+          {pages.filter(p => p.key === tab).map(p => (
             <section key={p.key} className="card" style={{ padding: 20, marginBottom: 14 }}>
               <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
                 <div style={{ fontWeight: 800, fontSize: 15 }}>{p.label}</div>
