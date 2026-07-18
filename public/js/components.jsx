@@ -181,6 +181,7 @@ const NAV_URLS = {
   adminStores: "/admin/stores",
   adminRoles: "/admin/roles",
   adminSettings: "/admin/settings",
+  adminSeo: "/admin/seo",
 };
 const ADMIN_NAV_HREF = {
   "Tổng quan": NAV_URLS.adminHome,
@@ -197,6 +198,7 @@ const ADMIN_NAV_HREF = {
   "Cửa hàng": NAV_URLS.adminStores,
   "Phân quyền": NAV_URLS.adminRoles,
   "Cài đặt": NAV_URLS.adminSettings,
+  "SEO": NAV_URLS.adminSeo,
 };
 function adminHref(label) { return ADMIN_NAV_HREF[label] || "#"; }
 

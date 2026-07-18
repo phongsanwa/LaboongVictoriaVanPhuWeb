@@ -10,7 +10,20 @@
   $seoDesc    = $seoDesc    ?? 'Laboong Victoria Văn Phú — trà sữa Đài Loan, tích điểm đổi quà, đặt món giao tận nơi tại Hà Đông, Hà Nội.';
   $seoNoindex = $seoNoindex ?? false;
   $seoBusiness= $seoBusiness ?? false;
+  $seoPage    = $seoPage    ?? null;
   $seoUrl     = url()->current();
+
+  // Bản cấu hình admin (trang /admin/seo) ghi đè giá trị mặc định trong code
+  try {
+      $seoCfg = \App\Models\AppSetting::get('seo', []);
+      if ($seoPage && !empty($seoCfg['pages'][$seoPage])) {
+          $p = $seoCfg['pages'][$seoPage];
+          if (!empty($p['title'])) $seoTitle = $p['title'];
+          if (!empty($p['desc']))  $seoDesc  = $p['desc'];
+          if (($p['index'] ?? true) === false) $seoNoindex = true;
+      }
+      $seoImage = $seoImage ?? ($seoCfg['og_image'] ?? null);
+  } catch (\Throwable $e) { /* giữ mặc định nếu DB lỗi */ }
 
   try {
       $seoImage = $seoImage ?? (\App\Models\AppSetting::get('general', [])['favicon_url'] ?? null);

@@ -5,13 +5,12 @@
 @include('partials.favicon')
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <meta name="csrf-token" content="{{ csrf_token() }}" />
-<title>Laboong · Đăng nhập</title>
-@include('partials.seo', ['seoPage' => 'login', 'seoTitle' => 'Đăng nhập · Laboong Victoria Văn Phú', 'seoDesc' => 'Đăng nhập tài khoản thành viên Laboong Victoria Văn Phú để tích điểm, đổi quà và đặt trà sữa giao tận nơi.', 'seoBusiness' => true])
+<title>Laboong Admin · SEO</title>
+<meta name="robots" content="noindex, nofollow" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&family=Baloo+2:wght@600;700;800&display=swap" rel="stylesheet" />
-<link rel="stylesheet" href="{{ asset('css/register.css') }}?v={{ filemtime(public_path('css/register.css')) }}" />
-<link rel="stylesheet" href="{{ asset('css/login.css') }}?v={{ filemtime(public_path('css/login.css')) }}" />
+<link rel="stylesheet" href="{{ asset('css/admin.css') }}?v={{ filemtime(public_path('css/admin.css')) }}" />
 </head>
 <body>
 <div id="root"></div>
@@ -20,8 +19,13 @@
 <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
 <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" crossorigin="anonymous"></script>
 
+<script>
+  window.ADMIN_SEO_DATA = @json($seoData);
+</script>
+
 <script type="text/babel" src="{{ asset('js/tweaks-panel.jsx') }}?v={{ filemtime(public_path('js/tweaks-panel.jsx')) }}"></script>
 <script type="text/babel" src="{{ asset('js/components.jsx') }}?v={{ filemtime(public_path('js/components.jsx')) }}"></script>
-<script type="text/babel" src="{{ asset('js/login.jsx') }}?v={{ filemtime(public_path('js/login.jsx')) }}"></script>
+<script type="text/babel" src="{{ asset('js/admin-sidebar.jsx') }}?v={{ filemtime(public_path('js/admin-sidebar.jsx')) }}"></script>
+<script type="text/babel" src="{{ asset('js/admin-seo.jsx') }}?v={{ filemtime(public_path('js/admin-seo.jsx')) }}"></script>
 </body>
 </html>

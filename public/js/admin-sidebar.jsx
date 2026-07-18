@@ -10,6 +10,7 @@ const SIDEBAR_NAV = [
   { ic: 'gift',    label: 'Đổi quà',             href: '/admin/rewards' },
   { ic: 'mega',    label: 'Chiến dịch',          href: '/admin/campaigns' },
   { ic: 'star',    label: 'Tin tức',             href: '/admin/news' },
+  { ic: 'search',  label: 'SEO',                 href: '/admin/seo' },
   { ic: 'cal',     label: 'Điểm danh',           href: '/admin/checkin' },
   { ic: 'cup',     label: 'Thực đơn',            href: '/admin/menu' },
   { ic: 'percent', label: 'Khuyến mãi',          href: '/admin/promotions' },
