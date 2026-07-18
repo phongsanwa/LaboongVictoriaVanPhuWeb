@@ -55,6 +55,8 @@ function NewsEditor({ initial, onClose, onSaved }) {
   const [videoUrl, setVideoUrl]   = useState(initial.video_url || null);
   const [youtubeUrl, setYoutubeUrl] = useState(initial.youtube_url || "");
   const [active, setActive]   = useState(initial.status ? initial.status === "active" : true);
+  const [seoTitle, setSeoTitle] = useState(initial.seo_title || "");
+  const [seoDesc, setSeoDesc]   = useState(initial.seo_description || "");
   const [uploading, setUploading] = useState(false);
   const [err, setErr] = useState("");
   const [saving, setSaving] = useState(false);
@@ -128,6 +130,8 @@ function NewsEditor({ initial, onClose, onSaved }) {
     try {
       const payload = {
         title: title.trim(), excerpt: excerpt.trim(), body,
+        seo_title: seoTitle.trim() || null,
+        seo_description: seoDesc.trim() || null,
         media_type: mediaType,
         image_url: imageUrl || null,
         video_url: mediaType === 'video' ? videoUrl : null,
@@ -211,6 +215,30 @@ function NewsEditor({ initial, onClose, onSaved }) {
                 : youtubeUrl && <div style={{ fontSize: 12, color: "var(--hot)", marginTop: 6 }}>Link YouTube chưa hợp lệ</div>}
             </div>
           )}
+
+          {/* ── SEO bài viết ── */}
+          <div className="fld" style={{ background: "var(--bg-2, #F9FAFB)", borderRadius: 12, padding: "14px 16px" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
+              <Icon name="search" size={15} color="var(--brand)" />
+              <span style={{ fontWeight: 800, fontSize: 13.5 }}>SEO bài viết</span>
+              <span style={{ fontSize: 11.5, color: "var(--ink-3)" }}>— để trống sẽ dùng tiêu đề & tóm tắt của bài</span>
+            </div>
+            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
+              <label style={{ fontSize: 12.5, fontWeight: 700, color: "var(--ink-2)" }}>Tiêu đề SEO</label>
+              <span style={{ fontSize: 11, color: (seoTitle || title).length > 60 ? "var(--hot)" : "var(--ink-3)" }}>{(seoTitle || title).length}/60</span>
+            </div>
+            <input className="inp" value={seoTitle} onChange={e => setSeoTitle(e.target.value)} placeholder={title || "Tiêu đề hiển thị trên Google"} maxLength={100} />
+            <div style={{ display: "flex", justifyContent: "space-between", margin: "10px 0 4px" }}>
+              <label style={{ fontSize: 12.5, fontWeight: 700, color: "var(--ink-2)" }}>Mô tả SEO</label>
+              <span style={{ fontSize: 11, color: (seoDesc || excerpt).length > 160 ? "var(--hot)" : "var(--ink-3)" }}>{(seoDesc || excerpt).length}/160</span>
+            </div>
+            <textarea className="inp" rows={2} value={seoDesc} onChange={e => setSeoDesc(e.target.value)} placeholder={excerpt || "Mô tả hiển thị dưới tiêu đề trên Google"} maxLength={300} style={{ resize: "vertical", fontFamily: "inherit" }} />
+            {isEdit && initial.slug && (
+              <div style={{ fontSize: 11.5, color: "var(--ink-3)", marginTop: 8 }}>
+                Trang công khai: <a href={"/tin-tuc/" + initial.slug} target="_blank" rel="noopener noreferrer" style={{ color: "var(--brand)", fontWeight: 600 }}>/tin-tuc/{initial.slug}</a>
+              </div>
+            )}
+          </div>
 
           <div className="fld">
             <label>Nội dung bài viết</label>

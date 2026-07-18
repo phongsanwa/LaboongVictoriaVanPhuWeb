@@ -114,6 +114,8 @@ class NewsController extends Controller
         $data = $request->validate([
             'title'       => ['required', 'string', 'max:200'],
             'excerpt'     => ['nullable', 'string', 'max:500'],
+            'seo_title'       => ['nullable', 'string', 'max:100'],
+            'seo_description' => ['nullable', 'string', 'max:300'],
             'body'        => ['nullable', 'string', 'max:200000'],
             'media_type'  => ['required', Rule::in(['image', 'video', 'youtube'])],
             'image_url'   => ['nullable', 'string', 'max:500'],
@@ -136,6 +138,8 @@ class NewsController extends Controller
         return [
             'title'       => $data['title'],
             'excerpt'     => $data['excerpt'] ?? null,
+            'seo_title'       => trim($data['seo_title'] ?? '') ?: null,
+            'seo_description' => trim($data['seo_description'] ?? '') ?: null,
             'body'        => $this->sanitizeBody($data['body'] ?? null),
             'media_type'  => $data['media_type'],
             'image_url'   => $data['image_url'] ?? null,
@@ -151,6 +155,9 @@ class NewsController extends Controller
             'id'          => $n->id,
             'title'       => $n->title,
             'excerpt'     => $n->excerpt ?? '',
+            'slug'        => $n->slug,
+            'seo_title'       => $n->seo_title ?? '',
+            'seo_description' => $n->seo_description ?? '',
             'body'        => $n->body ?? '',
             'media_type'  => $n->media_type,
             'image_url'   => $n->image_url,
