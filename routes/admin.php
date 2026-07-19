@@ -65,6 +65,7 @@ Route::middleware(['auth', 'admin.perm'])->prefix('admin')->name('admin.')->grou
     Route::post('/roles', [RolesController::class, 'update'])->middleware('admin.perm:staff')->name('roles.update');
     Route::post('/roles/assign', [RolesController::class, 'assign'])->middleware('admin.perm:staff')->name('roles.assign');
     Route::delete('/roles/staff/{staff}', [RolesController::class, 'removeStaff'])->middleware('admin.perm:staff')->name('roles.staff.remove');
+    Route::post('/roles/staff/{staff}/store', [RolesController::class, 'setStore'])->middleware('admin.perm:staff')->name('roles.staff.store');
 
     // Quản lý SEO
     Route::get('/seo', [\App\Http\Controllers\Admin\SeoController::class, 'index'])->middleware('admin.perm:settings')->name('seo.index');

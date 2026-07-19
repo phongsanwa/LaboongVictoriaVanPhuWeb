@@ -111,6 +111,8 @@ class RolesController extends Controller
                 'total' => array_sum(array_map(fn ($g) => count($g['perms']), self::PERM_GROUPS)),
                 'permGroups' => $permGroups,
                 'perms' => $perms,
+                'stores' => Store::orderBy('id')->get(['id', 'name'])
+                    ->map(fn ($s) => ['id' => $s->id, 'name' => $s->name])->all(),
             ],
         ]);
     }
@@ -158,6 +160,8 @@ class RolesController extends Controller
         $data = $request->validate([
             'phone' => ['required', 'string'],
             'role' => ['required', Rule::in(array_keys(self::ROLES))],
+            // Cửa hàng nhân viên trực thuộc — không gửi thì giữ nguyên/mặc định cửa hàng đầu
+            'store_id' => ['nullable', 'integer', 'exists:stores,id'],
         ]);
 
         $user = User::where('phone', $data['phone'])->first();
@@ -179,11 +183,14 @@ class RolesController extends Controller
         if ($staff) {
             $staff->role = $data['role'];
             $staff->status = 'active';
+            if (!empty($data['store_id'])) {
+                $staff->store_id = $data['store_id'];
+            }
             $staff->save();
         } else {
             Staff::create([
                 'user_id' => $user->id,
-                'store_id' => Store::orderBy('id')->value('id'),
+                'store_id' => $data['store_id'] ?? Store::orderBy('id')->value('id'),
                 'role' => $data['role'],
                 'employee_code' => $this->nextEmployeeCode(),
                 'pin' => (string) random_int(100000, 999999),
@@ -199,6 +206,21 @@ class RolesController extends Controller
 
         return response()->json([
             'message' => "Đã gán \"{$user->name}\" vào vai trò " . self::ROLES[$data['role']]['label'],
+            'roles' => $this->buildRoles($this->currentPerms()),
+        ]);
+    }
+
+    /** Chuyển nhân viên sang cửa hàng khác. */
+    public function setStore(Request $request, Staff $staff): JsonResponse
+    {
+        $data = $request->validate([
+            'store_id' => ['required', 'integer', 'exists:stores,id'],
+        ]);
+
+        $staff->update(['store_id' => $data['store_id']]);
+
+        return response()->json([
+            'message' => 'Đã chuyển "' . ($staff->user->name ?? 'nhân viên') . '" sang ' . ($staff->fresh()->store->name ?? 'cửa hàng mới'),
             'roles' => $this->buildRoles($this->currentPerms()),
         ]);
     }
@@ -238,7 +260,7 @@ class RolesController extends Controller
     /** Builds the role cards data (counts, team avatars) from the current permission matrix. */
     private function buildRoles(array $perms): array
     {
-        $staffByRole = Staff::with('user')
+        $staffByRole = Staff::with(['user', 'store'])
             ->whereIn('role', ['cashier', 'manager'])
             ->where('status', 'active')
             ->get()
@@ -267,6 +289,8 @@ class RolesController extends Controller
                     'id' => $s->id,
                     'name' => $s->user->name,
                     'phone' => $s->user->phone,
+                    'store_id' => $s->store_id,
+                    'store' => $s->store->name ?? '—',
                     'color' => self::AVATAR_COLORS[$i % count(self::AVATAR_COLORS)],
                 ])->all(),
             ];
