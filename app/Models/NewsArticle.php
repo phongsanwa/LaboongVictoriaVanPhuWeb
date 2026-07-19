@@ -10,6 +10,8 @@ class NewsArticle extends Model
         'title',
         'slug',
         'excerpt',
+        'seo_title',
+        'seo_description',
         'body',
         'media_type',
         'image_url',

@@ -87,7 +87,8 @@ input { font-family: inherit; }
 .inp-wrap { position: relative; display: flex; align-items: center; }
 .inp-wrap .lic { position: absolute; left: 14px; color: var(--ink-3); pointer-events: none; display: grid; }
 .inp-wrap.has-prefix .pfx { position: absolute; left: 42px; font-weight: 600; color: var(--ink-2); pointer-events: none; font-size: 15px; }
-.inp { width: 100%; border: 1.5px solid var(--line); background: var(--card); color: var(--ink); border-radius: var(--r-sm); padding: 13px 14px 13px 42px; font-size: 15px; font-weight: 500; transition: .15s; outline: none; }
+/* font-size tối thiểu 16px — iOS Safari tự zoom vào khi focus ô nhập có chữ nhỏ hơn 16px */
+.inp { width: 100%; border: 1.5px solid var(--line); background: var(--card); color: var(--ink); border-radius: var(--r-sm); padding: 13px 14px 13px 42px; font-size: 16px; font-weight: 500; transition: .15s; outline: none; }
 .inp::placeholder { color: var(--ink-3); font-weight: 400; }
 .inp:focus { border-color: var(--brand); box-shadow: 0 0 0 3px var(--brand-soft); }
 .inp-wrap.has-prefix .inp { padding-left: 74px; }
