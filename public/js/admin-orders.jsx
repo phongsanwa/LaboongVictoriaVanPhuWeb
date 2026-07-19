@@ -185,7 +185,9 @@ function App() {
   const refreshOrders = useCallback(async () => {
     if (!LIVE) return;
     try {
-      const res = await fetch(LIVE_D.urls?.refresh, { headers: { 'Accept': 'application/json' } });
+      // Giữ bộ lọc cửa hàng khi tự tải lại (nhân viên đã bị khoá phía server)
+      const refreshUrl = LIVE_D.urls?.refresh + (LIVE_D.storeFilter ? '?store_id=' + LIVE_D.storeFilter : '');
+      const res = await fetch(refreshUrl, { headers: { 'Accept': 'application/json' } });
       const json = await res.json();
       if (json.orders) {
         // Phát hiện đơn mới → chuông + đọc "Bạn đã có đơn hàng từ Laboong"
@@ -314,9 +316,22 @@ function App() {
               <Icon name="refresh" size={18} />
             </button>
           )}
-          <span className="otype ship" style={{ fontSize: 12.5, padding: "7px 13px" }}>
-            <Icon name="pin" size={14} color="currentColor" /> Victoria Văn Phú
-          </span>
+          {LIVE && !LIVE_D.storeLocked && (LIVE_D.stores || []).length > 1 ? (
+            <select
+              className="inp"
+              style={{ width: "auto", padding: "8px 12px", fontSize: 13, fontWeight: 600 }}
+              value={LIVE_D.storeFilter ?? ""}
+              title="Lọc đơn theo cửa hàng"
+              onChange={e => { location.href = location.pathname + (e.target.value ? "?store_id=" + e.target.value : ""); }}
+            >
+              <option value="">Tất cả cửa hàng</option>
+              {(LIVE_D.stores || []).map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+            </select>
+          ) : (
+            <span className="otype ship" style={{ fontSize: 12.5, padding: "7px 13px" }}>
+              <Icon name="pin" size={14} color="currentColor" /> {LIVE ? (LIVE_D.storeName || "Tất cả cửa hàng") : "Victoria Văn Phú"}
+            </span>
+          )}
         </header>
 
         <div className="content">
