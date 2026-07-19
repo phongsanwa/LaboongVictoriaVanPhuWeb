@@ -41,7 +41,9 @@ async function apiCall(method, url, body) {
 
 function AssignModal({ role, onClose, onAssign }) {
   const r = DATA.roles[role];
+  const stores = DATA.stores || [];
   const [phone, setPhone] = useState("");
+  const [storeId, setStoreId] = useState(stores[0]?.id ?? "");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
 
@@ -55,7 +57,7 @@ function AssignModal({ role, onClose, onAssign }) {
     if (!phone.trim()) { setError("Vui lòng nhập số điện thoại"); return; }
     setBusy(true);
     setError("");
-    const ok = await onAssign(phone.trim());
+    const ok = await onAssign(phone.trim(), storeId || null);
     setBusy(false);
     if (!ok.success) { setError(ok.message); return; }
     onClose();
@@ -78,6 +80,14 @@ function AssignModal({ role, onClose, onAssign }) {
             <input className="inp" value={phone} onChange={e => setPhone(e.target.value)} placeholder="VD: 0912345678" autoFocus
               onKeyDown={e => { if (e.key === "Enter") submit(); }} />
           </div>
+          {stores.length > 0 && (
+            <div className="fld" style={{ marginTop: 12 }}>
+              <label>Cửa hàng trực thuộc</label>
+              <select className="inp" value={storeId} onChange={e => setStoreId(e.target.value ? Number(e.target.value) : "")}>
+                {stores.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+              </select>
+            </div>
+          )}
           {error && <div style={{ color: "var(--danger, #C0392B)", fontSize: 13, marginTop: 6 }}>{error}</div>}
         </div>
         <div className="modal-f">
@@ -135,8 +145,8 @@ function App() {
   };
   const reset = () => setPerms(saved);
 
-  const handleAssign = async (phone) => {
-    const { ok, data } = await apiCall("POST", "/admin/roles/assign", { phone, role: assigning });
+  const handleAssign = async (phone, storeId) => {
+    const { ok, data } = await apiCall("POST", "/admin/roles/assign", { phone, role: assigning, store_id: storeId });
     if (!ok) {
       const msg = data.errors?.phone?.[0] || data.message || "Có lỗi xảy ra, vui lòng thử lại";
       return { success: false, message: msg };
@@ -145,6 +155,13 @@ function App() {
     setToast(data.message);
     setTimeout(() => setToast(null), 3000);
     return { success: true };
+  };
+
+  const handleSetStore = async (staffId, storeId) => {
+    const { ok, data } = await apiCall("POST", `/admin/roles/staff/${staffId}/store`, { store_id: storeId });
+    if (ok) setRoles(data.roles);
+    setToast(data.message || (ok ? "Đã chuyển cửa hàng" : "Không đổi được cửa hàng"));
+    setTimeout(() => setToast(null), 3000);
   };
 
   const handleRemoveStaff = async (staffId) => {
@@ -181,12 +198,31 @@ function App() {
           <div className="rc-bar"><div className="rc-fill" style={{ width: (cnt / (TOTAL || 1) * 100) + "%", background: r.grad }} /></div>
           <span className="rc-frac">{cnt}/{TOTAL} quyền</span>
         </div>
-        <div className="rc-team">
+        <div className="rc-team" style={{ display: "block" }}>
           {r.staff.map((m) => (
-            <div key={m.id} className="rc-av" style={{ background: m.color, position: "relative" }} title={`${m.name} · ${m.phone}`}>
-              {m.name.trim().split(/\s+/).slice(-1)[0][0]}
-              <button className="rc-av-x" title="Gỡ khỏi vai trò" onClick={() => handleRemoveStaff(m.id)}>
-                <Icon name="close" size={10} color="#fff" />
+            <div key={m.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "7px 0", borderTop: "1px solid var(--line, #EEE)" }}>
+              <div className="rc-av" style={{ background: m.color, flex: "none" }} title={`${m.name} · ${m.phone}`}>
+                {m.name.trim().split(/\s+/).slice(-1)[0][0]}
+              </div>
+              <div style={{ minWidth: 0, flex: 1 }}>
+                <div style={{ fontSize: 13, fontWeight: 700, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{m.name}</div>
+                <div style={{ fontSize: 11.5, color: "var(--ink-3)" }}>{m.phone}</div>
+              </div>
+              {(DATA.stores || []).length > 1 ? (
+                <select
+                  className="inp"
+                  style={{ width: "auto", maxWidth: 160, padding: "6px 8px", fontSize: 12.5 }}
+                  value={m.store_id ?? ""}
+                  title="Cửa hàng trực thuộc"
+                  onChange={e => handleSetStore(m.id, Number(e.target.value))}
+                >
+                  {(DATA.stores || []).map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                </select>
+              ) : (
+                <span style={{ fontSize: 12, color: "var(--ink-3)", whiteSpace: "nowrap" }}><Icon name="pin" size={12} /> {m.store}</span>
+              )}
+              <button className="icon-btn" style={{ flex: "none" }} title="Gỡ khỏi vai trò" onClick={() => handleRemoveStaff(m.id)}>
+                <Icon name="close" size={14} />
               </button>
             </div>
           ))}
