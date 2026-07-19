@@ -30,6 +30,9 @@ class OrdersController extends Controller
     {
         $admin = Auth::user();
 
+        $locked  = $this->lockedStoreId();
+        $storeId = $locked ?? (request()->integer('store_id') ?: null);
+
         return view('admin.orders', [
             'ordersData' => [
                 'admin'  => [
@@ -37,7 +40,14 @@ class OrdersController extends Controller
                     'email'    => $admin->email,
                     'initials' => $this->initials($admin->name),
                 ],
-                'orders' => $this->buildOrders(),
+                'orders' => $this->buildOrders($storeId),
+                // Phân theo cửa hàng: nhân viên bị khoá theo cửa hàng trực thuộc,
+                // admin được chọn lọc qua dropdown (null = tất cả)
+                'storeLocked' => $locked !== null,
+                'storeFilter' => $storeId,
+                'storeName'   => $storeId ? \App\Models\Store::find($storeId)?->name : null,
+                'stores'      => $locked !== null ? [] : \App\Models\Store::orderBy('id')->get(['id', 'name'])
+                    ->map(fn ($s) => ['id' => $s->id, 'name' => $s->name])->all(),
                 'urls'   => [
                     'advance' => route('admin.orders.advance', ['order' => '__ID__']),
                     'cancel'  => route('admin.orders.cancel',  ['order' => '__ID__']),
@@ -47,9 +57,22 @@ class OrdersController extends Controller
         ]);
     }
 
+    /** Cửa hàng nhân viên bị khoá theo (null = admin, xem mọi cửa hàng). */
+    private function lockedStoreId(): ?int
+    {
+        $user = Auth::user();
+        if (!$user || $user->user_type === 'admin') return null;
+
+        return $user->staff?->store_id;
+    }
+
     /** POST /admin/orders/{order}/advance */
     public function advance(Order $order): JsonResponse
     {
+        if (($locked = $this->lockedStoreId()) !== null && $order->store_id !== $locked) {
+            return response()->json(['message' => 'Đơn này thuộc cửa hàng khác'], 403);
+        }
+
         $jsStatus = self::STATUS_MAP[$order->status] ?? null;
         $nextDb   = self::ADVANCE_MAP[$jsStatus] ?? null;
 
@@ -82,6 +105,10 @@ class OrdersController extends Controller
     /** POST /admin/orders/{order}/cancel */
     public function cancel(Order $order): JsonResponse
     {
+        if (($locked = $this->lockedStoreId()) !== null && $order->store_id !== $locked) {
+            return response()->json(['message' => 'Đơn này thuộc cửa hàng khác'], 403);
+        }
+
         if (in_array($order->status, ['COMPLETED', 'CANCELLED'])) {
             return response()->json(['message' => 'Không thể huỷ đơn này'], 422);
         }
@@ -141,12 +168,15 @@ class OrdersController extends Controller
     /** GET /admin/orders/refresh */
     public function refresh(): JsonResponse
     {
-        return response()->json(['orders' => $this->buildOrders()]);
+        $storeId = $this->lockedStoreId() ?? (request()->integer('store_id') ?: null);
+
+        return response()->json(['orders' => $this->buildOrders($storeId)]);
     }
 
-    private function buildOrders(): array
+    private function buildOrders(?int $storeId = null): array
     {
         $orders = Order::with(['customer.user', 'items.product', 'items.toppings', 'discounts', 'store'])
+            ->when($storeId, fn ($q) => $q->where('store_id', $storeId))
             ->where(function ($q) {
                 $q->whereIn('status', ['PENDING', 'CONFIRMED', 'PREPARING', 'READY'])
                   ->orWhere('created_at', '>=', now()->startOfDay());
