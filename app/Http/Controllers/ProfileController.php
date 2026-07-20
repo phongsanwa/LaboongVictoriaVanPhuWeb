@@ -6,6 +6,7 @@ use App\Models\CustomerAddress;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 
@@ -67,6 +68,41 @@ class ProfileController extends Controller
         }
 
         return response()->json(['message' => 'Đã lưu thông tin cá nhân']);
+    }
+
+    /** Đổi mật khẩu — yêu cầu nhập đúng mật khẩu hiện tại. */
+    public function changePassword(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'current_password'          => ['required', 'string'],
+            'password'                  => ['required', 'string', 'min:6', 'confirmed'],
+            'password_confirmation'     => ['required'],
+        ], [
+            'current_password.required' => 'Vui lòng nhập mật khẩu hiện tại',
+            'password.required'         => 'Vui lòng nhập mật khẩu mới',
+            'password.min'              => 'Mật khẩu mới tối thiểu 6 ký tự',
+            'password.confirmed'        => 'Xác nhận mật khẩu không khớp',
+        ]);
+
+        $user = Auth::user();
+
+        if (!Hash::check($validated['current_password'], $user->password)) {
+            return response()->json([
+                'message' => 'Mật khẩu hiện tại không đúng',
+                'errors'  => ['current_password' => ['Mật khẩu hiện tại không đúng']],
+            ], 422);
+        }
+
+        if (Hash::check($validated['password'], $user->password)) {
+            return response()->json([
+                'message' => 'Mật khẩu mới phải khác mật khẩu hiện tại',
+                'errors'  => ['password' => ['Mật khẩu mới phải khác mật khẩu hiện tại']],
+            ], 422);
+        }
+
+        $user->forceFill(['password' => Hash::make($validated['password'])])->save();
+
+        return response()->json(['message' => 'Đã đổi mật khẩu thành công']);
     }
 
     public function uploadAvatar(Request $request): JsonResponse

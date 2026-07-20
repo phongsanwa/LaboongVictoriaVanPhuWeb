@@ -58,6 +58,7 @@ function App() {
   const [saved, setSaved] = useState(INITIAL);
   const [toast, setToast] = useState(null);
   const [addrModal, setAddrModal] = useState(null); // {edit?, label, name, text, def}
+  const [pwModal, setPwModal] = useState(false);
   const [avatarUploading, setAvatarUploading] = useState(false);
   const fileRef = useRef(null);
 
@@ -190,6 +191,7 @@ function App() {
           <a className="acct-link" href={NAV_URLS.history}><span className="ali"><Icon name="receipt" size={19} color="currentColor" /></span><span className="alt">Lịch sử giao dịch</span><span className="alc"><Icon name="chev" size={18} /></span></a>
           <a className="acct-link" href={NAV_URLS.wallet}><span className="ali"><Icon name="gift" size={19} color="currentColor" /></span><span className="alt">Đổi quà &amp; Voucher của tôi</span><span className="alc"><Icon name="chev" size={18} /></span></a>
           <a className="acct-link" href={NAV_URLS.store}><span className="ali"><Icon name="pin" size={19} color="currentColor" /></span><span className="alt">Cửa hàng Laboong</span><span className="alc"><Icon name="chev" size={18} /></span></a>
+          <button className="acct-link" onClick={() => setPwModal(true)} style={{ width: "100%", textAlign: "left", background: "none", border: "none", cursor: "pointer", font: "inherit" }}><span className="ali"><Icon name="lock" size={19} color="currentColor" /></span><span className="alt">Đổi mật khẩu</span><span className="alc"><Icon name="chev" size={18} /></span></button>
           <a className="acct-link danger" href={NAV_URLS.login} onClick={logout}><span className="ali"><Icon name="logout" size={19} color="currentColor" /></span><span className="alt">Đăng xuất</span><span className="alc"><Icon name="chev" size={18} /></span></a>
         </nav>
 
@@ -300,6 +302,9 @@ function App() {
 
       {/* address modal */}
       {addrModal && <AddrModal init={addrModal} onClose={() => setAddrModal(null)} onSave={saveAddr} />}
+
+      {/* change password modal */}
+      {pwModal && <PasswordModal onClose={() => setPwModal(false)} onDone={(m) => { setPwModal(false); flash(m); }} />}
 
       {toast && <div className="toast"><span className="tc"><Icon name="check" size={15} color="#fff" /></span>{toast}</div>}
 
@@ -586,6 +591,78 @@ function AddrModal({ init, onClose, onSave }) {
         <div className="modal-f">
           <button className="btn ghost" onClick={onClose}>Huỷ</button>
           <button className="btn primary" disabled={!valid} onClick={() => onSave({ ...f, text: fullText })} style={!valid ? { opacity: .5 } : {}}>Lưu địa chỉ</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function PasswordModal({ onClose, onDone }) {
+  const [cur, setCur] = useState("");
+  const [pw, setPw] = useState("");
+  const [pw2, setPw2] = useState("");
+  const [show, setShow] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState("");
+
+  useEffect(() => {
+    const h = (e) => { if (e.key === "Escape") onClose(); };
+    window.addEventListener("keydown", h);
+    return () => window.removeEventListener("keydown", h);
+  }, [onClose]);
+
+  const submit = async () => {
+    setErr("");
+    if (!cur) { setErr("Vui lòng nhập mật khẩu hiện tại"); return; }
+    if (pw.length < 6) { setErr("Mật khẩu mới tối thiểu 6 ký tự"); return; }
+    if (pw !== pw2) { setErr("Xác nhận mật khẩu không khớp"); return; }
+    if (pw === cur) { setErr("Mật khẩu mới phải khác mật khẩu hiện tại"); return; }
+    setBusy(true);
+    const { ok, data: res } = await apiCall("POST", "/profile/password", {
+      current_password: cur, password: pw, password_confirmation: pw2,
+    });
+    setBusy(false);
+    if (!ok) { setErr(res.message || "Có lỗi xảy ra, vui lòng thử lại"); return; }
+    onDone(res.message || "Đã đổi mật khẩu thành công");
+  };
+
+  const pwType = show ? "text" : "password";
+
+  return (
+    <div className="scrim" onClick={onClose}>
+      <div className="modal" onClick={e => e.stopPropagation()}>
+        <div className="modal-h">
+          <h3>Đổi mật khẩu</h3>
+          <button className="x" onClick={onClose}><Icon name="close" size={18} /></button>
+        </div>
+        <div className="modal-b">
+          <div className="fld">
+            <label>Mật khẩu hiện tại</label>
+            <input className="inp2" type={pwType} value={cur} placeholder="Nhập mật khẩu đang dùng" autoComplete="current-password"
+              onChange={e => { setCur(e.target.value); setErr(""); }} onKeyDown={e => { if (e.key === "Enter") submit(); }} />
+          </div>
+          <div className="fld">
+            <label>Mật khẩu mới</label>
+            <input className="inp2" type={pwType} value={pw} placeholder="Tối thiểu 6 ký tự" autoComplete="new-password"
+              onChange={e => { setPw(e.target.value); setErr(""); }} onKeyDown={e => { if (e.key === "Enter") submit(); }} />
+          </div>
+          <div className="fld">
+            <label>Nhập lại mật khẩu mới</label>
+            <input className="inp2" type={pwType} value={pw2} placeholder="Nhập lại mật khẩu mới" autoComplete="new-password"
+              onChange={e => { setPw2(e.target.value); setErr(""); }} onKeyDown={e => { if (e.key === "Enter") submit(); }} />
+          </div>
+          <button className="acct-link" onClick={() => setShow(s => !s)}
+            style={{ width: "100%", background: "none", border: "none", cursor: "pointer", font: "inherit", padding: "4px 0", color: "var(--ink-2)", fontSize: 13 }}>
+            <span className="ali"><Icon name={show ? "eyeoff" : "eye"} size={17} color="currentColor" /></span>
+            <span className="alt">{show ? "Ẩn mật khẩu" : "Hiện mật khẩu"}</span>
+          </button>
+          {err && <div className="err" style={{ marginTop: 6 }}><Icon name="info" size={13} color="var(--danger)" /> {err}</div>}
+        </div>
+        <div className="modal-f">
+          <button className="btn ghost" onClick={onClose}>Huỷ</button>
+          <button className="btn primary" disabled={busy} onClick={submit}>
+            <Icon name="check" size={16} color="#fff" /> {busy ? "Đang lưu…" : "Đổi mật khẩu"}
+          </button>
         </div>
       </div>
     </div>
