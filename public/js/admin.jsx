@@ -117,6 +117,17 @@ function App() {
     location.href = NAV_URLS.login;
   };
 
+  const [toggling, setToggling] = useState(null);
+  const toggleStatus = async (c) => {
+    if (toggling) return;
+    setToggling(c.customerId);
+    const { ok, data } = await apiCall("POST", `/admin/customers/${c.customerId}/toggle`);
+    setToggling(null);
+    if (!ok || !data.customer) return;
+    setCustomers(cs => cs.map(x => x.customerId === c.customerId ? { ...x, ...data.customer } : x));
+    setSel(prev => prev?.customerId === c.customerId ? { ...prev, ...data.customer } : prev);
+  };
+
   return (
     <div className="shell">
       {/* ---------- Sidebar ---------- */}
@@ -225,7 +236,17 @@ function App() {
                       <td><span className="pts tnum">{fmt(c.points)}<small>điểm</small></span></td>
                       <td><TierBadge tier={c.tier} /></td>
                       <td><span className="tnum" style={{ color: "var(--ink-2)", fontWeight: 500 }}>{fmtDate(c.joined)}</span></td>
-                      <td><span className={"status " + c.status}>{c.status === "on" ? "Active" : "Inactive"}</span></td>
+                      <td>
+                        <button
+                          className={"status " + c.status}
+                          disabled={toggling === c.customerId}
+                          title={c.status === "on" ? "Đang hoạt động — bấm để vô hiệu hoá" : "Đã vô hiệu hoá — bấm để kích hoạt"}
+                          onClick={e => { e.stopPropagation(); toggleStatus(c); }}
+                          style={{ cursor: "pointer", border: "none", opacity: toggling === c.customerId ? 0.5 : 1 }}
+                        >
+                          {c.status === "on" ? "Active" : "Inactive"}
+                        </button>
+                      </td>
                       <td style={{ textAlign: "right" }}>
                         <button className="row-act" onClick={e => { e.stopPropagation(); setSel(c); }}>Chi tiết <Icon name="chev" size={14} /></button>
                       </td>
