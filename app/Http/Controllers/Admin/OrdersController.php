@@ -30,8 +30,20 @@ class OrdersController extends Controller
     {
         $admin = Auth::user();
 
-        $locked  = $this->lockedStoreId();
-        $storeId = $locked ?? (request()->integer('store_id') ?: null);
+        $lockedIds = $this->lockedStoreIds();          // null = admin (mọi cửa hàng)
+        $requested = request()->integer('store_id') ?: null;
+
+        // Admin: lọc tự do theo dropdown. Nhân viên: chỉ trong các cửa hàng phụ trách.
+        if ($lockedIds === null) {
+            $scopeIds  = $requested ? [$requested] : null;
+            $storeList = \App\Models\Store::orderBy('id')->get(['id', 'name']);
+        } else {
+            // Nhân viên có thể lọc riêng 1 trong các cửa hàng của mình
+            $scopeIds  = ($requested && in_array($requested, $lockedIds, true)) ? [$requested] : $lockedIds;
+            $storeList = \App\Models\Store::whereIn('id', $lockedIds)->orderBy('id')->get(['id', 'name']);
+        }
+
+        $activeFilter = ($scopeIds !== null && count($scopeIds) === 1) ? $scopeIds[0] : null;
 
         return view('admin.orders', [
             'ordersData' => [
@@ -40,14 +52,14 @@ class OrdersController extends Controller
                     'email'    => $admin->email,
                     'initials' => $this->initials($admin->name),
                 ],
-                'orders' => $this->buildOrders($storeId),
-                // Phân theo cửa hàng: nhân viên bị khoá theo cửa hàng trực thuộc,
-                // admin được chọn lọc qua dropdown (null = tất cả)
-                'storeLocked' => $locked !== null,
-                'storeFilter' => $storeId,
-                'storeName'   => $storeId ? \App\Models\Store::find($storeId)?->name : null,
-                'stores'      => $locked !== null ? [] : \App\Models\Store::orderBy('id')->get(['id', 'name'])
-                    ->map(fn ($s) => ['id' => $s->id, 'name' => $s->name])->all(),
+                'orders' => $this->buildOrders($scopeIds),
+                // storeLocked = nhân viên (không được xem toàn hệ thống).
+                // stores = danh sách cửa hàng được phép lọc (của admin = tất cả, NV = của mình)
+                'storeLocked' => $lockedIds !== null,
+                'storeFilter' => $activeFilter,
+                'storeName'   => $activeFilter ? \App\Models\Store::find($activeFilter)?->name
+                    : ($lockedIds !== null && count($lockedIds) > 1 ? 'Cửa hàng của tôi' : null),
+                'stores'      => $storeList->map(fn ($s) => ['id' => $s->id, 'name' => $s->name])->all(),
                 'urls'   => [
                     'advance' => route('admin.orders.advance', ['order' => '__ID__']),
                     'cancel'  => route('admin.orders.cancel',  ['order' => '__ID__']),
@@ -57,19 +69,22 @@ class OrdersController extends Controller
         ]);
     }
 
-    /** Cửa hàng nhân viên bị khoá theo (null = admin, xem mọi cửa hàng). */
-    private function lockedStoreId(): ?int
+    /**
+     * Danh sách id cửa hàng nhân viên được phép xem (null = admin, xem tất cả).
+     * Mảng rỗng nghĩa là nhân viên chưa gán cửa hàng nào → không thấy đơn nào.
+     */
+    private function lockedStoreIds(): ?array
     {
         $user = Auth::user();
         if (!$user || $user->user_type === 'admin') return null;
 
-        return $user->staff?->store_id;
+        return $user->staff?->storeIds() ?? [];
     }
 
     /** POST /admin/orders/{order}/advance */
     public function advance(Order $order): JsonResponse
     {
-        if (($locked = $this->lockedStoreId()) !== null && $order->store_id !== $locked) {
+        if (($locked = $this->lockedStoreIds()) !== null && !in_array($order->store_id, $locked, true)) {
             return response()->json(['message' => 'Đơn này thuộc cửa hàng khác'], 403);
         }
 
@@ -105,7 +120,7 @@ class OrdersController extends Controller
     /** POST /admin/orders/{order}/cancel */
     public function cancel(Order $order): JsonResponse
     {
-        if (($locked = $this->lockedStoreId()) !== null && $order->store_id !== $locked) {
+        if (($locked = $this->lockedStoreIds()) !== null && !in_array($order->store_id, $locked, true)) {
             return response()->json(['message' => 'Đơn này thuộc cửa hàng khác'], 403);
         }
 
@@ -168,15 +183,22 @@ class OrdersController extends Controller
     /** GET /admin/orders/refresh */
     public function refresh(): JsonResponse
     {
-        $storeId = $this->lockedStoreId() ?? (request()->integer('store_id') ?: null);
+        $lockedIds = $this->lockedStoreIds();
+        $requested = request()->integer('store_id') ?: null;
 
-        return response()->json(['orders' => $this->buildOrders($storeId)]);
+        if ($lockedIds === null) {
+            $scopeIds = $requested ? [$requested] : null;
+        } else {
+            $scopeIds = ($requested && in_array($requested, $lockedIds, true)) ? [$requested] : $lockedIds;
+        }
+
+        return response()->json(['orders' => $this->buildOrders($scopeIds)]);
     }
 
-    private function buildOrders(?int $storeId = null): array
+    private function buildOrders(?array $storeIds = null): array
     {
         $orders = Order::with(['customer.user', 'items.product', 'items.toppings', 'discounts', 'store'])
-            ->when($storeId, fn ($q) => $q->where('store_id', $storeId))
+            ->when($storeIds !== null, fn ($q) => $q->whereIn('store_id', $storeIds ?: [0]))
             ->where(function ($q) {
                 $q->whereIn('status', ['PENDING', 'CONFIRMED', 'PREPARING', 'READY'])
                   ->orWhere('created_at', '>=', now()->startOfDay());
