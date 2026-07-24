@@ -8,6 +8,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\Rule;
 
 class SeoController extends Controller
 {
@@ -45,6 +46,9 @@ class SeoController extends Controller
         ],
     ];
 
+    /** Các loại schema.org phổ biến cho cửa hàng đồ uống. */
+    public const BUSINESS_TYPES = ['CafeOrCoffeeShop', 'Restaurant', 'Store', 'LocalBusiness', 'FoodEstablishment'];
+
     public function index()
     {
         $admin = Auth::user();
@@ -64,6 +68,8 @@ class SeoController extends Controller
             ];
         }
 
+        $biz = $saved['business'] ?? [];
+
         return view('admin.seo', [
             'seoData' => [
                 'admin' => [
@@ -73,6 +79,16 @@ class SeoController extends Controller
                 ],
                 'pages'    => $pages,
                 'og_image' => $saved['og_image'] ?? '',
+                // Structured Data (JSON-LD) — dữ liệu có cấu trúc cho Google
+                'businessTypes' => self::BUSINESS_TYPES,
+                'business' => [
+                    'type'          => $biz['type'] ?? 'CafeOrCoffeeShop',
+                    'name'          => $biz['name'] ?? '',
+                    'serves_cuisine'=> $biz['serves_cuisine'] ?? 'Trà sữa, đồ uống',
+                    'price_range'   => $biz['price_range'] ?? '',
+                    'same_as'       => $biz['same_as'] ?? [],
+                    'custom_jsonld' => $biz['custom_jsonld'] ?? '',
+                ],
                 'urls'     => [
                     'update' => route('admin.seo.update'),
                     'upload' => route('admin.seo.upload'),
@@ -89,6 +105,15 @@ class SeoController extends Controller
             'pages.*.title'   => ['nullable', 'string', 'max:100'],
             'pages.*.desc'    => ['nullable', 'string', 'max:300'],
             'pages.*.index'   => ['nullable', 'boolean'],
+            // Structured Data
+            'business'                => ['nullable', 'array'],
+            'business.type'           => ['nullable', 'string', Rule::in(self::BUSINESS_TYPES)],
+            'business.name'           => ['nullable', 'string', 'max:150'],
+            'business.serves_cuisine' => ['nullable', 'string', 'max:150'],
+            'business.price_range'    => ['nullable', 'string', 'max:60'],
+            'business.same_as'        => ['nullable', 'array'],
+            'business.same_as.*'      => ['nullable', 'string', 'max:300'],
+            'business.custom_jsonld'  => ['nullable', 'string', 'max:20000'],
         ]);
 
         $pages = [];
@@ -105,9 +130,32 @@ class SeoController extends Controller
         // Không lưu URL tạm blob: của trình duyệt
         if ($ogImage && str_starts_with($ogImage, 'blob:')) $ogImage = null;
 
+        // Structured Data: lọc URL sameAs rỗng, kiểm tra JSON-LD tuỳ chỉnh hợp lệ
+        $biz = $data['business'] ?? [];
+        $sameAs = array_values(array_filter(array_map(
+            fn ($u) => trim((string) $u),
+            $biz['same_as'] ?? []
+        ), fn ($u) => $u !== ''));
+
+        $custom = trim($biz['custom_jsonld'] ?? '');
+        if ($custom !== '' && json_decode($custom) === null) {
+            return response()->json([
+                'message' => 'JSON-LD tuỳ chỉnh không hợp lệ (sai cú pháp JSON)',
+                'errors'  => ['business.custom_jsonld' => ['JSON không hợp lệ']],
+            ], 422);
+        }
+
         AppSetting::set('seo', [
             'og_image' => $ogImage,
             'pages'    => $pages,
+            'business' => [
+                'type'          => $biz['type'] ?? 'CafeOrCoffeeShop',
+                'name'          => trim($biz['name'] ?? '') ?: null,
+                'serves_cuisine'=> trim($biz['serves_cuisine'] ?? '') ?: null,
+                'price_range'   => trim($biz['price_range'] ?? '') ?: null,
+                'same_as'       => $sameAs,
+                'custom_jsonld' => $custom ?: null,
+            ],
         ]);
 
         return response()->json(['message' => 'Đã lưu cấu hình SEO']);
