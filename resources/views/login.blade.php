@@ -5,7 +5,6 @@
 @include('partials.favicon')
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <meta name="csrf-token" content="{{ csrf_token() }}" />
-<title>Laboong · Đăng nhập</title>
 @include('partials.seo', ['seoPage' => 'login', 'seoTitle' => 'Đăng nhập · Laboong Victoria Văn Phú', 'seoDesc' => 'Đăng nhập tài khoản thành viên Laboong Victoria Văn Phú để tích điểm, đổi quà và đặt trà sữa giao tận nơi.', 'seoBusiness' => true])
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />

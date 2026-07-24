@@ -5,7 +5,6 @@
 @include('partials.favicon')
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <meta name="csrf-token" content="{{ csrf_token() }}" />
-<title>Laboong · Chi tiết cửa hàng</title>
 @include('partials.seo', ['seoPage' => 'store', 'seoTitle' => 'Cửa hàng · Laboong Victoria Văn Phú', 'seoDesc' => 'Địa chỉ, giờ mở cửa và bản đồ cửa hàng Laboong Victoria Văn Phú, Hà Đông, Hà Nội.'])
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />

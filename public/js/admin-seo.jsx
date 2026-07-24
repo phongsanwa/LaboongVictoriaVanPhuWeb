@@ -31,6 +31,26 @@ function App() {
   const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState(null);
+  // Structured Data (JSON-LD)
+  const [biz, setBiz] = useState(() => ({
+    type: (DATA.business && DATA.business.type) || 'CafeOrCoffeeShop',
+    name: (DATA.business && DATA.business.name) || '',
+    serves_cuisine: (DATA.business && DATA.business.serves_cuisine) || '',
+    price_range: (DATA.business && DATA.business.price_range) || '',
+    same_as: (DATA.business && DATA.business.same_as && DATA.business.same_as.length) ? DATA.business.same_as : [''],
+    custom_jsonld: (DATA.business && DATA.business.custom_jsonld) || '',
+  }));
+  const setBizField = (k, v) => setBiz(b => ({ ...b, [k]: v }));
+  const setSameAs = (i, v) => setBiz(b => ({ ...b, same_as: b.same_as.map((x, j) => j === i ? v : x) }));
+  const addSameAs = () => setBiz(b => ({ ...b, same_as: [...b.same_as, ''] }));
+  const removeSameAs = (i) => setBiz(b => ({ ...b, same_as: b.same_as.filter((_, j) => j !== i).length ? b.same_as.filter((_, j) => j !== i) : [''] }));
+
+  // Kiểm tra JSON-LD tuỳ chỉnh hợp lệ (để cảnh báo trước khi lưu)
+  const jsonldError = (() => {
+    const t = (biz.custom_jsonld || '').trim();
+    if (!t) return null;
+    try { JSON.parse(t); return null; } catch (e) { return e.message; }
+  })();
 
   const flash = (m) => { setToast(m); setTimeout(() => setToast(null), 2600); };
 
@@ -59,11 +79,20 @@ function App() {
 
   const save = async () => {
     if (saving || uploading) return;
+    if (jsonldError) { flash("JSON-LD tuỳ chỉnh chưa hợp lệ, vui lòng kiểm tra lại"); return; }
     setSaving(true);
     try {
       const body = {
         og_image: ogImage && !ogImage.startsWith("blob:") ? ogImage : null,
         pages: Object.fromEntries(pages.map(p => [p.key, { title: p.title, desc: p.desc, index: !!p.index }])),
+        business: {
+          type: biz.type,
+          name: biz.name.trim(),
+          serves_cuisine: biz.serves_cuisine.trim(),
+          price_range: biz.price_range.trim(),
+          same_as: biz.same_as.map(s => s.trim()).filter(Boolean),
+          custom_jsonld: biz.custom_jsonld.trim(),
+        },
       };
       const res = await fetch(DATA.urls.update, {
         method: "POST",
@@ -121,6 +150,60 @@ function App() {
                   <button className="btn ghost" onClick={() => { setOgImage(''); setOgPreview(null); }}>Bỏ ảnh (dùng mặc định)</button>
                 )}
               </div>
+            </div>
+          </section>
+
+          {/* ── Dữ liệu có cấu trúc (Structured Data / JSON-LD) ── */}
+          <section className="card" style={{ padding: 20, marginBottom: 18 }}>
+            <div style={{ fontWeight: 800, fontSize: 15, marginBottom: 4 }}>Dữ liệu có cấu trúc (Schema)</div>
+            <div style={{ fontSize: 12.5, color: "var(--ink-3)", marginBottom: 14 }}>
+              Giúp Google hiểu Laboong là quán đồ uống — hiển thị thông tin cửa hàng, giờ mở, đánh giá trên kết quả tìm kiếm & Google Maps. (Áp dụng trang chủ, đăng nhập, đăng ký.)
+            </div>
+
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+              <div className="fld">
+                <label style={{ fontSize: 12.5, fontWeight: 700, color: "var(--ink-2)", display: "block", marginBottom: 4 }}>Loại hình</label>
+                <select className="inp" style={{ width: "100%" }} value={biz.type} onChange={e => setBizField("type", e.target.value)}>
+                  {(DATA.businessTypes || ["CafeOrCoffeeShop"]).map(t => <option key={t} value={t}>{t}</option>)}
+                </select>
+              </div>
+              <div className="fld">
+                <label style={{ fontSize: 12.5, fontWeight: 700, color: "var(--ink-2)", display: "block", marginBottom: 4 }}>Khoảng giá</label>
+                <input className="inp" style={{ width: "100%", boxSizing: "border-box" }} placeholder="VD: 20.000₫ - 60.000₫ hoặc $$" value={biz.price_range} onChange={e => setBizField("price_range", e.target.value)} />
+              </div>
+              <div className="fld">
+                <label style={{ fontSize: 12.5, fontWeight: 700, color: "var(--ink-2)", display: "block", marginBottom: 4 }}>Tên hiển thị</label>
+                <input className="inp" style={{ width: "100%", boxSizing: "border-box" }} placeholder="Laboong Victoria Văn Phú" value={biz.name} onChange={e => setBizField("name", e.target.value)} />
+              </div>
+              <div className="fld">
+                <label style={{ fontSize: 12.5, fontWeight: 700, color: "var(--ink-2)", display: "block", marginBottom: 4 }}>Ẩm thực phục vụ</label>
+                <input className="inp" style={{ width: "100%", boxSizing: "border-box" }} placeholder="Trà sữa, đồ uống" value={biz.serves_cuisine} onChange={e => setBizField("serves_cuisine", e.target.value)} />
+              </div>
+            </div>
+
+            <div className="fld" style={{ marginTop: 8 }}>
+              <label style={{ fontSize: 12.5, fontWeight: 700, color: "var(--ink-2)", display: "block", marginBottom: 4 }}>Liên kết mạng xã hội (sameAs)</label>
+              <div style={{ fontSize: 11.5, color: "var(--ink-3)", marginBottom: 6 }}>Facebook, Instagram, TikTok… giúp Google liên kết đúng thương hiệu.</div>
+              {biz.same_as.map((u, i) => (
+                <div key={i} style={{ display: "flex", gap: 8, marginBottom: 6 }}>
+                  <input className="inp" style={{ flex: 1, boxSizing: "border-box" }} placeholder="https://facebook.com/laboong…" value={u} onChange={e => setSameAs(i, e.target.value)} />
+                  <button className="btn ghost" style={{ flex: "none", padding: "0 12px" }} title="Xoá" onClick={() => removeSameAs(i)}><Icon name="close" size={15} /></button>
+                </div>
+              ))}
+              <button className="btn secondary" style={{ marginTop: 2 }} onClick={addSameAs}><Icon name="plus" size={14} /> Thêm liên kết</button>
+            </div>
+
+            <div className="fld" style={{ marginTop: 12 }}>
+              <label style={{ fontSize: 12.5, fontWeight: 700, color: "var(--ink-2)", display: "block", marginBottom: 4 }}>
+                JSON-LD tuỳ chỉnh <span style={{ color: "var(--ink-3)", fontWeight: 400 }}>(nâng cao — chèn thêm 1 schema riêng)</span>
+              </label>
+              <textarea className="inp" rows={6} spellCheck={false}
+                style={{ width: "100%", boxSizing: "border-box", fontFamily: "ui-monospace, Menlo, monospace", fontSize: 12.5, resize: "vertical", borderColor: jsonldError ? "var(--hot, #E0518A)" : undefined }}
+                placeholder='{"@context":"https://schema.org","@type":"WebSite","name":"Laboong",...}'
+                value={biz.custom_jsonld} onChange={e => setBizField("custom_jsonld", e.target.value)} />
+              {jsonldError
+                ? <div style={{ fontSize: 11.5, color: "var(--hot, #E0518A)", marginTop: 4 }}>⚠ JSON không hợp lệ: {jsonldError}</div>
+                : <div style={{ fontSize: 11.5, color: "var(--ink-3)", marginTop: 4 }}>Dán JSON-LD hợp lệ để chèn thêm (để trống nếu không dùng). Kiểm tra tại search.google.com/test/rich-results.</div>}
             </div>
           </section>
 

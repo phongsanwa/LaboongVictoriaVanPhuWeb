@@ -37,6 +37,9 @@
       catch (\Throwable $e) { $seoStore = null; }
   }
 @endphp
+@if ($seoPage)
+<title>{{ $seoTitle }}</title>
+@endif
 <meta name="description" content="{{ $seoDesc }}" />
 @if ($seoNoindex)
 <meta name="robots" content="noindex, nofollow" />
@@ -58,13 +61,18 @@
 <meta name="twitter:title" content="{{ $seoTitle }}" />
 <meta name="twitter:description" content="{{ $seoDesc }}" />
 <meta name="twitter:image" content="{{ $seoImage }}" />
+@php
+  // Cấu hình Structured Data từ admin (SEO → Dữ liệu có cấu trúc)
+  $seoBiz = $seoCfg['business'] ?? [];
+@endphp
 @if ($seoBusiness && $seoStore)
 <script type="application/ld+json">
 {!! json_encode(array_filter([
     '@context'  => 'https://schema.org',
-    '@type'     => 'CafeOrCoffeeShop',
-    'name'      => 'Laboong Victoria Văn Phú',
-    'servesCuisine' => 'Trà sữa, đồ uống',
+    '@type'     => $seoBiz['type'] ?? 'CafeOrCoffeeShop',
+    'name'      => ($seoBiz['name'] ?? null) ?: 'Laboong Victoria Văn Phú',
+    'servesCuisine' => ($seoBiz['serves_cuisine'] ?? null) ?: 'Trà sữa, đồ uống',
+    'priceRange'=> $seoBiz['price_range'] ?? null,
     'url'       => url('/'),
     'image'     => $seoImage,
     'telephone' => $seoStore->phone,
@@ -82,6 +90,13 @@
     'openingHours' => ($seoStore->opening_time && $seoStore->closing_time)
         ? 'Mo-Su ' . substr($seoStore->opening_time, 0, 5) . '-' . substr($seoStore->closing_time, 0, 5)
         : null,
-], fn ($v) => $v !== null), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) !!}
+    'sameAs' => !empty($seoBiz['same_as']) ? array_values($seoBiz['same_as']) : null,
+], fn ($v) => $v !== null && $v !== ''), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) !!}
+</script>
+@endif
+@if ($seoBusiness && !empty($seoBiz['custom_jsonld']))
+{{-- JSON-LD tuỳ chỉnh do admin nhập (đã kiểm tra hợp lệ khi lưu) --}}
+<script type="application/ld+json">
+{!! $seoBiz['custom_jsonld'] !!}
 </script>
 @endif

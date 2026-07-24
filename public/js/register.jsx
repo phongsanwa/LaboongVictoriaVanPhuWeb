@@ -152,7 +152,7 @@ function FormStep({ data, setData, onNext }) {
     setLoading(false);
 
     if (!ok) { setServerError(res.message || "Có lỗi xảy ra, vui lòng thử lại."); return; }
-    onNext(res.redirect);
+    onNext(res.redirect, res.welcome_points);
   };
 
   return (
@@ -265,21 +265,24 @@ function FormStep({ data, setData, onNext }) {
 }
 
 /* ---------------- Step 2: success ---------------- */
-function SuccessStep({ data, redirect }) {
+function SuccessStep({ data, redirect, welcomePoints }) {
   useEffect(() => { const id = setTimeout(() => { location.href = redirect || NAV_URLS.home; }, 2200); return () => clearTimeout(id); }, [redirect]);
+  const wp = Number(welcomePoints ?? 0);
   return (
     <div className="success">
       <div className="succ-ring"><div className="ck"><Icon name="check" size={30} color="#fff" /></div></div>
       <h1>Chào mừng, {data.name.trim().split(/\s+/).slice(-1)[0]}! 🎉</h1>
       <p>Tài khoản của bạn đã được tạo thành công.</p>
 
-      <div className="welcome-card">
-        <div className="gico"><Icon name="gift" size={24} color="#fff" /></div>
-        <div>
-          <div className="wt">Quà chào mừng thành viên mới</div>
-          <div className="wv">+50 điểm</div>
+      {wp > 0 && (
+        <div className="welcome-card">
+          <div className="gico"><Icon name="gift" size={24} color="#fff" /></div>
+          <div>
+            <div className="wt">Quà chào mừng thành viên mới</div>
+            <div className="wv">+{wp} điểm</div>
+          </div>
         </div>
-      </div>
+      )}
 
       <div className="autologin"><span className="spin" /> Đang tự động đăng nhập…</div>
     </div>
@@ -310,6 +313,7 @@ function App() {
   const [step, setStep] = useState(0);
   const [data, setData] = useState({ phone: "", name: "", email: "", dob: "", password: "", password_confirmation: "" });
   const [redirect, setRedirect] = useState(null);
+  const [welcomePoints, setWelcomePoints] = useState(0);
   const [push, setPush] = useState(false);
 
   useEffect(() => {
@@ -344,8 +348,8 @@ function App() {
             ))}
           </div>
 
-          {step === 0 && <FormStep data={data} setData={setData} onNext={(redirectUrl) => { setRedirect(redirectUrl); setStep(1); }} />}
-          {step === 1 && <SuccessStep data={data} redirect={redirect} />}
+          {step === 0 && <FormStep data={data} setData={setData} onNext={(redirectUrl, wp) => { setRedirect(redirectUrl); setWelcomePoints(wp); setStep(1); }} />}
+          {step === 1 && <SuccessStep data={data} redirect={redirect} welcomePoints={welcomePoints} />}
         </div>
 
         {step === 0 && <div className="foot-note">Đã có tài khoản? <a href={NAV_URLS.login}>Đăng nhập</a></div>}
