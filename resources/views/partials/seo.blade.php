@@ -37,6 +37,9 @@
       catch (\Throwable $e) { $seoStore = null; }
   }
 @endphp
+@if ($seoPage)
+<title>{{ $seoTitle }}</title>
+@endif
 <meta name="description" content="{{ $seoDesc }}" />
 @if ($seoNoindex)
 <meta name="robots" content="noindex, nofollow" />
