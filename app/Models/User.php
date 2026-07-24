@@ -28,6 +28,7 @@ class User extends Authenticatable
         'status',
         'avatar_url',
         'phone_verified_at',
+        'last_seen_at',
     ];
 
     /**
@@ -51,8 +52,16 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'phone_verified_at' => 'datetime',
             'last_login_at' => 'datetime',
+            'last_seen_at' => 'datetime',
             'password' => 'hashed',
         ];
+    }
+
+    /** Coi là đang online nếu có hoạt động trong vòng 5 phút gần đây. */
+    public function isOnline(): bool
+    {
+        return $this->last_seen_at !== null
+            && $this->last_seen_at->gt(now()->subMinutes(5));
     }
 
     public function customer(): HasOne

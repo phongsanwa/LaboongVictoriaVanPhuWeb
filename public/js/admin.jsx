@@ -108,7 +108,7 @@ function App() {
 
   const stats = useMemo(() => {
     const s = ADMIN_CUSTOMERS_DATA.stats;
-    return { total: s.total, active: s.active, newM: s.newThisMonth, pts: s.points };
+    return { total: s.total, active: s.active, online: s.online || 0, newM: s.newThisMonth, pts: s.points };
   }, []);
 
   const logout = async (e) => {
@@ -155,7 +155,8 @@ function App() {
             <div className="stat"><div className="stat-ic g"><Icon name="users" size={22} /></div>
               <div><div className="lbl">Tổng khách hàng</div><div className="val tnum">{stats.total}</div><div className="chg up"><Icon name="spark" size={13} /> +3 tuần này</div></div></div>
             <div className="stat"><div className="stat-ic a"><Icon name="check" size={22} /></div>
-              <div><div className="lbl">Đang hoạt động</div><div className="val tnum">{stats.active}</div><div className="chg up">{Math.round(stats.active / stats.total * 100)}% tổng số</div></div></div>
+              <div><div className="lbl">Đang hoạt động</div><div className="val tnum">{stats.active}</div>
+                <div className="chg up"><span style={{ display: "inline-block", width: 7, height: 7, borderRadius: "50%", background: stats.online > 0 ? "#22C55E" : "var(--ink-3)", marginRight: 5 }} />{stats.online} đang online</div></div></div>
             <div className="stat"><div className="stat-ic y"><Icon name="star" size={20} /></div>
               <div><div className="lbl">Khách mới tháng này</div><div className="val tnum">{stats.newM}</div><div className="chg up"><Icon name="spark" size={13} /> Tăng trưởng tốt</div></div></div>
             <div className="stat"><div className="stat-ic p"><Icon name="coin" size={22} /></div>
@@ -225,10 +226,16 @@ function App() {
                     <tr key={c.id} onClick={() => setSel(c)}>
                       <td>
                         <div className="cust">
-                          <div className="cust-av" style={{ background: avColor(c.name) }}>{initials(c.name)}</div>
+                          <div className="cust-av" style={{ background: avColor(c.name), position: "relative" }}>
+                            {initials(c.name)}
+                            {c.online && <span title="Đang online" style={{ position: "absolute", right: -1, bottom: -1, width: 11, height: 11, borderRadius: "50%", background: "#22C55E", border: "2px solid var(--panel, #fff)" }} />}
+                          </div>
                           <div style={{ minWidth: 0 }}>
                             <div className="nm" title={c.name}>{c.name}</div>
                             <div className="em">{c.email}</div>
+                            <div style={{ fontSize: 11, marginTop: 1, color: c.online ? "#16A34A" : "var(--ink-3)", fontWeight: c.online ? 600 : 400 }}>
+                              {c.online ? "● Đang online" : ("○ " + (c.lastSeen || "Offline"))}
+                            </div>
                           </div>
                         </div>
                       </td>

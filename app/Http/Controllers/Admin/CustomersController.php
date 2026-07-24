@@ -102,6 +102,8 @@ class CustomersController extends Controller
                 'date_of_birth' => $c->date_of_birth?->toDateString(),
                 'gender' => $c->gender,
                 'status' => $c->user->status === 'active' ? 'on' : 'off',
+                'online' => $c->user->isOnline(),
+                'lastSeen' => $this->lastSeenLabel($c->user->last_seen_at, $now),
                 'visits' => $c->transactions_count,
                 'tier' => $tierMeta[$c->tier_id]['key'] ?? 'bac',
                 'joined' => $c->created_at->toDateString(),
@@ -113,6 +115,7 @@ class CustomersController extends Controller
         $stats = [
             'total' => $customers->count(),
             'active' => $customers->filter(fn ($c) => $c->user->status === 'active')->count(),
+            'online' => $customers->filter(fn ($c) => $c->user->isOnline())->count(),
             'newThisMonth' => $customers->filter(fn ($c) => $c->created_at->isSameMonth($now))->count(),
             'points' => $customers->sum('total_points'),
         ];
@@ -210,6 +213,8 @@ class CustomersController extends Controller
             'store'      => $c->store->name ?? '—',
             'store_id'   => $c->store_id,
             'status'     => $c->user->status === 'active' ? 'on' : 'off',
+            'online'     => $c->user->isOnline(),
+            'lastSeen'   => $this->lastSeenLabel($c->user->last_seen_at, Carbon::now()),
             'visits'     => $c->transactions_count ?? 0,
             'tier'       => $tierMeta[$c->tier_id]['key'] ?? 'bac',
             'joined'     => $c->created_at->toDateString(),
@@ -225,6 +230,24 @@ class CustomersController extends Controller
         $days = (int) floor($ts->diffInDays($now));
 
         return $days < 1 ? 'Hôm nay' : $days . ' ngày trước';
+    }
+
+    /** Nhãn "hoạt động gần nhất" cho hiển thị online/offline. */
+    private function lastSeenLabel(?Carbon $ts, Carbon $now): string
+    {
+        if (!$ts) return 'Chưa truy cập';
+
+        $mins = (int) floor($ts->diffInMinutes($now));
+        if ($mins < 5)    return 'Đang online';
+        if ($mins < 60)   return $mins . ' phút trước';
+
+        $hours = (int) floor($ts->diffInHours($now));
+        if ($hours < 24)  return $hours . ' giờ trước';
+
+        $days = (int) floor($ts->diffInDays($now));
+        if ($days < 30)   return $days . ' ngày trước';
+
+        return $ts->format('d/m/Y');
     }
 
     private function initials(string $name): string
