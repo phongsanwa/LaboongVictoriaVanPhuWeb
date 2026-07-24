@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
+use App\Models\AppSetting;
 use App\Models\Customer;
 use App\Models\CustomerTier;
 use App\Models\User;
@@ -34,7 +35,8 @@ class RegisterController extends Controller
         }
 
         $phone = $request->input('phone');
-        $welcomeBonus = 50;
+        // Điểm thưởng chào mừng lấy theo cài đặt admin (Cài đặt → Điểm · welcome)
+        $welcomeBonus = max(0, (int) (AppSetting::get('points', [])['welcome'] ?? 50));
 
         $user = DB::transaction(function () use ($request, $phone, $welcomeBonus) {
             $user = User::create([
@@ -80,6 +82,7 @@ class RegisterController extends Controller
         return response()->json([
             'message' => 'Đăng ký thành công',
             'redirect' => route('home'),
+            'welcome_points' => $welcomeBonus,
         ]);
     }
 
