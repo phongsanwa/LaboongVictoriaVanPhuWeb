@@ -7,6 +7,7 @@ use App\Models\Customer;
 use App\Models\CustomerPoint;
 use App\Models\CustomerTier;
 use App\Models\Redemption;
+use App\Models\Store;
 use App\Models\Transaction;
 use App\Models\User;
 use App\Models\Voucher;
@@ -31,18 +32,35 @@ class PosController extends Controller
 
     public function index()
     {
-        $staff = Auth::user()->staff()->with(['user', 'store'])->first();
+        $staff = Auth::user()->staff()->with(['user', 'store', 'stores'])->first();
+
+        $stores = $staff->stores->isNotEmpty() ? $staff->stores : collect([$staff->store])->filter();
 
         return view('pos.points', [
             'posData' => [
                 'staff' => [
-                    'name' => $staff->user->name,
-                    'role' => $staff->role === 'manager' ? 'Quản lý' : 'Thu ngân',
-                    'store' => $staff->store->name,
+                    'name'     => $staff->user->name,
+                    'role'     => $staff->role === 'manager' ? 'Quản lý' : 'Thu ngân',
+                    'store'    => $staff->store->name,
+                    'store_id' => $staff->store_id,
                 ],
+                // Danh sách cửa hàng nhân viên phụ trách — để chọn cửa hàng đang bán
+                'stores'   => $stores->map(fn ($s) => ['id' => $s->id, 'name' => $s->name])->values()->all(),
                 'perPoint' => self::PER_POINT,
             ],
         ]);
+    }
+
+    /** Cửa hàng dùng cho giao dịch: cửa hàng được chọn nếu nhân viên phụ trách, ngược lại cửa hàng chính. */
+    private function resolveStoreId($staff, ?int $requested): int
+    {
+        $allowed = $staff->storeIds();
+
+        if ($requested && in_array($requested, $allowed, true)) {
+            return $requested;
+        }
+
+        return $staff->store_id;
     }
 
     /** Look up a customer by member code or phone number, without charging anything yet. */
@@ -65,6 +83,7 @@ class PosController extends Controller
         $data = $request->validate([
             'code' => ['required', 'string'],
             'amount' => ['required', 'integer', 'min:' . self::PER_POINT, 'max:99999999'],
+            'store_id' => ['nullable', 'integer'],
         ]);
 
         $customer = $this->findCustomer(trim($data['code']));
@@ -74,18 +93,20 @@ class PosController extends Controller
         }
 
         $staff = Auth::user()->staff;
+        $storeId = $this->resolveStoreId($staff, $data['store_id'] ?? null);
+        $storeName = Store::find($storeId)?->name ?? ($staff->store->name ?? 'cửa hàng');
         $basePoints = intdiv($data['amount'], self::PER_POINT);
         $multiplier = $this->multiplierFor($customer);
         $earned = (int) floor($basePoints * $multiplier);
         $pointsBefore = $customer->total_points;
 
-        DB::transaction(function () use ($customer, $staff, $data, $earned, $multiplier) {
+        DB::transaction(function () use ($customer, $staff, $data, $earned, $multiplier, $storeId, $storeName) {
             $code = 'TXN' . now()->format('Ymd') . str_pad((string) (Transaction::whereDate('created_at', now())->count() + 1), 4, '0', STR_PAD_LEFT);
 
             $transaction = Transaction::create([
                 'transaction_code' => $code,
                 'customer_id' => $customer->id,
-                'store_id' => $staff->store_id,
+                'store_id' => $storeId,
                 'staff_id' => $staff->id,
                 'total_amount' => $data['amount'],
                 'discount_amount' => 0,
@@ -100,7 +121,7 @@ class PosController extends Controller
                 'transaction_id' => $transaction->id,
                 'point_type' => 'purchase',
                 'points' => $earned,
-                'description' => 'Tích điểm mua hàng tại ' . $staff->store->name,
+                'description' => 'Tích điểm mua hàng tại ' . $storeName,
                 'expires_at' => now()->addYear(),
             ]);
 

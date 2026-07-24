@@ -160,8 +160,9 @@ class RolesController extends Controller
         $data = $request->validate([
             'phone' => ['required', 'string'],
             'role' => ['required', Rule::in(array_keys(self::ROLES))],
-            // Cửa hàng nhân viên trực thuộc — không gửi thì giữ nguyên/mặc định cửa hàng đầu
-            'store_id' => ['nullable', 'integer', 'exists:stores,id'],
+            // Nhiều cửa hàng nhân viên phụ trách (bỏ trống = giữ nguyên/mặc định cửa hàng đầu)
+            'store_ids'   => ['nullable', 'array'],
+            'store_ids.*' => ['integer', 'exists:stores,id'],
         ]);
 
         $user = User::where('phone', $data['phone'])->first();
@@ -178,25 +179,35 @@ class RolesController extends Controller
             ]);
         }
 
+        $storeIds = array_values(array_unique(array_map('intval', $data['store_ids'] ?? [])));
+        $primary  = $storeIds[0] ?? Store::orderBy('id')->value('id');
+
         $staff = Staff::where('user_id', $user->id)->first();
 
         if ($staff) {
             $staff->role = $data['role'];
             $staff->status = 'active';
-            if (!empty($data['store_id'])) {
-                $staff->store_id = $data['store_id'];
+            if (!empty($storeIds)) {
+                $staff->store_id = $primary;
             }
             $staff->save();
         } else {
-            Staff::create([
+            $staff = Staff::create([
                 'user_id' => $user->id,
-                'store_id' => $data['store_id'] ?? Store::orderBy('id')->value('id'),
+                'store_id' => $primary,
                 'role' => $data['role'],
                 'employee_code' => $this->nextEmployeeCode(),
                 'pin' => (string) random_int(100000, 999999),
                 'status' => 'active',
                 'hired_date' => now(),
             ]);
+        }
+
+        // Đồng bộ bảng nối cửa hàng (chỉ khi có gửi lên; giữ nguyên nếu bỏ trống)
+        if (!empty($storeIds)) {
+            $staff->stores()->sync($storeIds);
+        } elseif ($staff->stores()->count() === 0 && $staff->store_id) {
+            $staff->stores()->sync([$staff->store_id]);
         }
 
         if ($user->user_type !== 'admin') {
@@ -210,17 +221,24 @@ class RolesController extends Controller
         ]);
     }
 
-    /** Chuyển nhân viên sang cửa hàng khác. */
+    /** Cập nhật danh sách cửa hàng nhân viên phụ trách. */
     public function setStore(Request $request, Staff $staff): JsonResponse
     {
         $data = $request->validate([
-            'store_id' => ['required', 'integer', 'exists:stores,id'],
+            'store_ids'   => ['required', 'array', 'min:1'],
+            'store_ids.*' => ['integer', 'exists:stores,id'],
+        ], [
+            'store_ids.required' => 'Vui lòng chọn ít nhất 1 cửa hàng',
+            'store_ids.min'      => 'Vui lòng chọn ít nhất 1 cửa hàng',
         ]);
 
-        $staff->update(['store_id' => $data['store_id']]);
+        $storeIds = array_values(array_unique(array_map('intval', $data['store_ids'])));
+        $staff->stores()->sync($storeIds);
+        // Cửa hàng chính = cửa hàng đầu (giữ tương thích POS/thống kê)
+        $staff->update(['store_id' => $storeIds[0]]);
 
         return response()->json([
-            'message' => 'Đã chuyển "' . ($staff->user->name ?? 'nhân viên') . '" sang ' . ($staff->fresh()->store->name ?? 'cửa hàng mới'),
+            'message' => 'Đã cập nhật cửa hàng cho "' . ($staff->user->name ?? 'nhân viên') . '"',
             'roles' => $this->buildRoles($this->currentPerms()),
         ]);
     }
@@ -260,7 +278,7 @@ class RolesController extends Controller
     /** Builds the role cards data (counts, team avatars) from the current permission matrix. */
     private function buildRoles(array $perms): array
     {
-        $staffByRole = Staff::with(['user', 'store'])
+        $staffByRole = Staff::with(['user', 'store', 'stores'])
             ->whereIn('role', ['cashier', 'manager'])
             ->where('status', 'active')
             ->get()
@@ -291,6 +309,9 @@ class RolesController extends Controller
                     'phone' => $s->user->phone,
                     'store_id' => $s->store_id,
                     'store' => $s->store->name ?? '—',
+                    'store_ids'   => $s->storeIds(),
+                    'store_names' => ($s->stores->isNotEmpty() ? $s->stores : collect([$s->store])->filter())
+                        ->pluck('name')->filter()->values()->all(),
                     'color' => self::AVATAR_COLORS[$i % count(self::AVATAR_COLORS)],
                 ])->all(),
             ];

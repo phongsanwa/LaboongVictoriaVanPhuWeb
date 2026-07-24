@@ -3,6 +3,7 @@
 use App\Http\Middleware\EnsureAdminAccess;
 use App\Http\Middleware\EnsureUserIsAdmin;
 use App\Http\Middleware\EnsureUserIsStaff;
+use App\Http\Middleware\TrackLastSeen;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -19,6 +20,9 @@ return Application::configure(basePath: dirname(__DIR__))
             'admin.perm' => EnsureAdminAccess::class,
             'staff' => EnsureUserIsStaff::class,
         ]);
+
+        // Theo dõi online/offline cho mọi request web đã đăng nhập
+        $middleware->web(append: [TrackLastSeen::class]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         //

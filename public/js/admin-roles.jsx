@@ -39,11 +39,38 @@ async function apiCall(method, url, body) {
   return { ok: res.ok, status: res.status, data };
 }
 
+/* Danh sách chọn nhiều cửa hàng (checkbox) dùng chung. */
+function StorePicker({ stores, selected, onToggle }) {
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 6, maxHeight: 220, overflowY: "auto" }}>
+      {stores.map(s => {
+        const on = selected.includes(s.id);
+        return (
+          <button key={s.id} type="button" onClick={() => onToggle(s.id)}
+            style={{
+              display: "flex", alignItems: "center", gap: 10, padding: "10px 12px", borderRadius: 10,
+              border: "1.5px solid " + (on ? "var(--brand)" : "var(--line, #E5E7EB)"),
+              background: on ? "var(--brand-soft, #F0FDF4)" : "transparent", cursor: "pointer", textAlign: "left",
+            }}>
+            <span style={{
+              width: 20, height: 20, borderRadius: 6, flex: "none", display: "grid", placeItems: "center",
+              background: on ? "var(--brand)" : "transparent", border: "1.5px solid " + (on ? "var(--brand)" : "var(--line, #CCC)"),
+            }}>
+              {on && <Icon name="check" size={13} color="#fff" />}
+            </span>
+            <span style={{ fontSize: 13.5, fontWeight: 600 }}>{s.name}</span>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
 function AssignModal({ role, onClose, onAssign }) {
   const r = DATA.roles[role];
   const stores = DATA.stores || [];
   const [phone, setPhone] = useState("");
-  const [storeId, setStoreId] = useState(stores[0]?.id ?? "");
+  const [storeIds, setStoreIds] = useState(stores[0] ? [stores[0].id] : []);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
 
@@ -53,11 +80,14 @@ function AssignModal({ role, onClose, onAssign }) {
     return () => window.removeEventListener("keydown", h);
   }, [onClose]);
 
+  const toggle = (id) => setStoreIds(ids => ids.includes(id) ? ids.filter(x => x !== id) : [...ids, id]);
+
   const submit = async () => {
     if (!phone.trim()) { setError("Vui lòng nhập số điện thoại"); return; }
+    if (stores.length > 0 && storeIds.length === 0) { setError("Vui lòng chọn ít nhất 1 cửa hàng"); return; }
     setBusy(true);
     setError("");
-    const ok = await onAssign(phone.trim(), storeId || null);
+    const ok = await onAssign(phone.trim(), storeIds);
     setBusy(false);
     if (!ok.success) { setError(ok.message); return; }
     onClose();
@@ -82,10 +112,8 @@ function AssignModal({ role, onClose, onAssign }) {
           </div>
           {stores.length > 0 && (
             <div className="fld" style={{ marginTop: 12 }}>
-              <label>Cửa hàng trực thuộc</label>
-              <select className="inp" value={storeId} onChange={e => setStoreId(e.target.value ? Number(e.target.value) : "")}>
-                {stores.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-              </select>
+              <label>Cửa hàng phụ trách <span style={{ color: "var(--ink-3)", fontWeight: 400 }}>(chọn được nhiều)</span></label>
+              <StorePicker stores={stores} selected={storeIds} onToggle={toggle} />
             </div>
           )}
           {error && <div style={{ color: "var(--danger, #C0392B)", fontSize: 13, marginTop: 6 }}>{error}</div>}
@@ -94,6 +122,56 @@ function AssignModal({ role, onClose, onAssign }) {
           <button className="btn ghost" style={{ flex: ".6" }} onClick={onClose}>Huỷ</button>
           <button className="btn primary" disabled={busy} onClick={submit}>
             <Icon name="check" size={17} color="#fff" /> {busy ? "Đang gán…" : "Gán vai trò"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* Modal sửa danh sách cửa hàng của một nhân viên đang làm. */
+function EditStoresModal({ member, onClose, onSave }) {
+  const stores = DATA.stores || [];
+  const [storeIds, setStoreIds] = useState(member.store_ids || []);
+  const [error, setError] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    const h = (e) => { if (e.key === "Escape") onClose(); };
+    window.addEventListener("keydown", h);
+    return () => window.removeEventListener("keydown", h);
+  }, [onClose]);
+
+  const toggle = (id) => setStoreIds(ids => ids.includes(id) ? ids.filter(x => x !== id) : [...ids, id]);
+
+  const submit = async () => {
+    if (storeIds.length === 0) { setError("Vui lòng chọn ít nhất 1 cửa hàng"); return; }
+    setBusy(true); setError("");
+    const ok = await onSave(member.id, storeIds);
+    setBusy(false);
+    if (!ok) { setError("Không lưu được, vui lòng thử lại"); return; }
+    onClose();
+  };
+
+  return (
+    <div className="modal-scrim" onClick={onClose}>
+      <div className="modal" onClick={e => e.stopPropagation()}>
+        <div className="modal-h">
+          <div className="mh-ic"><Icon name="pin" size={20} /></div>
+          <div>
+            <h3>Cửa hàng phụ trách</h3>
+            <p>{member.name} · {member.phone}</p>
+          </div>
+          <button className="x" onClick={onClose}><Icon name="close" size={18} /></button>
+        </div>
+        <div className="modal-b">
+          <StorePicker stores={stores} selected={storeIds} onToggle={toggle} />
+          {error && <div style={{ color: "var(--danger, #C0392B)", fontSize: 13, marginTop: 8 }}>{error}</div>}
+        </div>
+        <div className="modal-f">
+          <button className="btn ghost" style={{ flex: ".6" }} onClick={onClose}>Huỷ</button>
+          <button className="btn primary" disabled={busy} onClick={submit}>
+            <Icon name="check" size={17} color="#fff" /> {busy ? "Đang lưu…" : "Lưu"}
           </button>
         </div>
       </div>
@@ -110,6 +188,7 @@ function App() {
   const [toast, setToast] = useState(null);
   const [saving, setSaving] = useState(false);
   const [assigning, setAssigning] = useState(null);
+  const [editStores, setEditStores] = useState(null);
 
   useEffect(() => {
     const r = document.documentElement;
@@ -145,8 +224,8 @@ function App() {
   };
   const reset = () => setPerms(saved);
 
-  const handleAssign = async (phone, storeId) => {
-    const { ok, data } = await apiCall("POST", "/admin/roles/assign", { phone, role: assigning, store_id: storeId });
+  const handleAssign = async (phone, storeIds) => {
+    const { ok, data } = await apiCall("POST", "/admin/roles/assign", { phone, role: assigning, store_ids: storeIds });
     if (!ok) {
       const msg = data.errors?.phone?.[0] || data.message || "Có lỗi xảy ra, vui lòng thử lại";
       return { success: false, message: msg };
@@ -157,11 +236,12 @@ function App() {
     return { success: true };
   };
 
-  const handleSetStore = async (staffId, storeId) => {
-    const { ok, data } = await apiCall("POST", `/admin/roles/staff/${staffId}/store`, { store_id: storeId });
+  const handleSetStore = async (staffId, storeIds) => {
+    const { ok, data } = await apiCall("POST", `/admin/roles/staff/${staffId}/store`, { store_ids: storeIds });
     if (ok) setRoles(data.roles);
-    setToast(data.message || (ok ? "Đã chuyển cửa hàng" : "Không đổi được cửa hàng"));
+    setToast(data.message || (ok ? "Đã cập nhật cửa hàng" : "Không lưu được cửa hàng"));
     setTimeout(() => setToast(null), 3000);
+    return ok;
   };
 
   const handleRemoveStaff = async (staffId) => {
@@ -207,19 +287,18 @@ function App() {
               <div style={{ minWidth: 0, flex: 1 }}>
                 <div style={{ fontSize: 13, fontWeight: 700, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{m.name}</div>
                 <div style={{ fontSize: 11.5, color: "var(--ink-3)" }}>{m.phone}</div>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 4, marginTop: 4 }}>
+                  {(m.store_names && m.store_names.length ? m.store_names : [m.store]).map((sn, i) => (
+                    <span key={i} style={{ fontSize: 11, fontWeight: 600, color: "var(--brand)", background: "var(--brand-soft, #F0FDF4)", borderRadius: 6, padding: "2px 7px", display: "inline-flex", alignItems: "center", gap: 3 }}>
+                      <Icon name="pin" size={10} /> {sn}
+                    </span>
+                  ))}
+                </div>
               </div>
-              {(DATA.stores || []).length > 1 ? (
-                <select
-                  className="inp"
-                  style={{ width: "auto", maxWidth: 160, padding: "6px 8px", fontSize: 12.5 }}
-                  value={m.store_id ?? ""}
-                  title="Cửa hàng trực thuộc"
-                  onChange={e => handleSetStore(m.id, Number(e.target.value))}
-                >
-                  {(DATA.stores || []).map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-                </select>
-              ) : (
-                <span style={{ fontSize: 12, color: "var(--ink-3)", whiteSpace: "nowrap" }}><Icon name="pin" size={12} /> {m.store}</span>
+              {(DATA.stores || []).length > 1 && (
+                <button className="icon-btn" style={{ flex: "none" }} title="Sửa cửa hàng phụ trách" onClick={() => setEditStores(m)}>
+                  <Icon name="edit" size={14} />
+                </button>
               )}
               <button className="icon-btn" style={{ flex: "none" }} title="Gỡ khỏi vai trò" onClick={() => handleRemoveStaff(m.id)}>
                 <Icon name="close" size={14} />
@@ -303,6 +382,7 @@ function App() {
       {toast && <div className="toast"><span className="tc"><Icon name="check" size={15} color="#fff" /></span>{toast}</div>}
 
       {assigning && <AssignModal role={assigning} onClose={() => setAssigning(null)} onAssign={handleAssign} />}
+      {editStores && <EditStoresModal member={editStores} onClose={() => setEditStores(null)} onSave={handleSetStore} />}
 
       <TweaksPanel>
         <TweakSection label="Giao diện" />

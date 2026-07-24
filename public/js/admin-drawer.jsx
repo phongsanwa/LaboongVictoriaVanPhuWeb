@@ -149,7 +149,7 @@ function ConfirmDeleteCustomer({ c, onClose, onDeleted }) {
   };
 
   return (
-    <div className="scrim" style={{ zIndex: 60, display: "flex", alignItems: "center", justifyContent: "center" }} onClick={onClose}>
+    <div className="scrim" style={{ zIndex: 110, display: "flex", alignItems: "center", justifyContent: "center" }} onClick={onClose}>
       <div className="modal confirm" style={{ background: "var(--card, #fff)", borderRadius: 16, padding: 24, maxWidth: 400, width: "92%", textAlign: "center" }} onClick={e => e.stopPropagation()}>
         <div style={{ width: 52, height: 52, borderRadius: "50%", background: "rgba(220,60,60,.12)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 12px" }}>
           <Icon name="trash" size={26} color="var(--danger, #D4584B)" />
@@ -237,6 +237,7 @@ function Drawer({ c, onClose, onCustomerUpdated, onCustomerDeleted }) {
             <div className="ir"><div className="ic"><Icon name="pin" size={16} /></div><span className="ik">Cửa hàng thường đến</span><span className="iv">{customer.store}</span></div>
             <div className="ir"><div className="ic"><Icon name="cal" size={16} /></div><span className="ik">Ngày tham gia</span><span className="iv">{fmtDate(customer.joined)}</span></div>
             <div className="ir"><div className="ic"><Icon name="users" size={16} /></div><span className="ik">Trạng thái</span><span className="iv"><span className={"status " + customer.status}>{customer.status === "on" ? "Active" : "Inactive"}</span></span></div>
+            <div className="ir"><div className="ic"><Icon name="clock" size={16} /></div><span className="ik">Truy cập</span><span className="iv" style={customer.online ? { color: "#16A34A", fontWeight: 700 } : {}}>{customer.online ? "● Đang online" : ("○ " + (customer.lastSeen || "Chưa truy cập"))}</span></div>
           </div>
 
           <div className="dr-sec-t">Lịch sử giao dịch ({customer.tx.length})</div>
