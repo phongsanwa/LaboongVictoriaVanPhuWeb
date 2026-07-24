@@ -149,7 +149,7 @@ function ConfirmDeleteCustomer({ c, onClose, onDeleted }) {
   };
 
   return (
-    <div className="scrim" style={{ zIndex: 60, display: "flex", alignItems: "center", justifyContent: "center" }} onClick={onClose}>
+    <div className="scrim" style={{ zIndex: 110, display: "flex", alignItems: "center", justifyContent: "center" }} onClick={onClose}>
       <div className="modal confirm" style={{ background: "var(--card, #fff)", borderRadius: 16, padding: 24, maxWidth: 400, width: "92%", textAlign: "center" }} onClick={e => e.stopPropagation()}>
         <div style={{ width: 52, height: 52, borderRadius: "50%", background: "rgba(220,60,60,.12)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 12px" }}>
           <Icon name="trash" size={26} color="var(--danger, #D4584B)" />
