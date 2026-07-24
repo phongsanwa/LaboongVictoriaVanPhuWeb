@@ -7,11 +7,13 @@ const TW_DEFAULTS = /*EDITMODE-BEGIN*/{
 }/*EDITMODE-END*/;
 
 const DATA = window.POS_DATA || {
-  staff: { name: "Khánh Linh", role: "Thu ngân", store: "Victoria Văn Phú" },
+  staff: { name: "Khánh Linh", role: "Thu ngân", store: "Victoria Văn Phú", store_id: 1 },
+  stores: [{ id: 1, name: "Victoria Văn Phú" }],
   perPoint: 10000,
 };
 const PER_POINT = DATA.perPoint;
 const STAFF = DATA.staff;
+const STORES = DATA.stores || [];
 
 function initials(n) { const p = n.trim().split(/\s+/); return p[p.length - 1][0]; }
 
@@ -132,6 +134,10 @@ function MemberLookup({ code, setCode, onLookup, found, error, busy }) {
 
 function App() {
   const [tw, setTweak] = useTweaks(TW_DEFAULTS);
+  // Cửa hàng đang bán — nhân viên nhiều cửa hàng phải chọn trước khi thao tác
+  const multiStore = STORES.length > 1;
+  const [storeId, setStoreId] = useState(multiStore ? null : (STAFF.store_id ?? STORES[0]?.id ?? null));
+  const [switchStore, setSwitchStore] = useState(false); // mở lại bảng chọn để đổi cửa hàng
   const [mode, setMode] = useState(null);        // null home · "points" · "redeem"
   const [step, setStep] = useState(0);          // 0 bill · 1 method · 2 scan · 3 counter-qr · 4 result
   const [bill, setBill] = useState(0);          // đồng
@@ -180,7 +186,7 @@ function App() {
       return;
     }
 
-    const { ok, data } = await apiCall("POST", "/pos/points/charge", { code: c, amount: bill });
+    const { ok, data } = await apiCall("POST", "/pos/points/charge", { code: c, amount: bill, store_id: storeId });
     setBusy(false);
     if (!ok) { setError(data.message || "Có lỗi xảy ra, vui lòng thử lại"); setFound(null); return; }
 
@@ -249,13 +255,32 @@ function App() {
     location.href = "/login";
   };
 
+  const currentStoreName = (STORES.find(s => s.id === storeId) || {}).name || "";
+  // Cần chọn cửa hàng: nhân viên nhiều cửa hàng chưa chọn, hoặc đang bấm đổi
+  const needStorePick = multiStore && (storeId === null || switchStore);
+
+  const pickStore = (id) => {
+    setStoreId(id);
+    setSwitchStore(false);
+    // đổi cửa hàng giữa chừng → về màn chức năng, huỷ thao tác đang dở
+    setMode(null); setStep(0); setBill(0); setCust(null); setFound(null); setCode(""); setError("");
+  };
+
   return (
     <>
       <header className="topbar">
         <div className="tb-mark"><span>L</span></div>
         <div style={{ minWidth: 0, flex: 1 }}>
           <div className="tb-title">Tích điểm cho khách</div>
-          <div className="tb-sub">{STAFF.store}</div>
+          {multiStore ? (
+            <button className="tb-sub" onClick={() => setSwitchStore(true)}
+              style={{ display: "inline-flex", alignItems: "center", gap: 4, background: "none", border: "none", padding: 0, cursor: "pointer", color: "inherit", font: "inherit" }}
+              title="Đổi cửa hàng đang bán">
+              <Icon name="pin" size={12} /> {currentStoreName || "Chọn cửa hàng"} <Icon name="chevdown" size={13} />
+            </button>
+          ) : (
+            <div className="tb-sub">{currentStoreName || STAFF.store}</div>
+          )}
         </div>
         <div className="tb-staff">
           <div className="tb-av">{initials(STAFF.name)}</div>
@@ -265,8 +290,34 @@ function App() {
       </header>
 
       <main className="stage">
+        {/* STORE PICK — nhân viên nhiều cửa hàng chọn cửa hàng đang bán */}
+        {needStorePick && (
+          <div className="card">
+            <div className="card-pad">
+              <div className="step-title">Chọn cửa hàng đang bán</div>
+              <div className="step-desc">Bạn đang bán tại cửa hàng nào? Giao dịch tích điểm sẽ ghi nhận cho cửa hàng này.</div>
+              <div className="methods">
+                {STORES.map(s => (
+                  <button key={s.id} className="method scan" onClick={() => pickStore(s.id)}
+                    style={s.id === storeId ? { outline: "2px solid var(--brand)" } : {}}>
+                    <div className="mi"><Icon name="pin" size={24} color="#fff" /></div>
+                    <div>
+                      <div className="mt">{s.name}</div>
+                      <div className="md">{s.id === storeId ? "Đang chọn" : "Chọn cửa hàng này"}</div>
+                    </div>
+                    <span className="mgo"><Icon name={s.id === storeId ? "check" : "chev"} size={18} /></span>
+                  </button>
+                ))}
+              </div>
+              {switchStore && storeId !== null && (
+                <button className="btn ghost" style={{ marginTop: 14, width: "100%" }} onClick={() => setSwitchStore(false)}>Huỷ</button>
+              )}
+            </div>
+          </div>
+        )}
+
         {/* HOME — choose function */}
-        {mode === null && (
+        {!needStorePick && mode === null && (
           <div className="card">
             <div className="card-pad">
               <div className="step-title">Chọn chức năng</div>
@@ -293,12 +344,12 @@ function App() {
           </div>
         )}
 
-        {mode === "points" && <div className="flow-steps">
+        {!needStorePick && mode === "points" && <div className="flow-steps">
           {[0, 1, 2, 3].map(i => <span key={i} className={"fdot" + (i === dotIndex ? " on" : i < dotIndex ? " done" : "")} />)}
         </div>}
 
         {/* STEP 0 — bill */}
-        {mode === "points" && step === 0 && (
+        {!needStorePick && mode === "points" && step === 0 && (
           <div className="card">
             <div className="card-pad">
               <button className="linkback" onClick={goHome}>← Trang chủ</button>
@@ -325,7 +376,7 @@ function App() {
         )}
 
         {/* STEP 1 — method */}
-        {mode === "points" && step === 1 && (
+        {!needStorePick && mode === "points" && step === 1 && (
           <div className="card">
             <div className="card-pad">
               <div className="step-title">Chọn cách tích điểm</div>
@@ -358,7 +409,7 @@ function App() {
         )}
 
         {/* STEP 2 — staff scanning */}
-        {mode === "points" && step === 2 && (
+        {!needStorePick && mode === "points" && step === 2 && (
           <div className="card">
             <div className="card-pad">
               <div className="step-title">Quét mã khách</div>
@@ -376,7 +427,7 @@ function App() {
         )}
 
         {/* STEP 3 — counter QR for customer to scan */}
-        {mode === "points" && step === 3 && (
+        {!needStorePick && mode === "points" && step === 3 && (
           <div className="card">
             <div className="card-pad">
               <div className="step-title">Khách quét mã này</div>
@@ -393,7 +444,7 @@ function App() {
         )}
 
         {/* STEP 4 — result */}
-        {mode === "points" && step === 4 && cust && (
+        {!needStorePick && mode === "points" && step === 4 && cust && (
           <div className="card">
             <div className="result-head">
               <div className="rh-check"><div className="ck"><Icon name="check" size={26} color="var(--brand)" /></div></div>
@@ -431,7 +482,7 @@ function App() {
         )}
 
         {/* REDEEM — scan voucher/redemption code */}
-        {mode === "redeem" && !rDone && (
+        {!needStorePick && mode === "redeem" && !rDone && (
           <div className="card">
             <div className="card-pad">
               <button className="linkback" onClick={goHome}>← Trang chủ</button>
@@ -497,7 +548,7 @@ function App() {
         )}
 
         {/* REDEEM — done */}
-        {mode === "redeem" && rDone && (
+        {!needStorePick && mode === "redeem" && rDone && (
           <div className="card">
             <div className="result-head">
               <div className="rh-check"><div className="ck"><Icon name="check" size={26} color="var(--brand)" /></div></div>
