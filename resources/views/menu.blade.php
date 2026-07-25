@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 @include('partials.favicon')
+@include('partials.pwa')
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <meta name="csrf-token" content="{{ csrf_token() }}" />
 @include('partials.seo', ['seoPage' => 'menu', 'seoTitle' => 'Thực đơn · Laboong Victoria Văn Phú', 'seoDesc' => 'Thực đơn trà sữa Laboong: trà sữa trân châu, trà trái cây, topping đa dạng — đặt món online, giao nhanh tại Hà Đông.'])

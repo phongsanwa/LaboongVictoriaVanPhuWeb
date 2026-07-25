@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 @include('partials.favicon')
+@include('partials.pwa')
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <meta name="csrf-token" content="{{ csrf_token() }}" />
 @include('partials.seo', ['seoPage' => 'register', 'seoTitle' => 'Đăng ký thành viên · Laboong Victoria Văn Phú', 'seoDesc' => 'Tạo tài khoản Laboong Victoria Văn Phú miễn phí — nhận ưu đãi thành viên, tích điểm mỗi đơn và quà sinh nhật.', 'seoBusiness' => true])

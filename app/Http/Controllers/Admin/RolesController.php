@@ -46,10 +46,15 @@ class RolesController extends Controller
             ['id' => 'tx_view', 'name' => 'Xem lịch sử giao dịch', 'desc' => 'Tra cứu các giao dịch tích / tiêu điểm', 'cashier' => true, 'manager' => true],
             ['id' => 'tx_void', 'name' => 'Huỷ / hoàn giao dịch', 'desc' => 'Thu hồi điểm khi sai sót hoặc hoàn hàng', 'cashier' => false, 'manager' => true],
         ]],
+        ['title' => 'Đơn hàng', 'ic' => 'bag', 'perms' => [
+            ['id' => 'order_view', 'name' => 'Xem đơn hàng', 'desc' => 'Xem danh sách và chi tiết đơn tại cửa hàng', 'cashier' => true, 'manager' => true],
+            ['id' => 'order_advance', 'name' => 'Xử lý / chuyển trạng thái đơn', 'desc' => 'Xác nhận, pha chế, hoàn tất đơn hàng', 'cashier' => true, 'manager' => true],
+            ['id' => 'order_cancel', 'name' => 'Huỷ đơn hàng', 'desc' => 'Huỷ đơn khi khách yêu cầu hoặc sai sót', 'cashier' => false, 'manager' => true],
+        ]],
         ['title' => 'Khách hàng', 'ic' => 'users', 'perms' => [
             ['id' => 'cust_list', 'name' => 'Xem danh sách khách hàng', 'desc' => 'Truy cập danh bạ thành viên', 'cashier' => true, 'manager' => true],
             ['id' => 'cust_detail', 'name' => 'Xem chi tiết hồ sơ', 'desc' => 'Hồ sơ, điểm và lịch sử của từng khách', 'cashier' => true, 'manager' => true],
-            ['id' => 'cust_edit', 'name' => 'Sửa thông tin khách', 'desc' => 'Cập nhật tên, SĐT, email…', 'cashier' => false, 'manager' => true],
+            ['id' => 'cust_edit', 'name' => 'Sửa thông tin khách', 'desc' => 'Cập nhật tên, SĐT, email, trạng thái…', 'cashier' => false, 'manager' => true],
             ['id' => 'cust_export', 'name' => 'Xuất dữ liệu (Excel/CSV)', 'desc' => 'Tải danh sách khách hàng', 'cashier' => false, 'manager' => true],
         ]],
         ['title' => 'Quà & Voucher', 'ic' => 'gift', 'perms' => [
@@ -57,15 +62,27 @@ class RolesController extends Controller
             ['id' => 'gift_edit', 'name' => 'Tạo / sửa voucher & quà', 'desc' => 'Quản lý danh mục phần thưởng', 'cashier' => false, 'manager' => true],
             ['id' => 'gift_del', 'name' => 'Xoá voucher & quà', 'desc' => 'Gỡ phần thưởng khỏi danh mục', 'cashier' => false, 'manager' => true],
         ]],
+        ['title' => 'Thực đơn & Sản phẩm', 'ic' => 'cup', 'perms' => [
+            ['id' => 'menu_edit', 'name' => 'Quản lý thực đơn', 'desc' => 'Thêm / sửa / xoá món & danh mục', 'cashier' => false, 'manager' => true],
+            ['id' => 'variant_edit', 'name' => 'Quản lý variant / tuỳ chọn', 'desc' => 'Size, topping, tuỳ chọn của món', 'cashier' => false, 'manager' => true],
+        ]],
         ['title' => 'Chiến dịch & Marketing', 'ic' => 'mega', 'perms' => [
             ['id' => 'camp_view', 'name' => 'Xem chiến dịch', 'desc' => 'Theo dõi các chương trình đang chạy', 'cashier' => true, 'manager' => true],
             ['id' => 'camp_edit', 'name' => 'Tạo / sửa chiến dịch', 'desc' => 'Thiết lập ưu đãi, điều kiện, đối tượng', 'cashier' => false, 'manager' => true],
+            ['id' => 'promo_edit', 'name' => 'Quản lý khuyến mãi', 'desc' => 'Mã giảm giá, khuyến mãi gạch giá', 'cashier' => false, 'manager' => true],
+            ['id' => 'news_edit', 'name' => 'Quản lý tin tức', 'desc' => 'Đăng / sửa bài tin tức hiển thị trang chủ', 'cashier' => false, 'manager' => true],
             ['id' => 'push', 'name' => 'Gửi push notification', 'desc' => 'Gửi thông báo đẩy tới khách hàng', 'cashier' => false, 'manager' => true],
+        ]],
+        ['title' => 'Cửa hàng & Vận hành', 'ic' => 'pin', 'perms' => [
+            ['id' => 'store_edit', 'name' => 'Quản lý cửa hàng', 'desc' => 'Thông tin, giờ mở, bản đồ chi nhánh', 'cashier' => false, 'manager' => true],
+            ['id' => 'ship_edit', 'name' => 'Quản lý phí ship', 'desc' => 'Bậc phí, khuyến mãi phí giao hàng', 'cashier' => false, 'manager' => true],
+            ['id' => 'checkin_edit', 'name' => 'Cấu hình điểm danh', 'desc' => 'Thiết lập điểm thưởng điểm danh hằng ngày', 'cashier' => false, 'manager' => true],
         ]],
         ['title' => 'Báo cáo & Hệ thống', 'ic' => 'gear', 'perms' => [
             ['id' => 'report', 'name' => 'Xem báo cáo & thống kê', 'desc' => 'Doanh thu, điểm phát hành, hiệu quả CT', 'cashier' => false, 'manager' => true],
+            ['id' => 'seo_edit', 'name' => 'Quản lý SEO', 'desc' => 'Tiêu đề, mô tả, dữ liệu có cấu trúc', 'cashier' => false, 'manager' => true],
             ['id' => 'staff', 'name' => 'Quản lý nhân viên & phân quyền', 'desc' => 'Thêm nhân viên, gán vai trò', 'cashier' => false, 'manager' => true, 'lockManager' => true],
-            ['id' => 'settings', 'name' => 'Cài đặt hệ thống', 'desc' => 'Cấu hình cửa hàng, quy tắc tích điểm', 'cashier' => false, 'manager' => true],
+            ['id' => 'settings', 'name' => 'Cài đặt hệ thống', 'desc' => 'Cấu hình chung, quy tắc tích điểm, tích hợp', 'cashier' => false, 'manager' => true],
         ]],
     ];
 

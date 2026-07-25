@@ -35,10 +35,10 @@ Route::middleware(['auth', 'admin.perm'])->prefix('admin')->name('admin.')->grou
     Route::delete('/customers/{customer}', [CustomersController::class, 'destroy'])->middleware('admin.perm:cust_edit')->name('customers.destroy');
 
     // Đơn hàng
-    Route::get('/orders', [OrdersController::class, 'index'])->middleware('admin.perm:tx_view')->name('orders.index');
-    Route::get('/orders/refresh', [OrdersController::class, 'refresh'])->middleware('admin.perm:tx_view')->name('orders.refresh');
-    Route::post('/orders/{order}/advance', [OrdersController::class, 'advance'])->middleware('admin.perm:scan')->name('orders.advance');
-    Route::post('/orders/{order}/cancel', [OrdersController::class, 'cancel'])->middleware('admin.perm:tx_void')->name('orders.cancel');
+    Route::get('/orders', [OrdersController::class, 'index'])->middleware('admin.perm:order_view')->name('orders.index');
+    Route::get('/orders/refresh', [OrdersController::class, 'refresh'])->middleware('admin.perm:order_view')->name('orders.refresh');
+    Route::post('/orders/{order}/advance', [OrdersController::class, 'advance'])->middleware('admin.perm:order_advance')->name('orders.advance');
+    Route::post('/orders/{order}/cancel', [OrdersController::class, 'cancel'])->middleware('admin.perm:order_cancel')->name('orders.cancel');
 
     // Điểm & giao dịch
     Route::get('/points', [PointsController::class, 'index'])->middleware('admin.perm:tx_view')->name('points.index');
@@ -68,9 +68,9 @@ Route::middleware(['auth', 'admin.perm'])->prefix('admin')->name('admin.')->grou
     Route::post('/roles/staff/{staff}/store', [RolesController::class, 'setStore'])->middleware('admin.perm:staff')->name('roles.staff.store');
 
     // Quản lý SEO
-    Route::get('/seo', [\App\Http\Controllers\Admin\SeoController::class, 'index'])->middleware('admin.perm:settings')->name('seo.index');
-    Route::post('/seo', [\App\Http\Controllers\Admin\SeoController::class, 'update'])->middleware('admin.perm:settings')->name('seo.update');
-    Route::post('/seo/upload', [\App\Http\Controllers\Admin\SeoController::class, 'upload'])->middleware('admin.perm:settings')->name('seo.upload');
+    Route::get('/seo', [\App\Http\Controllers\Admin\SeoController::class, 'index'])->middleware('admin.perm:seo_edit')->name('seo.index');
+    Route::post('/seo', [\App\Http\Controllers\Admin\SeoController::class, 'update'])->middleware('admin.perm:seo_edit')->name('seo.update');
+    Route::post('/seo/upload', [\App\Http\Controllers\Admin\SeoController::class, 'upload'])->middleware('admin.perm:seo_edit')->name('seo.upload');
 
     // Cài đặt hệ thống
     Route::get('/settings', [SettingsController::class, 'index'])->middleware('admin.perm:settings')->name('settings.index');
@@ -81,34 +81,34 @@ Route::middleware(['auth', 'admin.perm'])->prefix('admin')->name('admin.')->grou
     Route::delete('/settings/favicon', [SettingsController::class, 'deleteFavicon'])->middleware('admin.perm:settings')->name('settings.favicon.delete');
 
     // Cửa hàng
-    Route::get('/stores', [StoresController::class, 'index'])->middleware('admin.perm:settings')->name('stores.index');
-    Route::post('/stores', [StoresController::class, 'store'])->middleware('admin.perm:settings')->name('stores.store');
-    Route::put('/stores/{store}', [StoresController::class, 'update'])->middleware('admin.perm:settings')->name('stores.update');
-    Route::post('/stores/{store}/toggle', [StoresController::class, 'toggle'])->middleware('admin.perm:settings')->name('stores.toggle');
-    Route::delete('/stores/{store}', [StoresController::class, 'destroy'])->middleware('admin.perm:settings')->name('stores.destroy');
-    Route::post('/stores/{store}/photos', [StoresController::class, 'uploadPhoto'])->middleware('admin.perm:settings')->name('stores.photos.upload');
-    Route::delete('/stores/{store}/photos', [StoresController::class, 'deletePhoto'])->middleware('admin.perm:settings')->name('stores.photos.delete');
+    Route::get('/stores', [StoresController::class, 'index'])->middleware('admin.perm:store_edit')->name('stores.index');
+    Route::post('/stores', [StoresController::class, 'store'])->middleware('admin.perm:store_edit')->name('stores.store');
+    Route::put('/stores/{store}', [StoresController::class, 'update'])->middleware('admin.perm:store_edit')->name('stores.update');
+    Route::post('/stores/{store}/toggle', [StoresController::class, 'toggle'])->middleware('admin.perm:store_edit')->name('stores.toggle');
+    Route::delete('/stores/{store}', [StoresController::class, 'destroy'])->middleware('admin.perm:store_edit')->name('stores.destroy');
+    Route::post('/stores/{store}/photos', [StoresController::class, 'uploadPhoto'])->middleware('admin.perm:store_edit')->name('stores.photos.upload');
+    Route::delete('/stores/{store}/photos', [StoresController::class, 'deletePhoto'])->middleware('admin.perm:store_edit')->name('stores.photos.delete');
 
     // Khuyến mãi
-    Route::get('/promotions', [PromotionsController::class, 'index'])->middleware('admin.perm:camp_view')->name('promotions.index');
-    Route::post('/promotions', [PromotionsController::class, 'store'])->middleware('admin.perm:camp_edit')->name('promotions.store');
-    Route::post('/promotions/{promotion}', [PromotionsController::class, 'update'])->middleware('admin.perm:camp_edit')->name('promotions.update');
-    Route::delete('/promotions/{promotion}', [PromotionsController::class, 'destroy'])->middleware('admin.perm:camp_edit')->name('promotions.destroy');
-    Route::post('/promotions/{promotion}/toggle', [PromotionsController::class, 'toggle'])->middleware('admin.perm:camp_edit')->name('promotions.toggle');
+    Route::get('/promotions', [PromotionsController::class, 'index'])->middleware('admin.perm:promo_edit')->name('promotions.index');
+    Route::post('/promotions', [PromotionsController::class, 'store'])->middleware('admin.perm:promo_edit')->name('promotions.store');
+    Route::post('/promotions/{promotion}', [PromotionsController::class, 'update'])->middleware('admin.perm:promo_edit')->name('promotions.update');
+    Route::delete('/promotions/{promotion}', [PromotionsController::class, 'destroy'])->middleware('admin.perm:promo_edit')->name('promotions.destroy');
+    Route::post('/promotions/{promotion}/toggle', [PromotionsController::class, 'toggle'])->middleware('admin.perm:promo_edit')->name('promotions.toggle');
 
     // Phí ship
-    Route::get('/shipping', [ShippingController::class, 'index'])->middleware('admin.perm:settings')->name('shipping.index');
-    Route::post('/shipping', [ShippingController::class, 'store'])->middleware('admin.perm:settings')->name('shipping.store');
-    Route::put('/shipping/{shipping}', [ShippingController::class, 'update'])->middleware('admin.perm:settings')->name('shipping.update');
-    Route::delete('/shipping/{shipping}', [ShippingController::class, 'destroy'])->middleware('admin.perm:settings')->name('shipping.destroy');
-    Route::post('/shipping/reorder', [ShippingController::class, 'reorder'])->middleware('admin.perm:settings')->name('shipping.reorder');
-    Route::post('/shipping/promos', [ShippingController::class, 'storePromo'])->middleware('admin.perm:settings')->name('shipping.promos.store');
-    Route::put('/shipping/promos/{promo}', [ShippingController::class, 'updatePromo'])->middleware('admin.perm:settings')->name('shipping.promos.update');
-    Route::delete('/shipping/promos/{promo}', [ShippingController::class, 'destroyPromo'])->middleware('admin.perm:settings')->name('shipping.promos.destroy');
-    Route::post('/shipping/promos/{promo}/toggle', [ShippingController::class, 'togglePromo'])->middleware('admin.perm:settings')->name('shipping.promos.toggle');
+    Route::get('/shipping', [ShippingController::class, 'index'])->middleware('admin.perm:ship_edit')->name('shipping.index');
+    Route::post('/shipping', [ShippingController::class, 'store'])->middleware('admin.perm:ship_edit')->name('shipping.store');
+    Route::put('/shipping/{shipping}', [ShippingController::class, 'update'])->middleware('admin.perm:ship_edit')->name('shipping.update');
+    Route::delete('/shipping/{shipping}', [ShippingController::class, 'destroy'])->middleware('admin.perm:ship_edit')->name('shipping.destroy');
+    Route::post('/shipping/reorder', [ShippingController::class, 'reorder'])->middleware('admin.perm:ship_edit')->name('shipping.reorder');
+    Route::post('/shipping/promos', [ShippingController::class, 'storePromo'])->middleware('admin.perm:ship_edit')->name('shipping.promos.store');
+    Route::put('/shipping/promos/{promo}', [ShippingController::class, 'updatePromo'])->middleware('admin.perm:ship_edit')->name('shipping.promos.update');
+    Route::delete('/shipping/promos/{promo}', [ShippingController::class, 'destroyPromo'])->middleware('admin.perm:ship_edit')->name('shipping.promos.destroy');
+    Route::post('/shipping/promos/{promo}/toggle', [ShippingController::class, 'togglePromo'])->middleware('admin.perm:ship_edit')->name('shipping.promos.toggle');
 
     // Variant / tuỳ chọn món
-    Route::middleware('admin.perm:settings')->group(function () {
+    Route::middleware('admin.perm:variant_edit')->group(function () {
         Route::get('/variants', [VariantsController::class, 'index'])->name('variants.index');
         Route::post('/variants/groups', [VariantsController::class, 'storeGroup'])->name('variants.groups.store');
         Route::post('/variants/groups/reorder', [VariantsController::class, 'reorderGroups'])->name('variants.groups.reorder');
@@ -123,7 +123,7 @@ Route::middleware(['auth', 'admin.perm'])->prefix('admin')->name('admin.')->grou
     });
 
     // Thực đơn
-    Route::middleware('admin.perm:settings')->group(function () {
+    Route::middleware('admin.perm:menu_edit')->group(function () {
         Route::get('/menu', [MenuController::class, 'index'])->name('menu.index');
         Route::post('/menu/products', [MenuController::class, 'storeProduct'])->name('menu.products.store');
         Route::post('/menu/products/{product}', [MenuController::class, 'updateProduct'])->name('menu.products.update');
@@ -136,11 +136,11 @@ Route::middleware(['auth', 'admin.perm'])->prefix('admin')->name('admin.')->grou
     });
 
     // Điểm danh
-    Route::get('/checkin', [CheckinController::class, 'index'])->middleware('admin.perm:settings')->name('checkin.index');
-    Route::post('/checkin', [CheckinController::class, 'update'])->middleware('admin.perm:settings')->name('checkin.update');
+    Route::get('/checkin', [CheckinController::class, 'index'])->middleware('admin.perm:checkin_edit')->name('checkin.index');
+    Route::post('/checkin', [CheckinController::class, 'update'])->middleware('admin.perm:checkin_edit')->name('checkin.update');
 
     // Tin tức (hiển thị ngoài trang chủ)
-    Route::middleware('admin.perm:camp_edit')->group(function () {
+    Route::middleware('admin.perm:news_edit')->group(function () {
         Route::get('/news', [NewsController::class, 'index'])->name('news.index');
         Route::post('/news', [NewsController::class, 'store'])->name('news.store');
         Route::post('/news/upload', [NewsController::class, 'upload'])->name('news.upload');
