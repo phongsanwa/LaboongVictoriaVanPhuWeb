@@ -113,6 +113,10 @@ function App() {
   /* ── Thêm vào màn hình chính (PWA) ── */
   const isStandalone = () => window.matchMedia?.("(display-mode: standalone)").matches || window.navigator.standalone === true;
   const isIOS = () => /iphone|ipad|ipod/i.test(window.navigator.userAgent) && !window.MSStream;
+  // Trình duyệt trong app khác (Zalo/Facebook/Messenger/Instagram/TikTok…) — không cài được, phải mở Safari
+  const inAppBrowser = () => /FBAN|FBAV|FB_IAB|Instagram|Line|Zalo|MicroMessenger|TikTok|GSA/i.test(window.navigator.userAgent);
+  // Chrome/Firefox/Edge trên iOS cũng KHÔNG có "Thêm màn hình chính" — chỉ Safari
+  const iosNonSafari = () => isIOS() && /CriOS|FxiOS|EdgiOS|OPiOS/i.test(window.navigator.userAgent);
   const [installEvt, setInstallEvt] = useState(null);
   const [iosGuide, setIosGuide] = useState(false);
   const [installed, setInstalled] = useState(isStandalone());
@@ -277,12 +281,50 @@ function App() {
           <div className="scrim" onClick={() => setIosGuide(false)} style={{ position: "fixed", inset: 0, zIndex: 200, background: "rgba(8,30,20,.55)", display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
             <div onClick={e => e.stopPropagation()} style={{ background: "var(--card,#fff)", borderRadius: 18, padding: 24, maxWidth: 380, width: "100%", textAlign: "center", boxShadow: "0 24px 60px rgba(0,0,0,.25)" }}>
               <div style={{ width: 52, height: 52, borderRadius: 14, margin: "0 auto 12px", background: "linear-gradient(150deg,#0F623F,#1AA86A)", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontWeight: 800, fontFamily: "'Baloo 2',cursive", fontSize: 26 }}>L</div>
-              <h3 style={{ margin: "0 0 6px", fontSize: 18, fontWeight: 800 }}>Thêm Laboong vào màn hình chính</h3>
-              <p style={{ margin: "0 0 14px", fontSize: 13.5, color: "var(--ink-2,#555)", lineHeight: 1.6 }}>
-                {isIOS()
-                  ? <>Trên iPhone (Safari):<br />1. Bấm nút <b>Chia sẻ</b> <span style={{ display: "inline-block" }}>⬆️</span> ở thanh dưới.<br />2. Chọn <b>“Thêm vào MH chính”</b> (Add to Home Screen).<br />3. Bấm <b>Thêm</b> — xong!</>
-                  : <>Mở menu trình duyệt (⋮) và chọn <b>“Thêm vào màn hình chính”</b> / <b>“Cài đặt ứng dụng”</b>.</>}
-              </p>
+              <h3 style={{ margin: "0 0 8px", fontSize: 18, fontWeight: 800 }}>Thêm Laboong vào màn hình chính</h3>
+
+              {inAppBrowser() ? (
+                <div style={{ textAlign: "left", fontSize: 13.5, color: "var(--ink-2,#555)", lineHeight: 1.65, margin: "0 0 14px" }}>
+                  <div style={{ background: "#FFF4E5", color: "#8a5300", borderRadius: 10, padding: "10px 12px", marginBottom: 12, fontWeight: 600 }}>
+                    ⚠️ Bạn đang mở trong trình duyệt của ứng dụng khác (Zalo, Facebook…). Chỗ này <b>không cài được</b>.
+                  </div>
+                  <b>Hãy mở bằng trình duyệt chính:</b>
+                  <div style={{ marginTop: 6 }}>1. Bấm nút <b>⋯</b> (hoặc <b>⋮</b>) ở góc phía trên.</div>
+                  <div>2. Chọn <b>“Mở trong trình duyệt”</b> / <b>“Mở bằng Safari / Chrome”</b>.</div>
+                  <div>3. Quay lại đây bấm <b>Thêm</b> một lần nữa.</div>
+                </div>
+              ) : iosNonSafari() ? (
+                <div style={{ textAlign: "left", fontSize: 13.5, color: "var(--ink-2,#555)", lineHeight: 1.65, margin: "0 0 14px" }}>
+                  <div style={{ background: "#FFF4E5", color: "#8a5300", borderRadius: 10, padding: "10px 12px", marginBottom: 12, fontWeight: 600 }}>
+                    ⚠️ Trên iPhone, chỉ <b>Safari</b> mới thêm được vào màn hình chính (Chrome/Firefox thì không).
+                  </div>
+                  Hãy mở lại trang này bằng <b>Safari</b>, rồi làm theo 3 bước bên dưới.
+                </div>
+              ) : isIOS() ? (
+                <div style={{ textAlign: "left", fontSize: 13.5, color: "var(--ink-2,#555)", lineHeight: 1.7, margin: "0 0 14px" }}>
+                  <div style={{ marginBottom: 8 }}>Trên <b>Safari</b> của iPhone:</div>
+                  <div style={{ display: "flex", gap: 9, marginBottom: 7 }}>
+                    <span style={{ flex: "none", width: 22, height: 22, borderRadius: "50%", background: "var(--brand,#0F623F)", color: "#fff", fontSize: 12, fontWeight: 800, display: "grid", placeItems: "center" }}>1</span>
+                    <span>Bấm nút <b>Chia sẻ</b> — biểu tượng <b>ô vuông có mũi tên hướng lên</b> <span style={{ fontSize: 15 }}>􀈂</span> ở <b>thanh công cụ dưới cùng</b> (giữa màn hình).</span>
+                  </div>
+                  <div style={{ display: "flex", gap: 9, marginBottom: 7 }}>
+                    <span style={{ flex: "none", width: 22, height: 22, borderRadius: "50%", background: "var(--brand,#0F623F)", color: "#fff", fontSize: 12, fontWeight: 800, display: "grid", placeItems: "center" }}>2</span>
+                    <span>Kéo xuống, chọn <b>“Thêm vào MH chính”</b> (Add to Home Screen).</span>
+                  </div>
+                  <div style={{ display: "flex", gap: 9 }}>
+                    <span style={{ flex: "none", width: 22, height: 22, borderRadius: "50%", background: "var(--brand,#0F623F)", color: "#fff", fontSize: 12, fontWeight: 800, display: "grid", placeItems: "center" }}>3</span>
+                    <span>Bấm <b>Thêm</b> ở góc trên phải — xong!</span>
+                  </div>
+                  <div style={{ marginTop: 10, fontSize: 12, color: "var(--ink-3,#888)" }}>
+                    Không thấy thanh công cụ dưới? <b>Chạm nhẹ một lần</b> vào màn hình hoặc <b>vuốt xuống</b> để hiện lại. Trên iPad, nút Chia sẻ nằm ở <b>góc trên bên phải</b>.
+                  </div>
+                </div>
+              ) : (
+                <p style={{ margin: "0 0 14px", fontSize: 13.5, color: "var(--ink-2,#555)", lineHeight: 1.6 }}>
+                  Mở menu trình duyệt (<b>⋮</b>) và chọn <b>“Thêm vào màn hình chính”</b> / <b>“Cài đặt ứng dụng”</b>.
+                </p>
+              )}
+
               <button className="btn primary" style={{ width: "100%" }} onClick={() => setIosGuide(false)}>Đã hiểu</button>
             </div>
           </div>
