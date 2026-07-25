@@ -122,9 +122,6 @@ function App() {
   const [installEvt, setInstallEvt] = useState(null);
   const [iosGuide, setIosGuide] = useState(false);
   const [installed, setInstalled] = useState(isStandalone());
-  const [installDismissed, setInstallDismissed] = useState(() => {
-    try { return localStorage.getItem("lb_a2hs_dismiss") === "1"; } catch (e) { return false; }
-  });
 
   useEffect(() => {
     const onPrompt = (e) => { e.preventDefault(); setInstallEvt(e); };
@@ -146,13 +143,9 @@ function App() {
     }
   };
 
-  const dismissInstall = () => {
-    setInstallDismissed(true);
-    try { localStorage.setItem("lb_a2hs_dismiss", "1"); } catch (e) { /* ignore */ }
-  };
-
-  // Hiện nút khi: chưa cài, chưa ẩn, và (có sự kiện cài được HOẶC là iOS)
-  const showInstall = !installed && !installDismissed && (installEvt || isIOS());
+  // Hiện banner khi CHƯA cài (và cài được: có sự kiện beforeinstallprompt HOẶC là iOS).
+  // Cài rồi (mở dạng app / standalone) thì tự ẩn — không có nút tắt thủ công.
+  const showInstall = !installed && (installEvt || isIOS());
 
   const dayIdx = checkedToday ? (streak - 1) % 7 : streak % 7;
 
@@ -272,9 +265,6 @@ function App() {
             </div>
             <button onClick={addToHomeScreen} style={{ flex: "none", background: "#fff", color: "#0F623F", border: "none", borderRadius: 10, padding: "9px 15px", fontWeight: 800, fontSize: 13.5, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 6 }}>
               <Icon name="plus2" size={15} color="#0F623F" /> Thêm
-            </button>
-            <button onClick={dismissInstall} title="Ẩn" style={{ flex: "none", background: "transparent", border: "none", color: "rgba(255,255,255,.8)", cursor: "pointer", padding: 4 }}>
-              <Icon name="close" size={16} color="#fff" />
             </button>
           </div>
         )}
