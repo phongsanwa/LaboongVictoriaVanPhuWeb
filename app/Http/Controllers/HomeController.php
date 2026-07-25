@@ -33,6 +33,7 @@ class HomeController extends Controller
                 'checkinConfig' => CheckinController::checkinConfig(),
                 'news' => $this->buildNews(),
                 'adminAccess' => AdminAccess::canEnter($user),
+                'staffEntry' => $this->staffEntry($user),
             ]]);
         }
 
@@ -117,7 +118,29 @@ class HomeController extends Controller
             'checkinConfig' => $checkinConfig,
             'news' => $this->buildNews(),
             'adminAccess' => AdminAccess::canEnter($user),
+            'staffEntry' => $this->staffEntry($user),
         ]]);
+    }
+
+    /**
+     * Nút truy cập khu nội bộ hiển thị ở trang chủ theo vai trò:
+     * - admin / quản lý (manager): vào trang Quản trị (/admin)
+     * - thu ngân (cashier): vào thẳng màn hình Tích điểm (/pos/points)
+     * - khách thường: không có nút (null).
+     */
+    private function staffEntry(?\App\Models\User $user): ?array
+    {
+        if (!AdminAccess::canEnter($user)) {
+            return null;
+        }
+
+        $role = $user->staff->role ?? null;
+
+        if ($user->user_type !== 'admin' && $role === 'cashier') {
+            return ['url' => '/pos/points', 'label' => 'Bán hàng'];
+        }
+
+        return ['url' => '/admin', 'label' => 'Quản trị'];
     }
 
     /** Tin tức đang hiển thị cho trang chủ. */

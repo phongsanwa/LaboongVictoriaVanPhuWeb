@@ -11,6 +11,8 @@ const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
 const HOME = window.HOME_DATA || {};
 const MEMBER = HOME.member || { name: "", id: "", tier: "" };
 const ADMIN_ACCESS = !!HOME.adminAccess; // admin hoặc quản lý (staff active) mới thấy nút Quản trị
+// Nút vào khu nội bộ: admin/quản lý → /admin (Quản trị); thu ngân → /pos/points (Bán hàng).
+const STAFF_ENTRY = HOME.staffEntry || { url: NAV_URLS.adminHome, label: "Quản trị" };
 const GOAL = HOME.goal || 0;
 const REWARD = HOME.reward || "";
 const PROMOS = HOME.promos || [];
@@ -232,8 +234,8 @@ function App() {
             {ADMIN_ACCESS && (
               <a
                 className="admin-enter"
-                href={NAV_URLS.adminHome}
-                title="Vào trang quản trị"
+                href={STAFF_ENTRY.url}
+                title={STAFF_ENTRY.label}
                 style={{
                   display: "inline-flex", alignItems: "center", gap: 6,
                   padding: "8px 14px", borderRadius: 999, textDecoration: "none",
@@ -243,7 +245,7 @@ function App() {
                 }}
               >
                 <Icon name="gear" size={16} color="#fff" />
-                <span className="admin-enter-txt">Quản trị</span>
+                <span className="admin-enter-txt">{STAFF_ENTRY.label}</span>
               </a>
             )}
             <a className="avatar" href={NAV_URLS.profile} title={MEMBER.name}>{initials}</a>
