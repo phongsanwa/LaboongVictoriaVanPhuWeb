@@ -110,6 +110,44 @@ function App() {
   const [ciToast, setCiToast] = useState(null);
   const [ciLoading, setCiLoading] = useState(false);
 
+  /* ── Thêm vào màn hình chính (PWA) ── */
+  const isStandalone = () => window.matchMedia?.("(display-mode: standalone)").matches || window.navigator.standalone === true;
+  const isIOS = () => /iphone|ipad|ipod/i.test(window.navigator.userAgent) && !window.MSStream;
+  const [installEvt, setInstallEvt] = useState(null);
+  const [iosGuide, setIosGuide] = useState(false);
+  const [installed, setInstalled] = useState(isStandalone());
+  const [installDismissed, setInstallDismissed] = useState(() => {
+    try { return localStorage.getItem("lb_a2hs_dismiss") === "1"; } catch (e) { return false; }
+  });
+
+  useEffect(() => {
+    const onPrompt = (e) => { e.preventDefault(); setInstallEvt(e); };
+    const onInstalled = () => { setInstalled(true); setInstallEvt(null); };
+    window.addEventListener("beforeinstallprompt", onPrompt);
+    window.addEventListener("appinstalled", onInstalled);
+    return () => { window.removeEventListener("beforeinstallprompt", onPrompt); window.removeEventListener("appinstalled", onInstalled); };
+  }, []);
+
+  const addToHomeScreen = async () => {
+    if (installEvt) {                         // Android / Chrome: bật hộp cài đặt hệ thống
+      installEvt.prompt();
+      try { await installEvt.userChoice; } catch (e) { /* ignore */ }
+      setInstallEvt(null);
+    } else if (isIOS()) {                      // iPhone: hướng dẫn thủ công qua nút Chia sẻ
+      setIosGuide(true);
+    } else {
+      setIosGuide(true);                       // trình duyệt khác: hiện hướng dẫn chung
+    }
+  };
+
+  const dismissInstall = () => {
+    setInstallDismissed(true);
+    try { localStorage.setItem("lb_a2hs_dismiss", "1"); } catch (e) { /* ignore */ }
+  };
+
+  // Hiện nút khi: chưa cài, chưa ẩn, và (có sự kiện cài được HOẶC là iOS)
+  const showInstall = !installed && !installDismissed && (installEvt || isIOS());
+
   const dayIdx = checkedToday ? (streak - 1) % 7 : streak % 7;
 
   const doCheckin = async () => {
@@ -214,6 +252,41 @@ function App() {
           <h1>Chào <b>{MEMBER.name}</b> 👋</h1>
           <p>Tích điểm mỗi ly, đổi quà mỗi ngày tại Laboong.</p>
         </div>
+
+        {showInstall && (
+          <div style={{
+            display: "flex", alignItems: "center", gap: 12, marginBottom: 16,
+            background: "linear-gradient(150deg,#0F623F,#1AA86A)", color: "#fff",
+            borderRadius: 16, padding: "13px 14px", boxShadow: "0 6px 18px rgba(15,98,63,.25)",
+          }}>
+            <div style={{ width: 40, height: 40, borderRadius: 11, background: "rgba(255,255,255,.2)", display: "flex", alignItems: "center", justifyContent: "center", flex: "none", fontWeight: 800, fontFamily: "'Baloo 2',cursive", fontSize: 22 }}>L</div>
+            <div style={{ minWidth: 0, flex: 1 }}>
+              <div style={{ fontWeight: 700, fontSize: 14.5 }}>Cài Laboong lên màn hình chính</div>
+              <div style={{ fontSize: 12, opacity: .85 }}>Mở nhanh như một app, khỏi gõ địa chỉ web.</div>
+            </div>
+            <button onClick={addToHomeScreen} style={{ flex: "none", background: "#fff", color: "#0F623F", border: "none", borderRadius: 10, padding: "9px 15px", fontWeight: 800, fontSize: 13.5, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 6 }}>
+              <Icon name="plus2" size={15} color="#0F623F" /> Thêm
+            </button>
+            <button onClick={dismissInstall} title="Ẩn" style={{ flex: "none", background: "transparent", border: "none", color: "rgba(255,255,255,.8)", cursor: "pointer", padding: 4 }}>
+              <Icon name="close" size={16} color="#fff" />
+            </button>
+          </div>
+        )}
+
+        {iosGuide && (
+          <div className="scrim" onClick={() => setIosGuide(false)} style={{ position: "fixed", inset: 0, zIndex: 200, background: "rgba(8,30,20,.55)", display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
+            <div onClick={e => e.stopPropagation()} style={{ background: "var(--card,#fff)", borderRadius: 18, padding: 24, maxWidth: 380, width: "100%", textAlign: "center", boxShadow: "0 24px 60px rgba(0,0,0,.25)" }}>
+              <div style={{ width: 52, height: 52, borderRadius: 14, margin: "0 auto 12px", background: "linear-gradient(150deg,#0F623F,#1AA86A)", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontWeight: 800, fontFamily: "'Baloo 2',cursive", fontSize: 26 }}>L</div>
+              <h3 style={{ margin: "0 0 6px", fontSize: 18, fontWeight: 800 }}>Thêm Laboong vào màn hình chính</h3>
+              <p style={{ margin: "0 0 14px", fontSize: 13.5, color: "var(--ink-2,#555)", lineHeight: 1.6 }}>
+                {isIOS()
+                  ? <>Trên iPhone (Safari):<br />1. Bấm nút <b>Chia sẻ</b> <span style={{ display: "inline-block" }}>⬆️</span> ở thanh dưới.<br />2. Chọn <b>“Thêm vào MH chính”</b> (Add to Home Screen).<br />3. Bấm <b>Thêm</b> — xong!</>
+                  : <>Mở menu trình duyệt (⋮) và chọn <b>“Thêm vào màn hình chính”</b> / <b>“Cài đặt ứng dụng”</b>.</>}
+              </p>
+              <button className="btn primary" style={{ width: "100%" }} onClick={() => setIosGuide(false)}>Đã hiểu</button>
+            </div>
+          </div>
+        )}
 
         <div className="grid">
           {/* ============ LEFT COLUMN ============ */}
