@@ -11,6 +11,8 @@ const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
 const HOME = window.HOME_DATA || {};
 const MEMBER = HOME.member || { name: "", id: "", tier: "" };
 const ADMIN_ACCESS = !!HOME.adminAccess; // admin hoặc quản lý (staff active) mới thấy nút Quản trị
+// Nút vào khu nội bộ: admin/quản lý → /admin (Quản trị); thu ngân → /pos/points (Bán hàng).
+const STAFF_ENTRY = HOME.staffEntry || { url: NAV_URLS.adminHome, label: "Quản trị" };
 const GOAL = HOME.goal || 0;
 const REWARD = HOME.reward || "";
 const PROMOS = HOME.promos || [];
@@ -120,9 +122,6 @@ function App() {
   const [installEvt, setInstallEvt] = useState(null);
   const [iosGuide, setIosGuide] = useState(false);
   const [installed, setInstalled] = useState(isStandalone());
-  const [installDismissed, setInstallDismissed] = useState(() => {
-    try { return localStorage.getItem("lb_a2hs_dismiss") === "1"; } catch (e) { return false; }
-  });
 
   useEffect(() => {
     const onPrompt = (e) => { e.preventDefault(); setInstallEvt(e); };
@@ -144,13 +143,9 @@ function App() {
     }
   };
 
-  const dismissInstall = () => {
-    setInstallDismissed(true);
-    try { localStorage.setItem("lb_a2hs_dismiss", "1"); } catch (e) { /* ignore */ }
-  };
-
-  // Hiện nút khi: chưa cài, chưa ẩn, và (có sự kiện cài được HOẶC là iOS)
-  const showInstall = !installed && !installDismissed && (installEvt || isIOS());
+  // Hiện banner khi CHƯA cài (và cài được: có sự kiện beforeinstallprompt HOẶC là iOS).
+  // Cài rồi (mở dạng app / standalone) thì tự ẩn — không có nút tắt thủ công.
+  const showInstall = !installed && (installEvt || isIOS());
 
   const dayIdx = checkedToday ? (streak - 1) % 7 : streak % 7;
 
@@ -232,8 +227,8 @@ function App() {
             {ADMIN_ACCESS && (
               <a
                 className="admin-enter"
-                href={NAV_URLS.adminHome}
-                title="Vào trang quản trị"
+                href={STAFF_ENTRY.url}
+                title={STAFF_ENTRY.label}
                 style={{
                   display: "inline-flex", alignItems: "center", gap: 6,
                   padding: "8px 14px", borderRadius: 999, textDecoration: "none",
@@ -243,7 +238,7 @@ function App() {
                 }}
               >
                 <Icon name="gear" size={16} color="#fff" />
-                <span className="admin-enter-txt">Quản trị</span>
+                <span className="admin-enter-txt">{STAFF_ENTRY.label}</span>
               </a>
             )}
             <a className="avatar" href={NAV_URLS.profile} title={MEMBER.name}>{initials}</a>
@@ -270,9 +265,6 @@ function App() {
             </div>
             <button onClick={addToHomeScreen} style={{ flex: "none", background: "#fff", color: "#0F623F", border: "none", borderRadius: 10, padding: "9px 15px", fontWeight: 800, fontSize: 13.5, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 6 }}>
               <Icon name="plus2" size={15} color="#0F623F" /> Thêm
-            </button>
-            <button onClick={dismissInstall} title="Ẩn" style={{ flex: "none", background: "transparent", border: "none", color: "rgba(255,255,255,.8)", cursor: "pointer", padding: 4 }}>
-              <Icon name="close" size={16} color="#fff" />
             </button>
           </div>
         )}

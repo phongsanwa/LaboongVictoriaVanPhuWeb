@@ -126,7 +126,8 @@ function validatePasswordConfirm(pw, confirm) {
 /* ---------------- Step 1: form ---------------- */
 function FormStep({ data, setData, onNext }) {
   const [touched, setTouched] = useState({});
-  const [serverError, setServerError] = useState("");
+  // Lỗi trả về từ server theo từng field: { phone, email, name, password, dob, _general }
+  const [serverErrors, setServerErrors] = useState({});
   const [loading, setLoading] = useState(false);
   const [showPw, setShowPw] = useState(false);
   const [showPw2, setShowPw2] = useState(false);
@@ -139,9 +140,18 @@ function FormStep({ data, setData, onNext }) {
   const nameOk = data.name.trim().length >= 2;
   const canSubmit = phoneRes.ok && emailRes.ok && dobRes.ok && nameOk && pwRes.ok && pw2Res.ok;
 
+  // Xoá lỗi server của 1 field khi người dùng sửa lại field đó
+  const clearServerError = (field) => setServerErrors(prev => {
+    if (!prev[field] && !prev._general) return prev;
+    const next = { ...prev };
+    delete next[field];
+    delete next._general;
+    return next;
+  });
+
   const submit = async () => {
     setTouched({ phone: true, name: true, email: true, dob: true, password: true, password_confirmation: true });
-    setServerError("");
+    setServerErrors({});
     if (!canSubmit) return;
 
     setLoading(true);
@@ -151,7 +161,15 @@ function FormStep({ data, setData, onNext }) {
     });
     setLoading(false);
 
-    if (!ok) { setServerError(res.message || "Có lỗi xảy ra, vui lòng thử lại."); return; }
+    if (!ok) {
+      // Gán lỗi đúng field: Laravel trả errors = { field: [msg, ...] }
+      const errs = res.errors || {};
+      const mapped = {};
+      Object.keys(errs).forEach(k => { mapped[k] = Array.isArray(errs[k]) ? errs[k][0] : errs[k]; });
+      if (!Object.keys(mapped).length) mapped._general = res.message || "Có lỗi xảy ra, vui lòng thử lại.";
+      setServerErrors(mapped);
+      return;
+    }
     onNext(res.redirect, res.welcome_points);
   };
 
@@ -166,14 +184,14 @@ function FormStep({ data, setData, onNext }) {
         <label>Số điện thoại<span className="req">*</span></label>
         <div className="inp-wrap">
           <span className="lic"><Icon name="phone" size={18} /></span>
-          <input className={"inp" + ((touched.phone && !phoneRes.ok) || serverError ? " bad" : "")} inputMode="numeric"
+          <input className={"inp" + ((touched.phone && !phoneRes.ok) || serverErrors.phone ? " bad" : "")} inputMode="numeric"
             placeholder="0912 345 678" value={data.phone}
-            onChange={e => { setData({ ...data, phone: e.target.value.replace(/[^\d\s.\-]/g, "") }); setServerError(""); }}
+            onChange={e => { setData({ ...data, phone: e.target.value.replace(/[^\d\s.\-]/g, "") }); clearServerError("phone"); }}
             onBlur={() => setTouched(t => ({ ...t, phone: true }))} />
-          {phoneRes.ok && data.phone && !serverError && <span className="okmark"><Icon name="check" size={18} /></span>}
+          {phoneRes.ok && data.phone && !serverErrors.phone && <span className="okmark"><Icon name="check" size={18} /></span>}
         </div>
-        {serverError
-          ? <div className="err"><Icon name="info" size={14} color="var(--danger)" /> {serverError}</div>
+        {serverErrors.phone
+          ? <div className="err"><Icon name="info" size={14} color="var(--danger)" /> {serverErrors.phone}</div>
           : touched.phone && !phoneRes.ok
             ? <div className="err"><Icon name="info" size={14} color="var(--danger)" /> {phoneRes.msg}</div>
             : <div className="hint">Dùng để đăng nhập vào tài khoản của bạn.</div>}
@@ -183,12 +201,16 @@ function FormStep({ data, setData, onNext }) {
         <label>Họ và tên<span className="req">*</span></label>
         <div className="inp-wrap">
           <span className="lic"><Icon name="user" size={18} /></span>
-          <input className={"inp" + (touched.name && !nameOk ? " bad" : "")}
+          <input className={"inp" + ((touched.name && !nameOk) || serverErrors.name ? " bad" : "")}
             placeholder="VD: Nguyễn Minh Anh" value={data.name}
-            onChange={e => setData({ ...data, name: e.target.value })}
+            onChange={e => { setData({ ...data, name: e.target.value }); clearServerError("name"); }}
             onBlur={() => setTouched(t => ({ ...t, name: true }))} />
         </div>
-        {touched.name && !nameOk && <div className="err"><Icon name="info" size={14} color="var(--danger)" /> Vui lòng nhập họ tên</div>}
+        {serverErrors.name
+          ? <div className="err"><Icon name="info" size={14} color="var(--danger)" /> {serverErrors.name}</div>
+          : touched.name && !nameOk
+            ? <div className="err"><Icon name="info" size={14} color="var(--danger)" /> Vui lòng nhập họ tên</div>
+            : null}
       </div>
 
       <div className="fld">
@@ -223,13 +245,17 @@ function FormStep({ data, setData, onNext }) {
         <label>Email<span className="req">*</span></label>
         <div className="inp-wrap">
           <span className="lic"><Icon name="mail" size={18} /></span>
-          <input className={"inp" + (touched.email && !emailRes.ok ? " bad" : "")} inputMode="email"
+          <input className={"inp" + ((touched.email && !emailRes.ok) || serverErrors.email ? " bad" : "")} inputMode="email"
             placeholder="ban@email.com" value={data.email}
-            onChange={e => setData({ ...data, email: e.target.value })}
+            onChange={e => { setData({ ...data, email: e.target.value }); clearServerError("email"); }}
             onBlur={() => setTouched(t => ({ ...t, email: true }))} />
-          {emailRes.ok && data.email && <span className="okmark"><Icon name="check" size={18} /></span>}
+          {emailRes.ok && data.email && !serverErrors.email && <span className="okmark"><Icon name="check" size={18} /></span>}
         </div>
-        {touched.email && !emailRes.ok && <div className="err"><Icon name="info" size={14} color="var(--danger)" /> {emailRes.msg}</div>}
+        {serverErrors.email
+          ? <div className="err"><Icon name="info" size={14} color="var(--danger)" /> {serverErrors.email}</div>
+          : touched.email && !emailRes.ok
+            ? <div className="err"><Icon name="info" size={14} color="var(--danger)" /> {emailRes.msg}</div>
+            : null}
       </div>
 
       <div className="fld" style={{ position: "relative" }}>
@@ -252,6 +278,10 @@ function FormStep({ data, setData, onNext }) {
           ? <div className="err"><Icon name="info" size={14} color="var(--danger)" /> {dobRes.msg}</div>
           : <div className="hint">Bấm để chọn ngày hoặc gõ trực tiếp · Nhận quà sinh nhật từ Laboong 🎂</div>}
       </div>
+
+      {serverErrors._general && (
+        <div className="err" style={{ marginTop: 4 }}><Icon name="info" size={14} color="var(--danger)" /> {serverErrors._general}</div>
+      )}
 
       <button className="btn primary" disabled={!canSubmit || loading} onClick={submit} style={{ marginTop: 6 }}>
         {loading ? "Đang đăng ký…" : <>Đăng ký <Icon name="arrow" size={18} color={canSubmit ? "#fff" : "currentColor"} /></>}
