@@ -151,6 +151,17 @@ function QRCanvas({ value }) {
 /* ---------------- helpers ---------------- */
 function fmt(n) { return n.toLocaleString("vi-VN"); }
 
+/* ---------------- Logo thương hiệu ----------------
+   Lấy logo đã upload ở Admin (Cài đặt chung → Logo) qua window.BRAND_LOGO.
+   Có logo: hiển thị ảnh; chưa có: dùng chữ "L" mặc định như trước. */
+const BRAND_LOGO_URL = (typeof window !== "undefined" && window.BRAND_LOGO) || null;
+function BrandGlyph({ letter = "L", alt = "Logo" }) {
+  if (BRAND_LOGO_URL) {
+    return <img className="brand-logo-img" src={BRAND_LOGO_URL} alt={alt} />;
+  }
+  return <span>{letter}</span>;
+}
+
 /* ---------------- Shared navigation map ---------------- */
 const NAV_URLS = {
   // customer

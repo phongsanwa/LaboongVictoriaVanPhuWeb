@@ -360,7 +360,7 @@ function App() {
     <div className="wrap">
       <div className="card">
         <div className="brand">
-          <div className="brand-mark"><span>L</span></div>
+          <div className="brand-mark"><BrandGlyph /></div>
           <div className="brand-name">Laboong</div>
           <div className="brand-sub">Victoria Văn Phú · Thẻ thành viên</div>
         </div>
