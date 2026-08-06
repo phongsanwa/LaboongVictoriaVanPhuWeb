@@ -269,7 +269,7 @@ function App() {
   return (
     <>
       <header className="topbar">
-        <div className="tb-mark"><span>L</span></div>
+        <div className="tb-mark"><BrandGlyph /></div>
         <div style={{ minWidth: 0, flex: 1 }}>
           <div className="tb-title">Tích điểm cho khách</div>
           {multiStore ? (

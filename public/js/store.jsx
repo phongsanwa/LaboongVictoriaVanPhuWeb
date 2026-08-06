@@ -165,7 +165,7 @@ function App() {
           {/* identity */}
           <section className="store-id">
             <div className="store-top">
-              <div className="store-logo"><span>L</span></div>
+              <div className="store-logo"><BrandGlyph /></div>
               <div style={{ minWidth: 0, flex: 1 }}>
                 <div className="store-name">{store.name}</div>
                 <div className="store-sub">

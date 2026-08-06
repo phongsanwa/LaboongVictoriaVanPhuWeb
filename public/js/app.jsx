@@ -210,7 +210,7 @@ function App() {
       <header className="hdr">
         <div className="hdr-in">
           <div className="brand">
-            <div className="brand-mark"><span>L</span></div>
+            <div className="brand-mark"><BrandGlyph /></div>
             <div className="brand-txt">
               <div className="brand-name">Laboong</div>
               <div className="brand-sub">Victoria Văn Phú</div>

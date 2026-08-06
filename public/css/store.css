@@ -86,6 +86,7 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
 .store-top { display: flex; align-items: flex-start; gap: 13px; }
 .store-logo { width: 52px; height: 52px; border-radius: 15px; background: linear-gradient(150deg, var(--brand), var(--brand-deep)); display: grid; place-items: center; flex: none; box-shadow: var(--shadow-brand); position: relative; }
 .store-logo span { font-family: var(--display); font-weight: 800; font-size: 26px; color: #fff; }
+.brand-logo-img { width: 100%; height: 100%; object-fit: cover; border-radius: inherit; display: block; }
 .store-logo::after { content:""; position:absolute; width:13px; height:13px; border-radius:50%; background:var(--yellow); right:5px; bottom:5px; }
 .store-name { font-family: var(--display); font-weight: 800; font-size: 21px; letter-spacing: -.01em; line-height: 1.15; }
 .store-sub { display: flex; align-items: center; gap: 9px; margin-top: 6px; flex-wrap: wrap; }
@@ -161,3 +162,6 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
 .toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); z-index: 120; background: var(--ink); color: var(--bg); padding: 13px 20px; border-radius: 999px; font-size: 14px; font-weight: 600; box-shadow: var(--shadow-lg); display: flex; align-items: center; gap: 10px; white-space: nowrap; animation: tin .3s cubic-bezier(.2,.8,.2,1); }
 .toast .tc { width: 24px; height: 24px; border-radius: 50%; background: var(--brand); display: grid; place-items: center; flex: none; }
 @keyframes tin { from { opacity: 0; transform: translateX(-50%) translateY(10px); } to { opacity: 1; transform: translateX(-50%) translateY(0); } }
+
+.store-logo:has(.brand-logo-img) { background: #fff; }
+.store-logo:has(.brand-logo-img)::after { display: none; }
