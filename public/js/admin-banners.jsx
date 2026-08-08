@@ -199,6 +199,19 @@ function App() {
     catch (e) { flash(e.message, false); }
   };
 
+  // Nút ▲▼ đổi chỗ banner lên/xuống 1 bậc (tiện dùng trên điện thoại)
+  const move = (id, dir) => {
+    setBanners(list => {
+      const i = list.findIndex(b => b.id === id);
+      const j = i + dir;
+      if (i < 0 || j < 0 || j >= list.length) return list;
+      const arr = [...list];
+      [arr[i], arr[j]] = [arr[j], arr[i]];
+      persistOrder(arr);
+      return arr;
+    });
+  };
+
   const onDrop = (targetId) => {
     setOverId(null);
     const from = dragId; setDragId(null);
@@ -241,7 +254,7 @@ function App() {
             </div>
           )}
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(340px, 1fr))", gap: 16 }}>
-            {banners.map(n => (
+            {banners.map((n, i) => (
               <div key={n.id}
                 draggable
                 onDragStart={() => setDragId(n.id)}
@@ -268,7 +281,13 @@ function App() {
                   {n.link_url
                     ? <div style={{ fontSize: 12.5, color: "var(--ink-2)", marginBottom: 10, wordBreak: "break-all" }}><Icon name="link" size={12} /> {n.link_url}</div>
                     : <div style={{ fontSize: 12.5, color: "var(--ink-3)", marginBottom: 10 }}>Không có link</div>}
-                  <div style={{ display: "flex", gap: 8 }}>
+                  <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                    {banners.length > 1 && (
+                      <div style={{ display: "flex", gap: 4 }}>
+                        <button className="btn ghost tiny" title="Lên" disabled={i === 0} onClick={() => move(n.id, -1)} style={i === 0 ? { opacity: 0.4 } : {}}><Icon name="chevup" size={14} /></button>
+                        <button className="btn ghost tiny" title="Xuống" disabled={i === banners.length - 1} onClick={() => move(n.id, 1)} style={i === banners.length - 1 ? { opacity: 0.4 } : {}}><Icon name="chevdown" size={14} /></button>
+                      </div>
+                    )}
                     <button className="btn ghost tiny" onClick={() => setEditor(n)}><Icon name="edit" size={14} /> Sửa</button>
                     <button className="btn ghost tiny" onClick={() => toggle(n)}><Icon name={n.status === "active" ? "eyeoff" : "eye"} size={14} /> {n.status === "active" ? "Ẩn" : "Hiện"}</button>
                     <button className="btn ghost tiny" style={{ marginLeft: "auto", color: "var(--hot)" }} onClick={() => setConfirmDel(n)}><Icon name="trash" size={14} /></button>
