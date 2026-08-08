@@ -33,6 +33,10 @@ class Promotion extends Model
         if ($this->type === 'percent') {
             return max(0, $price - (int) floor($price * $this->value / 100));
         }
+        // Đồng giá: bán ra đúng mức giá cố định (không vượt quá giá gốc).
+        if ($this->type === 'fixed') {
+            return max(0, min($price, (int) $this->value));
+        }
         return max(0, $price - $this->value);
     }
 
@@ -40,6 +44,9 @@ class Promotion extends Model
     {
         if ($this->type === 'percent') {
             return "-{$this->value}%";
+        }
+        if ($this->type === 'fixed') {
+            return 'Đồng giá';
         }
         return '-' . number_format($this->value, 0, ',', '.') . 'đ';
     }

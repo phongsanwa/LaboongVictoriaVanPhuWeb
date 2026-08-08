@@ -81,7 +81,9 @@ function PromoEditor({ initial, kind, allProducts, onClose, onSave, saving }) {
     });
   };
 
-  const previewBadge = numVal > 0 ? (type === 'percent' ? `-${numVal}%` : `-${fmt(numVal)}đ`) : null;
+  const previewBadge = numVal > 0
+    ? (type === 'percent' ? `-${numVal}%` : type === 'fixed' ? `Đồng giá ${fmt(numVal)}đ` : `-${fmt(numVal)}đ`)
+    : null;
 
   const inputRow = (label, input, hint) => (
     <div className="fld">
@@ -161,7 +163,11 @@ function PromoEditor({ initial, kind, allProducts, onClose, onSave, saving }) {
           {/* Type */}
           <div className="fld">
             <label>Loại giảm giá</label>
-            {radioRow('pmtype', [
+            {radioRow('pmtype', kind === 'price' ? [
+              { v: 'percent', label: 'Giảm %',   desc: 'Phần trăm trên giá món' },
+              { v: 'amount',  label: 'Giảm tiền', desc: 'Trừ số tiền cố định' },
+              { v: 'fixed',   label: 'Đồng giá',  desc: 'Bán ra một mức giá cố định' },
+            ] : [
               { v: 'percent', label: 'Giảm %',   desc: 'Phần trăm trên tổng tiền' },
               { v: 'amount',  label: 'Giảm tiền', desc: 'Số tiền cố định' },
             ], type, setType)}
@@ -169,12 +175,12 @@ function PromoEditor({ initial, kind, allProducts, onClose, onSave, saving }) {
 
           {/* Value */}
           <div className="fld">
-            <label>Mức giảm</label>
+            <label>{type === 'fixed' ? 'Giá đồng giá' : 'Mức giảm'}</label>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
               <div style={{ position: 'relative', flex: 1 }}>
                 <input className="inp tnum" inputMode="numeric" value={value}
                   onChange={e => setValue(e.target.value.replace(/[^\d]/g, ''))}
-                  placeholder={type === 'percent' ? '0–100' : 'Số tiền'}
+                  placeholder={type === 'percent' ? '0–100' : (type === 'fixed' ? 'Giá bán ra' : 'Số tiền')}
                   style={{ paddingRight: 44 }} />
                 <span style={{
                   position: 'absolute', right: 13, top: '50%', transform: 'translateY(-50%)',
@@ -366,7 +372,7 @@ function PromoCard({ p, kind, saving, onEdit, onToggle, onDel }) {
             fontSize: 12, fontWeight: 600, padding: '2px 9px', borderRadius: 20,
             background: 'var(--brand-soft)', color: 'var(--brand-ink)',
           }}>
-            {p.type === 'percent' ? 'Giảm %' : 'Giảm tiền'}
+            {p.type === 'percent' ? 'Giảm %' : p.type === 'fixed' ? 'Đồng giá' : 'Giảm tiền'}
           </span>
           {kind === 'price' && (
             <span style={{ fontSize: 12, color: 'var(--ink-3)' }}>
@@ -454,7 +460,7 @@ function App() {
   const save = async (formData) => {
     const kind   = editorKind;
     const setter = setterFor(kind);
-    const makeBadge = fd => fd.type === 'percent' ? `-${fd.value}%` : `-${fmt(fd.value)}đ`;
+    const makeBadge = fd => fd.type === 'percent' ? `-${fd.value}%` : fd.type === 'fixed' ? 'Đồng giá' : `-${fmt(fd.value)}đ`;
 
     if (!LIVE) {
       if (editor.id) {
