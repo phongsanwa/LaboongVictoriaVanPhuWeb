@@ -21,6 +21,7 @@ class SettingsController extends Controller
         'logo_url' => null,
         'favicon_url' => null,
         'checkin_enabled' => true, // bật/tắt chức năng điểm danh hàng ngày
+        'ios_guide_html' => null,  // hướng dẫn thêm ra màn hình chính iPhone (HTML từ trình soạn thảo)
     ];
 
     private const POINTS_DEFAULTS = [
@@ -119,6 +120,7 @@ class SettingsController extends Controller
             'general.email' => ['required', 'email'],
             'general.hotline' => ['required', 'string', 'max:30'],
             'general.checkin_enabled' => ['required', 'boolean'],
+            'general.ios_guide_html' => ['nullable', 'string', 'max:50000'],
 
             'points' => ['required', 'array'],
             'points.per_point' => ['required', 'integer', 'min:1'],
@@ -154,6 +156,8 @@ class SettingsController extends Controller
         $general['logo_url'] = $current['logo_url'] ?? null;
         $general['favicon_url'] = $current['favicon_url'] ?? null;
         $general['checkin_enabled'] = (bool) ($data['general']['checkin_enabled'] ?? true);
+        // Hướng dẫn iPhone là HTML từ trình soạn thảo → làm sạch chống XSS trước khi lưu.
+        $general['ios_guide_html'] = \App\Support\HtmlSanitizer::clean($data['general']['ios_guide_html'] ?? null);
         AppSetting::set('general', $general);
         AppSetting::set('points', $data['points']);
         AppSetting::set('timing', $data['timing']);

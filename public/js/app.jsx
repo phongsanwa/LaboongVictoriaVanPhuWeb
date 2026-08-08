@@ -81,6 +81,8 @@ const CHECKIN_CONFIG = HOME.checkinConfig || [
 ];
 // Bật/tắt chức năng điểm danh (Admin → Cài đặt chung). Mặc định bật nếu server không gửi cờ.
 const CHECKIN_ENABLED = HOME.checkinEnabled !== false;
+// Hướng dẫn cài lên iPhone do admin soạn (HTML đã làm sạch ở server). Trống → dùng hướng dẫn mặc định.
+const IOS_GUIDE_HTML = (HOME.iosGuideHtml && HOME.iosGuideHtml.trim()) ? HOME.iosGuideHtml : null;
 
 function storeStatus(store) {
   if (!store || !store.opening_time || !store.closing_time) return "";
@@ -284,7 +286,11 @@ function App() {
                 {/* Card gọn nổi phía trên thanh công cụ */}
                 <div onClick={e => e.stopPropagation()} style={{ position: "absolute", left: 16, right: 16, bottom: 108, background: "var(--card,#fff)", borderRadius: 18, padding: "18px 18px 16px", maxWidth: 380, margin: "0 auto", boxShadow: "0 20px 50px rgba(0,0,0,.28)", textAlign: "center" }}>
                   <div style={{ width: 46, height: 46, borderRadius: 13, overflow: "hidden", margin: "0 auto 10px", background: "linear-gradient(150deg,#0F623F,#1AA86A)", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontWeight: 800, fontFamily: "'Baloo 2',cursive", fontSize: 23 }}><BrandGlyph /></div>
-                  <h3 style={{ margin: "0 0 10px", fontSize: 17, fontWeight: 800 }}>Chỉ 2 bước là xong 👇</h3>
+                  <h3 style={{ margin: "0 0 10px", fontSize: 17, fontWeight: 800 }}>{IOS_GUIDE_HTML ? "Thêm Laboong vào màn hình chính 👇" : "Chỉ 2 bước là xong 👇"}</h3>
+                  {IOS_GUIDE_HTML ? (
+                    <div className="ios-guide-html" style={{ textAlign: "left", fontSize: 14, color: "var(--ink-2,#555)", lineHeight: 1.6 }}
+                      dangerouslySetInnerHTML={{ __html: IOS_GUIDE_HTML }} />
+                  ) : (
                   <div style={{ textAlign: "left", fontSize: 14, color: "var(--ink-2,#555)", lineHeight: 1.55 }}>
                     <div style={{ display: "flex", gap: 9, alignItems: "center", marginBottom: 9 }}>
                       <span style={{ flex: "none", width: 24, height: 24, borderRadius: "50%", background: "var(--brand,#0F623F)", color: "#fff", fontSize: 13, fontWeight: 800, display: "grid", placeItems: "center" }}>1</span>
@@ -295,6 +301,7 @@ function App() {
                       <span>Chọn <b>“Thêm vào MH chính”</b> → <b>Thêm</b>.</span>
                     </div>
                   </div>
+                  )}
                   <div style={{ marginTop: 11, fontSize: 11.5, color: "var(--ink-3,#999)" }}>Không thấy thanh dưới? Chạm nhẹ hoặc vuốt xuống để hiện lại.</div>
                   <button onClick={() => setIosGuide(false)} style={{ marginTop: 12, width: "100%", background: "transparent", border: "1.5px solid var(--line,#e5e7eb)", borderRadius: 11, padding: "9px", fontWeight: 700, fontSize: 13.5, color: "var(--ink-2,#555)", cursor: "pointer" }}>Đóng</button>
                 </div>

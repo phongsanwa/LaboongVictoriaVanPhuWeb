@@ -34,6 +34,7 @@ class HomeController extends Controller
                 'checkinEnabled' => CheckinController::isEnabled(),
                 'news' => $this->buildNews(),
                 'adminAccess' => AdminAccess::canEnter($user),
+                'iosGuideHtml' => \App\Models\AppSetting::get('general', [])['ios_guide_html'] ?? null,
                 'staffEntry' => $this->staffEntry($user),
             ]]);
         }
@@ -120,6 +121,7 @@ class HomeController extends Controller
             'checkinEnabled' => CheckinController::isEnabled(),
             'news' => $this->buildNews(),
             'adminAccess' => AdminAccess::canEnter($user),
+            'iosGuideHtml' => \App\Models\AppSetting::get('general', [])['ios_guide_html'] ?? null,
             'staffEntry' => $this->staffEntry($user),
         ]]);
     }
