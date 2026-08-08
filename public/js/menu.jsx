@@ -428,7 +428,11 @@ function App() {
   const [liveShippingTiers,  ] = useState(getLiveShippingTiers);
   const [liveShippingPromos, ] = useState(getLiveShippingPromos);
   const [liveOrderPromos,    ] = useState(getLiveOrderPromos);
-  const [selectedStoreId, setSelectedStoreId] = useState(getLiveStoreId);
+  // Chỉ tự chọn sẵn khi CHỈ CÓ 1 chi nhánh; nhiều chi nhánh thì để trống, khách phải tự bấm chọn "Giao từ".
+  const [selectedStoreId, setSelectedStoreId] = useState(() => {
+    const stores = getLiveStores();
+    return stores.length === 1 ? stores[0].id : null;
+  });
   const [storeView,  setStoreView]  = useState(false);
   const [storeViewMode, setStoreViewMode] = useState("pickup"); // "pickup" | "delivery"
   const [userLoc,    setUserLoc]    = useState(null);
@@ -612,7 +616,8 @@ function App() {
   const saleSavings  = Math.max(0, origSubtotal - subtotal);
 
   const selectedAddr  = addrId === "pickup" ? null : addresses.find(a => a.id === addrId);
-  const selectedStore = liveStores.find(s => s.id === selectedStoreId) || liveStores[0] || null;
+  // Không mặc định chi nhánh khi có nhiều cửa hàng — khách phải tự chọn (chỉ 1 cửa hàng mới auto).
+  const selectedStore = liveStores.find(s => s.id === selectedStoreId) || (liveStores.length === 1 ? liveStores[0] : null);
 
   /* Khoảng cách đường bộ (xe máy) cửa hàng → địa chỉ giao qua Distance
      Matrix; undefined = đang tính, null = API lỗi (dùng Haversine dự phòng) */
@@ -817,6 +822,14 @@ function App() {
 
     if (!LIVE) { setActualPts(earnPts); setPlaced(true); clearCart(); return; }
 
+    // Bắt buộc chọn chi nhánh khi có nhiều cửa hàng (không còn mặc định "Giao từ").
+    if (liveStores.length > 1 && !selectedStore) {
+      setOrderErr(selectedAddr ? "Vui lòng chọn chi nhánh giao hàng." : "Vui lòng chọn chi nhánh nhận hàng.");
+      setStoreViewMode(selectedAddr ? "delivery" : "pickup");
+      setStoreView(true);
+      return;
+    }
+
     setPlacing(true);
     try {
       const res = await fetch(LIVE_D.urls?.placeOrder, {
@@ -852,7 +865,7 @@ function App() {
   };
 
   const addrIcon = (label) => label === "Công ty" ? "building" : label === "Khác" ? "pin" : "home";
-  const pickupLabel   = selectedStore ? selectedStore.name : ('Laboong ' + liveStore);
+  const pickupLabel   = selectedStore ? selectedStore.name : (liveStores.length > 1 ? 'Chưa chọn chi nhánh' : ('Laboong ' + liveStore));
 
   const sortedStores = useMemo(() => {
     if (!userLoc) return liveStores;
