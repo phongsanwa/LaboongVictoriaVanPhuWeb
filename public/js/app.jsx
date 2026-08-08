@@ -18,6 +18,8 @@ const REWARD = HOME.reward || "";
 const PROMOS = HOME.promos || [];
 const TX = HOME.transactions || [];
 const STORE = HOME.store || null;
+// Danh sách tất cả cửa hàng đang hoạt động (trang chủ hiển thị hết, không chỉ 1).
+const STORES = Array.isArray(HOME.stores) && HOME.stores.length ? HOME.stores : (STORE ? [STORE] : []);
 const NEWS = HOME.news || [];
 
 /* ---- Google Maps (loaded async in welcome.blade.php) ---- */
@@ -515,28 +517,27 @@ function App() {
             </section>
             )}
 
-            {/* ---- Nearest store ---- */}
-            {STORE && (
+            {/* ---- Danh sách tất cả cửa hàng ---- */}
+            {STORES.length > 0 && (
               <section className="card">
                 <div className="card-h">
-                  <h3>Cửa hàng của bạn</h3>
+                  <h3>Danh sách cửa hàng</h3>
                   <a className="link" href={NAV_URLS.store}>Tất cả <Icon name="chev" size={15}/></a>
                 </div>
-                <StoreMap store={STORE} />
-                <div className="store-body">
-                  <div className="store-row">
-                    <div style={{ minWidth: 0 }}>
-                      <div className="store-name">{STORE.name}</div>
-                      <div className="store-addr">{STORE.address}</div>
+                <div className="store-list">
+                  {STORES.map((s, i) => (
+                    <div className="store-item" key={s.id || i}>
+                      <div className="store-item-info">
+                        <div className="store-name">{s.name}</div>
+                        <div className="store-addr">{s.address}</div>
+                        {storeStatus(s) && <div className="store-open">{storeStatus(s)}</div>}
+                      </div>
+                      <div className="store-item-btns">
+                        <button className="sbtn primary" onClick={() => window.open(directionsUrl(s), "_blank")}><Icon name="nav" size={16} color="#fff"/> Chỉ đường</button>
+                        <button className="sbtn ghost" onClick={() => s.phone && (location.href = "tel:" + s.phone.replace(/[\s.]/g, ""))} disabled={!s.phone}><Icon name="phone" size={16}/> Gọi</button>
+                      </div>
                     </div>
-                    <div className="store-dist">
-                      <div className="open">{storeStatus(STORE)}</div>
-                    </div>
-                  </div>
-                </div>
-                <div className="store-btns">
-                  <button className="sbtn primary" onClick={() => window.open(directionsUrl(STORE), "_blank")}><Icon name="nav" size={17} color="#fff"/> Chỉ đường</button>
-                  <button className="sbtn ghost" onClick={() => STORE.phone && (location.href = "tel:" + STORE.phone.replace(/[\s.]/g, ""))} disabled={!STORE.phone}><Icon name="phone" size={17}/> Gọi cửa hàng</button>
+                  ))}
                 </div>
               </section>
             )}

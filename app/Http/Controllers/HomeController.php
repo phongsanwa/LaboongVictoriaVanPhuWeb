@@ -36,6 +36,7 @@ class HomeController extends Controller
                 'adminAccess' => AdminAccess::canEnter($user),
                 'iosGuideHtml' => \App\Models\AppSetting::get('general', [])['ios_guide_html'] ?? null,
                 'banners' => $this->buildBanners(),
+                'stores' => $this->buildStores(),
                 'staffEntry' => $this->staffEntry($user),
             ]]);
         }
@@ -124,6 +125,7 @@ class HomeController extends Controller
             'adminAccess' => AdminAccess::canEnter($user),
             'iosGuideHtml' => \App\Models\AppSetting::get('general', [])['ios_guide_html'] ?? null,
             'banners' => $this->buildBanners(),
+            'stores' => $this->buildStores(),
             'staffEntry' => $this->staffEntry($user),
         ]]);
     }
@@ -147,6 +149,12 @@ class HomeController extends Controller
         }
 
         return ['url' => '/admin', 'label' => 'Quản trị'];
+    }
+
+    /** Tất cả cửa hàng đang hoạt động, hiển thị dạng danh sách ở trang chủ. */
+    private function buildStores()
+    {
+        return Store::where('status', 'active')->orderBy('id')->get();
     }
 
     /** Banner đang bật cho trang chủ (mobile trống thì dùng desktop). */
