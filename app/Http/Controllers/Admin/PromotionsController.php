@@ -42,7 +42,7 @@ class PromotionsController extends Controller
             'kind'                    => ['required', Rule::in(['price', 'voucher'])],
             'name'                    => ['required', 'string', 'max:100'],
             'code'                    => ['nullable', 'string', 'max:30', 'alpha_dash', 'unique:promotions,code'],
-            'type'                    => ['required', Rule::in(['percent', 'amount'])],
+            'type'                    => ['required', Rule::in(['percent', 'amount', 'fixed'])],
             'value'                   => ['required', 'integer', 'min:1'],
             'scope'                   => ['required', Rule::in(['all', 'specific'])],
             'product_ids'             => ['nullable', 'array'],
@@ -61,6 +61,11 @@ class PromotionsController extends Controller
 
         if ($data['type'] === 'percent' && $data['value'] > 100) {
             return response()->json(['message' => 'Phần trăm giảm không được vượt quá 100%'], 422);
+        }
+
+        // Đồng giá chỉ dùng cho khuyến mãi gạch giá (không áp dụng cho voucher).
+        if ($data['type'] === 'fixed' && $data['kind'] !== 'price') {
+            return response()->json(['message' => 'Đồng giá chỉ áp dụng cho khuyến mãi gạch giá'], 422);
         }
 
         $order = Promotion::max('sort_order') + 1;
@@ -100,7 +105,7 @@ class PromotionsController extends Controller
             'kind'                    => ['required', Rule::in(['price', 'voucher'])],
             'name'                    => ['required', 'string', 'max:100'],
             'code'                    => ['nullable', 'string', 'max:30', 'alpha_dash', Rule::unique('promotions', 'code')->ignore($promotion->id)],
-            'type'                    => ['required', Rule::in(['percent', 'amount'])],
+            'type'                    => ['required', Rule::in(['percent', 'amount', 'fixed'])],
             'value'                   => ['required', 'integer', 'min:1'],
             'scope'                   => ['required', Rule::in(['all', 'specific'])],
             'product_ids'             => ['nullable', 'array'],
@@ -119,6 +124,11 @@ class PromotionsController extends Controller
 
         if ($data['type'] === 'percent' && $data['value'] > 100) {
             return response()->json(['message' => 'Phần trăm giảm không được vượt quá 100%'], 422);
+        }
+
+        // Đồng giá chỉ dùng cho khuyến mãi gạch giá (không áp dụng cho voucher).
+        if ($data['type'] === 'fixed' && $data['kind'] !== 'price') {
+            return response()->json(['message' => 'Đồng giá chỉ áp dụng cho khuyến mãi gạch giá'], 422);
         }
 
         $code = isset($data['code']) && $data['code'] !== ''
