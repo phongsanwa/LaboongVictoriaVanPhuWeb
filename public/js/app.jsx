@@ -79,6 +79,8 @@ const CHECKIN_CONFIG = HOME.checkinConfig || [
   { d: "Ngày 4", pts: 10 }, { d: "Ngày 5", pts: 15 }, { d: "Ngày 6", pts: 15 },
   { d: "Ngày 7", pts: 50, bonus: true },
 ];
+// Bật/tắt chức năng điểm danh (Admin → Cài đặt chung). Mặc định bật nếu server không gửi cờ.
+const CHECKIN_ENABLED = HOME.checkinEnabled !== false;
 
 function storeStatus(store) {
   if (!store || !store.opening_time || !store.closing_time) return "";
@@ -419,6 +421,7 @@ function App() {
           <div className="col">
 
             {/* ---- Daily check-in ---- */}
+            {CHECKIN_ENABLED && (
             <section className="card checkin">
               <div className="checkin-head">
                 <span className="ci-ic"><Icon name="spark" size={19} color="#fff" /></span>
@@ -450,6 +453,7 @@ function App() {
                 </button>
               </div>
             </section>
+            )}
 
             {/* ---- Nearest store ---- */}
             {STORE && (

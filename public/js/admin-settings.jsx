@@ -51,6 +51,7 @@ function buildState() {
     tagline: DATA.general.tagline,
     email: DATA.general.email,
     hotline: DATA.general.hotline,
+    checkinEnabled: DATA.general.checkin_enabled !== false,
     perPoint: DATA.points.per_point,
     welcome: DATA.points.welcome,
     expiry: DATA.points.expiry,
@@ -100,7 +101,7 @@ function App() {
   const save = async () => {
     setSaving(true);
     const { ok, data } = await apiCall("POST", "/admin/settings", {
-      general: { brand: form.brand, tagline: form.tagline, email: form.email, hotline: form.hotline },
+      general: { brand: form.brand, tagline: form.tagline, email: form.email, hotline: form.hotline, checkin_enabled: form.checkinEnabled },
       points: { per_point: form.perPoint, welcome: form.welcome, expiry: form.expiry, rounding: form.rounding },
       timing: { prep_base: form.prepBase, prep_per_cup: form.prepPerCup, ship_minutes: form.shipMinutes },
       tiers: form.tiers.map(t => ({ id: t.id, min: t.min, mult: t.mult })),
@@ -236,6 +237,15 @@ function App() {
                           <div className="sinp-affix"><input className="sinp" value={form.hotline} onChange={e => set("hotline", e.target.value)} /></div>
                         </div>
                         <div className="fsub" style={{ marginTop: 7, color: "var(--ink-3)", fontSize: 12 }}>Email hỗ trợ · Hotline</div>
+                      </div>
+                    </div>
+                    <div className="frow">
+                      <div className="flabel">Điểm danh hàng ngày<div className="fsub">Bật/tắt mục điểm danh nhận điểm ở trang chủ khách</div></div>
+                      <div className="fcontrol" style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                        <Tog on={form.checkinEnabled} onClick={() => set("checkinEnabled", !form.checkinEnabled)} />
+                        <span style={{ fontSize: 13.5, fontWeight: 600, color: form.checkinEnabled ? "var(--brand)" : "var(--ink-3)" }}>
+                          {form.checkinEnabled ? "Đang bật" : "Đang tắt"}
+                        </span>
                       </div>
                     </div>
                   </div>
