@@ -51,6 +51,8 @@ function buildState() {
     tagline: DATA.general.tagline,
     email: DATA.general.email,
     hotline: DATA.general.hotline,
+    checkinEnabled: DATA.general.checkin_enabled !== false,
+    iosGuide: DATA.general.ios_guide_html || "",
     perPoint: DATA.points.per_point,
     welcome: DATA.points.welcome,
     expiry: DATA.points.expiry,
@@ -82,6 +84,9 @@ function App() {
 
   const dirty = useMemo(() => JSON.stringify(form) !== JSON.stringify(saved), [form, saved]);
 
+  const iosGuideRef = React.useRef(null);
+  const iosEditorRef = React.useRef(null);
+
   useEffect(() => {
     const r = document.documentElement;
     const [b, d] = Array.isArray(tw.brand) ? tw.brand : [tw.brand, tw.brand];
@@ -91,6 +96,31 @@ function App() {
   }, [tw.brand, tw.dark]);
 
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
+
+  /* TinyMCE cho ô hướng dẫn cài đặt iPhone — chỉ khởi tạo khi đang ở tab "Thông tin chung";
+     CDN bị chặn thì tự dùng textarea thường (vẫn nhập & lưu được HTML). */
+  useEffect(() => {
+    if (tab !== "general") return;
+    const tiny = window.tinymce;
+    if (!tiny || !iosGuideRef.current) return;
+    tiny.init({
+      target: iosGuideRef.current,
+      height: 300,
+      menubar: false,
+      language: "vi",
+      branding: false,
+      plugins: "lists link image table autolink code",
+      toolbar: "undo redo | blocks | bold italic underline | bullist numlist | link image table | alignleft aligncenter alignright | removeformat | code",
+      relative_urls: false,
+      convert_urls: false,
+      setup: (editor) => {
+        iosEditorRef.current = editor;
+        editor.on("init", () => editor.setContent(form.iosGuide || ""));
+        editor.on("Change KeyUp Undo Redo SetContent", () => set("iosGuide", editor.getContent()));
+      },
+    });
+    return () => { try { iosEditorRef.current?.remove(); } catch (e) { /* ignore */ } iosEditorRef.current = null; };
+  }, [tab]); // eslint-disable-line
   const setTier = (i, k, v) => setForm(f => ({ ...f, tiers: f.tiers.map((x, j) => j === i ? { ...x, [k]: v } : x) }));
   const toggleNotif = (k) => setForm(f => ({ ...f, notif: { ...f.notif, [k]: !f.notif[k] } }));
   const toggleInteg = (i) => setForm(f => ({ ...f, integ: f.integ.map((x, j) => j === i ? { ...x, on: !x.on } : x) }));
@@ -100,7 +130,7 @@ function App() {
   const save = async () => {
     setSaving(true);
     const { ok, data } = await apiCall("POST", "/admin/settings", {
-      general: { brand: form.brand, tagline: form.tagline, email: form.email, hotline: form.hotline },
+      general: { brand: form.brand, tagline: form.tagline, email: form.email, hotline: form.hotline, checkin_enabled: form.checkinEnabled, ios_guide_html: form.iosGuide || null },
       points: { per_point: form.perPoint, welcome: form.welcome, expiry: form.expiry, rounding: form.rounding },
       timing: { prep_base: form.prepBase, prep_per_cup: form.prepPerCup, ship_minutes: form.shipMinutes },
       tiers: form.tiers.map(t => ({ id: t.id, min: t.min, mult: t.mult })),
@@ -236,6 +266,27 @@ function App() {
                           <div className="sinp-affix"><input className="sinp" value={form.hotline} onChange={e => set("hotline", e.target.value)} /></div>
                         </div>
                         <div className="fsub" style={{ marginTop: 7, color: "var(--ink-3)", fontSize: 12 }}>Email hỗ trợ · Hotline</div>
+                      </div>
+                    </div>
+                    <div className="frow">
+                      <div className="flabel">Điểm danh hàng ngày<div className="fsub">Bật/tắt mục điểm danh nhận điểm ở trang chủ khách</div></div>
+                      <div className="fcontrol" style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                        <Tog on={form.checkinEnabled} onClick={() => set("checkinEnabled", !form.checkinEnabled)} />
+                        <span style={{ fontSize: 13.5, fontWeight: 600, color: form.checkinEnabled ? "var(--brand)" : "var(--ink-3)" }}>
+                          {form.checkinEnabled ? "Đang bật" : "Đang tắt"}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="frow" style={{ alignItems: "flex-start" }}>
+                      <div className="flabel">
+                        Hướng dẫn cài lên iPhone
+                        <div className="fsub">Nội dung hiện cho khách khi bấm "Thêm vào màn hình chính" trên iPhone. Để trống = dùng hướng dẫn mặc định.</div>
+                      </div>
+                      <div className="fcontrol">
+                        <textarea ref={iosGuideRef} className="inp" defaultValue={form.iosGuide}
+                          onChange={e => set("iosGuide", e.target.value)} rows={6}
+                          placeholder="VD: 1. Bấm nút Chia sẻ ở thanh dưới · 2. Chọn 'Thêm vào MH chính' · 3. Bấm Thêm"
+                          style={{ resize: "vertical", minHeight: 140, fontFamily: "inherit" }} />
                       </div>
                     </div>
                   </div>

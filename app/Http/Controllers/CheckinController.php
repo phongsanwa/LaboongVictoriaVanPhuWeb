@@ -28,7 +28,16 @@ class CheckinController extends Controller {
         return $cfg['days'] ?? static::defaultDays();
     }
 
+    /** Chức năng điểm danh có đang bật không (Cài đặt chung → Điểm danh hàng ngày). */
+    public static function isEnabled(): bool {
+        return (bool) (AppSetting::get('general', [])['checkin_enabled'] ?? true);
+    }
+
     public function store(Request $request): JsonResponse {
+        if (!self::isEnabled()) {
+            return response()->json(['message' => 'Chức năng điểm danh đang tạm tắt'], 403);
+        }
+
         $user = Auth::user();
         $customer = $user->customer()->first();
         if (!$customer) return response()->json(['message' => 'Không tìm thấy khách hàng'], 404);

@@ -20,6 +20,8 @@ class SettingsController extends Controller
         'hotline' => '1900 8386',
         'logo_url' => null,
         'favicon_url' => null,
+        'checkin_enabled' => true, // bật/tắt chức năng điểm danh hàng ngày
+        'ios_guide_html' => null,  // hướng dẫn thêm ra màn hình chính iPhone (HTML từ trình soạn thảo)
     ];
 
     private const POINTS_DEFAULTS = [
@@ -63,7 +65,8 @@ class SettingsController extends Controller
     {
         $admin = Auth::user();
 
-        $general = AppSetting::get('general', self::GENERAL_DEFAULTS);
+        // Gộp mặc định để dữ liệu cũ (chưa có khoá mới như checkin_enabled) vẫn đủ trường.
+        $general = array_merge(self::GENERAL_DEFAULTS, AppSetting::get('general', []));
         $points = AppSetting::get('points', self::POINTS_DEFAULTS);
         $notif = AppSetting::get('notifications', self::NOTIF_DEFAULTS);
         $timing = AppSetting::get('timing', self::TIMING_DEFAULTS);
@@ -116,6 +119,8 @@ class SettingsController extends Controller
             'general.tagline' => ['required', 'string', 'max:150'],
             'general.email' => ['required', 'email'],
             'general.hotline' => ['required', 'string', 'max:30'],
+            'general.checkin_enabled' => ['required', 'boolean'],
+            'general.ios_guide_html' => ['nullable', 'string', 'max:50000'],
 
             'points' => ['required', 'array'],
             'points.per_point' => ['required', 'integer', 'min:1'],
@@ -150,6 +155,9 @@ class SettingsController extends Controller
         $general = $data['general'];
         $general['logo_url'] = $current['logo_url'] ?? null;
         $general['favicon_url'] = $current['favicon_url'] ?? null;
+        $general['checkin_enabled'] = (bool) ($data['general']['checkin_enabled'] ?? true);
+        // Hướng dẫn iPhone là HTML từ trình soạn thảo → làm sạch chống XSS trước khi lưu.
+        $general['ios_guide_html'] = \App\Support\HtmlSanitizer::clean($data['general']['ios_guide_html'] ?? null);
         AppSetting::set('general', $general);
         AppSetting::set('points', $data['points']);
         AppSetting::set('timing', $data['timing']);

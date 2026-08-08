@@ -71,6 +71,7 @@ class RolesController extends Controller
             ['id' => 'camp_edit', 'name' => 'Tạo / sửa chiến dịch', 'desc' => 'Thiết lập ưu đãi, điều kiện, đối tượng', 'cashier' => false, 'manager' => true],
             ['id' => 'promo_edit', 'name' => 'Quản lý khuyến mãi', 'desc' => 'Mã giảm giá, khuyến mãi gạch giá', 'cashier' => false, 'manager' => true],
             ['id' => 'news_edit', 'name' => 'Quản lý tin tức', 'desc' => 'Đăng / sửa bài tin tức hiển thị trang chủ', 'cashier' => false, 'manager' => true],
+            ['id' => 'banner_edit', 'name' => 'Quản lý banner', 'desc' => 'Banner hiển thị ngoài trang chủ khách', 'cashier' => false, 'manager' => true],
             ['id' => 'push', 'name' => 'Gửi push notification', 'desc' => 'Gửi thông báo đẩy tới khách hàng', 'cashier' => false, 'manager' => true],
         ]],
         ['title' => 'Cửa hàng & Vận hành', 'ic' => 'pin', 'perms' => [

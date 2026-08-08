@@ -47,10 +47,16 @@ function CustomizeSheet({ item, variantGroups, onClose, onAdd }) {
     g.type !== 'addon' && g.required && g.options.length > 0 && !g.options.some(o => o.available !== false)
   );
 
+  const MAX_TOPPING_QTY = 20;
   const selectSingle = (gKey, optId) => setSelections(s => ({ ...s, [gKey]: optId }));
-  const toggleAddon  = (gKey, optId) => setSelections(s => {
+  const addonQty = (gKey, optId) => (selections[gKey] || []).filter(x => x === optId).length;
+  // Số lượng mỗi topping lưu bằng mảng lặp id (2 trân châu = [id, id]) để tương thích cách tính giá sẵn có.
+  const setAddonQty = (gKey, optId, delta) => setSelections(s => {
     const curr = s[gKey] || [];
-    return { ...s, [gKey]: curr.includes(optId) ? curr.filter(x => x !== optId) : [...curr, optId] };
+    const count = curr.filter(x => x === optId).length;
+    const next = Math.max(0, Math.min(MAX_TOPPING_QTY, count + delta));
+    const rest = curr.filter(x => x !== optId);
+    return { ...s, [gKey]: [...rest, ...Array(next).fill(optId)] };
   });
 
   const submit = () => {
@@ -107,16 +113,25 @@ function CustomizeSheet({ item, variantGroups, onClose, onAdd }) {
                     <div className="cz-tops">
                       {g.options.map(o => {
                         const avail = o.available !== false;
-                        const on = avail && (selections[g.key] || []).includes(o.id);
+                        const qty = avail ? addonQty(g.key, o.id) : 0;
+                        const on = qty > 0;
                         return (
-                          <button key={o.id} className={"cz-top" + (on ? " on" : "")}
-                            onClick={() => avail && toggleAddon(g.key, o.id)}
-                            disabled={!avail}
-                            style={!avail ? { opacity: 0.45, cursor: "not-allowed" } : {}}>
-                            <span className="box">{on && <Icon name="check" size={14} color="#fff" />}</span>
+                          <div key={o.id} className={"cz-top" + (on ? " on" : "")}
+                            style={!avail ? { opacity: 0.45 } : {}}>
                             <span className="tn" style={!avail ? { textDecoration: "line-through" } : {}}>{o.label}</span>
                             <span className="tp">{avail ? `+${fmt(o.extra)}đ` : "Hết"}</span>
-                          </button>
+                            {avail && (
+                              <span className="cz-top-qty">
+                                <button onClick={() => setAddonQty(g.key, o.id, -1)} disabled={qty <= 0} aria-label="Bớt">
+                                  <Icon name="minus" size={14} color="currentColor" />
+                                </button>
+                                <span className="qn">{qty}</span>
+                                <button onClick={() => setAddonQty(g.key, o.id, 1)} disabled={qty >= MAX_TOPPING_QTY} aria-label="Thêm">
+                                  <Icon name="plus" size={14} color="currentColor" />
+                                </button>
+                              </span>
+                            )}
+                          </div>
                         );
                       })}
                     </div>

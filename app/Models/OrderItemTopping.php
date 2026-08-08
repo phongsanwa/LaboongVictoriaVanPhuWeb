@@ -11,6 +11,7 @@ class OrderItemTopping extends Model
         'order_item_id',
         'variant_id',
         'topping_name',
+        'quantity',
         'price_at_order',
     ];
 

@@ -18,6 +18,8 @@ const REWARD = HOME.reward || "";
 const PROMOS = HOME.promos || [];
 const TX = HOME.transactions || [];
 const STORE = HOME.store || null;
+// Danh sách tất cả cửa hàng đang hoạt động (trang chủ hiển thị hết, không chỉ 1).
+const STORES = Array.isArray(HOME.stores) && HOME.stores.length ? HOME.stores : (STORE ? [STORE] : []);
 const NEWS = HOME.news || [];
 
 /* ---- Google Maps (loaded async in welcome.blade.php) ---- */
@@ -79,6 +81,61 @@ const CHECKIN_CONFIG = HOME.checkinConfig || [
   { d: "Ngày 4", pts: 10 }, { d: "Ngày 5", pts: 15 }, { d: "Ngày 6", pts: 15 },
   { d: "Ngày 7", pts: 50, bonus: true },
 ];
+// Bật/tắt chức năng điểm danh (Admin → Cài đặt chung). Mặc định bật nếu server không gửi cờ.
+const CHECKIN_ENABLED = HOME.checkinEnabled !== false;
+// Hướng dẫn cài lên iPhone do admin soạn (HTML đã làm sạch ở server). Trống → dùng hướng dẫn mặc định.
+const IOS_GUIDE_HTML = (HOME.iosGuideHtml && HOME.iosGuideHtml.trim()) ? HOME.iosGuideHtml : null;
+// Banner trang chủ (Admin → Banner). Mỗi banner có ảnh desktop + mobile + link tuỳ chọn.
+const BANNERS = Array.isArray(HOME.banners) ? HOME.banners : [];
+
+/* Banner trang chủ: dùng Swiper.js (CDN). Có nhiều banner thì chạy slide + phân trang. */
+function BannerMedia({ b }) {
+  return (
+    <picture>
+      <source media="(max-width: 640px)" srcSet={b.mobile} />
+      <img src={b.desktop} alt={b.title || "Banner"} className="hb-img" loading="lazy" draggable={false} />
+    </picture>
+  );
+}
+
+function HomeBanners() {
+  const rootRef = useRef(null);
+  const swiperRef = useRef(null);
+  const n = BANNERS.length;
+
+  useEffect(() => {
+    if (n === 0 || !window.Swiper || !rootRef.current) return;
+    swiperRef.current = new window.Swiper(rootRef.current, {
+      slidesPerView: 1,
+      spaceBetween: 0,
+      autoHeight: true,
+      loop: n > 1,
+      autoplay: n > 1 ? { delay: 5000, disableOnInteraction: false } : false,
+      pagination: n > 1 ? { el: rootRef.current.querySelector(".swiper-pagination"), clickable: true } : false,
+      grabCursor: n > 1,
+    });
+    return () => { try { swiperRef.current?.destroy(true, true); } catch (e) { /* ignore */ } swiperRef.current = null; };
+  }, [n]);
+
+  if (n === 0) return null;
+
+  return (
+    <div className="home-banner">
+      <div className="swiper hb-swiper" ref={rootRef}>
+        <div className="swiper-wrapper">
+          {BANNERS.map((b, i) => (
+            <div className="swiper-slide" key={i}>
+              {b.link
+                ? <a href={b.link} className="hb-link" aria-label={b.title || "Banner"}><BannerMedia b={b} /></a>
+                : <BannerMedia b={b} />}
+            </div>
+          ))}
+        </div>
+        {n > 1 && <div className="swiper-pagination"></div>}
+      </div>
+    </div>
+  );
+}
 
 function storeStatus(store) {
   if (!store || !store.opening_time || !store.closing_time) return "";
@@ -252,13 +309,15 @@ function App() {
           <p>Tích điểm mỗi ly, đổi quà mỗi ngày tại Laboong.</p>
         </div>
 
+        <HomeBanners />
+
         {showInstall && (
           <div style={{
             display: "flex", alignItems: "center", gap: 12, marginBottom: 16,
             background: "linear-gradient(150deg,#0F623F,#1AA86A)", color: "#fff",
             borderRadius: 16, padding: "13px 14px", boxShadow: "0 6px 18px rgba(15,98,63,.25)",
           }}>
-            <div style={{ width: 40, height: 40, borderRadius: 11, background: "rgba(255,255,255,.2)", display: "flex", alignItems: "center", justifyContent: "center", flex: "none", fontWeight: 800, fontFamily: "'Baloo 2',cursive", fontSize: 22 }}>L</div>
+            <div style={{ width: 40, height: 40, borderRadius: 11, overflow: "hidden", background: "rgba(255,255,255,.2)", display: "flex", alignItems: "center", justifyContent: "center", flex: "none", fontWeight: 800, fontFamily: "'Baloo 2',cursive", fontSize: 22 }}><BrandGlyph /></div>
             <div style={{ minWidth: 0, flex: 1 }}>
               <div style={{ fontWeight: 700, fontSize: 14.5 }}>Cài Laboong lên màn hình chính</div>
               <div style={{ fontSize: 12, opacity: .85 }}>Mở nhanh như một app, khỏi gõ địa chỉ web.</div>
@@ -281,8 +340,12 @@ function App() {
                 <style>{"@keyframes lbArrow{0%,100%{transform:translate(-50%,0)}50%{transform:translate(-50%,10px)}}"}</style>
                 {/* Card gọn nổi phía trên thanh công cụ */}
                 <div onClick={e => e.stopPropagation()} style={{ position: "absolute", left: 16, right: 16, bottom: 108, background: "var(--card,#fff)", borderRadius: 18, padding: "18px 18px 16px", maxWidth: 380, margin: "0 auto", boxShadow: "0 20px 50px rgba(0,0,0,.28)", textAlign: "center" }}>
-                  <div style={{ width: 46, height: 46, borderRadius: 13, margin: "0 auto 10px", background: "linear-gradient(150deg,#0F623F,#1AA86A)", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontWeight: 800, fontFamily: "'Baloo 2',cursive", fontSize: 23 }}>L</div>
-                  <h3 style={{ margin: "0 0 10px", fontSize: 17, fontWeight: 800 }}>Chỉ 2 bước là xong 👇</h3>
+                  <div style={{ width: 46, height: 46, borderRadius: 13, overflow: "hidden", margin: "0 auto 10px", background: "linear-gradient(150deg,#0F623F,#1AA86A)", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontWeight: 800, fontFamily: "'Baloo 2',cursive", fontSize: 23 }}><BrandGlyph /></div>
+                  <h3 style={{ margin: "0 0 10px", fontSize: 17, fontWeight: 800 }}>{IOS_GUIDE_HTML ? "Thêm Laboong vào màn hình chính 👇" : "Chỉ 2 bước là xong 👇"}</h3>
+                  {IOS_GUIDE_HTML ? (
+                    <div className="ios-guide-html" style={{ textAlign: "left", fontSize: 14, color: "var(--ink-2,#555)", lineHeight: 1.6 }}
+                      dangerouslySetInnerHTML={{ __html: IOS_GUIDE_HTML }} />
+                  ) : (
                   <div style={{ textAlign: "left", fontSize: 14, color: "var(--ink-2,#555)", lineHeight: 1.55 }}>
                     <div style={{ display: "flex", gap: 9, alignItems: "center", marginBottom: 9 }}>
                       <span style={{ flex: "none", width: 24, height: 24, borderRadius: "50%", background: "var(--brand,#0F623F)", color: "#fff", fontSize: 13, fontWeight: 800, display: "grid", placeItems: "center" }}>1</span>
@@ -293,6 +356,7 @@ function App() {
                       <span>Chọn <b>“Thêm vào MH chính”</b> → <b>Thêm</b>.</span>
                     </div>
                   </div>
+                  )}
                   <div style={{ marginTop: 11, fontSize: 11.5, color: "var(--ink-3,#999)" }}>Không thấy thanh dưới? Chạm nhẹ hoặc vuốt xuống để hiện lại.</div>
                   <button onClick={() => setIosGuide(false)} style={{ marginTop: 12, width: "100%", background: "transparent", border: "1.5px solid var(--line,#e5e7eb)", borderRadius: 11, padding: "9px", fontWeight: 700, fontSize: 13.5, color: "var(--ink-2,#555)", cursor: "pointer" }}>Đóng</button>
                 </div>
@@ -309,7 +373,7 @@ function App() {
           return (
             <div className="scrim" onClick={() => setIosGuide(false)} style={{ position: "fixed", inset: 0, zIndex: 200, background: "rgba(8,30,20,.55)", display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
               <div onClick={e => e.stopPropagation()} style={{ background: "var(--card,#fff)", borderRadius: 18, padding: 24, maxWidth: 380, width: "100%", textAlign: "center", boxShadow: "0 24px 60px rgba(0,0,0,.25)" }}>
-                <div style={{ width: 52, height: 52, borderRadius: 14, margin: "0 auto 12px", background: "linear-gradient(150deg,#0F623F,#1AA86A)", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontWeight: 800, fontFamily: "'Baloo 2',cursive", fontSize: 26 }}>L</div>
+                <div style={{ width: 52, height: 52, borderRadius: 14, overflow: "hidden", margin: "0 auto 12px", background: "linear-gradient(150deg,#0F623F,#1AA86A)", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontWeight: 800, fontFamily: "'Baloo 2',cursive", fontSize: 26 }}><BrandGlyph /></div>
                 <h3 style={{ margin: "0 0 8px", fontSize: 18, fontWeight: 800 }}>Thêm Laboong vào màn hình chính</h3>
 
                 {inAppBrowser() ? (
@@ -419,6 +483,7 @@ function App() {
           <div className="col">
 
             {/* ---- Daily check-in ---- */}
+            {CHECKIN_ENABLED && (
             <section className="card checkin">
               <div className="checkin-head">
                 <span className="ci-ic"><Icon name="spark" size={19} color="#fff" /></span>
@@ -450,29 +515,29 @@ function App() {
                 </button>
               </div>
             </section>
+            )}
 
-            {/* ---- Nearest store ---- */}
-            {STORE && (
+            {/* ---- Danh sách tất cả cửa hàng ---- */}
+            {STORES.length > 0 && (
               <section className="card">
                 <div className="card-h">
-                  <h3>Cửa hàng của bạn</h3>
+                  <h3>Danh sách cửa hàng</h3>
                   <a className="link" href={NAV_URLS.store}>Tất cả <Icon name="chev" size={15}/></a>
                 </div>
-                <StoreMap store={STORE} />
-                <div className="store-body">
-                  <div className="store-row">
-                    <div style={{ minWidth: 0 }}>
-                      <div className="store-name">{STORE.name}</div>
-                      <div className="store-addr">{STORE.address}</div>
+                <div className="store-list">
+                  {STORES.map((s, i) => (
+                    <div className="store-item" key={s.id || i}>
+                      <div className="store-item-info">
+                        <div className="store-name">{s.name}</div>
+                        <div className="store-addr">{s.address}</div>
+                        {storeStatus(s) && <div className="store-open">{storeStatus(s)}</div>}
+                      </div>
+                      <div className="store-item-btns">
+                        <button className="sbtn primary" onClick={() => window.open(directionsUrl(s), "_blank")}><Icon name="nav" size={16} color="#fff"/> Chỉ đường</button>
+                        <button className="sbtn ghost" onClick={() => s.phone && (location.href = "tel:" + s.phone.replace(/[\s.]/g, ""))} disabled={!s.phone}><Icon name="phone" size={16}/> Gọi</button>
+                      </div>
                     </div>
-                    <div className="store-dist">
-                      <div className="open">{storeStatus(STORE)}</div>
-                    </div>
-                  </div>
-                </div>
-                <div className="store-btns">
-                  <button className="sbtn primary" onClick={() => window.open(directionsUrl(STORE), "_blank")}><Icon name="nav" size={17} color="#fff"/> Chỉ đường</button>
-                  <button className="sbtn ghost" onClick={() => STORE.phone && (location.href = "tel:" + STORE.phone.replace(/[\s.]/g, ""))} disabled={!STORE.phone}><Icon name="phone" size={17}/> Gọi cửa hàng</button>
+                  ))}
                 </div>
               </section>
             )}

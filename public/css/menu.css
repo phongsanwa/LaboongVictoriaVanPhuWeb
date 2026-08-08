@@ -199,6 +199,11 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
 .cz-top .tn { font-weight: 600; font-size: 14px; flex: 1; }
 .cz-top .tp { font-weight: 700; font-size: 13px; color: var(--ink-2); font-variant-numeric: tabular-nums; }
 .cz-top.on .tp { color: var(--brand); }
+/* Bộ chọn số lượng cho từng topping */
+.cz-top-qty { display: inline-flex; align-items: center; background: var(--bg-2); border-radius: 999px; flex: none; }
+.cz-top-qty button { width: 34px; height: 34px; display: grid; place-items: center; color: var(--brand); transition: .12s; border-radius: 999px; }
+.cz-top-qty button:disabled { color: var(--ink-3); }
+.cz-top-qty .qn { min-width: 26px; text-align: center; font-family: var(--display); font-weight: 800; font-size: 15px; font-variant-numeric: tabular-nums; }
 
 /* footer: qty + add */
 .cz-f { background: var(--card); border-top: 1px solid var(--line); padding: 14px 20px 20px; display: flex; align-items: center; gap: 14px; }

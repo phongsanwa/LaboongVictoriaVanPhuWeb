@@ -56,13 +56,18 @@ class OrderHistoryController extends Controller
             }
             if ($item->sugar_level !== null && $item->sugar_level !== '100') $parts[] = "Đường {$item->sugar_level}%";
             if ($item->ice_level   !== null && $item->ice_level   !== '100') $parts[] = "Đá {$item->ice_level}%";
-            $toppingNames = $item->toppings->pluck('topping_name')->all();
-            foreach ($toppingNames as $t) $parts[] = $t;
+            // Hiển thị kèm số lượng ("Trân châu x2"); và dựng lại mảng có lặp id để "Đặt lại" khôi phục đúng số lượng.
+            $toppingExpanded = [];
+            foreach ($item->toppings as $t) {
+                $q = max(1, (int) ($t->quantity ?? 1));
+                $parts[] = $q > 1 ? "{$t->topping_name} x{$q}" : $t->topping_name;
+                for ($k = 0; $k < $q; $k++) $toppingExpanded[] = $t->topping_name;
+            }
 
             // Selections để "Đặt lại" dựng lại giỏ hàng trên trang thực đơn
             $selections = [];
             if ($sizeKey && $item->size_name)          $selections[$sizeKey]  = $item->size_name;
-            if ($addonKey && count($toppingNames))     $selections[$addonKey] = $toppingNames;
+            if ($addonKey && count($toppingExpanded))  $selections[$addonKey] = $toppingExpanded;
             if ($sugarKey && $item->sugar_level !== null) $selections[$sugarKey] = $item->sugar_level . '%';
             if ($iceKey && $item->ice_level !== null)     $selections[$iceKey]   = $item->ice_level . '%';
 

@@ -68,6 +68,9 @@ Route::get('/sitemap.xml', function () {
     return response($xml, 200, ['Content-Type' => 'application/xml; charset=utf-8']);
 });
 
+/* ── PWA: web app manifest động (icon màn hình chính theo logo trong Admin) ── */
+Route::get('/manifest.webmanifest', [\App\Http\Controllers\PwaController::class, 'manifest'])->name('pwa.manifest');
+
 Route::get('/', [HomeController::class, 'index'])->middleware('auth')->name('home');
 Route::get('/menu', [MenuPageController::class, 'index'])->middleware('auth')->name('menu');
 Route::post('/orders', [OrderController::class, 'place'])->middleware('auth')->name('orders.place');
