@@ -83,6 +83,45 @@ const CHECKIN_CONFIG = HOME.checkinConfig || [
 const CHECKIN_ENABLED = HOME.checkinEnabled !== false;
 // Hướng dẫn cài lên iPhone do admin soạn (HTML đã làm sạch ở server). Trống → dùng hướng dẫn mặc định.
 const IOS_GUIDE_HTML = (HOME.iosGuideHtml && HOME.iosGuideHtml.trim()) ? HOME.iosGuideHtml : null;
+// Banner trang chủ (Admin → Banner). Mỗi banner có ảnh desktop + mobile + link tuỳ chọn.
+const BANNERS = Array.isArray(HOME.banners) ? HOME.banners : [];
+
+/* Banner trang chủ: chạy slide tự động nếu có nhiều banner. */
+function HomeBanners() {
+  const [idx, setIdx] = useState(0);
+  const n = BANNERS.length;
+  useEffect(() => {
+    if (n <= 1) return;
+    const t = setInterval(() => setIdx(i => (i + 1) % n), 5000);
+    return () => clearInterval(t);
+  }, [n]);
+  if (n === 0) return null;
+
+  const cur = BANNERS[Math.min(idx, n - 1)];
+  const Media = ({ b }) => (
+    <picture>
+      <source media="(max-width: 640px)" srcSet={b.mobile} />
+      <img src={b.desktop} alt={b.title || "Banner"} className="hb-img" loading="lazy" />
+    </picture>
+  );
+
+  return (
+    <div className="home-banner">
+      <div className="hb-frame">
+        {cur.link
+          ? <a href={cur.link} className="hb-link" aria-label={cur.title || "Banner"}><Media b={cur} /></a>
+          : <Media b={cur} />}
+      </div>
+      {n > 1 && (
+        <div className="hb-dots">
+          {BANNERS.map((_, i) => (
+            <button key={i} className={"hb-dot" + (i === idx ? " on" : "")} onClick={() => setIdx(i)} aria-label={"Banner " + (i + 1)} />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
 
 function storeStatus(store) {
   if (!store || !store.opening_time || !store.closing_time) return "";
@@ -255,6 +294,8 @@ function App() {
           <h1>Chào <b>{MEMBER.name}</b> 👋</h1>
           <p>Tích điểm mỗi ly, đổi quà mỗi ngày tại Laboong.</p>
         </div>
+
+        <HomeBanners />
 
         {showInstall && (
           <div style={{

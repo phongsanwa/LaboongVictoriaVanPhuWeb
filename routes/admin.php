@@ -148,4 +148,14 @@ Route::middleware(['auth', 'admin.perm'])->prefix('admin')->name('admin.')->grou
         Route::post('/news/{news}/toggle', [NewsController::class, 'toggle'])->name('news.toggle');
         Route::delete('/news/{news}', [NewsController::class, 'destroy'])->name('news.destroy');
     });
+
+    // Banner trang chủ
+    Route::middleware('admin.perm:banner_edit')->group(function () {
+        Route::get('/banners', [\App\Http\Controllers\Admin\BannersController::class, 'index'])->name('banners.index');
+        Route::post('/banners', [\App\Http\Controllers\Admin\BannersController::class, 'store'])->name('banners.store');
+        Route::post('/banners/upload', [\App\Http\Controllers\Admin\BannersController::class, 'upload'])->name('banners.upload');
+        Route::post('/banners/{banner}', [\App\Http\Controllers\Admin\BannersController::class, 'update'])->name('banners.update');
+        Route::post('/banners/{banner}/toggle', [\App\Http\Controllers\Admin\BannersController::class, 'toggle'])->name('banners.toggle');
+        Route::delete('/banners/{banner}', [\App\Http\Controllers\Admin\BannersController::class, 'destroy'])->name('banners.destroy');
+    });
 });

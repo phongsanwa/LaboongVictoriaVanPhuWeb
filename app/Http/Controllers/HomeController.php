@@ -35,6 +35,7 @@ class HomeController extends Controller
                 'news' => $this->buildNews(),
                 'adminAccess' => AdminAccess::canEnter($user),
                 'iosGuideHtml' => \App\Models\AppSetting::get('general', [])['ios_guide_html'] ?? null,
+                'banners' => $this->buildBanners(),
                 'staffEntry' => $this->staffEntry($user),
             ]]);
         }
@@ -122,6 +123,7 @@ class HomeController extends Controller
             'news' => $this->buildNews(),
             'adminAccess' => AdminAccess::canEnter($user),
             'iosGuideHtml' => \App\Models\AppSetting::get('general', [])['ios_guide_html'] ?? null,
+            'banners' => $this->buildBanners(),
             'staffEntry' => $this->staffEntry($user),
         ]]);
     }
@@ -145,6 +147,20 @@ class HomeController extends Controller
         }
 
         return ['url' => '/admin', 'label' => 'Quản trị'];
+    }
+
+    /** Banner đang bật cho trang chủ (mobile trống thì dùng desktop). */
+    private function buildBanners(): array
+    {
+        return \App\Models\Banner::where('status', 'active')
+            ->orderBy('sort_order')->orderByDesc('id')
+            ->get()
+            ->map(fn (\App\Models\Banner $b) => [
+                'desktop' => $b->image_desktop,
+                'mobile'  => $b->image_mobile ?: $b->image_desktop,
+                'link'    => $b->link_url,
+                'title'   => $b->title,
+            ])->all();
     }
 
     /** Tin tức đang hiển thị cho trang chủ. */
