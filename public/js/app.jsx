@@ -260,7 +260,7 @@ function App() {
             background: "linear-gradient(150deg,#0F623F,#1AA86A)", color: "#fff",
             borderRadius: 16, padding: "13px 14px", boxShadow: "0 6px 18px rgba(15,98,63,.25)",
           }}>
-            <div style={{ width: 40, height: 40, borderRadius: 11, background: "rgba(255,255,255,.2)", display: "flex", alignItems: "center", justifyContent: "center", flex: "none", fontWeight: 800, fontFamily: "'Baloo 2',cursive", fontSize: 22 }}>L</div>
+            <div style={{ width: 40, height: 40, borderRadius: 11, overflow: "hidden", background: "rgba(255,255,255,.2)", display: "flex", alignItems: "center", justifyContent: "center", flex: "none", fontWeight: 800, fontFamily: "'Baloo 2',cursive", fontSize: 22 }}><BrandGlyph /></div>
             <div style={{ minWidth: 0, flex: 1 }}>
               <div style={{ fontWeight: 700, fontSize: 14.5 }}>Cài Laboong lên màn hình chính</div>
               <div style={{ fontSize: 12, opacity: .85 }}>Mở nhanh như một app, khỏi gõ địa chỉ web.</div>
@@ -283,7 +283,7 @@ function App() {
                 <style>{"@keyframes lbArrow{0%,100%{transform:translate(-50%,0)}50%{transform:translate(-50%,10px)}}"}</style>
                 {/* Card gọn nổi phía trên thanh công cụ */}
                 <div onClick={e => e.stopPropagation()} style={{ position: "absolute", left: 16, right: 16, bottom: 108, background: "var(--card,#fff)", borderRadius: 18, padding: "18px 18px 16px", maxWidth: 380, margin: "0 auto", boxShadow: "0 20px 50px rgba(0,0,0,.28)", textAlign: "center" }}>
-                  <div style={{ width: 46, height: 46, borderRadius: 13, margin: "0 auto 10px", background: "linear-gradient(150deg,#0F623F,#1AA86A)", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontWeight: 800, fontFamily: "'Baloo 2',cursive", fontSize: 23 }}>L</div>
+                  <div style={{ width: 46, height: 46, borderRadius: 13, overflow: "hidden", margin: "0 auto 10px", background: "linear-gradient(150deg,#0F623F,#1AA86A)", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontWeight: 800, fontFamily: "'Baloo 2',cursive", fontSize: 23 }}><BrandGlyph /></div>
                   <h3 style={{ margin: "0 0 10px", fontSize: 17, fontWeight: 800 }}>Chỉ 2 bước là xong 👇</h3>
                   <div style={{ textAlign: "left", fontSize: 14, color: "var(--ink-2,#555)", lineHeight: 1.55 }}>
                     <div style={{ display: "flex", gap: 9, alignItems: "center", marginBottom: 9 }}>
@@ -311,7 +311,7 @@ function App() {
           return (
             <div className="scrim" onClick={() => setIosGuide(false)} style={{ position: "fixed", inset: 0, zIndex: 200, background: "rgba(8,30,20,.55)", display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
               <div onClick={e => e.stopPropagation()} style={{ background: "var(--card,#fff)", borderRadius: 18, padding: 24, maxWidth: 380, width: "100%", textAlign: "center", boxShadow: "0 24px 60px rgba(0,0,0,.25)" }}>
-                <div style={{ width: 52, height: 52, borderRadius: 14, margin: "0 auto 12px", background: "linear-gradient(150deg,#0F623F,#1AA86A)", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontWeight: 800, fontFamily: "'Baloo 2',cursive", fontSize: 26 }}>L</div>
+                <div style={{ width: 52, height: 52, borderRadius: 14, overflow: "hidden", margin: "0 auto 12px", background: "linear-gradient(150deg,#0F623F,#1AA86A)", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontWeight: 800, fontFamily: "'Baloo 2',cursive", fontSize: 26 }}><BrandGlyph /></div>
                 <h3 style={{ margin: "0 0 8px", fontSize: 18, fontWeight: 800 }}>Thêm Laboong vào màn hình chính</h3>
 
                 {inAppBrowser() ? (
