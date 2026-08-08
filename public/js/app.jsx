@@ -86,39 +86,51 @@ const IOS_GUIDE_HTML = (HOME.iosGuideHtml && HOME.iosGuideHtml.trim()) ? HOME.io
 // Banner trang chủ (Admin → Banner). Mỗi banner có ảnh desktop + mobile + link tuỳ chọn.
 const BANNERS = Array.isArray(HOME.banners) ? HOME.banners : [];
 
-/* Banner trang chủ: chạy slide tự động nếu có nhiều banner. */
-function HomeBanners() {
-  const [idx, setIdx] = useState(0);
-  const n = BANNERS.length;
-  useEffect(() => {
-    if (n <= 1) return;
-    const t = setInterval(() => setIdx(i => (i + 1) % n), 5000);
-    return () => clearInterval(t);
-  }, [n]);
-  if (n === 0) return null;
-
-  const cur = BANNERS[Math.min(idx, n - 1)];
-  const Media = ({ b }) => (
+/* Banner trang chủ: dùng Swiper.js (CDN). Có nhiều banner thì chạy slide + phân trang. */
+function BannerMedia({ b }) {
+  return (
     <picture>
       <source media="(max-width: 640px)" srcSet={b.mobile} />
-      <img src={b.desktop} alt={b.title || "Banner"} className="hb-img" loading="lazy" />
+      <img src={b.desktop} alt={b.title || "Banner"} className="hb-img" loading="lazy" draggable={false} />
     </picture>
   );
+}
+
+function HomeBanners() {
+  const rootRef = useRef(null);
+  const swiperRef = useRef(null);
+  const n = BANNERS.length;
+
+  useEffect(() => {
+    if (n === 0 || !window.Swiper || !rootRef.current) return;
+    swiperRef.current = new window.Swiper(rootRef.current, {
+      slidesPerView: 1,
+      spaceBetween: 0,
+      autoHeight: true,
+      loop: n > 1,
+      autoplay: n > 1 ? { delay: 5000, disableOnInteraction: false } : false,
+      pagination: n > 1 ? { el: rootRef.current.querySelector(".swiper-pagination"), clickable: true } : false,
+      grabCursor: n > 1,
+    });
+    return () => { try { swiperRef.current?.destroy(true, true); } catch (e) { /* ignore */ } swiperRef.current = null; };
+  }, [n]);
+
+  if (n === 0) return null;
 
   return (
     <div className="home-banner">
-      <div className="hb-frame">
-        {cur.link
-          ? <a href={cur.link} className="hb-link" aria-label={cur.title || "Banner"}><Media b={cur} /></a>
-          : <Media b={cur} />}
-      </div>
-      {n > 1 && (
-        <div className="hb-dots">
-          {BANNERS.map((_, i) => (
-            <button key={i} className={"hb-dot" + (i === idx ? " on" : "")} onClick={() => setIdx(i)} aria-label={"Banner " + (i + 1)} />
+      <div className="swiper hb-swiper" ref={rootRef}>
+        <div className="swiper-wrapper">
+          {BANNERS.map((b, i) => (
+            <div className="swiper-slide" key={i}>
+              {b.link
+                ? <a href={b.link} className="hb-link" aria-label={b.title || "Banner"}><BannerMedia b={b} /></a>
+                : <BannerMedia b={b} />}
+            </div>
           ))}
         </div>
-      )}
+        {n > 1 && <div className="swiper-pagination"></div>}
+      </div>
     </div>
   );
 }
