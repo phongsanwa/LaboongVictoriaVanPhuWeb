@@ -226,7 +226,10 @@ class OrdersController extends Controller
             if ($item->size_name) $parts[] = "Size {$item->size_name}";
             if ($item->sugar_level && $item->sugar_level !== '100') $parts[] = "Đường {$item->sugar_level}%";
             if ($item->ice_level   && $item->ice_level   !== '100') $parts[] = "Đá {$item->ice_level}%";
-            foreach ($item->toppings as $t) $parts[] = $t->topping_name;
+            foreach ($item->toppings as $t) {
+                $q = max(1, (int) ($t->quantity ?? 1));
+                $parts[] = $q > 1 ? "{$t->topping_name} x{$q}" : $t->topping_name;
+            }
 
             return [
                 'name' => $item->product?->name ?? "Sản phẩm #{$item->product_id}",

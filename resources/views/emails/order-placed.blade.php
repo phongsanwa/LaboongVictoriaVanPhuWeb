@@ -119,7 +119,7 @@
               if ($item->size_name)          $parts[] = "Size {$item->size_name}";
               if ($item->sugar_level !== null) $parts[] = "Đường {$item->sugar_level}%";
               if ($item->ice_level   !== null) $parts[] = "Đá {$item->ice_level}%";
-              foreach ($item->toppings as $t) $parts[] = $t->topping_name;
+              foreach ($item->toppings as $t) { $q = max(1, (int) ($t->quantity ?? 1)); $parts[] = $q > 1 ? "{$t->topping_name} x{$q}" : $t->topping_name; }
               $opts = implode(' · ', $parts);
             @endphp
             <tr>

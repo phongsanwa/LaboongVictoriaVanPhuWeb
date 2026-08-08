@@ -46,7 +46,7 @@ MON DAT
   if ($item->size_name)           $parts[] = "Size {$item->size_name}";
   if ($item->sugar_level !== null) $parts[] = "Duong {$item->sugar_level}%";
   if ($item->ice_level   !== null) $parts[] = "Da {$item->ice_level}%";
-  foreach ($item->toppings as $t) $parts[] = $t->topping_name;
+  foreach ($item->toppings as $t) { $q = max(1, (int) ($t->quantity ?? 1)); $parts[] = $q > 1 ? "{$t->topping_name} x{$q}" : $t->topping_name; }
 @endphp
 {{ $item->quantity }}x {{ $item->product?->name ?? "San pham #{$item->product_id}" }}
 @if (count($parts))

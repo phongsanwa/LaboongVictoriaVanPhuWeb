@@ -110,7 +110,7 @@ class OrderController extends Controller
                 ? $pricePromo->calcSalePrice((int) $product->base_price)
                 : (float) $product->base_price;
 
-            $addonTotal = array_sum(array_column($addonTops, 'extra'));
+            $addonTotal = array_sum(array_map(fn ($t) => (float) $t['extra'] * (int) ($t['quantity'] ?? 1), $addonTops));
             // Kiểu ShopeeFood: đơn lưu GIÁ GỐC; phần gạch giá tách thành dòng
             // "Khuyến mãi gạch giá" riêng. sale_* chỉ dùng để tính khuyến mãi.
             $origUnit   = round((float) $product->base_price + $sizeExtra + $addonTotal, 2);
@@ -223,7 +223,7 @@ class OrderController extends Controller
                 $topTotal = 0;
                 foreach ($itemData as $it) {
                     foreach ($it['toppings'] as $t) {
-                        $topTotal += (float) $t['extra'] * (int) $it['quantity'];
+                        $topTotal += (float) $t['extra'] * (int) ($t['quantity'] ?? 1) * (int) $it['quantity'];
                     }
                 }
                 $voucherDiscAmt = $topTotal > 0
@@ -277,6 +277,7 @@ class OrderController extends Controller
                     $orderItem->toppings()->create([
                         'variant_id'     => $top['variant_id'],
                         'topping_name'   => $top['name'],
+                        'quantity'       => (int) ($top['quantity'] ?? 1),
                         'price_at_order' => $top['extra'],
                     ]);
                 }
@@ -411,7 +412,10 @@ class OrderController extends Controller
                 $sizeName   = $value;
 
             } elseif ($group->type === 'addon' && is_array($value)) {
-                foreach ($value as $toppingName) {
+                // Khách chọn số lượng mỗi topping: mảng có thể lặp id (2 trân châu = [pearl, pearl]).
+                // Gộp theo tên để lưu 1 dòng/topping kèm số lượng (bảng có unique order_item_id+variant_id).
+                $counts = array_count_values(array_map('strval', $value));
+                foreach ($counts as $toppingName => $count) {
                     $variant = ProductVariant::where('product_id', $productId)
                         ->where('variant_type', $groupKey)
                         ->where('name', $toppingName)
@@ -419,6 +423,7 @@ class OrderController extends Controller
                     if ($variant) {
                         $addonTops[] = [
                             'name'       => $toppingName,
+                            'quantity'   => max(1, (int) $count),
                             'extra'      => (float) $variant->extra_price,
                             'variant_id' => $variant->id,
                         ];

@@ -340,7 +340,13 @@ function optsText(l, variantGroups) {
       if (val === undefined || val === null) return;
       if (Array.isArray(val)) {
         if (val.length) {
-          const names = val.map(id => g.options.find(o => o.id === id)?.label || id);
+          // Mảng có thể lặp id (số lượng topping) → gộp thành "Tên x2"
+          const counts = {};
+          val.forEach(id => { counts[id] = (counts[id] || 0) + 1; });
+          const names = Object.entries(counts).map(([id, n]) => {
+            const label = g.options.find(o => o.id === id)?.label || id;
+            return n > 1 ? `${label} x${n}` : label;
+          });
           parts.push(names.join(', '));
         }
       } else {
