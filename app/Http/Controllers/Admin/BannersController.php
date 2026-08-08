@@ -31,6 +31,7 @@ class BannersController extends Controller
                     'toggle'  => route('admin.banners.toggle', ['banner' => '__ID__']),
                     'destroy' => route('admin.banners.destroy', ['banner' => '__ID__']),
                     'upload'  => route('admin.banners.upload'),
+                    'reorder' => route('admin.banners.reorder'),
                 ],
             ],
         ]);
@@ -60,6 +61,18 @@ class BannersController extends Controller
         $banner->update($data);
 
         return response()->json(['banner' => $this->present($banner->fresh())]);
+    }
+
+    /** Sắp xếp lại thứ tự banner theo danh sách id kéo-thả. */
+    public function reorder(Request $request): JsonResponse
+    {
+        $ids = $request->validate(['ids' => ['required', 'array']])['ids'];
+
+        foreach ($ids as $i => $id) {
+            Banner::where('id', $id)->update(['sort_order' => $i]);
+        }
+
+        return response()->json(['ok' => true]);
     }
 
     public function toggle(Banner $banner): JsonResponse

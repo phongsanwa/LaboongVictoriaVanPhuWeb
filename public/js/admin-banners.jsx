@@ -159,6 +159,8 @@ function App() {
   const [sideOpen, setSideOpen] = useState(false);
   const [toast, setToast] = useState(null);
   const [confirmDel, setConfirmDel] = useState(null);
+  const [dragId, setDragId] = useState(null);
+  const [overId, setOverId] = useState(null);
 
   useEffect(() => {
     const r = document.documentElement;
@@ -191,6 +193,28 @@ function App() {
     } catch (e) { flash(e.message, false); }
   };
 
+  // Lưu thứ tự mới lên server (im lặng; lỗi thì báo toast)
+  const persistOrder = async (list) => {
+    try { await apiJson('POST', URLS.reorder, { ids: list.map(b => b.id) }); }
+    catch (e) { flash(e.message, false); }
+  };
+
+  const onDrop = (targetId) => {
+    setOverId(null);
+    const from = dragId; setDragId(null);
+    if (from == null || from === targetId) return;
+    setBanners(list => {
+      const arr = [...list];
+      const fi = arr.findIndex(b => b.id === from);
+      const ti = arr.findIndex(b => b.id === targetId);
+      if (fi < 0 || ti < 0) return list;
+      const [moved] = arr.splice(fi, 1);
+      arr.splice(ti, 0, moved);
+      persistOrder(arr);
+      return arr;
+    });
+  };
+
   const admin = DATA.admin || { name: "Quản trị viên", email: "", initials: "QT" };
 
   return (
@@ -211,11 +235,25 @@ function App() {
               Chưa có banner nào. Bấm “Thêm banner” để tạo banner đầu tiên.
             </div>
           )}
+          {banners.length > 1 && (
+            <div style={{ fontSize: 13, color: "var(--ink-3)", marginBottom: 12, display: "flex", alignItems: "center", gap: 6 }}>
+              <Icon name="grid" size={14} /> Kéo-thả các banner để sắp xếp thứ tự hiển thị ngoài trang chủ.
+            </div>
+          )}
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(340px, 1fr))", gap: 16 }}>
             {banners.map(n => (
-              <div key={n.id} style={{ background: "var(--panel)", border: "1px solid var(--line-2)", borderRadius: 16, overflow: "hidden", opacity: n.status === "active" ? 1 : 0.6 }}>
+              <div key={n.id}
+                draggable
+                onDragStart={() => setDragId(n.id)}
+                onDragEnd={() => { setDragId(null); setOverId(null); }}
+                onDragOver={e => { e.preventDefault(); if (overId !== n.id) setOverId(n.id); }}
+                onDrop={() => onDrop(n.id)}
+                style={{ background: "var(--panel)", border: (overId === n.id && dragId !== n.id) ? "2px solid var(--brand)" : "1px solid var(--line-2)", borderRadius: 16, overflow: "hidden", opacity: n.status === "active" ? (dragId === n.id ? 0.5 : 1) : 0.6, cursor: "grab" }}>
                 <div style={{ position: "relative", background: "linear-gradient(135deg,#0F623F,#1AA86A)" }}>
-                  <img src={n.image_desktop} alt="" style={{ width: "100%", maxHeight: 180, objectFit: "cover", display: "block" }} />
+                  <img src={n.image_desktop} alt="" style={{ width: "100%", maxHeight: 180, objectFit: "cover", display: "block" }} draggable={false} />
+                  <span style={{ position: "absolute", bottom: 10, right: 10, background: "rgba(0,0,0,.55)", color: "#fff", padding: "4px 8px", borderRadius: 8, display: "inline-flex", alignItems: "center", gap: 5, fontSize: 11, fontWeight: 700 }}>
+                    <Icon name="grid" size={12} color="#fff" /> Kéo để xếp
+                  </span>
                   <span style={{ position: "absolute", top: 10, right: 10, background: n.status === "active" ? "var(--brand)" : "var(--ink-3)", color: "#fff", fontSize: 11, fontWeight: 700, padding: "3px 9px", borderRadius: 999 }}>
                     {n.status === "active" ? "Đang hiện" : "Đang ẩn"}
                   </span>
