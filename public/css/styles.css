@@ -558,5 +558,8 @@ a { color: inherit; text-decoration: none; }
 .news-detail-body table { width: 100%; border-collapse: collapse; }
 .news-detail-body td, .news-detail-body th { border: 1px solid var(--line); padding: 6px 8px; }
 
-.brand-mark:has(.brand-logo-img) { background: #fff; }
+.brand-mark:has(.brand-logo-img) {
+    background: transparent;
+    box-shadow: none;
+}
 .brand-mark:has(.brand-logo-img)::after { display: none; }

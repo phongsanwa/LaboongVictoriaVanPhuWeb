@@ -1212,5 +1212,8 @@ textarea.sinp { resize: vertical; min-height: 70px; line-height: 1.5; }
 .dr-f { padding: 14px 20px; border-top: 1px solid var(--line); background: var(--panel); display: flex; gap: 10px; }
 .dr-f .btn { flex: 1; justify-content: center; }
 
-.side-mark:has(.brand-logo-img) { background: #fff; }
+.side-mark:has(.brand-logo-img) {
+    background: transparent;
+    box-shadow: none;
+}
 .side-mark:has(.brand-logo-img)::after { display: none; }

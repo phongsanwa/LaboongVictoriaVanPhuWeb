@@ -55,7 +55,7 @@ input { font-family: inherit; }
 
 /* brand head */
 .brand { display: flex; flex-direction: column; align-items: center; text-align: center; margin-bottom: 22px; }
-.brand-mark { width: 60px; height: 60px; border-radius: 19px; background: linear-gradient(150deg, var(--brand), var(--brand-deep)); display: grid; place-items: center; box-shadow: var(--shadow-brand); position: relative; }
+.brand-mark { width: 100px; height: 100px; border-radius: 19px; background: linear-gradient(150deg, var(--brand), var(--brand-deep)); display: grid; place-items: center; box-shadow: var(--shadow-brand); position: relative; }
 .brand-mark span { font-family: var(--display); font-weight: 800; font-size: 30px; color: #fff; }
 .brand-logo-img { width: 100%; height: 100%; object-fit: cover; border-radius: inherit; display: block; }
 .brand-mark::after { content:""; position: absolute; width: 16px; height: 16px; border-radius: 50%; background: var(--yellow); right: 8px; bottom: 8px; }
@@ -111,7 +111,7 @@ input { font-family: inherit; }
 .btn-row .btn { width: auto; flex: 1; }
 .btn-row .btn.back { flex: 0 0 52px; padding: 15px 0; }
 
-.foot-note { text-align: center; font-size: 13px; color: var(--ink-2); margin-top: 18px; font-weight: 500; }
+.foot-note { text-align: center; font-size: 14px; color: var(--ink-2); margin-top: 18px; font-weight: 500; }
 .foot-note a { color: var(--brand); font-weight: 700; }
 .legal { text-align: center; font-size: 12px; color: var(--ink-3); margin-top: 16px; line-height: 1.5; font-weight: 500; }
 .legal a { color: var(--ink-2); font-weight: 600; text-decoration: underline; }
@@ -181,5 +181,8 @@ input { font-family: inherit; }
   .otp-box { max-width: 46px; font-size: 22px; }
 }
 
-.brand-mark:has(.brand-logo-img) { background: #fff; }
+.brand-mark:has(.brand-logo-img) {
+    background: transparent;
+    box-shadow: none;
+}
 .brand-mark:has(.brand-logo-img)::after { display: none; }
