@@ -297,6 +297,11 @@ function App() {
           {!LIVE_D.hideMenuToggle && (
             <button className="icon-btn menu-toggle" onClick={() => setSideOpen(true)}><Icon name="grid" size={19} /></button>
           )}
+          {LIVE_D.hideMenuToggle && (
+            <a className="btn ghost" href={LIVE_D.posUrl || "/pos/points"} style={{ display: "inline-flex", alignItems: "center", gap: 7, whiteSpace: "nowrap" }}>
+              <Icon name="arrowleft" size={16} /> Về màn tích điểm
+            </a>
+          )}
           <div>
             <div className="crumb">Quản lý · Đơn hàng</div>
             <h1>Quản lý đơn hàng</h1>
