@@ -14,6 +14,8 @@ const DATA = window.POS_DATA || {
 const PER_POINT = DATA.perPoint;
 const STAFF = DATA.staff;
 const STORES = DATA.stores || [];
+const CAN_ORDERS = !!DATA.canOrders;           // nhân viên có quyền xem đơn hàng
+const ORDERS_URL = DATA.ordersUrl || "/admin/orders";
 
 function initials(n) { const p = n.trim().split(/\s+/); return p[p.length - 1][0]; }
 
@@ -339,6 +341,16 @@ function App() {
                   </div>
                   <span className="mgo"><Icon name="chev" size={18} /></span>
                 </button>
+                {CAN_ORDERS && (
+                  <a className="method orders" href={ORDERS_URL}>
+                    <div className="mi"><Icon name="bag" size={26} color="#fff" /></div>
+                    <div>
+                      <div className="mt">Quản lý đơn hàng</div>
+                      <div className="md">Xem và xử lý đơn đặt online của cửa hàng</div>
+                    </div>
+                    <span className="mgo"><Icon name="chev" size={18} /></span>
+                  </a>
+                )}
               </div>
             </div>
           </div>
