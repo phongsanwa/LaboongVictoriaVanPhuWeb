@@ -47,6 +47,9 @@ class PosController extends Controller
                 // Danh sách cửa hàng nhân viên phụ trách — để chọn cửa hàng đang bán
                 'stores'   => $stores->map(fn ($s) => ['id' => $s->id, 'name' => $s->name])->values()->all(),
                 'perPoint' => self::PER_POINT,
+                // Nút "Quản lý đơn hàng": chỉ hiện khi nhân viên có quyền xem đơn.
+                'canOrders'  => \App\Support\AdminAccess::allows(Auth::user(), 'order_view'),
+                'ordersUrl'  => route('admin.orders.index'),
             ],
         ]);
     }
