@@ -271,8 +271,8 @@ function App() {
   return (
     <>
       <header className="topbar">
-        <div className="tb-mark"><BrandGlyph /></div>
-        <div style={{ minWidth: 0, flex: 1 }}>
+        <a className="tb-mark" href="/" title="Về trang chủ" style={{ textDecoration: "none", cursor: "pointer" }}><BrandGlyph /></a>
+        <div style={{ minWidth: 0, flex: 1, overflow: "hidden" }}>
           <div className="tb-title">Tích điểm cho khách</div>
           {multiStore ? (
             <button className="tb-sub" onClick={() => setSwitchStore(true)}
@@ -286,7 +286,7 @@ function App() {
         </div>
         <div className="tb-staff">
           <div className="tb-av">{initials(STAFF.name)}</div>
-          <div><div className="sn">{STAFF.name}</div><div className="sr">{STAFF.role}</div></div>
+          <div className="tb-staff-tx"><div className="sn">{STAFF.name}</div><div className="sr">{STAFF.role}</div></div>
         </div>
         <button className="icon-btn" style={{ width: 34, height: 34, marginLeft: 8 }} onClick={logout} title="Đăng xuất"><Icon name="logout" size={16} /></button>
       </header>
@@ -342,8 +342,8 @@ function App() {
                   <span className="mgo"><Icon name="chev" size={18} /></span>
                 </button>
                 {CAN_ORDERS && (
-                  <a className="method orders" href={ORDERS_URL}>
-                    <div className="mi"><Icon name="bag" size={26} color="#fff" /></div>
+                  <a className="method orders" href={ORDERS_URL} style={{ textDecoration: "none", color: "inherit" }}>
+                    <div className="mi" style={{ background: "linear-gradient(150deg,#2B6CB0,#4A90D9)" }}><Icon name="bag" size={26} color="#fff" /></div>
                     <div>
                       <div className="mt">Quản lý đơn hàng</div>
                       <div className="md">Xem và xử lý đơn đặt online của cửa hàng</div>
