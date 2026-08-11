@@ -69,6 +69,8 @@ a { color: inherit; text-decoration: none; }
 
 /* ---------------- Shell ---------------- */
 .shell { display: grid; grid-template-columns: var(--sidew) 1fr; min-height: 100vh; }
+/* Ẩn sidebar (thu ngân): nội dung chiếm toàn bộ chiều rộng */
+.shell.no-side { grid-template-columns: 1fr; }
 
 /* ---------------- Sidebar ---------------- */
 .side {

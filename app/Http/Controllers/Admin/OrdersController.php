@@ -52,6 +52,10 @@ class OrdersController extends Controller
                     'email'    => $admin->email,
                     'initials' => $this->initials($admin->name),
                 ],
+                // Thu ngân: ẩn nút mở sidebar (menu-toggle) trên trang đơn hàng.
+                'hideMenuToggle' => $admin->user_type !== 'admin' && (optional($admin->staff)->role === 'cashier'),
+                // Đường về màn tích điểm (POS) cho thu ngân.
+                'posUrl' => route('pos.points'),
                 'orders' => $this->buildOrders($scopeIds),
                 // storeLocked = nhân viên (không được xem toàn hệ thống).
                 // stores = danh sách cửa hàng được phép lọc (của admin = tất cả, NV = của mình)
