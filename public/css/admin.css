@@ -77,7 +77,8 @@ a { color: inherit; text-decoration: none; }
   background: var(--panel); border-right: 1px solid var(--line);
   display: flex; flex-direction: column; position: sticky; top: 0; height: 100vh;
 }
-.side-brand { display: flex; align-items: center; gap: 11px; padding: 20px 20px 18px; }
+.side-brand { display: flex; align-items: center; gap: 11px; padding: 20px 20px 18px; text-decoration: none; color: inherit; cursor: pointer; transition: opacity .15s; }
+a.side-brand:hover { opacity: .82; }
 .side-mark {
   width: 40px; height: 40px; border-radius: 12px; flex: none;
   background: linear-gradient(150deg, var(--brand), var(--brand-deep));

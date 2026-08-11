@@ -70,10 +70,10 @@ function AdminSidebar({ activeLabel, badges: pageBadges = {}, admin, sideOpen, o
     <>
       {sideOpen && <div className="scrim" style={{ zIndex: 55 }} onClick={onClose} />}
       <aside className={'side' + (sideOpen ? ' open' : '')}>
-        <div className="side-brand">
+        <a className="side-brand" href={(typeof NAV_URLS !== 'undefined' && NAV_URLS.home) || '/'} title="Về trang chủ">
           <div className="side-mark"><BrandGlyph /></div>
           <div><div className="nm">Laboong</div><div className="sb">Bảng quản trị</div></div>
-        </div>
+        </a>
         <div className="side-body">
           <div className="side-sec">Quản lý</div>
           <nav className="side-nav">{mgmt.map(renderLink)}</nav>
