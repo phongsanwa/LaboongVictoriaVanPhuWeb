@@ -292,7 +292,9 @@ function App() {
 
       <div className="main">
         <header className="topbar">
-          <button className="icon-btn menu-toggle" onClick={() => setSideOpen(true)}><Icon name="grid" size={19} /></button>
+          {!LIVE_D.hideMenuToggle && (
+            <button className="icon-btn menu-toggle" onClick={() => setSideOpen(true)}><Icon name="grid" size={19} /></button>
+          )}
           <div>
             <div className="crumb">Quản lý · Đơn hàng</div>
             <h1>Quản lý đơn hàng</h1>
