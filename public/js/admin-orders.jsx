@@ -287,8 +287,10 @@ function App() {
   const adminInfo = LIVE ? LIVE_D.admin : { name: "Quản trị viên", email: "admin@laboong.vn", initials: "QT" };
 
   return (
-    <div className="shell">
-      <AdminSidebar activeLabel="Đơn hàng" badges={{ "Đơn hàng": String(counts.active || 0) }} admin={adminInfo} sideOpen={sideOpen} onClose={() => setSideOpen(false)} />
+    <div className={"shell" + (LIVE_D.hideMenuToggle ? " no-side" : "")}>
+      {!LIVE_D.hideMenuToggle && (
+        <AdminSidebar activeLabel="Đơn hàng" badges={{ "Đơn hàng": String(counts.active || 0) }} admin={adminInfo} sideOpen={sideOpen} onClose={() => setSideOpen(false)} />
+      )}
 
       <div className="main">
         <header className="topbar">
