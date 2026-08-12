@@ -108,6 +108,7 @@ class SettingsController extends Controller
                 'notifications' => array_merge(self::NOTIF_DEFAULTS, $notif),
                 'timing' => $timing,
                 'integrations' => $integrations,
+                'telegram' => \App\Support\TelegramNotifier::config(),
             ],
         ]);
     }
@@ -150,6 +151,11 @@ class SettingsController extends Controller
             'integrations' => ['required', 'array'],
             'integrations.*.id' => ['required', 'string'],
             'integrations.*.on' => ['required', 'boolean'],
+
+            'telegram' => ['nullable', 'array'],
+            'telegram.enabled' => ['nullable', 'boolean'],
+            'telegram.bot_token' => ['nullable', 'string', 'max:120'],
+            'telegram.chat_id' => ['nullable', 'string', 'max:60'],
         ]);
 
         $current = AppSetting::get('general', self::GENERAL_DEFAULTS);
@@ -167,6 +173,12 @@ class SettingsController extends Controller
 
         $integEnabled = collect($data['integrations'])->mapWithKeys(fn ($i) => [$i['id'] => (bool) $i['on']])->all();
         AppSetting::set('integrations', $integEnabled);
+
+        AppSetting::set('telegram', [
+            'enabled'   => (bool) ($data['telegram']['enabled'] ?? false),
+            'bot_token' => trim((string) ($data['telegram']['bot_token'] ?? '')),
+            'chat_id'   => trim((string) ($data['telegram']['chat_id'] ?? '')),
+        ]);
 
         foreach ($data['tiers'] as $tier) {
             CustomerTier::where('id', $tier['id'])->update([
@@ -245,6 +257,28 @@ class SettingsController extends Controller
         $this->removeGeneralImage('app_icon_url');
 
         return response()->json(['message' => 'Đã xoá icon màn hình chính']);
+    }
+
+    /** Gửi tin nhắn thử tới Telegram để kiểm tra bot token + chat id. */
+    public function testTelegram(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'bot_token' => ['required', 'string', 'max:120'],
+            'chat_id'   => ['required', 'string', 'max:60'],
+        ], [
+            'bot_token.required' => 'Vui lòng nhập Bot Token',
+            'chat_id.required'   => 'Vui lòng nhập Chat ID',
+        ]);
+
+        $ok = \App\Support\TelegramNotifier::send(
+            "✅ <b>Laboong</b> — Kết nối Telegram thành công!\nĐơn hàng mới sẽ được gửi về đây.",
+            $data['bot_token'],
+            $data['chat_id'],
+        );
+
+        return $ok
+            ? response()->json(['message' => 'Đã gửi tin nhắn thử — kiểm tra Telegram nhé!'])
+            : response()->json(['message' => 'Không gửi được. Kiểm tra lại Bot Token và Chat ID.'], 422);
     }
 
     /** Stores a new image for a general-settings field, removing the previous file, and returns its public URL. */
