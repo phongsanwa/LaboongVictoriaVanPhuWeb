@@ -83,6 +83,20 @@ function minsAgo(iso) {
   return Math.max(0, Math.floor((Date.now() - new Date(iso).getTime()) / 60000));
 }
 
+/* Đổi tổng số phút thành "ngày giờ phút trước" cho dễ đọc (đơn cũ không còn hiện số phút khổng lồ). */
+function timeAgo(mins) {
+  mins = Math.max(0, Math.floor(mins || 0));
+  if (mins < 1) return "Vừa xong";
+  const d = Math.floor(mins / 1440);
+  const h = Math.floor((mins % 1440) / 60);
+  const m = mins % 60;
+  const parts = [];
+  if (d > 0) parts.push(d + " ngày");
+  if (h > 0) parts.push(h + " giờ");
+  if (m > 0 || parts.length === 0) parts.push(m + " phút");
+  return parts.join(" ") + " trước";
+}
+
 function csrfToken() {
   return document.querySelector('meta[name="csrf-token"]')?.content || '';
 }
@@ -379,7 +393,7 @@ function App() {
                     <div style={{ minWidth: 0 }}>
                       <div className="ocard-code">{o.id}</div>
                       <div className={"ocard-time" + (late ? " late" : "")}>
-                        <Icon name="clock" size={12} color="currentColor" /> {o.mins} phút trước
+                        <Icon name="clock" size={12} color="currentColor" /> {timeAgo(o.mins)}
                       </div>
                     </div>
                     <span className={"ostatus " + st.cls}>{st.label}</span>
@@ -441,7 +455,7 @@ function OrderDrawer({ o, saving, onClose, onAdvance, onCancel }) {
         <div className="od-head">
           <button className="od-close" onClick={onClose}><Icon name="close" size={18} color="#fff" /></button>
           <div className="od-code">{o.id}</div>
-          <div className="od-meta"><span>{o.mins} phút trước</span><span>·</span><span>{o.pay}</span></div>
+          <div className="od-meta"><span>{timeAgo(o.mins)}</span><span>·</span><span>{o.pay}</span></div>
           <span className="od-statuschip"><Icon name={st.ic} size={14} color="#fff" /> {st.label}</span>
         </div>
         <div className="od-body">
