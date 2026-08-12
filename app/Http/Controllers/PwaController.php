@@ -14,7 +14,8 @@ class PwaController extends Controller
     public function manifest(): Response
     {
         $general = AppSetting::get('general', []);
-        $logo  = $general['logo_url'] ?? null;
+        // Icon màn hình chính: ưu tiên ảnh riêng (app_icon_url), chưa có thì dùng logo.
+        $logo  = ($general['app_icon_url'] ?? null) ?: ($general['logo_url'] ?? null);
         $brand = $general['brand'] ?? 'Laboong';
 
         $manifest = [

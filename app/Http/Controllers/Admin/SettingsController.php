@@ -20,6 +20,7 @@ class SettingsController extends Controller
         'hotline' => '1900 8386',
         'logo_url' => null,
         'favicon_url' => null,
+        'app_icon_url' => null, // icon riêng cho "Thêm vào màn hình chính" (PWA); trống thì dùng logo
         'checkin_enabled' => true, // bật/tắt chức năng điểm danh hàng ngày
         'ios_guide_html' => null,  // hướng dẫn thêm ra màn hình chính iPhone (HTML từ trình soạn thảo)
     ];
@@ -155,6 +156,7 @@ class SettingsController extends Controller
         $general = $data['general'];
         $general['logo_url'] = $current['logo_url'] ?? null;
         $general['favicon_url'] = $current['favicon_url'] ?? null;
+        $general['app_icon_url'] = $current['app_icon_url'] ?? null;
         $general['checkin_enabled'] = (bool) ($data['general']['checkin_enabled'] ?? true);
         // Hướng dẫn iPhone là HTML từ trình soạn thảo → làm sạch chống XSS trước khi lưu.
         $general['ios_guide_html'] = \App\Support\HtmlSanitizer::clean($data['general']['ios_guide_html'] ?? null);
@@ -220,6 +222,29 @@ class SettingsController extends Controller
         $this->removeGeneralImage('favicon_url');
 
         return response()->json(['message' => 'Đã xoá favicon']);
+    }
+
+    public function uploadAppIcon(Request $request): JsonResponse
+    {
+        $request->validate([
+            'app_icon' => ['required', 'image', 'mimes:png,jpg,jpeg,webp', 'max:2048'],
+        ], [
+            'app_icon.required' => 'Vui lòng chọn một tệp hình ảnh',
+            'app_icon.image' => 'Tệp phải là hình ảnh (PNG, JPG, WEBP)',
+            'app_icon.mimes' => 'Tệp phải là hình ảnh (PNG, JPG, WEBP)',
+            'app_icon.max' => 'Kích thước ảnh tối đa 2MB',
+        ]);
+
+        $url = $this->replaceGeneralImage('app_icon_url', $request->file('app_icon'), 'branding');
+
+        return response()->json(['message' => 'Đã tải lên icon màn hình chính', 'app_icon_url' => $url]);
+    }
+
+    public function deleteAppIcon(): JsonResponse
+    {
+        $this->removeGeneralImage('app_icon_url');
+
+        return response()->json(['message' => 'Đã xoá icon màn hình chính']);
     }
 
     /** Stores a new image for a general-settings field, removing the previous file, and returns its public URL. */

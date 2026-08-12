@@ -81,6 +81,9 @@ function App() {
   const [faviconUrl, setFaviconUrl] = useState(DATA.general.favicon_url || null);
   const [faviconBusy, setFaviconBusy] = useState(false);
   const faviconInputRef = React.useRef(null);
+  const [appIconUrl, setAppIconUrl] = useState(DATA.general.app_icon_url || null);
+  const [appIconBusy, setAppIconBusy] = useState(false);
+  const appIconInputRef = React.useRef(null);
 
   const dirty = useMemo(() => JSON.stringify(form) !== JSON.stringify(saved), [form, saved]);
 
@@ -246,6 +249,22 @@ function App() {
                           <div className="logo-up-btns">
                             <button className="btn ghost sm" disabled={faviconBusy} onClick={() => faviconInputRef.current?.click()}><Icon name="image" size={15} /> Tải lên</button>
                             <button className="btn ghost sm" disabled={faviconBusy || !faviconUrl} onClick={() => deleteAsset("favicon", setFaviconUrl, setFaviconBusy)}><Icon name="trash" size={15} /> Xoá</button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="frow">
+                      <div className="flabel">Icon màn hình chính<div className="fsub">Ảnh khi khách "Thêm vào màn hình chính". Nên vuông, nền đặc, ≥512px. Để trống thì dùng logo.</div></div>
+                      <div className="fcontrol">
+                        <div className="logo-up">
+                          <div className="logo-prev">
+                            {appIconUrl ? <img src={appIconUrl} alt="Icon" style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: "inherit" }} /> : <span>{(form.brand || "L")[0]}</span>}
+                          </div>
+                          <input ref={appIconInputRef} type="file" accept="image/png,image/jpeg,image/webp" style={{ display: "none" }}
+                            onChange={e => { uploadAsset("app_icon", e.target.files[0], setAppIconUrl, setAppIconBusy); e.target.value = ""; }} />
+                          <div className="logo-up-btns">
+                            <button className="btn ghost sm" disabled={appIconBusy} onClick={() => appIconInputRef.current?.click()}><Icon name="image" size={15} /> Tải lên</button>
+                            <button className="btn ghost sm" disabled={appIconBusy || !appIconUrl} onClick={() => deleteAsset("app_icon", setAppIconUrl, setAppIconBusy)}><Icon name="trash" size={15} /> Xoá</button>
                           </div>
                         </div>
                       </div>
