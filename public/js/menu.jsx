@@ -799,6 +799,38 @@ function App() {
     }
   };
 
+  /* Xoá một địa chỉ giao hàng đã lưu */
+  const deleteAddress = async (id) => {
+    if (!window.confirm("Xoá địa chỉ này?")) return;
+    const removeLocal = () => {
+      setAddresses(list => {
+        const wasDef = list.find(a => a.id === id)?.def;
+        let next = list.filter(a => a.id !== id);
+        // Xoá địa chỉ mặc định → chuyển mặc định sang địa chỉ còn lại đầu tiên (giống server)
+        if (wasDef && next.length && !next.some(a => a.def)) {
+          next = next.map((a, i) => i === 0 ? { ...a, def: true } : a);
+        }
+        return next;
+      });
+      if (addrId === id) setAddrId("pickup");
+    };
+    if (!LIVE) { removeLocal(); return; }
+    try {
+      const url = (LIVE_D.urls?.deleteAddress || "/profile/addresses/__ID__").replace("__ID__", id);
+      const res = await fetch(url, {
+        method: 'DELETE',
+        headers: {
+          'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || '',
+          'Accept': 'application/json',
+        },
+      });
+      if (!res.ok) { const j = await res.json().catch(() => ({})); throw new Error(j.message || 'Không xoá được địa chỉ'); }
+      removeLocal();
+    } catch (e) {
+      alert(e.message);
+    }
+  };
+
   const jumpCat = (key) => {
     setActiveCat(key);
     const el = grpRefs.current[key];
@@ -1333,14 +1365,19 @@ function App() {
                   <div className="cp-sec">Giao đến địa chỉ</div>
                   <div className="vlist">
                     {addresses.map(a => (
-                      <button key={a.id} className={"aopt" + (addrId === a.id ? " on" : "")} onClick={() => { setAddrId(a.id); setAddrView(false); }}>
+                      <div key={a.id} className={"aopt" + (addrId === a.id ? " on" : "")} style={{ cursor: "pointer" }}
+                        onClick={() => { setAddrId(a.id); setAddrView(false); }}>
                         <span className="ai"><Icon name={addrIcon(a.label)} size={19} color="currentColor" /></span>
                         <div style={{ minWidth: 0, flex: 1 }}>
                           <div className="albl"><span className="atag">{a.label}</span>{a.def && <span className="adef">Mặc định</span>}</div>
                           <div className="atext">{a.text}</div>
                         </div>
+                        <button className="aopt-del" title="Xoá địa chỉ" aria-label="Xoá địa chỉ"
+                          onClick={(e) => { e.stopPropagation(); deleteAddress(a.id); }}>
+                          <Icon name="close" size={15} color="currentColor" />
+                        </button>
                         <span className="aradio" />
-                      </button>
+                      </div>
                     ))}
                     {addresses.length === 0 && !addrFormOpen && (
                       <div className="cp-empty">Bạn chưa có địa chỉ giao hàng — thêm ngay bên dưới nhé!</div>

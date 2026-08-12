@@ -259,8 +259,9 @@ class MenuPageController extends Controller
             'customerName'  => Auth::user()?->name ?? '',
             'customerPhone' => Auth::user()?->phone ?? '',
             'urls'          => [
-                'placeOrder'   => route('orders.place'),
-                'storeAddress' => route('profile.addresses.store'),
+                'placeOrder'    => route('orders.place'),
+                'storeAddress'  => route('profile.addresses.store'),
+                'deleteAddress' => route('profile.addresses.destroy', ['address' => '__ID__']),
             ],
             'tagMeta'       => [
                 'hot' => ['l' => 'Best',   'ic' => 'flame'],
