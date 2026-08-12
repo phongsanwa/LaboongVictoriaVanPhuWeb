@@ -44,6 +44,11 @@ class SendOrderNotification implements ShouldQueue
         foreach ($recipients as $email) {
             Mail::to($email)->send(new OrderPlaced($order));
         }
+
+        // Gửi thêm qua Telegram (nếu đã bật & cấu hình trong Cài đặt)
+        if (\App\Support\TelegramNotifier::enabled()) {
+            \App\Support\TelegramNotifier::send(\App\Support\TelegramNotifier::formatOrder($order));
+        }
     }
 
     public function failed(\Throwable $e): void

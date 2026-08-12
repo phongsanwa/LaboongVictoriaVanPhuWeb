@@ -79,6 +79,9 @@ Route::middleware(['auth', 'admin.perm'])->prefix('admin')->name('admin.')->grou
     Route::delete('/settings/logo', [SettingsController::class, 'deleteLogo'])->middleware('admin.perm:settings')->name('settings.logo.delete');
     Route::post('/settings/favicon', [SettingsController::class, 'uploadFavicon'])->middleware('admin.perm:settings')->name('settings.favicon.upload');
     Route::delete('/settings/favicon', [SettingsController::class, 'deleteFavicon'])->middleware('admin.perm:settings')->name('settings.favicon.delete');
+    Route::post('/settings/app_icon', [SettingsController::class, 'uploadAppIcon'])->middleware('admin.perm:settings')->name('settings.app_icon.upload');
+    Route::delete('/settings/app_icon', [SettingsController::class, 'deleteAppIcon'])->middleware('admin.perm:settings')->name('settings.app_icon.delete');
+    Route::post('/settings/telegram/test', [SettingsController::class, 'testTelegram'])->middleware('admin.perm:settings')->name('settings.telegram.test');
 
     // Cửa hàng
     Route::get('/stores', [StoresController::class, 'index'])->middleware('admin.perm:store_edit')->name('stores.index');

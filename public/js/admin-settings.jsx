@@ -63,6 +63,9 @@ function buildState() {
     tiers: DATA.tiers,
     notif: DATA.notifications,
     integ: DATA.integrations,
+    tgEnabled: !!(DATA.telegram && DATA.telegram.enabled),
+    tgToken: (DATA.telegram && DATA.telegram.bot_token) || "",
+    tgChatId: (DATA.telegram && DATA.telegram.chat_id) || "",
   };
 }
 
@@ -81,6 +84,9 @@ function App() {
   const [faviconUrl, setFaviconUrl] = useState(DATA.general.favicon_url || null);
   const [faviconBusy, setFaviconBusy] = useState(false);
   const faviconInputRef = React.useRef(null);
+  const [appIconUrl, setAppIconUrl] = useState(DATA.general.app_icon_url || null);
+  const [appIconBusy, setAppIconBusy] = useState(false);
+  const appIconInputRef = React.useRef(null);
 
   const dirty = useMemo(() => JSON.stringify(form) !== JSON.stringify(saved), [form, saved]);
 
@@ -125,6 +131,16 @@ function App() {
   const toggleNotif = (k) => setForm(f => ({ ...f, notif: { ...f.notif, [k]: !f.notif[k] } }));
   const toggleInteg = (i) => setForm(f => ({ ...f, integ: f.integ.map((x, j) => j === i ? { ...x, on: !x.on } : x) }));
 
+  const [tgTesting, setTgTesting] = useState(false);
+  const testTelegram = async () => {
+    if (tgTesting) return;
+    setTgTesting(true);
+    const { ok, data } = await apiCall("POST", "/admin/settings/telegram/test", { bot_token: (form.tgToken || "").trim(), chat_id: (form.tgChatId || "").trim() });
+    setTgTesting(false);
+    setToast(data.message || (ok ? "Đã gửi thử" : "Không gửi được"));
+    setTimeout(() => setToast(null), 3500);
+  };
+
   const discard = () => setForm(saved);
 
   const save = async () => {
@@ -136,6 +152,7 @@ function App() {
       tiers: form.tiers.map(t => ({ id: t.id, min: t.min, mult: t.mult })),
       notifications: form.notif,
       integrations: form.integ.map(g => ({ id: g.id, on: g.on })),
+      telegram: { enabled: form.tgEnabled, bot_token: (form.tgToken || "").trim(), chat_id: (form.tgChatId || "").trim() },
     });
     setSaving(false);
     if (ok) {
@@ -246,6 +263,22 @@ function App() {
                           <div className="logo-up-btns">
                             <button className="btn ghost sm" disabled={faviconBusy} onClick={() => faviconInputRef.current?.click()}><Icon name="image" size={15} /> Tải lên</button>
                             <button className="btn ghost sm" disabled={faviconBusy || !faviconUrl} onClick={() => deleteAsset("favicon", setFaviconUrl, setFaviconBusy)}><Icon name="trash" size={15} /> Xoá</button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="frow">
+                      <div className="flabel">Icon màn hình chính<div className="fsub">Ảnh khi khách "Thêm vào màn hình chính". Nên vuông, nền đặc, ≥512px. Để trống thì dùng logo.</div></div>
+                      <div className="fcontrol">
+                        <div className="logo-up">
+                          <div className="logo-prev">
+                            {appIconUrl ? <img src={appIconUrl} alt="Icon" style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: "inherit" }} /> : <span>{(form.brand || "L")[0]}</span>}
+                          </div>
+                          <input ref={appIconInputRef} type="file" accept="image/png,image/jpeg,image/webp" style={{ display: "none" }}
+                            onChange={e => { uploadAsset("app_icon", e.target.files[0], setAppIconUrl, setAppIconBusy); e.target.value = ""; }} />
+                          <div className="logo-up-btns">
+                            <button className="btn ghost sm" disabled={appIconBusy} onClick={() => appIconInputRef.current?.click()}><Icon name="image" size={15} /> Tải lên</button>
+                            <button className="btn ghost sm" disabled={appIconBusy || !appIconUrl} onClick={() => deleteAsset("app_icon", setAppIconUrl, setAppIconBusy)}><Icon name="trash" size={15} /> Xoá</button>
                           </div>
                         </div>
                       </div>
@@ -408,6 +441,40 @@ function App() {
                         </div>
                       </div>
                     ))}
+                  </div>
+                </div>
+              )}
+
+              {tab === "integrations" && (
+                <div className="scard" style={{ marginTop: 16 }}>
+                  <div className="scard-h">
+                    <div className="st">Gửi đơn hàng qua Telegram</div>
+                    <div className="sd">Ngoài email, gửi thông báo đơn mới về nhóm/kênh Telegram.</div>
+                  </div>
+                  <div className="scard-b">
+                    <div className="frow">
+                      <div className="flabel">Bật gửi Telegram</div>
+                      <div className="fcontrol" style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                        <Tog on={form.tgEnabled} onClick={() => set("tgEnabled", !form.tgEnabled)} />
+                        <span style={{ fontSize: 13.5, fontWeight: 600, color: form.tgEnabled ? "var(--brand)" : "var(--ink-3)" }}>{form.tgEnabled ? "Đang bật" : "Đang tắt"}</span>
+                      </div>
+                    </div>
+                    <div className="frow">
+                      <div className="flabel">Bot Token<div className="fsub">Lấy từ @BotFather trên Telegram</div></div>
+                      <div className="fcontrol"><input className="sinp" value={form.tgToken} onChange={e => set("tgToken", e.target.value)} placeholder="123456:ABC-DEF..." /></div>
+                    </div>
+                    <div className="frow">
+                      <div className="flabel">Chat ID<div className="fsub">ID nhóm/kênh/cá nhân nhận thông báo</div></div>
+                      <div className="fcontrol">
+                        <input className="sinp" value={form.tgChatId} onChange={e => set("tgChatId", e.target.value)} placeholder="-1001234567890" />
+                        <div style={{ marginTop: 10 }}>
+                          <button className="btn ghost sm" disabled={tgTesting || !form.tgToken.trim() || !form.tgChatId.trim()} onClick={testTelegram}>
+                            <Icon name="send" size={15} /> {tgTesting ? "Đang gửi…" : "Gửi thử"}
+                          </button>
+                          <span style={{ marginLeft: 10, fontSize: 12, color: "var(--ink-3)" }}>Nhớ bấm “Lưu thay đổi” sau khi cấu hình.</span>
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 </div>
               )}
