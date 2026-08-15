@@ -79,6 +79,13 @@ class RegisterController extends Controller
 
         Auth::login($user);
 
+        // Gửi email chào mừng (kèm mã QR + link website). Không để lỗi mail làm hỏng đăng ký.
+        try {
+            \Illuminate\Support\Facades\Mail::to($user->email)->send(new \App\Mail\WelcomeRegistered($user));
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::error('Welcome email failed', ['user_id' => $user->id, 'error' => $e->getMessage()]);
+        }
+
         return response()->json([
             'message' => 'Đăng ký thành công',
             'redirect' => route('home'),

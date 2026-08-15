@@ -1080,10 +1080,10 @@ function App() {
                     <div><div className="ot">Sẽ nhận khi đơn hoàn tất</div><div className="ov">+{fmt(actualPts)} điểm</div></div>
                   </div>
                 )}
-                <p style={{ fontSize: 12.5, color: "var(--ink-3)", marginTop: -4 }}>
+                <p style={{ fontSize: 13, color: "var(--ink-2)", margin: "14px 6px 2px", lineHeight: 1.55 }}>
                   Điểm sẽ được cộng vào tài khoản khi đơn giao thành công.
                 </p>
-                <button className="ok-btn" onClick={reset}>Đặt thêm món khác</button>
+                <button className="ok-btn" onClick={reset} style={{ marginTop: 20 }}>Đặt thêm món khác</button>
               </div>
             ) : couponView ? (
               <>
