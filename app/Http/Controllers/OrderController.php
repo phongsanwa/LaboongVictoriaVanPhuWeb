@@ -379,7 +379,10 @@ class OrderController extends Controller
     private function notifyStaff(int $orderId): void
     {
         try {
-            SendOrderNotification::dispatch($orderId);
+            // Chạy NGAY SAU khi trả phản hồi cho khách, trong cùng tiến trình web
+            // (không đẩy vào hàng đợi) → luôn dùng code mới nhất, không cần restart
+            // queue worker sau mỗi lần deploy. Khách không phải chờ thêm.
+            SendOrderNotification::dispatchAfterResponse($orderId);
         } catch (\Throwable $e) {
             Log::error('Failed to dispatch SendOrderNotification', ['order_id' => $orderId, 'error' => $e->getMessage()]);
         }
