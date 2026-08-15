@@ -19,6 +19,8 @@ const GROUP_ICONS = ["cup", "coin", "flame", "plus", "star", "gift", "grid", "re
 /* ─── Live-mode globals ──────────────────────────────────────────────── */
 const LIVE      = !!window.ADMIN_VARIANTS_DATA;
 const LIVE_URLS = window.ADMIN_VARIANTS_DATA?.urls || {};
+const STORES    = window.ADMIN_VARIANTS_DATA?.stores || [];
+const INIT_OFFS = window.ADMIN_VARIANTS_DATA?.storeOffs || {};
 
 function csrfToken() {
   return document.querySelector('meta[name="csrf-token"]')?.content || '';
@@ -153,6 +155,25 @@ function App() {
   const [search,      setSearch]      = useState("");
   const [saving,      setSaving]      = useState(false);
   const [toast,       setToast]       = useState(null);
+  // Cửa hàng đang xem (null = "Tất cả cửa hàng" → bật/tắt toàn hệ thống).
+  const [storeId,     setStoreId]     = useState(null);
+  // storeOffs[store_id] = Set("TYPE|Name") các option đang HẾT riêng ở cửa hàng đó.
+  const [storeOffs,   setStoreOffs]   = useState(() => {
+    const m = {};
+    Object.keys(INIT_OFFS).forEach(k => { m[k] = new Set(INIT_OFFS[k]); });
+    return m;
+  });
+
+  const offKey    = (gKey, oId) => `${gKey}|${oId}`;
+  const isOff     = (gKey, oId) => storeId != null && !!storeOffs[String(storeId)]?.has(offKey(gKey, oId));
+  // Còn bán ở góc nhìn hiện tại: phải còn global VÀ (nếu chọn cửa hàng) không nằm trong danh sách hết của cửa hàng đó.
+  const effAvail  = (g, o) => o.available && !isOff(g.key, o.id);
+  const setOffFlags = (fn) => setStoreOffs(prev => {
+    const key = String(storeId);
+    const cur = new Set(prev[key] || []);
+    fn(cur);
+    return { ...prev, [key]: cur };
+  });
 
   useEffect(() => {
     const r = document.documentElement;
@@ -168,9 +189,13 @@ function App() {
   };
 
   const stats = useMemo(() => {
-    const all = groups.flatMap(g => g.options);
-    return { groups: groups.length, total: all.length, off: all.filter(o => !o.available).length };
-  }, [groups]);
+    const all = groups.flatMap(g => g.options.map(o => ({ g, o })));
+    return {
+      groups: groups.length,
+      total: all.length,
+      off: all.filter(({ g, o }) => !effAvail(g, o)).length,
+    };
+  }, [groups, storeId, storeOffs]);
 
   const filteredGroups = useMemo(() => {
     if (!search.trim()) return groups;
@@ -196,9 +221,19 @@ function App() {
     if (LIVE) {
       setSaving(true);
       try {
-        const data = await apiFetch('POST', LIVE_URLS.toggleOption, { group_key: gKey, name: oId });
-        setGroup(gKey, g => ({ ...g, options: g.options.map(x => x.id === oId ? { ...x, available: data.available } : x) }));
-        flash(data.available ? `Đã bật lại "${o.label}"` : `Đã tắt "${o.label}" (báo hết)`);
+        const body = { group_key: gKey, name: oId };
+        if (storeId != null) body.store_id = storeId;
+        const data = await apiFetch('POST', LIVE_URLS.toggleOption, body);
+        if (storeId != null) {
+          // Chỉ đổi tồn RIÊNG cho cửa hàng đang xem, không đụng global.
+          const k = offKey(gKey, oId);
+          const wasOff = isOff(gKey, oId);
+          setOffFlags(cur => { if (wasOff) cur.delete(k); else cur.add(k); });
+          flash(wasOff ? `Đã bật lại "${o.label}" tại cửa hàng này` : `Đã tắt "${o.label}" tại cửa hàng này`);
+        } else {
+          setGroup(gKey, g => ({ ...g, options: g.options.map(x => x.id === oId ? { ...x, available: data.available } : x) }));
+          flash(data.available ? `Đã bật lại "${o.label}" (mọi cửa hàng)` : `Đã tắt "${o.label}" (mọi cửa hàng)`);
+        }
       } catch (e) {
         flash(e.message, false);
       } finally {
@@ -216,14 +251,25 @@ function App() {
     if (!g) return;
     // any-on semantics: must match the server (toggleAllOptions) which turns
     // the group off if any row is still available, otherwise turns all on
-    const anyOn = g.options.some(o => o.available);
+    const anyOn = g.options.some(o => effAvail(g, o));
 
     if (LIVE) {
       setSaving(true);
       try {
-        const data = await apiFetch('POST', LIVE_URLS.toggleAll, { group_key: gKey });
-        setGroup(gKey, g => ({ ...g, options: g.options.map(o => ({ ...o, available: data.available })) }));
-        flash(data.available ? `Đã bật lại toàn bộ "${g.label}"` : `Đã báo hết toàn bộ "${g.label}"`);
+        const body = { group_key: gKey };
+        if (storeId != null) body.store_id = storeId;
+        const data = await apiFetch('POST', LIVE_URLS.toggleAll, body);
+        if (storeId != null) {
+          const keys = g.options.map(o => offKey(g.key, o.id));
+          setOffFlags(cur => {
+            if (data.available) keys.forEach(k => cur.delete(k));
+            else keys.forEach(k => cur.add(k));
+          });
+          flash(data.available ? `Đã bật lại toàn bộ "${g.label}" tại cửa hàng này` : `Đã báo hết toàn bộ "${g.label}" tại cửa hàng này`);
+        } else {
+          setGroup(gKey, g => ({ ...g, options: g.options.map(o => ({ ...o, available: data.available })) }));
+          flash(data.available ? `Đã bật lại toàn bộ "${g.label}" (mọi cửa hàng)` : `Đã báo hết toàn bộ "${g.label}" (mọi cửa hàng)`);
+        }
       } catch (e) {
         flash(e.message, false);
       } finally {
@@ -433,6 +479,38 @@ function App() {
         </header>
 
         <div className="content">
+          {LIVE && STORES.length > 0 && (
+            <div style={{
+              display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap",
+              marginBottom: 16, padding: "13px 16px", borderRadius: "var(--r-sm)",
+              background: storeId != null ? "var(--brand-soft)" : "var(--card, #fff)",
+              border: `1.5px solid ${storeId != null ? "var(--brand)" : "var(--line)"}`,
+              transition: ".14s",
+            }}>
+              <span style={{ display: "flex", alignItems: "center", gap: 8, color: "var(--brand-deep)", fontWeight: 800, fontSize: 13.5 }}>
+                <Icon name="globe" size={17} color="var(--brand)" /> Cửa hàng
+              </span>
+              <select
+                value={storeId == null ? "" : String(storeId)}
+                onChange={e => setStoreId(e.target.value === "" ? null : parseInt(e.target.value, 10))}
+                style={{
+                  flex: "0 1 260px", minWidth: 180, padding: "9px 12px",
+                  border: "1.5px solid var(--line)", borderRadius: "var(--r-sm)",
+                  background: "var(--card, #fff)", color: "var(--ink)", fontSize: 13.5, fontWeight: 700, cursor: "pointer",
+                }}>
+                <option value="">Tất cả cửa hàng (áp dụng chung)</option>
+                {STORES.map(s => (
+                  <option key={s.id} value={String(s.id)}>{s.name}</option>
+                ))}
+              </select>
+              <span style={{ fontSize: 12.5, color: "var(--ink-2)", fontWeight: 500 }}>
+                {storeId != null
+                  ? "Bật/tắt chỉ ảnh hưởng cửa hàng này — các cửa hàng khác giữ nguyên."
+                  : "Bật/tắt áp dụng cho toàn bộ cửa hàng."}
+              </span>
+            </div>
+          )}
+
           <div className="stats" style={{ marginBottom: 20 }}>
             <div className="stat">
               <div className="stat-ic g"><Icon name="plus" size={22} /></div>
@@ -459,7 +537,7 @@ function App() {
           )}
 
           {filteredGroups.map(g => {
-            const anyOn  = g.options.some(o => o.available);
+            const anyOn  = g.options.some(o => effAvail(g, o));
             const gIdx   = groups.findIndex(x => x.key === g.key);
             const isFirst = gIdx === 0;
             const isLast  = gIdx === groups.length - 1;
@@ -473,7 +551,7 @@ function App() {
                     <div className="vgmeta">{g.required ? "Bắt buộc chọn 1" : "Chọn nhiều · không bắt buộc"}</div>
                   </div>
                   <span className="vgtype">{TYPE_LABEL[g.type]}</span>
-                  <span className="vgcount">{g.options.filter(o => o.available).length}/{g.options.length} đang bán</span>
+                  <span className="vgcount">{g.options.filter(o => effAvail(g, o)).length}/{g.options.length} đang bán</span>
                   <div style={{ display: "flex", gap: 6, marginLeft: 8 }}>
                     {!searching && (
                       <>
@@ -519,12 +597,12 @@ function App() {
                         <button className="btn ghost tiny" onClick={() => setEditing(null)} disabled={saving}>Huỷ</button>
                       </div>
                     ) : (
-                      <div className={"vopt-row" + (o.available ? "" : " off")} key={o.id}>
+                      <div className={"vopt-row" + (effAvail(g, o) ? "" : " off")} key={o.id}>
                         <span className="vopt-drag"><Icon name="dots" size={16} color="currentColor" /></span>
                         <span className="vopt-name">
                           {o.label}
                           {o.def && <span className="vdef">Mặc định</span>}
-                          {!o.available && <span className="soldout">Hết</span>}
+                          {!effAvail(g, o) && <span className="soldout">Hết</span>}
                         </span>
                         {priceText(g, o) && (
                           <span className={"vopt-extra" + (o.extra > 0 ? "" : " free")}>{priceText(g, o)}</span>
@@ -541,9 +619,9 @@ function App() {
                           <button className="vopt-edit del" title="Xoá" onClick={() => del(g.key, o.id)}>
                             <Icon name="trash" size={15} />
                           </button>
-                          <button className={"switch" + (o.available ? " on" : "")}
-                            title={o.available ? "Đang bán — bấm để báo hết" : "Đang hết — bấm để bật lại"}
-                            disabled={saving}
+                          <button className={"switch" + (effAvail(g, o) ? " on" : "")}
+                            title={effAvail(g, o) ? "Đang bán — bấm để báo hết" : "Đang hết — bấm để bật lại"}
+                            disabled={saving || (storeId != null && !o.available)}
                             onClick={() => toggleAvail(g.key, o.id)} />
                         </div>
                       </div>

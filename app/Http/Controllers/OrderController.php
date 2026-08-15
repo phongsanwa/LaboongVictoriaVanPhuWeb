@@ -11,6 +11,7 @@ use App\Models\ProductVariant;
 use App\Models\Promotion;
 use App\Models\ShippingPromotion;
 use App\Models\Store;
+use App\Models\StoreVariantOff;
 use App\Models\VariantGroup;
 use App\Models\Voucher;
 use App\Services\DiscountCalculationService;
@@ -71,6 +72,10 @@ class OrderController extends Controller
 
         $variantGroups = VariantGroup::all()->keyBy('key');
 
+        // Option đang HẾT RIÊNG tại cửa hàng này → chặn đặt để tồn kho tách theo quán.
+        $storeOffSet = array_flip(StoreVariantOff::offKeysFor($store->id));
+        $blockedNames = [];
+
         // Khuyến mãi gạch giá (kind=price) — phải trừ vào giá món giống trang thực đơn,
         // nếu không đơn lưu giá gốc và điểm tích bị tính trên giá chưa giảm
         $pricePromos = Promotion::where('is_active', true)
@@ -103,7 +108,7 @@ class OrderController extends Controller
             $qty        = (int) $line['qty'];
 
             [$sizeExtra, $sizeName, $addonTops, $sugarLevel, $iceLevel]
-                = $this->resolveSelections($productId, $selections, $variantGroups);
+                = $this->resolveSelections($productId, $selections, $variantGroups, $storeOffSet, $blockedNames);
 
             $pricePromo    = $specificPricePromoMap[$productId] ?? $allScopePricePromo;
             $effectiveBase = $pricePromo
@@ -129,6 +134,13 @@ class OrderController extends Controller
                 'size_extra_price' => $sizeExtra,
                 'toppings'         => $addonTops,
             ];
+        }
+
+        if (!empty($blockedNames)) {
+            $list = implode(', ', array_unique($blockedNames));
+            return response()->json([
+                'message' => "Tại {$store->name}, các lựa chọn sau đang hết: {$list}. Vui lòng chọn lại.",
+            ], 422);
         }
 
         if (empty($itemData)) {
@@ -396,7 +408,7 @@ class OrderController extends Controller
         return (int) $m[1];
     }
 
-    private function resolveSelections(int $productId, array $selections, $variantGroups): array
+    private function resolveSelections(int $productId, array $selections, $variantGroups, array $offSet = [], array &$blocked = []): array
     {
         $sizeExtra  = 0.0;
         $sizeName   = null;
@@ -409,6 +421,9 @@ class OrderController extends Controller
             if (!$group) continue;
 
             if ($group->type === 'size' && is_string($value) && $value !== '') {
+                if (isset($offSet["{$groupKey}|{$value}"])) {
+                    $blocked[] = $value;
+                }
                 $variant    = ProductVariant::where('product_id', $productId)
                     ->where('variant_type', $groupKey)
                     ->where('name', $value)
@@ -421,6 +436,10 @@ class OrderController extends Controller
                 // Gộp theo tên để lưu 1 dòng/topping kèm số lượng (bảng có unique order_item_id+variant_id).
                 $counts = array_count_values(array_map('strval', $value));
                 foreach ($counts as $toppingName => $count) {
+                    if (isset($offSet["{$groupKey}|{$toppingName}"])) {
+                        $blocked[] = $toppingName;
+                        continue;
+                    }
                     $variant = ProductVariant::where('product_id', $productId)
                         ->where('variant_type', $groupKey)
                         ->where('name', $toppingName)
@@ -436,6 +455,9 @@ class OrderController extends Controller
                 }
 
             } elseif ($group->type === 'level' && is_string($value) && $value !== '') {
+                if (isset($offSet["{$groupKey}|{$value}"])) {
+                    $blocked[] = $value;
+                }
                 // Lượng chọn = đúng số % khách chọn (không ép về mốc cứng), giới hạn 0–100.
                 $pct = (string) max(0, min(100, (int) filter_var($value, FILTER_SANITIZE_NUMBER_INT)));
                 // Nhận diện Đường/Đá theo NHÃN nhóm (bỏ dấu tiếng Việt) — bền hơn là dựa vào key.

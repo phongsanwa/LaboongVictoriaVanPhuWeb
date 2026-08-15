@@ -172,18 +172,37 @@ function getLiveVariantGroups() {
   return typeof VARIANT_GROUPS !== 'undefined' ? VARIANT_GROUPS : [];
 }
 
+/* storeOffs[store_id] = ["TYPE|Name", ...]: option hết RIÊNG theo từng cửa hàng. */
+function getLiveStoreOffs() { return LIVE ? (LIVE_D.storeOffs || {}) : {}; }
+
+/* Set các option "TYPE|Name" đang hết ở cửa hàng đang chọn (rỗng nếu chưa chọn). */
+function storeOffSet(storeId) {
+  const all = getLiveStoreOffs();
+  return new Set(storeId != null ? (all[String(storeId)] || []) : []);
+}
+
 /* Filter global variantGroups to only the options a specific product has.
-   item.variants = { SIZE: { M: {extra, available}, L: {...} }, TOPPING: {...} } */
-function getProductVariantGroups(item, variantGroups) {
+   item.variants = { SIZE: { M: {extra, available}, L: {...} }, TOPPING: {...} }
+   offSet: option hết riêng theo cửa hàng đang chọn (Set "TYPE|Name"). */
+function getProductVariantGroups(item, variantGroups, offSet) {
+  const off = offSet || new Set();
+  const isOff = (g, o) => off.has(g.key + '|' + o.id);
+
   // A product with no variant rows serializes as [] (empty JSON array) — fall
   // back to the global groups instead of hiding every option.
-  if (!item.variants || Object.keys(item.variants).length === 0) return variantGroups;
+  if (!item.variants || Object.keys(item.variants).length === 0) {
+    if (off.size === 0) return variantGroups;
+    return variantGroups.map(g => ({
+      ...g,
+      options: g.options.map(o => ({ ...o, available: o.available && !isOff(g, o) })),
+    }));
+  }
   return variantGroups.map(g => {
     const productOpts = item.variants[g.key];
     if (!productOpts) return null; // product has no variants of this type
     const options = g.options
       .filter(o => productOpts[o.id] !== undefined)
-      .map(o => ({ ...o, extra: productOpts[o.id].extra, available: productOpts[o.id].available, def: false }));
+      .map(o => ({ ...o, extra: productOpts[o.id].extra, available: productOpts[o.id].available && !isOff(g, o), def: false }));
     if (options.length === 0) return null;
     // Re-apply default selection
     const availOpts = options.filter(o => o.available);
@@ -1049,7 +1068,7 @@ function App() {
       {customize && (
         <CustomizeSheet
           item={customize}
-          variantGroups={getProductVariantGroups(customize, variantGroups)}
+          variantGroups={getProductVariantGroups(customize, variantGroups, storeOffSet(selectedStoreId))}
           onClose={() => setCustomize(null)}
           onAdd={addLine}
         />
