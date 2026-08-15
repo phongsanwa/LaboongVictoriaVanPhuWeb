@@ -41,19 +41,32 @@ class SendOrderNotification implements ShouldQueue
 
         $recipients = $adminEmails->merge($staffEmails)->unique()->values();
 
+        // Mỗi kênh chạy độc lập: một kênh lỗi (VD email SMTP) không được chặn các kênh còn lại.
         foreach ($recipients as $email) {
-            Mail::to($email)->send(new OrderPlaced($order));
+            try {
+                Mail::to($email)->send(new OrderPlaced($order));
+            } catch (\Throwable $e) {
+                Log::error('Order email failed', ['order_id' => $this->orderId, 'to' => $email, 'error' => $e->getMessage()]);
+            }
         }
 
         // Gửi thêm qua Telegram (nếu đã bật & cấu hình trong Cài đặt)
-        if (\App\Support\TelegramNotifier::enabled()) {
-            \App\Support\TelegramNotifier::send(\App\Support\TelegramNotifier::formatOrder($order));
+        try {
+            if (\App\Support\TelegramNotifier::enabled()) {
+                \App\Support\TelegramNotifier::send(\App\Support\TelegramNotifier::formatOrder($order));
+            }
+        } catch (\Throwable $e) {
+            Log::error('Order Telegram failed', ['order_id' => $this->orderId, 'error' => $e->getMessage()]);
         }
 
         // Gửi thêm qua ntfy.sh (thông báo đẩy có chuông to)
-        if (\App\Support\NtfyNotifier::enabled()) {
-            $n = \App\Support\NtfyNotifier::formatOrder($order);
-            \App\Support\NtfyNotifier::send($n['title'], $n['message'], $n['click']);
+        try {
+            if (\App\Support\NtfyNotifier::enabled()) {
+                $n = \App\Support\NtfyNotifier::formatOrder($order);
+                \App\Support\NtfyNotifier::send($n['title'], $n['message'], $n['click']);
+            }
+        } catch (\Throwable $e) {
+            Log::error('Order ntfy failed', ['order_id' => $this->orderId, 'error' => $e->getMessage()]);
         }
     }
 

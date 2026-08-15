@@ -64,24 +64,59 @@ class NtfyNotifier
         }
     }
 
-    /** Soạn tiêu đề + nội dung ngắn gọn cho 1 đơn hàng. Trả [title, message, click]. */
+    /** Soạn tiêu đề + nội dung đầy đủ (giống email) cho 1 đơn hàng. Trả [title, message, click]. */
     public static function formatOrder(Order $o): array
     {
         $fmt = fn ($n) => number_format((int) $n, 0, ',', '.');
         $ordNo = 'LB-' . str_pad((string) $o->id, 4, '0', STR_PAD_LEFT);
         $user  = $o->customer?->user;
         $name  = $user?->name ?? 'Khách hàng';
-        $phone = $o->delivery_phone ?: ($user?->phone ?? '');
+        $phone = $o->delivery_phone ?: ($user?->phone ?? '—');
+        $created = $o->created_at?->setTimezone('Asia/Ho_Chi_Minh')->format('H:i d/m/Y');
         $method = ((int) $o->shipping_fee) > 0 ? 'Giao hàng' : 'Nhận tại quầy';
 
-        $itemCount = 0;
-        foreach ($o->items as $it) $itemCount += (int) $it->quantity;
-
         $lines = [];
-        $lines[] = "{$name}" . ($phone ? " · {$phone}" : '');
-        $lines[] = "{$itemCount} món · {$method}";
-        if ($o->store?->name) $lines[] = $o->store->name;
-        $lines[] = "Tổng: " . $fmt($o->total_amount) . 'đ';
+        $lines[] = "🕒 {$created}";
+        $lines[] = "👤 {$name} · {$phone}";
+        $lines[] = "🛵 {$method}";
+        if ($o->store?->name) $lines[] = "🏪 " . $o->store->name;
+        if ($o->delivery_address) $lines[] = "📍 " . $o->delivery_address;
+        $lines[] = "";
+        $lines[] = "MÓN ĐẶT";
+
+        foreach ($o->items as $item) {
+            $parts = [];
+            if ($item->size_name)            $parts[] = "Size {$item->size_name}";
+            if ($item->sugar_level !== null) $parts[] = "Đường {$item->sugar_level}%";
+            if ($item->ice_level !== null)   $parts[] = "Đá {$item->ice_level}%";
+            foreach ($item->toppings as $t) {
+                $q = max(1, (int) ($t->quantity ?? 1));
+                $parts[] = $q > 1 ? "{$t->topping_name} x{$q}" : $t->topping_name;
+            }
+            $pname = $item->product?->name ?? ('Sản phẩm #' . $item->product_id);
+            $lines[] = "• {$item->quantity}x {$pname} — " . $fmt($item->unit_price * $item->quantity) . 'đ';
+            if ($parts) $lines[] = "   " . implode(' · ', $parts);
+        }
+
+        if ($o->note) {
+            $lines[] = "";
+            $lines[] = "📝 Ghi chú: " . $o->note;
+        }
+
+        $lines[] = "";
+        $lines[] = "Tạm tính: " . $fmt($o->subtotal) . 'đ';
+        foreach ($o->discounts as $d) {
+            $amt = (int) $d->discount_amount;
+            $desc = $d->description ?: 'Giảm giá';
+            if ($amt > 0) {
+                $label = ($d->discount_category === 'SHIPPING') ? 'Giảm ship' : 'Giảm giá';
+                $lines[] = "{$label}: -" . $fmt($amt) . "đ ({$desc})";
+            } else {
+                $lines[] = "Quà tặng: {$desc}";
+            }
+        }
+        if ((int) $o->shipping_fee > 0) $lines[] = "Phí ship: " . $fmt($o->shipping_fee) . 'đ';
+        $lines[] = "💰 TỔNG: " . $fmt($o->total_amount) . 'đ';
 
         return [
             'title'   => 'Bạn có đơn hàng từ Laboong · ' . $ordNo,
