@@ -435,14 +435,15 @@ class OrderController extends Controller
                     }
                 }
 
-            } elseif ($group->type === 'level' && is_string($value)) {
-                $pct  = (int) filter_var($value, FILTER_SANITIZE_NUMBER_INT);
-                $snap = $this->snapLevel($pct);
-                $lk   = strtolower($groupKey);
-                if (str_contains($lk, 'sugar') || str_contains($lk, 'duong')) {
-                    $sugarLevel = $snap;
-                } elseif (str_contains($lk, 'ice') || str_contains($lk, 'da')) {
-                    $iceLevel = $snap;
+            } elseif ($group->type === 'level' && is_string($value) && $value !== '') {
+                // Lượng chọn = đúng số % khách chọn (không ép về mốc cứng).
+                $pct = (string) (int) filter_var($value, FILTER_SANITIZE_NUMBER_INT);
+                // Nhận diện Đường/Đá theo NHÃN nhóm (bỏ dấu tiếng Việt) — bền hơn là dựa vào key.
+                $hint = $this->noAccent(($group->label ?? '') . ' ' . $groupKey);
+                if (str_contains($hint, 'duong') || str_contains($hint, 'sugar') || str_contains($hint, 'ngot')) {
+                    $sugarLevel = $pct;
+                } elseif (str_contains($hint, 'da') || str_contains($hint, 'ice') || str_contains($hint, 'lanh')) {
+                    $iceLevel = $pct;
                 }
             }
         }
@@ -457,6 +458,23 @@ class OrderController extends Controller
         if ($pct <= 60) return '50';
         if ($pct <= 85) return '75';
         return '100';
+    }
+
+    /** Bỏ dấu tiếng Việt + viết thường, để nhận diện "đường"/"đá" từ nhãn nhóm. */
+    private function noAccent(string $s): string
+    {
+        $s = mb_strtolower($s, 'UTF-8');
+        $s = preg_replace([
+            '/[àáạảãâầấậẩẫăằắặẳẵ]/u',
+            '/[èéẹẻẽêềếệểễ]/u',
+            '/[ìíịỉĩ]/u',
+            '/[òóọỏõôồốộổỗơờớợởỡ]/u',
+            '/[ùúụủũưừứựửữ]/u',
+            '/[ỳýỵỷỹ]/u',
+            '/đ/u',
+        ], ['a', 'e', 'i', 'o', 'u', 'y', 'd'], $s);
+
+        return $s;
     }
 
     private function calcPromotionDiscount(Promotion $promo, float $subtotal): float
