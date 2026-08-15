@@ -436,8 +436,8 @@ class OrderController extends Controller
                 }
 
             } elseif ($group->type === 'level' && is_string($value) && $value !== '') {
-                // Lượng chọn = đúng số % khách chọn (không ép về mốc cứng).
-                $pct = (string) (int) filter_var($value, FILTER_SANITIZE_NUMBER_INT);
+                // Lượng chọn = đúng số % khách chọn (không ép về mốc cứng), giới hạn 0–100.
+                $pct = (string) max(0, min(100, (int) filter_var($value, FILTER_SANITIZE_NUMBER_INT)));
                 // Nhận diện Đường/Đá theo NHÃN nhóm (bỏ dấu tiếng Việt) — bền hơn là dựa vào key.
                 $hint = $this->noAccent(($group->label ?? '') . ' ' . $groupKey);
                 if (str_contains($hint, 'duong') || str_contains($hint, 'sugar') || str_contains($hint, 'ngot')) {
