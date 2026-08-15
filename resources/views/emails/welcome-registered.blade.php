@@ -13,7 +13,7 @@
         {{-- Header --}}
         <tr><td style="background:linear-gradient(135deg,#0F623F,#1AA86A); padding:28px 28px 24px; text-align:center;">
           <div style="font-size: 32px;font-weight:800;color: #f2d7b7;letter-spacing:.3px">LABOONG</div>
-          <div style="font-size: 14px;color: #f2d7b7;margin-top:2px">Victoria Văn Phú</div>
+          <div style="font-size: 14px;color: #f2d7b7;margin-top:2px">Victoria Văn Phú & Số 3 Chu Văn An Hà Đông</div>
         </td></tr>
 
         {{-- Body --}}
@@ -21,7 +21,7 @@
           <div style="font-size:44px; line-height:1;">🎉</div>
           <h1 style="font-size:22px; margin:14px 0 6px; color:#0F623F;">Bạn đã đăng ký thành công!</h1>
           <p style="font-size:15px; color:#3f4f47; margin:0; line-height:1.6;">
-            Chào <b>{{ $name }}</b>, cảm ơn bạn đã trở thành thành viên Laboong Victoria Văn Phú.
+            Chào <b>{{ $name }}</b>, cảm ơn bạn đã trở thành thành viên Laboong Victoria Văn Phú & Laboong Số 3 Chu Văn An Hà Đông.
             Từ giờ bạn có thể <b>tích điểm mỗi ly</b>, <b>điểm danh nhận thưởng</b> và <b>đổi quà</b> nhé!
           </p>
         </td></tr>
@@ -48,7 +48,7 @@
         {{-- Footer --}}
         <tr><td style="padding:22px 28px 26px; text-align:center; border-top:1px solid #eee7d8; margin-top:16px;">
           <div style="font-size:12.5px; color:#8a978d; line-height:1.6;">
-            Đây là email tự động từ hệ thống Laboong Victoria Văn Phú.<br />
+            Đây là email tự động từ hệ thống Laboong Victoria Văn Phú & Laboong Số 3 Chu Văn An Hà Đông.<br />
             Nếu bạn không thực hiện đăng ký này, vui lòng bỏ qua email.
           </div>
         </td></tr>
