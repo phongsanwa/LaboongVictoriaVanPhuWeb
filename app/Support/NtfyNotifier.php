@@ -121,7 +121,7 @@ class NtfyNotifier
         return [
             'title'   => 'Bạn có đơn hàng từ Laboong · ' . $ordNo,
             'message' => implode("\n", $lines),
-            'click'   => rtrim((string) config('app.url'), '/') . '/admin/orders',
+            'click'   => Site::adminOrders(),
         ];
     }
 }
