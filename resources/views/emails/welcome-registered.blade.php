@@ -26,11 +26,14 @@
           </p>
         </td></tr>
 
-        {{-- QR --}}
+        {{-- QR (nhúng inline; nếu thiếu file thì bỏ qua, email vẫn gửi bình thường) --}}
+        @php($lbQrPath = public_path('images/website-qr.png'))
+        @if(is_file($lbQrPath))
         <tr><td style="padding:22px 28px 6px; text-align:center;">
           <div style="font-size:14px; color:#3f4f47; margin-bottom:12px;">Quét mã QR để mở nhanh website:</div>
-          <img src="{{ $message->embed(public_path('images/website-qr.png')) }}" alt="Mã QR website Laboong" width="220" height="220" style="display:block; margin:0 auto; border:1px solid #e6e0d2; border-radius:12px; padding:8px; background:#fff;" />
+          <img src="{{ $message->embed($lbQrPath) }}" alt="Mã QR website Laboong" width="220" height="220" style="display:block; margin:0 auto; border:1px solid #e6e0d2; border-radius:12px; padding:8px; background:#fff;" />
         </td></tr>
+        @endif
 
         {{-- Link button --}}
         <tr><td style="padding:20px 28px 8px; text-align:center;">
