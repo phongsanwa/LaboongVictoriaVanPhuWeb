@@ -669,7 +669,9 @@ function App() {
     : calcShipPromoDiscount(selectedShipPromo, shipFee, subtotal, dist);
   const totalDiscount   = orderDiscount + shipDiscount;
   const payable         = Math.max(0, subtotal - orderDiscount + shipFee - shipDiscount);
-  const earnPts       = Math.floor(payable / livePerPoint);
+  // Điểm thưởng chỉ tính trên tiền hàng (sau giảm giá), KHÔNG tính phí ship.
+  const earnBase        = Math.max(0, subtotal - orderDiscount);
+  const earnPts       = Math.floor(earnBase / livePerPoint);
 
   /* Clear order voucher/promo if subtotal drops below min or free_item product removed */
   useEffect(() => {
