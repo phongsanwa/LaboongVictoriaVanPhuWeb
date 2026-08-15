@@ -9,6 +9,7 @@ use App\Models\Promotion;
 use App\Models\ShippingPromotion;
 use App\Models\ShippingTier;
 use App\Models\Store;
+use App\Models\StoreVariantOff;
 use App\Models\VariantGroup;
 use Illuminate\Support\Facades\Auth;
 
@@ -207,6 +208,11 @@ class MenuPageController extends Controller
             'cats'          => $cats,
             'menu'          => $menu,
             'variantGroups' => $variantGroupsData,
+            // storeOffs[store_id] = ["TYPE|Name", ...] các option HẾT riêng theo cửa hàng.
+            'storeOffs'     => StoreVariantOff::all()
+                ->groupBy('store_id')
+                ->map(fn ($rows) => $rows->map(fn ($r) => "{$r->variant_type}|{$r->name}")->values()->all())
+                ->all(),
             'store'         => $storeName,
             'storeId'       => $store?->id,
             'stores'        => $stores,

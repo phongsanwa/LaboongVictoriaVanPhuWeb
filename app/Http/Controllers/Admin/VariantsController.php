@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Product;
 use App\Models\ProductVariant;
+use App\Models\StoreVariantOff;
 use App\Models\VariantGroup;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -27,6 +28,13 @@ class VariantsController extends Controller
                     'initials' => $this->initials($admin->name),
                 ],
                 'groups' => $this->buildGroups(),
+                // Danh sách cửa hàng + option đang HẾT theo từng cửa hàng (để tách tồn riêng).
+                'stores' => \App\Models\Store::where('status', 'active')->orderBy('id')
+                    ->get(['id', 'name'])->map(fn ($s) => ['id' => $s->id, 'name' => $s->name])->all(),
+                'storeOffs' => \App\Models\StoreVariantOff::all()
+                    ->groupBy('store_id')
+                    ->map(fn ($rows) => $rows->map(fn ($r) => "{$r->variant_type}|{$r->name}")->values()->all())
+                    ->all(),
                 'urls'   => [
                     'storeOption'  => route('admin.variants.options.store'),
                     'updateOption' => route('admin.variants.options.update'),
@@ -204,11 +212,33 @@ class VariantsController extends Controller
         $data = $request->validate([
             'group_key' => ['required', 'string', Rule::exists('variant_groups', 'key')],
             'name'      => ['required', 'string', 'max:100'],
+            'store_id'  => ['nullable', 'integer', Rule::exists('stores', 'id')],
         ]);
 
         $type = $data['group_key'];
         $name = $data['name'];
+        $storeId = $data['store_id'] ?? null;
 
+        // Có store_id → bật/tắt tồn RIÊNG cho cửa hàng đó (không đụng các cửa hàng khác).
+        if ($storeId) {
+            $off = StoreVariantOff::where('store_id', $storeId)
+                ->where('variant_type', $type)->where('name', $name)->first();
+
+            if ($off) {
+                $off->delete();
+                $nowOff = false;
+            } else {
+                StoreVariantOff::create(['store_id' => $storeId, 'variant_type' => $type, 'name' => $name]);
+                $nowOff = true;
+            }
+
+            $globalAvail = ProductVariant::where('variant_type', $type)
+                ->where('name', $name)->where('is_available', true)->exists();
+
+            return response()->json(['available' => $globalAvail && !$nowOff]);
+        }
+
+        // Không có store_id → "Tất cả cửa hàng": bật/tắt toàn hệ thống như cũ.
         $anyAvail = ProductVariant::where('variant_type', $type)
             ->where('name', $name)
             ->where('is_available', true)
@@ -265,9 +295,29 @@ class VariantsController extends Controller
     {
         $data = $request->validate([
             'group_key' => ['required', 'string', Rule::exists('variant_groups', 'key')],
+            'store_id'  => ['nullable', 'integer', Rule::exists('stores', 'id')],
         ]);
 
         $type = $data['group_key'];
+        $storeId = $data['store_id'] ?? null;
+
+        if ($storeId) {
+            $names    = ProductVariant::where('variant_type', $type)->distinct()->pluck('name');
+            $offNames = StoreVariantOff::where('store_id', $storeId)->where('variant_type', $type)->pluck('name')->all();
+            $availNames = ProductVariant::where('variant_type', $type)->where('is_available', true)->distinct()->pluck('name')->all();
+            // Còn ít nhất 1 option đang bán được tại cửa hàng này?
+            $anyAvail = collect($availNames)->contains(fn ($n) => !in_array($n, $offNames, true));
+
+            if ($anyAvail) {
+                foreach ($names as $n) {
+                    StoreVariantOff::firstOrCreate(['store_id' => $storeId, 'variant_type' => $type, 'name' => $n]);
+                }
+                return response()->json(['available' => false]);
+            }
+
+            StoreVariantOff::where('store_id', $storeId)->where('variant_type', $type)->delete();
+            return response()->json(['available' => true]);
+        }
 
         // Any-on semantics: if any product sells any option in this group,
         // the toggle turns the whole group off; otherwise it turns it all on.
