@@ -49,6 +49,12 @@ class SendOrderNotification implements ShouldQueue
         if (\App\Support\TelegramNotifier::enabled()) {
             \App\Support\TelegramNotifier::send(\App\Support\TelegramNotifier::formatOrder($order));
         }
+
+        // Gửi thêm qua ntfy.sh (thông báo đẩy có chuông to)
+        if (\App\Support\NtfyNotifier::enabled()) {
+            $n = \App\Support\NtfyNotifier::formatOrder($order);
+            \App\Support\NtfyNotifier::send($n['title'], $n['message'], $n['click']);
+        }
     }
 
     public function failed(\Throwable $e): void

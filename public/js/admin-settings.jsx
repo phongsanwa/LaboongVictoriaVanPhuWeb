@@ -66,6 +66,9 @@ function buildState() {
     tgEnabled: !!(DATA.telegram && DATA.telegram.enabled),
     tgToken: (DATA.telegram && DATA.telegram.bot_token) || "",
     tgChatId: (DATA.telegram && DATA.telegram.chat_id) || "",
+    ntfyEnabled: !!(DATA.ntfy && DATA.ntfy.enabled),
+    ntfyTopic: (DATA.ntfy && DATA.ntfy.topic) || "",
+    ntfyServer: (DATA.ntfy && DATA.ntfy.server) || "",
   };
 }
 
@@ -141,6 +144,16 @@ function App() {
     setTimeout(() => setToast(null), 3500);
   };
 
+  const [ntfyTesting, setNtfyTesting] = useState(false);
+  const testNtfy = async () => {
+    if (ntfyTesting) return;
+    setNtfyTesting(true);
+    const { ok, data } = await apiCall("POST", "/admin/settings/ntfy/test", { topic: (form.ntfyTopic || "").trim(), server: (form.ntfyServer || "").trim() });
+    setNtfyTesting(false);
+    setToast(data.message || (ok ? "Đã gửi thử" : "Không gửi được"));
+    setTimeout(() => setToast(null), 3500);
+  };
+
   const discard = () => setForm(saved);
 
   const save = async () => {
@@ -153,6 +166,7 @@ function App() {
       notifications: form.notif,
       integrations: form.integ.map(g => ({ id: g.id, on: g.on })),
       telegram: { enabled: form.tgEnabled, bot_token: (form.tgToken || "").trim(), chat_id: (form.tgChatId || "").trim() },
+      ntfy: { enabled: form.ntfyEnabled, topic: (form.ntfyTopic || "").trim(), server: (form.ntfyServer || "").trim() },
     });
     setSaving(false);
     if (ok) {
@@ -470,6 +484,40 @@ function App() {
                         <div style={{ marginTop: 10 }}>
                           <button className="btn ghost sm" disabled={tgTesting || !form.tgToken.trim() || !form.tgChatId.trim()} onClick={testTelegram}>
                             <Icon name="send" size={15} /> {tgTesting ? "Đang gửi…" : "Gửi thử"}
+                          </button>
+                          <span style={{ marginLeft: 10, fontSize: 12, color: "var(--ink-3)" }}>Nhớ bấm “Lưu thay đổi” sau khi cấu hình.</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {tab === "integrations" && (
+                <div className="scard" style={{ marginTop: 16 }}>
+                  <div className="scard-h">
+                    <div className="st">Báo đơn qua ntfy.sh (chuông to)</div>
+                    <div className="sd">Thông báo đẩy về điện thoại kèm chuông báo lớn khi có đơn mới.</div>
+                  </div>
+                  <div className="scard-b">
+                    <div className="frow">
+                      <div className="flabel">Bật ntfy</div>
+                      <div className="fcontrol" style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                        <Tog on={form.ntfyEnabled} onClick={() => set("ntfyEnabled", !form.ntfyEnabled)} />
+                        <span style={{ fontSize: 13.5, fontWeight: 600, color: form.ntfyEnabled ? "var(--brand)" : "var(--ink-3)" }}>{form.ntfyEnabled ? "Đang bật" : "Đang tắt"}</span>
+                      </div>
+                    </div>
+                    <div className="frow">
+                      <div className="flabel">Topic<div className="fsub">Chuỗi bí mật, khó đoán. Cài app ntfy → Subscribe đúng topic này.</div></div>
+                      <div className="fcontrol"><input className="sinp" value={form.ntfyTopic} onChange={e => set("ntfyTopic", e.target.value)} placeholder="vd: laboong-vvp-donhang-8x2k" /></div>
+                    </div>
+                    <div className="frow">
+                      <div className="flabel">Server<div className="fsub">Để trống = dùng ntfy.sh miễn phí</div></div>
+                      <div className="fcontrol">
+                        <input className="sinp" value={form.ntfyServer} onChange={e => set("ntfyServer", e.target.value)} placeholder="https://ntfy.sh" />
+                        <div style={{ marginTop: 10 }}>
+                          <button className="btn ghost sm" disabled={ntfyTesting || !form.ntfyTopic.trim()} onClick={testNtfy}>
+                            <Icon name="send" size={15} /> {ntfyTesting ? "Đang gửi…" : "Gửi thử"}
                           </button>
                           <span style={{ marginLeft: 10, fontSize: 12, color: "var(--ink-3)" }}>Nhớ bấm “Lưu thay đổi” sau khi cấu hình.</span>
                         </div>
