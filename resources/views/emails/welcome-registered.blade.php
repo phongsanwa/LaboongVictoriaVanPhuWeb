@@ -12,8 +12,8 @@
 
         {{-- Header --}}
         <tr><td style="background:linear-gradient(135deg,#0F623F,#1AA86A); padding:28px 28px 24px; text-align:center;">
-          <div style="font-size:22px; font-weight:800; color:#ffffff; letter-spacing:.3px;">LABOONG</div>
-          <div style="font-size:13px; color:#d8f3e6; margin-top:2px;">Victoria Văn Phú</div>
+          <div style="font-size: 32px;font-weight:800;color: #f2d7b7;letter-spacing:.3px">LABOONG</div>
+          <div style="font-size: 14px;color: #f2d7b7;margin-top:2px">Victoria Văn Phú</div>
         </td></tr>
 
         {{-- Body --}}
