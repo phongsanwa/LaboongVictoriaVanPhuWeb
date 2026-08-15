@@ -64,9 +64,9 @@ class Order extends Model
         return $this->hasMany(OrderDiscount::class);
     }
 
-    /** Tính điểm thưởng theo công thức floor(total_amount / 1000) */
+    /** Điểm thưởng: chỉ tính trên tiền hàng (đã trừ phí ship), 1 điểm / 10.000đ. */
     public function calculatePointsEarned(): int
     {
-        return (int) floor($this->total_amount / 1000);
+        return (int) floor(max(0, $this->total_amount - $this->shipping_fee) / 10000);
     }
 }

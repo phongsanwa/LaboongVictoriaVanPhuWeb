@@ -242,7 +242,9 @@ class OrderController extends Controller
 
         $discountAmt  = $badgeDiscAmt + $orderDiscAmt + $shipDiscAmt;
         $totalAmount  = max(0.0, round($saleSubtotal - $orderDiscAmt + $shippingFee - $shipDiscAmt, 2));
-        $pointsEarned = (int) floor($totalAmount / self::PER_POINT);
+        // Điểm thưởng chỉ tính trên tiền HÀNG (sau giảm giá), KHÔNG tính phí ship.
+        $pointsBase   = max(0.0, round($saleSubtotal - $orderDiscAmt, 2));
+        $pointsEarned = (int) floor($pointsBase / self::PER_POINT);
 
         $orderId = null;
 
