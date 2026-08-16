@@ -889,6 +889,20 @@ function App() {
       return;
     }
 
+    // Đơn GIAO HÀNG nhưng chưa tính xong phí ship → chặn để không đặt nhầm 0đ.
+    // (Phí = 0 hợp lệ chỉ khi đã tính ra khoảng cách và rơi vào vùng miễn phí.)
+    if (selectedAddr) {
+      if (geoInfo?.geocoding) {
+        setOrderErr("Đang tính phí giao hàng, vui lòng đợi một chút rồi đặt lại.");
+        return;
+      }
+      if (!geoInfo || geoInfo.dist == null) {
+        setOrderErr("Chưa xác định được phí giao đến địa chỉ này. Vui lòng chọn lại địa chỉ hoặc chi nhánh giao.");
+        setAddrView(true);
+        return;
+      }
+    }
+
     setPlacing(true);
     try {
       const res = await fetch(LIVE_D.urls?.placeOrder, {
@@ -1668,7 +1682,19 @@ function App() {
                   <div className="csum earn"><span>Điểm tích được</span><span className="v">+{fmt(earnPts)} điểm</span></div>
                   <div className="csum total"><span>Tổng cộng</span><span className="v tnum">{fmt(payable)}đ</span></div>
                   {orderErr && <div className="cp-err" style={{ marginBottom: 6 }}><Icon name="alert" size={14} color="var(--hot)" /> {orderErr}</div>}
-                  <button className="checkout" disabled={placing} onClick={checkout}>
+                  {selectedAddr && geoInfo?.geocoding && (
+                    <div style={{ fontSize: 12.5, color: "var(--ink-3)", marginBottom: 6, fontWeight: 600 }}>
+                      Đang tính phí giao hàng…
+                    </div>
+                  )}
+                  {selectedAddr && !geoInfo?.geocoding && (!geoInfo || geoInfo.dist == null) && (
+                    <div style={{ fontSize: 12.5, color: "var(--hot)", marginBottom: 6, fontWeight: 600 }}>
+                      Chưa xác định được phí giao đến địa chỉ này — vui lòng chọn lại địa chỉ hoặc chi nhánh giao.
+                    </div>
+                  )}
+                  <button className="checkout"
+                    disabled={placing || (selectedAddr && (geoInfo?.geocoding || !geoInfo || geoInfo.dist == null))}
+                    onClick={checkout}>
                     {placing ? <span>Đang đặt…</span> : <><Icon name="check" size={18} color="#fff" /> Đặt hàng · {fmt(payable)}đ</>}
                   </button>
                 </div>
