@@ -399,6 +399,7 @@ function App() {
   const [activeCat, setActiveCat] = useState(() => liveCats[0]?.key || "");
   const [lines, setLines] = useState(() => loadCartState()?.lines || []);
   const [customize, setCustomize] = useState(null);
+  const [editLine, setEditLine] = useState(null); // dòng giỏ đang được sửa (null = thêm mới)
   const [drawer, setDrawer] = useState(false);
   const [placed, setPlaced] = useState(false);
   const [placing, setPlacing] = useState(false);
@@ -488,7 +489,7 @@ function App() {
   }, []);  // eslint-disable-line
 
   useEffect(() => {
-    const h = e => { if (e.key === "Escape") { setCustomize(null); setDrawer(false); } };
+    const h = e => { if (e.key === "Escape") { setCustomize(null); setEditLine(null); setDrawer(false); } };
     window.addEventListener("keydown", h); return () => window.removeEventListener("keydown", h);
   }, []);
 
@@ -539,6 +540,42 @@ function App() {
       return [...ls, { ...line, key }];
     });
     setCustomize(null);
+  };
+
+  /* Cập nhật một dòng giỏ đã có (sửa trực tiếp, không xoá rồi thêm lại).
+     Nếu lựa chọn mới trùng với một dòng khác thì gộp số lượng. */
+  const updateLine = (oldKey, line) => {
+    const newKey = lineKey(line);
+    setLines(ls => {
+      const oldIdx = ls.findIndex(l => l.key === oldKey);
+      const without = ls.filter(l => l.key !== oldKey);
+      const j = without.findIndex(l => l.key === newKey);
+      if (j >= 0) { // trùng dòng khác → gộp số lượng
+        const next = [...without];
+        next[j] = { ...next[j], qty: next[j].qty + line.qty };
+        return next;
+      }
+      const next = [...without];
+      next.splice(oldIdx < 0 ? next.length : oldIdx, 0, { ...line, key: newKey });
+      return next;
+    });
+    setCustomize(null);
+    setEditLine(null);
+  };
+
+  const commitLine = (line) => {
+    if (editLine) updateLine(editLine.key, line);
+    else addLine(line);
+  };
+
+  /* Bấm vào món trong giỏ → mở lại bảng tuỳ chỉnh để sửa (size, đường, đá, topping). */
+  const editCartLine = (l) => {
+    if (!l.selections) return; // món thêm nhanh (không có tuỳ chọn) thì bỏ qua
+    const m = liveMenu.find(x => x.id === l.id);
+    if (!m) return;
+    const menuItem = m.salePrice != null ? { ...m, price: m.salePrice, origPrice: m.price } : m;
+    setEditLine(l);
+    setCustomize(menuItem);
   };
 
   /* "Đặt lại" từ trang lịch sử đơn hàng — dựng lại giỏ theo GIÁ HIỆN TẠI */
@@ -1067,7 +1104,7 @@ function App() {
                                   <span className="qn">{qty}</span>
                                   <button onClick={() => addSimple(m, 1)}><Icon name="plus" size={16} color="currentColor" /></button>
                                 </div>)
-                          : <button className="add-btn" onClick={() => setCustomize(m.salePrice != null ? { ...m, price: m.salePrice, origPrice: m.price } : m)} aria-label="Tuỳ chỉnh & thêm"><Icon name="plus" size={18} color="#fff" /></button>}
+                          : <button className="add-btn" onClick={() => { setEditLine(null); setCustomize(m.salePrice != null ? { ...m, price: m.salePrice, origPrice: m.price } : m); }} aria-label="Tuỳ chỉnh & thêm"><Icon name="plus" size={18} color="#fff" /></button>}
                       </div>
                     </div>
                   </div>
@@ -1083,8 +1120,11 @@ function App() {
         <CustomizeSheet
           item={customize}
           variantGroups={getProductVariantGroups(customize, variantGroups, storeOffSet(selectedStoreId))}
-          onClose={() => setCustomize(null)}
-          onAdd={addLine}
+          onClose={() => { setCustomize(null); setEditLine(null); }}
+          onAdd={commitLine}
+          initialSelections={editLine?.selections || null}
+          initialQty={editLine?.qty || 1}
+          editing={!!editLine}
         />
       )}
 
@@ -1561,15 +1601,19 @@ function App() {
                       )}
                     </div>
                   )}
-                  {lines.map(l => (
+                  {lines.map(l => {
+                    const canEdit = !!l.selections;
+                    return (
                     <div className="crow" key={l.key}>
-                      <div className="cthumb" style={{ background: l.grad }}>
+                      <div className="cthumb" style={{ background: l.grad, cursor: canEdit ? "pointer" : "default" }}
+                        onClick={canEdit ? () => editCartLine(l) : undefined}>
                         {l.img
                           ? <img src={l.img} alt={l.name} style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: "inherit" }} />
                           : <Icon name="cup" size={22} color="#fff" />
                         }
                       </div>
-                      <div style={{ minWidth: 0, flex: 1 }}>
+                      <div style={{ minWidth: 0, flex: 1, cursor: canEdit ? "pointer" : "default" }}
+                        onClick={canEdit ? () => editCartLine(l) : undefined}>
                         <div className="cn">{l.name}</div>
                         {optsText(l, variantGroups) && <div className="copts">{optsText(l, variantGroups)}</div>}
                         <div className="cp">
@@ -1577,6 +1621,11 @@ function App() {
                             <span style={{ textDecoration: "line-through", color: "var(--ink-3)", fontSize: 11, marginRight: 5 }}>{fmt(l.origPrice)}đ</span>
                           )}
                           {fmt(l.unit)}đ
+                          {canEdit && (
+                            <span style={{ marginLeft: 8, fontSize: 11.5, fontWeight: 700, color: "var(--brand)" }}>
+                              <Icon name="edit" size={12} color="currentColor" /> Sửa
+                            </span>
+                          )}
                         </div>
                       </div>
                       <div className="cstep">
@@ -1585,7 +1634,8 @@ function App() {
                         <button onClick={() => changeQty(l.key, 1)}><Icon name="plus" size={15} color="currentColor" /></button>
                       </div>
                     </div>
-                  ))}
+                    );
+                  })}
                   <div className="cart-note">
                     <input placeholder="Ghi chú cho quán (giao tận bàn, ít đá…)" value={note} onChange={e => setNote(e.target.value)} />
                   </div>
