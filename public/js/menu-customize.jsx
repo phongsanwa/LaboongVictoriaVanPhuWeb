@@ -35,9 +35,21 @@ function calcUnit(basePrice, variantGroups, selections) {
   return basePrice + extra;
 }
 
-function CustomizeSheet({ item, variantGroups, onClose, onAdd }) {
-  const [selections, setSelections] = useStateCz(() => makeDefaultSelections(variantGroups));
-  const [qty, setQty] = useStateCz(1);
+function CustomizeSheet({ item, variantGroups, onClose, onAdd, initialSelections = null, initialQty = 1, editing = false }) {
+  const [selections, setSelections] = useStateCz(() => {
+    const base = makeDefaultSelections(variantGroups);
+    // Sửa món: giữ lại lựa chọn cũ cho các nhóm còn áp dụng cho món này.
+    if (initialSelections) {
+      variantGroups.forEach(g => {
+        if (initialSelections[g.key] !== undefined) {
+          const v = initialSelections[g.key];
+          base[g.key] = Array.isArray(v) ? [...v] : v;
+        }
+      });
+    }
+    return base;
+  });
+  const [qty, setQty] = useStateCz(() => Math.max(1, initialQty || 1));
 
   const unit  = calcUnit(item.price, variantGroups, selections);
   const total = unit * qty;
@@ -165,7 +177,7 @@ function CustomizeSheet({ item, variantGroups, onClose, onAdd }) {
             <button onClick={() => setQty(q => q + 1)}><Icon name="plus" size={17} color="currentColor" /></button>
           </div>
           <button className="cz-add" onClick={submit} disabled={soldOut} style={soldOut ? { opacity: 0.5, cursor: "not-allowed" } : {}}>
-            <Icon name="bag" size={17} color="#fff" /> {soldOut ? "Tạm hết" : `Thêm · ${fmt(total)}đ`}
+            <Icon name={editing ? "check" : "bag"} size={17} color="#fff" /> {soldOut ? "Tạm hết" : `${editing ? "Cập nhật" : "Thêm"} · ${fmt(total)}đ`}
           </button>
         </div>
       </div>
