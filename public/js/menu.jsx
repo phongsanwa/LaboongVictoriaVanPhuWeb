@@ -1624,7 +1624,7 @@ function App() {
                           )}
                           {fmt(l.unit)}đ
                           {canEdit && (
-                            <span style={{ marginLeft: 8, fontSize: 11.5, fontWeight: 700, color: "var(--brand)" }}>
+                            <span style={{ fontSize: 11.5, fontWeight: 700, color: "var(--brand)", display: "flex", marginLeft: 0, alignItems: "center", background: "#fff", width: "fit-content", padding: "5px 10px", borderRadius: 12, columnGap: 5, marginTop: 5 }}>
                               <Icon name="edit" size={12} color="currentColor" /> Sửa
                             </span>
                           )}
