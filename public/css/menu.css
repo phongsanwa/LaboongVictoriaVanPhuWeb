@@ -218,8 +218,8 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
 .crow .copts { font-size: 11.5px; color: var(--ink-3); margin-top: 3px; line-height: 1.4; font-weight: 500; }
 
 /* ===== coupon / voucher ===== */
-.coupon-trigger { width: 100%; display: flex; align-items: center; gap: 11px; padding: 13px 15px; border-radius: var(--r-md); border: 1.5px dashed var(--line); background: var(--bg-2); color: var(--ink); font-weight: 700; font-size: 14px; transition: .14s; margin-bottom: 12px; }
-.coupon-trigger:hover { border-color: var(--brand); color: var(--brand); }
+.coupon-trigger { width: 100%; display: flex; align-items: center; gap: 11px; padding: 13px 15px; border-radius: var(--r-md); background: var(--brand); color: #fff; font-weight: 700; font-size: 14px; transition: .14s; margin-bottom: 12px; }
+.coupon-trigger:hover { border-color: var(--brand); color: #fff; }
 .coupon-trigger .cti { width: 32px; height: 32px; border-radius: 9px; background: var(--card); color: var(--brand); display: grid; place-items: center; flex: none; }
 .coupon-trigger .ctchev { margin-left: auto; color: var(--ink-3); flex: none; }
 
