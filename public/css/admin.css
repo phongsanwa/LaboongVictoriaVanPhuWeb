@@ -269,7 +269,7 @@ table.tbl { width: 100%; border-collapse: collapse; min-width: 840px; table-layo
 .pager { display: flex; align-items: center; gap: 14px; padding: 14px 18px; flex-wrap: wrap; }
 .pager .info { font-size: 13px; color: var(--ink-2); font-weight: 500; }
 .pager .info b { color: var(--ink); font-weight: 700; }
-.pager .pg-btns { margin-left: auto; display: flex; align-items: center; gap: 6px; }
+.pager .pg-btns { margin-left: auto; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
 .pg { width: 34px; height: 34px; border-radius: var(--r-sm); border: 1px solid var(--line); display: grid; place-items: center;
   font-size: 13.5px; font-weight: 600; color: var(--ink-2); transition: .14s; }
 .pg:hover:not(:disabled) { border-color: var(--ink-3); color: var(--ink); }
