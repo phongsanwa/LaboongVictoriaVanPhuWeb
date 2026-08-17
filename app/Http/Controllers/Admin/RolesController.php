@@ -73,6 +73,7 @@ class RolesController extends Controller
             ['id' => 'news_edit', 'name' => 'Quản lý tin tức', 'desc' => 'Đăng / sửa bài tin tức hiển thị trang chủ', 'cashier' => false, 'manager' => true],
             ['id' => 'banner_edit', 'name' => 'Quản lý banner', 'desc' => 'Banner hiển thị ngoài trang chủ khách', 'cashier' => false, 'manager' => true],
             ['id' => 'push', 'name' => 'Gửi push notification', 'desc' => 'Gửi thông báo đẩy tới khách hàng', 'cashier' => false, 'manager' => true],
+            ['id' => 'email_send', 'name' => 'Gửi email cho khách', 'desc' => 'Soạn mẫu và gửi email hàng loạt tới khách hàng', 'cashier' => false, 'manager' => true],
         ]],
         ['title' => 'Cửa hàng & Vận hành', 'ic' => 'pin', 'perms' => [
             ['id' => 'store_edit', 'name' => 'Quản lý cửa hàng', 'desc' => 'Thông tin, giờ mở, bản đồ chi nhánh', 'cashier' => false, 'manager' => true],

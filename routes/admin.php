@@ -5,6 +5,7 @@ use App\Http\Controllers\Admin\CheckinController;
 use App\Http\Controllers\Admin\ShippingController;
 use App\Http\Controllers\Admin\CustomersController;
 use App\Http\Controllers\Admin\DashboardController;
+use App\Http\Controllers\Admin\EmailController;
 use App\Http\Controllers\Admin\OrdersController;
 use App\Http\Controllers\Admin\PointsController;
 use App\Http\Controllers\Admin\RewardsController;
@@ -59,6 +60,19 @@ Route::middleware(['auth', 'admin.perm'])->prefix('admin')->name('admin.')->grou
     Route::put('/campaigns/{campaign}', [CampaignsController::class, 'update'])->middleware('admin.perm:camp_edit')->name('campaigns.update');
     Route::post('/campaigns/{campaign}/toggle', [CampaignsController::class, 'toggle'])->middleware('admin.perm:camp_edit')->name('campaigns.toggle');
     Route::post('/campaigns/{campaign}/push', [CampaignsController::class, 'push'])->middleware('admin.perm:push')->name('campaigns.push');
+
+    // Email marketing — gửi email cho khách + quản lý mẫu email
+    Route::middleware('admin.perm:email_send')->group(function () {
+        Route::get('/emails', [EmailController::class, 'index'])->name('emails.index');
+        Route::post('/emails/templates', [EmailController::class, 'storeTemplate'])->name('emails.templates.store');
+        Route::put('/emails/templates/{template}', [EmailController::class, 'updateTemplate'])->name('emails.templates.update');
+        Route::delete('/emails/templates/{template}', [EmailController::class, 'destroyTemplate'])->name('emails.templates.destroy');
+        Route::post('/emails/blasts', [EmailController::class, 'createBlast'])->name('emails.blasts.store');
+        Route::post('/emails/blasts/{blast}/send', [EmailController::class, 'sendChunk'])->name('emails.blasts.send');
+        Route::get('/emails/blasts/{blast}/status', [EmailController::class, 'blastStatus'])->name('emails.blasts.status');
+        Route::delete('/emails/blasts/{blast}', [EmailController::class, 'destroyBlast'])->name('emails.blasts.destroy');
+        Route::post('/emails/test', [EmailController::class, 'test'])->name('emails.test');
+    });
 
     // Phân quyền
     Route::get('/roles', [RolesController::class, 'index'])->middleware('admin.perm:staff')->name('roles.index');
