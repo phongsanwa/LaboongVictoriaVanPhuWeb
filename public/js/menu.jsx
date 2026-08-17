@@ -561,6 +561,7 @@ function App() {
     });
     setCustomize(null);
     setEditLine(null);
+    setDrawer(true); // sửa xong quay lại giỏ hàng với món đã cập nhật
   };
 
   const commitLine = (line) => {
@@ -574,6 +575,7 @@ function App() {
     const m = liveMenu.find(x => x.id === l.id);
     if (!m) return;
     const menuItem = m.salePrice != null ? { ...m, price: m.salePrice, origPrice: m.price } : m;
+    setDrawer(false); // đóng giỏ hàng để bảng sửa món hiển thị rõ, không đè lên nhau
     setEditLine(l);
     setCustomize(menuItem);
   };
@@ -1120,7 +1122,7 @@ function App() {
         <CustomizeSheet
           item={customize}
           variantGroups={getProductVariantGroups(customize, variantGroups, storeOffSet(selectedStoreId))}
-          onClose={() => { setCustomize(null); setEditLine(null); }}
+          onClose={() => { const wasEdit = !!editLine; setCustomize(null); setEditLine(null); if (wasEdit) setDrawer(true); }}
           onAdd={commitLine}
           initialSelections={editLine?.selections || null}
           initialQty={editLine?.qty || 1}
