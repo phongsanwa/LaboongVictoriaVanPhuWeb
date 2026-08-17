@@ -39,6 +39,7 @@ function App() {
   const [tier, setTier] = useState("all");
   const [store, setStore] = useState("all");
   const [status, setStatus] = useState("all");
+  const [onlineOnly, setOnlineOnly] = useState(false);
   // Mặc định: khách đăng ký mới nhất hiển thị trên đầu
   const [sort, setSort] = useState({ key: "joined", dir: "desc" });
   const [page, setPage] = useState(1);
@@ -62,6 +63,7 @@ function App() {
       if (tier !== "all" && c.tier !== tier) return false;
       if (store !== "all" && c.store !== store) return false;
       if (status !== "all" && c.status !== status) return false;
+      if (onlineOnly && !c.online) return false;
       if (q.trim()) {
         const s = q.toLowerCase();
         if (!c.name.toLowerCase().includes(s) && !c.phone.replace(/\s/g, "").includes(s.replace(/\s/g, "")) && !c.email.toLowerCase().includes(s)) return false;
@@ -76,9 +78,9 @@ function App() {
       return 0;
     });
     return rows;
-  }, [q, tier, store, status, sort, customers]);
+  }, [q, tier, store, status, onlineOnly, sort, customers]);
 
-  useEffect(() => { setPage(1); }, [q, tier, store, status]);
+  useEffect(() => { setPage(1); }, [q, tier, store, status, onlineOnly]);
 
   const pages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const pageRows = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
@@ -192,6 +194,20 @@ function App() {
                 <button className={status === "on" ? "on ok" : ""} onClick={() => setStatus("on")}>Active</button>
                 <button className={status === "off" ? "on off" : ""} onClick={() => setStatus("off")}>Inactive</button>
               </div>
+
+              <button
+                onClick={() => setOnlineOnly(v => !v)}
+                title={onlineOnly ? "Đang lọc: chỉ khách online — bấm để bỏ lọc" : "Chỉ hiện khách đang online"}
+                style={{
+                  display: "flex", alignItems: "center", gap: 7, padding: "8px 13px",
+                  borderRadius: "var(--r-sm)", fontWeight: 700, fontSize: 13.5, cursor: "pointer",
+                  border: `1.5px solid ${onlineOnly ? "#16A34A" : "var(--line)"}`,
+                  background: onlineOnly ? "rgba(34,197,94,.12)" : "transparent",
+                  color: onlineOnly ? "#16A34A" : "var(--ink-2)", transition: ".14s",
+                }}>
+                <span style={{ width: 9, height: 9, borderRadius: "50%", background: onlineOnly ? "#22C55E" : "var(--ink-3)" }} />
+                Đang online{onlineOnly ? ` (${stats.online})` : ""}
+              </button>
 
               <div className="menu-wrap">
                 <button className="btn primary" onClick={() => setExp(v => !v)}><Icon name="download" size={17} color="#fff" /> Export</button>
