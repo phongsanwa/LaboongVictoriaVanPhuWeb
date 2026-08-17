@@ -18,6 +18,7 @@ class BulkEmail extends Mailable
     public function __construct(
         public readonly string $subjectLine,
         public readonly string $bodyHtml,
+        public readonly bool $attachQr = false,
     ) {}
 
     public function envelope(): Envelope
@@ -42,6 +43,7 @@ class BulkEmail extends Mailable
         return new Content(view: 'emails.bulk', with: [
             'bodyHtml' => $this->bodyHtml,
             'siteUrl'  => Site::base(),
+            'attachQr' => $this->attachQr,
         ]);
     }
 }

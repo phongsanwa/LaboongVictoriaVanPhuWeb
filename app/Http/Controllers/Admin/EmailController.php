@@ -8,11 +8,12 @@ use App\Models\Customer;
 use App\Models\EmailBlast;
 use App\Models\EmailBlastRecipient;
 use App\Models\EmailTemplate;
+use App\Services\EmailBlastSender;
 use App\Support\HtmlSanitizer;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Validation\Rule;
 
@@ -103,9 +104,11 @@ class EmailController extends Controller
         $data = $request->validate([
             'subject'       => ['required', 'string', 'max:200'],
             'body'          => ['required', 'string', 'max:200000'],
+            'attach_qr'     => ['boolean'],
             'audience'      => ['required', Rule::in(['all', 'selected'])],
             'customer_ids'  => ['array'],
             'customer_ids.*'=> ['integer'],
+            'scheduled_at'  => ['nullable', 'date'],
         ], [
             'subject.required' => 'Vui lòng nhập tiêu đề email',
             'body.required'    => 'Vui lòng nhập nội dung email',
@@ -114,6 +117,15 @@ class EmailController extends Controller
         $body = HtmlSanitizer::clean($data['body']);
         if (!$body) {
             return response()->json(['message' => 'Nội dung email trống sau khi làm sạch.'], 422);
+        }
+
+        // Hẹn giờ: nhận giờ VN từ trình duyệt → quy về UTC để so & lưu.
+        $scheduledAt = null;
+        if (!empty($data['scheduled_at'])) {
+            $scheduledAt = Carbon::parse($data['scheduled_at'], 'Asia/Ho_Chi_Minh')->utc();
+            if ($scheduledAt->isPast()) {
+                return response()->json(['message' => 'Thời gian hẹn gửi phải ở tương lai.'], 422);
+            }
         }
 
         $query = Customer::with('user');
@@ -136,9 +148,12 @@ class EmailController extends Controller
         $blast = EmailBlast::create([
             'subject'      => $data['subject'],
             'body'         => $body,
+            'attach_qr'    => (bool) ($data['attach_qr'] ?? false),
             'audience'     => $data['audience'],
             'total'        => $recipients->count(),
-            'status'       => 'sending',
+            // Có hẹn giờ → chờ cron gửi; không thì gửi ngay (frontend đẩy từng lô).
+            'status'       => $scheduledAt ? 'scheduled' : 'sending',
+            'scheduled_at' => $scheduledAt,
             'created_by'   => Auth::id(),
         ]);
 
@@ -168,45 +183,27 @@ class EmailController extends Controller
      */
     public function sendChunk(EmailBlast $blast): JsonResponse
     {
-        $pending = $blast->recipients()
-            ->where('status', 'pending')
-            ->limit(self::CHUNK)
-            ->get();
-
-        // Lấy điểm + SĐT của lô này trong 1 truy vấn để cá nhân hoá.
-        $customerIds = $pending->pluck('customer_id')->filter()->all();
-        $customers = Customer::with('user')->whereIn('id', $customerIds)->get()->keyBy('id');
-
-        foreach ($pending as $r) {
-            $c = $r->customer_id ? $customers->get($r->customer_id) : null;
-            $vars = [
-                '{name}'   => $r->name ?: ($c?->user?->name ?? 'bạn'),
-                '{ten}'    => $r->name ?: ($c?->user?->name ?? 'bạn'),
-                '{phone}'  => $c?->user?->phone ?? '',
-                '{sdt}'    => $c?->user?->phone ?? '',
-                '{points}' => (string) (int) ($c?->total_points ?? 0),
-                '{diem}'   => (string) (int) ($c?->total_points ?? 0),
-            ];
-
-            $subject = strtr($blast->subject, $vars);
-            $bodyHtml = strtr($blast->body ?? '', $vars);
-
-            try {
-                Mail::to($r->email)->send(new BulkEmail($subject, $bodyHtml));
-                $r->update(['status' => 'sent', 'error' => null, 'sent_at' => now()]);
-            } catch (\Throwable $e) {
-                Log::warning('BulkEmail failed', ['to' => $r->email, 'error' => $e->getMessage()]);
-                $r->update(['status' => 'failed', 'error' => mb_substr($e->getMessage(), 0, 300)]);
-            }
+        // Chưa tới giờ hẹn thì không gửi (để cron lo); chỉ trả tiến trình.
+        if ($blast->status === 'scheduled') {
+            return response()->json($this->progressPayload($blast, [
+                'total' => $blast->total, 'sent' => 0, 'failed' => 0,
+                'pending' => $blast->total, 'done' => false, 'status' => 'scheduled',
+            ]));
         }
 
-        return response()->json($this->refreshProgress($blast));
+        $p = app(EmailBlastSender::class)->sendChunk($blast, self::CHUNK);
+
+        return response()->json($this->progressPayload($blast->fresh(), $p));
     }
 
     /** Trạng thái hiện tại (để polling / mở lại chiến dịch còn dở). */
     public function blastStatus(EmailBlast $blast): JsonResponse
     {
-        return response()->json($this->refreshProgress($blast));
+        $p = ($blast->status === 'scheduled')
+            ? ['total' => $blast->total, 'sent' => 0, 'failed' => 0, 'pending' => $blast->total, 'done' => false, 'status' => 'scheduled']
+            : app(EmailBlastSender::class)->progress($blast);
+
+        return response()->json($this->progressPayload($blast->fresh(), $p));
     }
 
     public function destroyBlast(EmailBlast $blast): JsonResponse
@@ -220,9 +217,10 @@ class EmailController extends Controller
     public function test(Request $request): JsonResponse
     {
         $data = $request->validate([
-            'subject' => ['required', 'string', 'max:200'],
-            'body'    => ['required', 'string', 'max:200000'],
-            'to'      => ['nullable', 'email'],
+            'subject'   => ['required', 'string', 'max:200'],
+            'body'      => ['required', 'string', 'max:200000'],
+            'attach_qr' => ['boolean'],
+            'to'        => ['nullable', 'email'],
         ]);
 
         $to   = $data['to'] ?: Auth::user()->email;
@@ -239,7 +237,11 @@ class EmailController extends Controller
         ];
 
         try {
-            Mail::to($to)->send(new BulkEmail(strtr($data['subject'], $vars), strtr($body, $vars)));
+            Mail::to($to)->send(new BulkEmail(
+                strtr($data['subject'], $vars),
+                strtr($body, $vars),
+                (bool) ($data['attach_qr'] ?? false),
+            ));
         } catch (\Throwable $e) {
             return response()->json(['message' => 'Gửi thử thất bại: ' . $e->getMessage()], 422);
         }
@@ -249,74 +251,60 @@ class EmailController extends Controller
 
     /* ─── Helpers ─── */
 
-    /** Tính lại số đã gửi/lỗi/còn lại từ bảng recipients (chuẩn khi resume). */
-    private function refreshProgress(EmailBlast $blast): array
+    /** Gói tiến trình + thông tin blast cho frontend. */
+    private function progressPayload(EmailBlast $blast, array $p): array
     {
-        $counts = $blast->recipients()
-            ->selectRaw('status, COUNT(*) as c')
-            ->groupBy('status')
-            ->pluck('c', 'status');
-
-        $sent    = (int) ($counts['sent'] ?? 0);
-        $failed  = (int) ($counts['failed'] ?? 0);
-        $pending = (int) ($counts['pending'] ?? 0);
-        $done    = $pending === 0;
-        $status  = !$done ? 'sending' : ($failed > 0 ? 'partial' : 'sent');
-
-        $blast->update(['sent_count' => $sent, 'failed_count' => $failed, 'status' => $status]);
-
-        return [
-            'id'      => $blast->id,
-            'total'   => $blast->total,
-            'sent'    => $sent,
-            'failed'  => $failed,
-            'pending' => $pending,
-            'done'    => $done,
-            'status'  => $status,
-            'blast'   => $this->presentBlast($blast->fresh()),
-        ];
+        return array_merge($p, [
+            'id'    => $blast->id,
+            'blast' => $this->presentBlast($blast),
+        ]);
     }
 
     private function validateTemplate(Request $request): array
     {
         $data = $request->validate([
-            'name'    => ['required', 'string', 'max:150'],
-            'subject' => ['required', 'string', 'max:200'],
-            'body'    => ['nullable', 'string', 'max:200000'],
+            'name'      => ['required', 'string', 'max:150'],
+            'subject'   => ['required', 'string', 'max:200'],
+            'body'      => ['nullable', 'string', 'max:200000'],
+            'attach_qr' => ['boolean'],
         ], [
             'name.required'    => 'Vui lòng nhập tên mẫu',
             'subject.required' => 'Vui lòng nhập tiêu đề',
         ]);
 
         return [
-            'name'    => $data['name'],
-            'subject' => $data['subject'],
-            'body'    => HtmlSanitizer::clean($data['body'] ?? null),
+            'name'      => $data['name'],
+            'subject'   => $data['subject'],
+            'body'      => HtmlSanitizer::clean($data['body'] ?? null),
+            'attach_qr' => (bool) ($data['attach_qr'] ?? false),
         ];
     }
 
     private function presentTemplate(EmailTemplate $t): array
     {
         return [
-            'id'      => $t->id,
-            'name'    => $t->name,
-            'subject' => $t->subject,
-            'body'    => $t->body ?? '',
+            'id'        => $t->id,
+            'name'      => $t->name,
+            'subject'   => $t->subject,
+            'body'      => $t->body ?? '',
+            'attach_qr' => (bool) $t->attach_qr,
         ];
     }
 
     private function presentBlast(EmailBlast $b): array
     {
         return [
-            'id'        => $b->id,
-            'subject'   => $b->subject,
-            'audience'  => $b->audience,
-            'total'     => $b->total,
-            'sent'      => $b->sent_count,
-            'failed'    => $b->failed_count,
-            'pending'   => max(0, $b->total - $b->sent_count - $b->failed_count),
-            'status'    => $b->status,
-            'created_at'=> $b->created_at?->setTimezone('Asia/Ho_Chi_Minh')->format('H:i d/m/Y'),
+            'id'          => $b->id,
+            'subject'     => $b->subject,
+            'audience'    => $b->audience,
+            'attach_qr'   => (bool) $b->attach_qr,
+            'total'       => $b->total,
+            'sent'        => $b->sent_count,
+            'failed'      => $b->failed_count,
+            'pending'     => max(0, $b->total - $b->sent_count - $b->failed_count),
+            'status'      => $b->status,
+            'scheduled_at'=> $b->scheduled_at?->setTimezone('Asia/Ho_Chi_Minh')->format('H:i d/m/Y'),
+            'created_at'  => $b->created_at?->setTimezone('Asia/Ho_Chi_Minh')->format('H:i d/m/Y'),
         ];
     }
 

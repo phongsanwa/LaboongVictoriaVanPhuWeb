@@ -21,6 +21,15 @@
           {!! $bodyHtml !!}
         </td></tr>
 
+        {{-- Mã QR website (tuỳ chọn; nhúng inline, thiếu file thì bỏ qua) --}}
+        @php($lbQrPath = public_path('images/website-qr.png'))
+        @if(!empty($attachQr) && is_file($lbQrPath))
+        <tr><td style="padding:6px 28px 4px; text-align:center;">
+          <div style="font-size:13.5px; color:#3f4f47; margin-bottom:10px;">Quét mã QR để mở nhanh website & đặt hàng:</div>
+          <img src="{{ $message->embed($lbQrPath) }}" alt="Mã QR website Laboong" width="190" height="190" style="display:block; margin:0 auto; border:1px solid #e6e0d2; border-radius:12px; padding:8px; background:#fff;" />
+        </td></tr>
+        @endif
+
         {{-- Nút về website --}}
         <tr><td style="padding:8px 28px 24px; text-align:center;">
           <a href="{{ $siteUrl }}" style="display:inline-block; background:#0F623F; color:#ffffff; text-decoration:none; font-size:15px; font-weight:700; padding:12px 26px; border-radius:999px;">

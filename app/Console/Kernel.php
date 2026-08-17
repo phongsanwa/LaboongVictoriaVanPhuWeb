@@ -14,6 +14,11 @@ class Kernel extends ConsoleKernel
             ->dailyAt('08:00')
             ->withoutOverlapping()
             ->appendOutputTo(storage_path('logs/birthday-award.log'));
+
+        // Gửi email đã hẹn giờ + gửi nốt chiến dịch còn dở (mỗi phút)
+        $schedule->command('emails:dispatch')
+            ->everyMinute()
+            ->withoutOverlapping();
     }
 
     protected function commands(): void

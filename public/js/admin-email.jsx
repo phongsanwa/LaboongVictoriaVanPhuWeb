@@ -64,6 +64,7 @@ function TemplateEditor({ initial, onClose, onSaved }) {
   const [name, setName] = useState(initial.name || '');
   const [subject, setSubject] = useState(initial.subject || '');
   const [body, setBody] = useState(initial.body || '');
+  const [attachQr, setAttachQr] = useState(!!initial.attach_qr);
   const [saving, setSaving] = useState(false);
   const [err, setErr] = useState('');
 
@@ -71,7 +72,7 @@ function TemplateEditor({ initial, onClose, onSaved }) {
     if (!name.trim() || !subject.trim()) { setErr('Nhập tên mẫu và tiêu đề.'); return; }
     setSaving(true); setErr('');
     try {
-      const payload = { name: name.trim(), subject: subject.trim(), body };
+      const payload = { name: name.trim(), subject: subject.trim(), body, attach_qr: attachQr };
       const res = isEdit
         ? await apiFetch('PUT', URLS.updateTemplate.replace('__ID__', initial.id), payload)
         : await apiFetch('POST', URLS.storeTemplate, payload);
@@ -94,6 +95,10 @@ function TemplateEditor({ initial, onClose, onSaved }) {
             <input className="inp" value={subject} onChange={e => setSubject(e.target.value)} placeholder="VD: 🧋 Ưu đãi đặc biệt cho {name}!" /></div>
           <div className="fld"><label>Nội dung</label>
             <RichEditor value={body} onChange={setBody} height={300} /></div>
+          <label style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer' }}>
+            <input type="checkbox" checked={attachQr} onChange={e => setAttachQr(e.target.checked)} style={{ accentColor: 'var(--brand)', width: 17, height: 17 }} />
+            <span style={{ fontWeight: 700 }}>Kèm mã QR website</span>
+          </label>
           {err && <div className="cp-err"><Icon name="alert" size={14} color="var(--hot)" /> {err}</div>}
         </div>
         <div className="modal-f">
@@ -122,6 +127,9 @@ function App() {
   const [tplId, setTplId] = useState('');
   const [subject, setSubject] = useState('');
   const [body, setBody] = useState('');
+  const [attachQr, setAttachQr] = useState(false);
+  const [when, setWhen] = useState('now');      // now | later
+  const [scheduledAt, setScheduledAt] = useState('');
   const [audience, setAudience] = useState('all'); // all | selected
   const [selected, setSelected] = useState(() => new Set());
   const [search, setSearch] = useState('');
@@ -136,7 +144,7 @@ function App() {
     setTplId(id);
     if (!id) return;
     const t = templates.find(x => String(x.id) === String(id));
-    if (t) { setSubject(t.subject || ''); setBody(t.body || ''); }
+    if (t) { setSubject(t.subject || ''); setBody(t.body || ''); setAttachQr(!!t.attach_qr); }
   };
 
   const filteredCustomers = useMemo(() => {
@@ -171,20 +179,36 @@ function App() {
     if (!subject.trim()) { setComposeErr('Vui lòng nhập tiêu đề email.'); return; }
     if (!body || !body.trim()) { setComposeErr('Vui lòng nhập nội dung email.'); return; }
     if (audience === 'selected' && selected.size === 0) { setComposeErr('Vui lòng chọn ít nhất một khách hàng.'); return; }
-    if (!confirm(`Gửi email tới ${recipientCount} khách hàng?`)) return;
+    if (when === 'later' && !scheduledAt) { setComposeErr('Vui lòng chọn thời gian hẹn gửi.'); return; }
 
-    setSending({ total: recipientCount, sent: 0, failed: 0, pending: recipientCount, done: false });
+    const scheduled = when === 'later';
+    const msg = scheduled
+      ? `Hẹn gửi email tới ${recipientCount} khách vào lúc đã chọn?`
+      : `Gửi email tới ${recipientCount} khách hàng ngay bây giờ?`;
+    if (!confirm(msg)) return;
+
+    const payload = {
+      subject: subject.trim(), body, attach_qr: attachQr, audience,
+      customer_ids: audience === 'selected' ? [...selected] : [],
+      scheduled_at: scheduled ? scheduledAt : null,
+    };
+
+    if (!scheduled) setSending({ total: recipientCount, sent: 0, failed: 0, pending: recipientCount, done: false });
     try {
-      const res = await apiFetch('POST', URLS.createBlast, {
-        subject: subject.trim(), body, audience,
-        customer_ids: audience === 'selected' ? [...selected] : [],
-      });
+      const res = await apiFetch('POST', URLS.createBlast, payload);
       setBlasts(bs => [res.blast, ...bs]);
-      await drive(res.blast.id);
-      flash('Đã gửi xong email.');
+      if (scheduled) {
+        setSending(null);
+        flash('Đã lên lịch gửi email. Hệ thống sẽ tự gửi khi tới giờ.');
+        setTab('history');
+      } else {
+        await drive(res.blast.id);
+        flash('Đã gửi xong email.');
+      }
     } catch (e) {
+      setSending(null);
       setComposeErr(e.message);
-      flash('Gửi bị gián đoạn: ' + e.message, false);
+      flash('Không gửi được: ' + e.message, false);
     }
   };
 
@@ -192,7 +216,7 @@ function App() {
     setComposeErr('');
     if (!subject.trim() || !body.trim()) { setComposeErr('Nhập tiêu đề và nội dung trước khi gửi thử.'); return; }
     try {
-      const res = await apiFetch('POST', URLS.test, { subject: subject.trim(), body });
+      const res = await apiFetch('POST', URLS.test, { subject: subject.trim(), body, attach_qr: attachQr });
       flash(res.message || 'Đã gửi email thử.');
     } catch (e) { flash(e.message, false); }
   };
@@ -221,7 +245,7 @@ function App() {
   };
 
   const statusBadge = (s) => {
-    const map = { sending: ['Đang gửi', 'var(--warn,#b8860b)'], sent: ['Đã gửi', 'var(--ok,#0a7d3f)'], partial: ['Còn lỗi', 'var(--hot,#e53)'] };
+    const map = { scheduled: ['Đã lên lịch', 'var(--brand,#0F623F)'], sending: ['Đang gửi', 'var(--warn,#b8860b)'], sent: ['Đã gửi', 'var(--ok,#0a7d3f)'], partial: ['Còn lỗi', 'var(--hot,#e53)'] };
     const [label, color] = map[s] || [s, 'var(--ink-2)'];
     return <span style={{ fontSize: 12, fontWeight: 700, color, background: 'rgba(0,0,0,.04)', padding: '3px 9px', borderRadius: 999 }}>{label}</span>;
   };
@@ -277,6 +301,37 @@ function App() {
                   ))}
                   <span>— gõ trực tiếp vào tiêu đề/nội dung, hệ thống tự thay khi gửi.</span>
                 </div>
+
+                {/* Kèm mã QR */}
+                <label style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 12, cursor: 'pointer' }}>
+                  <input type="checkbox" checked={attachQr} onChange={e => setAttachQr(e.target.checked)} style={{ accentColor: 'var(--brand)', width: 17, height: 17 }} />
+                  <span style={{ fontWeight: 700 }}>Kèm mã QR website</span>
+                  <span style={{ fontSize: 12.5, color: 'var(--ink-3)' }}>— chèn ảnh QR để khách quét mở web</span>
+                </label>
+              </div>
+
+              {/* Thời điểm gửi */}
+              <div className="card" style={{ padding: 18, background: 'var(--card,#fff)', borderRadius: 14, border: '1px solid var(--line,#eee)' }}>
+                <div style={{ fontWeight: 800, marginBottom: 10, display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <Icon name="cal" size={18} color="var(--brand)" /> Thời điểm gửi
+                </div>
+                <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+                  {[['now', 'Gửi ngay'], ['later', 'Lên lịch']].map(([k, label]) => (
+                    <label key={k} style={{ flex: 1, minWidth: 140, display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', border: `1.5px solid ${when === k ? 'var(--brand)' : 'var(--line)'}`, borderRadius: 10, cursor: 'pointer', background: when === k ? 'var(--brand-soft)' : 'transparent' }}>
+                      <input type="radio" checked={when === k} onChange={() => setWhen(k)} style={{ accentColor: 'var(--brand)' }} />
+                      <span style={{ fontWeight: 700 }}>{label}</span>
+                    </label>
+                  ))}
+                </div>
+                {when === 'later' && (
+                  <div className="fld" style={{ marginTop: 12, marginBottom: 0 }}>
+                    <label>Gửi vào lúc (giờ Việt Nam)</label>
+                    <input type="datetime-local" className="inp" value={scheduledAt} onChange={e => setScheduledAt(e.target.value)} />
+                    <div style={{ fontSize: 12.5, color: 'var(--ink-3)', marginTop: 6 }}>
+                      Hệ thống sẽ tự gửi khi tới giờ (không cần mở trang). Cần bật cron trên máy chủ.
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Người nhận */}
@@ -341,7 +396,7 @@ function App() {
                   <Icon name="eye" size={16} /> Gửi thử về email của tôi
                 </button>
                 <button className="btn primary" onClick={send} disabled={!!sending && !sending.done} style={{ marginLeft: 'auto' }}>
-                  <Icon name="send" size={16} color="#fff" /> Gửi tới {recipientCount} khách
+                  <Icon name={when === 'later' ? 'cal' : 'send'} size={16} color="#fff" /> {when === 'later' ? `Lên lịch gửi tới ${recipientCount} khách` : `Gửi tới ${recipientCount} khách`}
                 </button>
               </div>
             </div>
@@ -384,11 +439,14 @@ function App() {
                       <div style={{ minWidth: 0, flex: 1 }}>
                         <div style={{ fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{b.subject}</div>
                         <div style={{ fontSize: 12.5, color: 'var(--ink-3)' }}>
-                          {b.created_at} · {b.audience === 'all' ? 'Tất cả' : 'Chọn lọc'} · {b.sent}/{b.total} đã gửi{b.failed ? ` · ${b.failed} lỗi` : ''}
+                          {b.status === 'scheduled' && b.scheduled_at
+                            ? <><Icon name="cal" size={12} /> Hẹn gửi lúc {b.scheduled_at} · </>
+                            : null}
+                          {b.created_at} · {b.audience === 'all' ? 'Tất cả' : 'Chọn lọc'} · {b.sent}/{b.total} đã gửi{b.failed ? ` · ${b.failed} lỗi` : ''}{b.attach_qr ? ' · có QR' : ''}
                         </div>
                       </div>
                       {statusBadge(b.status)}
-                      {b.pending > 0 && (
+                      {b.status !== 'scheduled' && b.pending > 0 && (
                         <button className="btn primary tiny" onClick={() => resume(b)} disabled={!!sending && !sending.done}>Gửi tiếp ({b.pending})</button>
                       )}
                       <button className="vopt-edit del" title="Xoá" onClick={() => delBlast(b)}><Icon name="trash" size={15} /></button>
