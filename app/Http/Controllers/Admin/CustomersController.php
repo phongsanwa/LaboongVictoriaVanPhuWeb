@@ -61,7 +61,8 @@ class CustomersController extends Controller
             ->groupBy('customer_id');
 
         // Lịch sử ĐƠN HÀNG khách đã đặt (web/app) — tách riêng với giao dịch điểm.
-        $orders = \App\Models\Order::with('store:id,name')->withCount('items')
+        $orders = \App\Models\Order::with(['store:id,name', 'items.product:id,name', 'items.toppings'])
+            ->withCount('items')
             ->whereIn('customer_id', $customerIds)
             ->orderByDesc('created_at')
             ->get()
@@ -109,6 +110,24 @@ class CustomersController extends Controller
                     default     => $o->status,
                 };
 
+                $lines = $o->items->map(function ($item) {
+                    $parts = [];
+                    if ($item->size_name) $parts[] = "Size {$item->size_name}";
+                    if ($item->sugar_level !== null && $item->sugar_level !== '100') $parts[] = "Đường {$item->sugar_level}%";
+                    if ($item->ice_level !== null && $item->ice_level !== '100') $parts[] = "Đá {$item->ice_level}%";
+                    foreach ($item->toppings as $t) {
+                        $q = max(1, (int) ($t->quantity ?? 1));
+                        $parts[] = $q > 1 ? "{$t->topping_name} x{$q}" : $t->topping_name;
+                    }
+
+                    return [
+                        'name' => $item->product?->name ?? "Sản phẩm #{$item->product_id}",
+                        'opt'  => implode(' · ', $parts),
+                        'qty'  => (int) $item->quantity,
+                        'unit' => (int) $item->unit_price,
+                    ];
+                })->values();
+
                 return [
                     'code'     => 'LB-' . str_pad((string) $o->id, 4, '0', STR_PAD_LEFT),
                     'status'   => $o->status,
@@ -117,6 +136,13 @@ class CustomersController extends Controller
                     'items'    => $o->items_count,
                     'total'    => (int) $o->total_amount,
                     'meta'     => $this->daysAgo($o->created_at, $now) . ' · ' . ($o->store?->name ?? '—'),
+                    // Chi tiết để mở rộng khi bấm vào đơn
+                    'lines'    => $lines,
+                    'subtotal' => (int) $o->subtotal,
+                    'discount' => (int) $o->discount_amount,
+                    'shipFee'  => (int) $o->shipping_fee,
+                    'note'     => $o->note ?? '',
+                    'addr'     => $o->delivery_address,
                 ];
             })->values();
 
