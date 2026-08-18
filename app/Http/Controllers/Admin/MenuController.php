@@ -37,6 +37,7 @@ class MenuController extends Controller
                     'updateProduct'  => route('admin.menu.products.update', ['product' => '__ID__']),
                     'deleteProduct'  => route('admin.menu.products.destroy', ['product' => '__ID__']),
                     'toggleProduct'  => route('admin.menu.products.toggle', ['product' => '__ID__']),
+                    'reorderProducts'=> route('admin.menu.products.reorder'),
                     'updateVariants' => route('admin.menu.products.variants', ['product' => '__ID__']),
                     'storeCategory'  => route('admin.menu.categories.store'),
                     'updateCategory' => route('admin.menu.categories.update', ['category' => '__ID__']),
@@ -178,6 +179,21 @@ class MenuController extends Controller
         $product->load(['category', 'variants' => fn ($q) => $q->orderBy('sort_order')]);
 
         return response()->json(['product' => $this->presentProduct($product)]);
+    }
+
+    /** POST /admin/menu/products/reorder  (ids: [id, id, ...]) — sắp thứ tự món */
+    public function reorderProducts(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'ids'   => ['required', 'array'],
+            'ids.*' => ['required', 'integer', Rule::exists('products', 'id')],
+        ]);
+
+        foreach ($data['ids'] as $order => $id) {
+            Product::where('id', $id)->update(['sort_order' => $order + 1]);
+        }
+
+        return response()->json(['message' => 'Đã cập nhật thứ tự món']);
     }
 
     /** POST /admin/menu/products/{product}/variants */
