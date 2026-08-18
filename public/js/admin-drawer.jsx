@@ -194,7 +194,7 @@ function Drawer({ c, onClose, onCustomerUpdated, onCustomerDeleted }) {
   const toNext = next ? Math.max(0, next.min - customer.points) : 0;
 
   const handleSaved = (updated) => {
-    const merged = { ...customer, ...updated, tx: customer.tx };
+    const merged = { ...customer, ...updated, tx: customer.tx, orders: customer.orders };
     setCustomer(merged);
     setEditing(false);
     if (onCustomerUpdated) onCustomerUpdated(merged);
@@ -250,6 +250,29 @@ function Drawer({ c, onClose, onCustomerUpdated, onCustomerDeleted }) {
                   <div className="tm">{x.meta}</div>
                 </div>
                 <div className={"ta " + (x.amt > 0 ? "plus" : "minus")}>{x.amt > 0 ? "+" : "−"}{fmt(Math.abs(x.amt))}</div>
+              </div>
+            ))}
+          </div>
+
+          <div className="dr-sec-t" style={{ marginTop: 18 }}>Lịch sử đơn hàng ({(customer.orders || []).length})</div>
+          <div className="dr-tx">
+            {(customer.orders || []).length === 0 && (
+              <div style={{ padding: "10px 2px", color: "var(--ink-3)", fontSize: 13 }}>Khách chưa có đơn hàng nào.</div>
+            )}
+            {(customer.orders || []).map((o, i) => (
+              <div className="tx" key={i}>
+                <div className="txic earn"><Icon name={o.ship ? "truck" : "bag"} size={18} /></div>
+                <div style={{ minWidth: 0, flex: 1 }}>
+                  <div className="tt">{o.code} · {o.items} món
+                    <span style={{
+                      marginLeft: 7, fontSize: 11, fontWeight: 700, padding: "1px 7px", borderRadius: 999,
+                      background: o.status === "CANCELLED" ? "rgba(212,88,75,.12)" : o.status === "COMPLETED" ? "rgba(22,163,74,.12)" : "rgba(0,0,0,.06)",
+                      color: o.status === "CANCELLED" ? "#D4584B" : o.status === "COMPLETED" ? "#16A34A" : "var(--ink-2)",
+                    }}>{o.statusLabel}</span>
+                  </div>
+                  <div className="tm">{o.meta}</div>
+                </div>
+                <div style={{ fontWeight: 800, fontSize: 13.5, whiteSpace: "nowrap", color: o.status === "CANCELLED" ? "var(--ink-3)" : "var(--ink)", textDecoration: o.status === "CANCELLED" ? "line-through" : "none" }}>{fmt(o.total)}đ</div>
               </div>
             ))}
           </div>
