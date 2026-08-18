@@ -60,7 +60,14 @@ class CustomersController extends Controller
             ->get()
             ->groupBy('customer_id');
 
-        $customerRows = $customers->map(function ($c) use ($tierMeta, $transactions, $redemptions, $now) {
+        // Lịch sử ĐƠN HÀNG khách đã đặt (web/app) — tách riêng với giao dịch điểm.
+        $orders = \App\Models\Order::with('store:id,name')->withCount('items')
+            ->whereIn('customer_id', $customerIds)
+            ->orderByDesc('created_at')
+            ->get()
+            ->groupBy('customer_id');
+
+        $customerRows = $customers->map(function ($c) use ($tierMeta, $transactions, $redemptions, $orders, $now) {
             $tx = collect();
 
             foreach ($transactions->get($c->id, collect()) as $t) {
@@ -90,6 +97,29 @@ class CustomersController extends Controller
                 'type' => $x['type'], 'title' => $x['title'], 'meta' => $x['meta'], 'amt' => $x['amt'],
             ])->values();
 
+            // Lịch sử đơn hàng của khách (tối đa 15 đơn gần nhất)
+            $orderHistory = $orders->get($c->id, collect())->take(15)->map(function ($o) use ($now) {
+                $statusLabel = match ($o->status) {
+                    'PENDING'   => 'Chờ xác nhận',
+                    'CONFIRMED' => 'Đã xác nhận',
+                    'PREPARING' => 'Đang pha chế',
+                    'READY'     => 'Sẵn sàng',
+                    'COMPLETED' => 'Hoàn tất',
+                    'CANCELLED' => 'Đã huỷ',
+                    default     => $o->status,
+                };
+
+                return [
+                    'code'     => 'LB-' . str_pad((string) $o->id, 4, '0', STR_PAD_LEFT),
+                    'status'   => $o->status,
+                    'statusLabel' => $statusLabel,
+                    'ship'     => !empty($o->delivery_address) || (int) $o->shipping_fee > 0,
+                    'items'    => $o->items_count,
+                    'total'    => (int) $o->total_amount,
+                    'meta'     => $this->daysAgo($o->created_at, $now) . ' · ' . ($o->store?->name ?? '—'),
+                ];
+            })->values();
+
             return [
                 'id' => 'KH' . (1000 + $c->id),
                 'customerId' => $c->id,
@@ -109,6 +139,7 @@ class CustomersController extends Controller
                 'joined' => $c->created_at->toDateString(),
                 'spent' => (float) $c->total_spent,
                 'tx' => $tx,
+                'orders' => $orderHistory,
             ];
         })->values();
 
