@@ -23,6 +23,8 @@ class Order extends Model
         'note',
         'delivery_address',
         'delivery_phone',
+        'delivery_lat',
+        'delivery_lng',
         'confirmed_at',
         'completed_at',
         'cancelled_at',
