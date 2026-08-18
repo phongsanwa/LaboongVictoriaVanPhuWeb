@@ -72,6 +72,7 @@ Route::middleware(['auth', 'admin.perm'])->prefix('admin')->name('admin.')->grou
         Route::get('/emails/blasts/{blast}/status', [EmailController::class, 'blastStatus'])->name('emails.blasts.status');
         Route::delete('/emails/blasts/{blast}', [EmailController::class, 'destroyBlast'])->name('emails.blasts.destroy');
         Route::post('/emails/test', [EmailController::class, 'test'])->name('emails.test');
+        Route::post('/emails/upload', [EmailController::class, 'uploadImage'])->name('emails.upload');
     });
 
     // Phân quyền
