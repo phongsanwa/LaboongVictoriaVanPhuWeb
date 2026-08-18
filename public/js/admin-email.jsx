@@ -39,6 +39,33 @@ function RichEditor({ value, onChange, height = 320 }) {
       relative_urls: false,
       convert_urls: false,
       paste_data_images: false,
+      automatic_uploads: true,
+      file_picker_types: 'image',
+      // Kéo-thả / dán ảnh → tự upload lên server
+      images_upload_handler: (blobInfo) => new Promise((resolve, reject) => {
+        const fd = new FormData();
+        fd.append('file', blobInfo.blob(), blobInfo.filename());
+        fetch(URLS.uploadImage, { method: 'POST', headers: { 'X-CSRF-TOKEN': csrfToken(), 'Accept': 'application/json' }, body: fd })
+          .then(r => r.json().then(j => r.ok ? resolve(j.url) : reject(j.message || 'Tải ảnh lỗi')))
+          .catch(() => reject('Tải ảnh lỗi'));
+      }),
+      // Nút chọn ảnh từ máy ngay trong hộp thoại Insert/Edit Image
+      file_picker_callback: (cb) => {
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = 'image/*';
+        input.onchange = () => {
+          const file = input.files && input.files[0];
+          if (!file) return;
+          const fd = new FormData();
+          fd.append('file', file);
+          fetch(URLS.uploadImage, { method: 'POST', headers: { 'X-CSRF-TOKEN': csrfToken(), 'Accept': 'application/json' }, body: fd })
+            .then(r => r.json())
+            .then(j => { if (j.url) cb(j.url, { alt: file.name }); else alert(j.message || 'Tải ảnh lỗi'); })
+            .catch(() => alert('Tải ảnh lỗi'));
+        };
+        input.click();
+      },
       setup: (editor) => {
         edRef.current = editor;
         editor.on('init', () => editor.setContent(value || ''));

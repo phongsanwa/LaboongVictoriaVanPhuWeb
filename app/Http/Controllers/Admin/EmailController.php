@@ -10,10 +10,12 @@ use App\Models\EmailBlastRecipient;
 use App\Models\EmailTemplate;
 use App\Services\EmailBlastSender;
 use App\Support\HtmlSanitizer;
+use App\Support\Site;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Validation\Rule;
 
@@ -67,6 +69,7 @@ class EmailController extends Controller
                     'blastStatus'     => route('admin.emails.blasts.status', ['blast' => '__ID__']),
                     'destroyBlast'    => route('admin.emails.blasts.destroy', ['blast' => '__ID__']),
                     'test'            => route('admin.emails.test'),
+                    'uploadImage'     => route('admin.emails.upload'),
                 ],
             ],
         ]);
@@ -247,6 +250,22 @@ class EmailController extends Controller
         }
 
         return response()->json(['message' => "Đã gửi email thử tới {$to}"]);
+    }
+
+    /** Upload ảnh cho trình soạn email — trả URL TUYỆT ĐỐI để hiển thị được
+     *  trong hộp thư người nhận (ảnh đường dẫn tương đối sẽ không hiện). */
+    public function uploadImage(Request $request): JsonResponse
+    {
+        $request->validate([
+            'file' => ['required', 'image', 'mimes:jpg,jpeg,png,webp,gif', 'max:4096'],
+        ], [
+            'file.image' => 'Tệp phải là ảnh (jpg, png, webp, gif)',
+            'file.max'   => 'Ảnh tối đa 4MB',
+        ]);
+
+        $path = Storage::disk('public')->put('emails/images', $request->file('file'));
+
+        return response()->json(['url' => Site::base() . Storage::url($path)]);
     }
 
     /* ─── Helpers ─── */
