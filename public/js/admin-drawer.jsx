@@ -179,6 +179,7 @@ function Drawer({ c, onClose, onCustomerUpdated, onCustomerDeleted }) {
   const [editing, setEditing] = React.useState(false);
   const [confirmDel, setConfirmDel] = React.useState(false);
   const [customer, setCustomer] = React.useState(c);
+  const [openOrder, setOpenOrder] = React.useState(null); // index đơn đang mở chi tiết
 
   React.useEffect(() => { setCustomer(c); }, [c]);
 
@@ -260,19 +261,45 @@ function Drawer({ c, onClose, onCustomerUpdated, onCustomerDeleted }) {
               <div style={{ padding: "10px 2px", color: "var(--ink-3)", fontSize: 13 }}>Khách chưa có đơn hàng nào.</div>
             )}
             {(customer.orders || []).map((o, i) => (
-              <div className="tx" key={i}>
-                <div className="txic earn"><Icon name={o.ship ? "truck" : "bag"} size={18} /></div>
-                <div style={{ minWidth: 0, flex: 1 }}>
-                  <div className="tt">{o.code} · {o.items} món
-                    <span style={{
-                      marginLeft: 7, fontSize: 11, fontWeight: 700, padding: "1px 7px", borderRadius: 999,
-                      background: o.status === "CANCELLED" ? "rgba(212,88,75,.12)" : o.status === "COMPLETED" ? "rgba(22,163,74,.12)" : "rgba(0,0,0,.06)",
-                      color: o.status === "CANCELLED" ? "#D4584B" : o.status === "COMPLETED" ? "#16A34A" : "var(--ink-2)",
-                    }}>{o.statusLabel}</span>
+              <div key={i}>
+                <div className="tx" style={{ cursor: "pointer" }} onClick={() => setOpenOrder(openOrder === i ? null : i)}>
+                  <div className="txic earn"><Icon name={o.ship ? "truck" : "bag"} size={18} /></div>
+                  <div style={{ minWidth: 0, flex: 1 }}>
+                    <div className="tt">{o.code} · {o.items} món
+                      <span style={{
+                        marginLeft: 7, fontSize: 11, fontWeight: 700, padding: "1px 7px", borderRadius: 999,
+                        background: o.status === "CANCELLED" ? "rgba(212,88,75,.12)" : o.status === "COMPLETED" ? "rgba(22,163,74,.12)" : "rgba(0,0,0,.06)",
+                        color: o.status === "CANCELLED" ? "#D4584B" : o.status === "COMPLETED" ? "#16A34A" : "var(--ink-2)",
+                      }}>{o.statusLabel}</span>
+                    </div>
+                    <div className="tm">{o.meta}</div>
                   </div>
-                  <div className="tm">{o.meta}</div>
+                  <div style={{ fontWeight: 800, fontSize: 13.5, whiteSpace: "nowrap", color: o.status === "CANCELLED" ? "var(--ink-3)" : "var(--ink)", textDecoration: o.status === "CANCELLED" ? "line-through" : "none" }}>{fmt(o.total)}đ</div>
+                  <span style={{ marginLeft: 6, color: "var(--ink-3)", transform: openOrder === i ? "rotate(180deg)" : "none", transition: ".15s" }}><Icon name="chevdown" size={16} /></span>
                 </div>
-                <div style={{ fontWeight: 800, fontSize: 13.5, whiteSpace: "nowrap", color: o.status === "CANCELLED" ? "var(--ink-3)" : "var(--ink)", textDecoration: o.status === "CANCELLED" ? "line-through" : "none" }}>{fmt(o.total)}đ</div>
+
+                {openOrder === i && (
+                  <div style={{ margin: "2px 0 10px", padding: "10px 12px", background: "var(--bg-2, rgba(0,0,0,.03))", borderRadius: 10 }}>
+                    {(o.lines || []).map((l, li) => (
+                      <div key={li} style={{ display: "flex", gap: 8, padding: "5px 0", borderBottom: li < o.lines.length - 1 ? "1px solid var(--line, rgba(0,0,0,.06))" : "none" }}>
+                        <span style={{ fontWeight: 700, color: "var(--brand)", flexShrink: 0 }}>{l.qty}×</span>
+                        <div style={{ minWidth: 0, flex: 1 }}>
+                          <div style={{ fontWeight: 600, fontSize: 13.5 }}>{l.name}</div>
+                          {l.opt && <div style={{ fontSize: 12, color: "var(--ink-3)" }}>{l.opt}</div>}
+                        </div>
+                        <span style={{ whiteSpace: "nowrap", fontSize: 13, color: "var(--ink-2)" }}>{fmt(l.unit * l.qty)}đ</span>
+                      </div>
+                    ))}
+                    {o.addr && <div style={{ fontSize: 12, color: "var(--ink-3)", marginTop: 8 }}><Icon name="pin" size={12} /> {o.addr}</div>}
+                    {o.note && <div style={{ fontSize: 12, color: "var(--ink-3)", marginTop: 4 }}>Ghi chú: {o.note}</div>}
+                    <div style={{ marginTop: 8, paddingTop: 8, borderTop: "1px solid var(--line, rgba(0,0,0,.08))", fontSize: 12.5 }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", color: "var(--ink-2)" }}><span>Tạm tính</span><span>{fmt(o.subtotal)}đ</span></div>
+                      {o.discount > 0 && <div style={{ display: "flex", justifyContent: "space-between", color: "var(--pink, #D4548B)" }}><span>Giảm giá</span><span>−{fmt(o.discount)}đ</span></div>}
+                      {o.shipFee > 0 && <div style={{ display: "flex", justifyContent: "space-between", color: "var(--ink-2)" }}><span>Phí ship</span><span>{fmt(o.shipFee)}đ</span></div>}
+                      <div style={{ display: "flex", justifyContent: "space-between", fontWeight: 800, marginTop: 3 }}><span>Tổng</span><span>{fmt(o.total)}đ</span></div>
+                    </div>
+                  </div>
+                )}
               </div>
             ))}
           </div>
