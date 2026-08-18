@@ -151,12 +151,22 @@ class MenuController extends Controller
     /** DELETE /admin/menu/products/{product} */
     public function destroyProduct(Product $product): JsonResponse
     {
+        // Món đã nằm trong đơn hàng cũ → không xoá cứng (vướng khoá ngoại
+        // order_items, và làm mất lịch sử). Xoá mềm: ẩn khỏi thực đơn nhưng
+        // giữ nguyên dữ liệu đơn cũ. Món chưa từng được đặt → xoá hẳn.
+        if ($product->orderItems()->exists()) {
+            $product->update(['is_available' => false]);
+            $product->delete(); // soft delete (giữ ảnh + dữ liệu cho lịch sử)
+
+            return response()->json(['message' => 'Món đã có trong đơn cũ nên được ẩn khỏi thực đơn (giữ lịch sử đơn hàng).']);
+        }
+
         if ($product->image_url) {
             $oldPath = str_replace('/storage/', '', $product->image_url);
             Storage::disk('public')->delete($oldPath);
         }
 
-        $product->delete();
+        $product->forceDelete(); // xoá hẳn: variant/khuyến mãi tự xoá theo (cascade)
 
         return response()->json(['message' => 'Đã xoá món']);
     }
@@ -378,7 +388,9 @@ class MenuController extends Controller
         $slug  = $base;
         $count = 1;
 
-        while (Product::where('slug', $slug)->exists()) {
+        // Kể cả món đã xoá mềm vẫn giữ slug (unique) → phải tính withTrashed
+        // để không trùng khi tạo món mới cùng tên.
+        while (Product::withTrashed()->where('slug', $slug)->exists()) {
             $slug = $base . '-' . $count;
             $count++;
         }
