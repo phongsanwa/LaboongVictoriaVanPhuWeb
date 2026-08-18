@@ -1,6 +1,27 @@
 /* global React, ReactDOM, Icon, fmt, adminHref, useTweaks, TweaksPanel, TweakSection, TweakColor, TweakToggle */
 const { useState, useEffect, useMemo, useCallback, useRef } = React;
 
+/* ─── Chỉ đường Google Maps: điểm đến = toạ độ khách đã chọn (chính xác,
+   không dò lại từ chuỗi địa chỉ); điểm đi = vị trí hiện tại của người mở. ─── */
+function openDirections(o) {
+  const dest = (o.lat != null && o.lng != null)
+    ? `${o.lat},${o.lng}`
+    : (o.addr ? encodeURIComponent(o.addr) : '');
+  if (!dest) { alert('Đơn này chưa lưu địa chỉ giao.'); return; }
+
+  const base = 'https://www.google.com/maps/dir/?api=1&travelmode=driving&destination=' + dest;
+
+  if (navigator.geolocation) {
+    navigator.geolocation.getCurrentPosition(
+      pos => window.open(`${base}&origin=${pos.coords.latitude},${pos.coords.longitude}`, '_blank', 'noopener'),
+      ()  => window.open(base, '_blank', 'noopener'), // không lấy được vị trí → Google tự dùng "vị trí của bạn"
+      { enableHighAccuracy: true, timeout: 8000, maximumAge: 30000 }
+    );
+  } else {
+    window.open(base, '_blank', 'noopener');
+  }
+}
+
 /* ─── Âm thanh báo đơn mới (kiểu ShopeeFood) ──────────────────────── */
 let _audioCtx = null;
 function ensureAudioCtx() {
@@ -493,6 +514,18 @@ function OrderDrawer({ o, saving, onClose, onAdvance, onCancel }) {
               <div style={{ minWidth: 0 }}>
                 <div className="odk">{o.type === "ship" ? "Giao đến" : "Hình thức"}</div>
                 <div className="odv">{o.type === "ship" ? (o.addr || "Giao hàng (chưa lưu địa chỉ)") : `Nhận tại quầy${o.store ? " · " + o.store : ""}`}</div>
+                {o.type === "ship" && (o.addr || (o.lat != null && o.lng != null)) && (
+                  <button
+                    onClick={() => openDirections(o)}
+                    style={{
+                      display: "inline-flex", alignItems: "center", gap: 6, marginTop: 8,
+                      padding: "8px 13px", borderRadius: 999, border: "none", cursor: "pointer",
+                      background: "#1A73E8", color: "#fff", fontWeight: 700, fontSize: 13,
+                    }}>
+                    <Icon name="pin" size={14} color="#fff" /> Chỉ đường (Google Maps)
+                    {o.lat == null && <span style={{ fontWeight: 500, opacity: .85 }}> · theo địa chỉ</span>}
+                  </button>
+                )}
               </div>
             </div>
           </div>

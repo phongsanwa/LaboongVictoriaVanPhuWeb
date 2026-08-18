@@ -262,6 +262,8 @@ class OrdersController extends Controller
             'accountPhone' => $user?->phone ?? '',
             'type'      => $isShip ? 'ship' : 'pickup',
             'addr'      => $o->delivery_address,
+            'lat'       => $o->delivery_lat !== null ? (float) $o->delivery_lat : null,
+            'lng'       => $o->delivery_lng !== null ? (float) $o->delivery_lng : null,
             'store'     => $o->store?->name,
             'items'     => $items,
             'discount'  => (int) $o->discount_amount,

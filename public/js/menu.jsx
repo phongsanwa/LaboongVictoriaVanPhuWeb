@@ -962,6 +962,8 @@ function App() {
           shipping_fee: shipFee || 0,
           delivery_address: selectedAddr ? selectedAddr.text : null,
           delivery_phone: selectedAddr ? (deliveryPhone || null) : null,
+          delivery_lat: selectedAddr?.lat ?? null,
+          delivery_lng: selectedAddr?.lng ?? null,
         }),
       });
       const json = await res.json();

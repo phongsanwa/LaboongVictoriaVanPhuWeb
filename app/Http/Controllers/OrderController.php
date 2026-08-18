@@ -44,6 +44,8 @@ class OrderController extends Controller
             'ship_promo_id'       => ['nullable', 'integer'],
             'delivery_address'    => ['nullable', 'string', 'max:500'],
             'delivery_phone'      => ['nullable', 'string', 'regex:/^0\d{9}$/'],
+            'delivery_lat'        => ['nullable', 'numeric', 'between:-90,90'],
+            'delivery_lng'        => ['nullable', 'numeric', 'between:-180,180'],
         ], [
             'delivery_phone.regex' => 'Số điện thoại nhận hàng phải gồm 10 số, bắt đầu bằng 0',
         ]);
@@ -280,6 +282,9 @@ class OrderController extends Controller
                 'delivery_address' => $data['delivery_address'] ?? null,
                 // Chỉ lưu SĐT nhận hàng cho đơn giao; đơn tại quầy để trống
                 'delivery_phone'   => !empty($data['delivery_address']) ? ($data['delivery_phone'] ?? null) : null,
+                // Toạ độ chính xác để chỉ đường (chỉ lưu cho đơn giao)
+                'delivery_lat'     => !empty($data['delivery_address']) ? ($data['delivery_lat'] ?? null) : null,
+                'delivery_lng'     => !empty($data['delivery_address']) ? ($data['delivery_lng'] ?? null) : null,
             ]);
 
             foreach ($itemData as $item) {
