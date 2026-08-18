@@ -29,7 +29,8 @@ class OrderItem extends Model
 
     public function product(): BelongsTo
     {
-        return $this->belongsTo(Product::class);
+        // withTrashed: món đã xoá mềm vẫn hiện đúng tên trong lịch sử đơn.
+        return $this->belongsTo(Product::class)->withTrashed();
     }
 
     public function toppings(): HasMany

@@ -422,6 +422,30 @@ function App() {
     }
   };
 
+  /* Di chuyển món lên/xuống (dir = -1 hoặc +1) — sắp thứ tự trong danh sách đang xem. */
+  const moveProduct = async (id, dir) => {
+    const idx = filtered.findIndex(m => m.id === id);
+    const neighbor = filtered[idx + dir];
+    if (!neighbor) return;
+
+    // Đổi chỗ 2 món trong danh sách tổng (giữ sort_order toàn cục).
+    const gi = items.findIndex(m => m.id === id);
+    const gj = items.findIndex(m => m.id === neighbor.id);
+    const next = [...items];
+    [next[gi], next[gj]] = [next[gj], next[gi]];
+    const prev = items;
+    setItems(next);
+
+    if (LIVE) {
+      try {
+        await apiFetch('POST', LIVE_URLS.reorderProducts, { ids: next.map(m => m.id) });
+      } catch (err) {
+        setItems(prev); // lỗi thì hoàn tác
+        flash({ type: 'err', msg: err.message });
+      }
+    }
+  };
+
   const remove = async (m) => {
     if (!confirm(`Xoá món "${m.name}" khỏi thực đơn?`)) return;
     if (LIVE) {
@@ -540,7 +564,7 @@ function App() {
             {filtered.length === 0 && (
               <div style={{ gridColumn: "1/-1", textAlign: "center", padding: 48, color: "var(--ink-3)", fontWeight: 500 }}>Không có món nào khớp.</div>
             )}
-            {filtered.map(m => (
+            {filtered.map((m, mi) => (
               <div className={"mcard" + (m.available ? "" : " off")} key={m.id}>
                 {!m.available && <span className="soldout-flag">Tạm hết</span>}
                 <div className="mcard-avail">
@@ -564,6 +588,12 @@ function App() {
                   <div className="mcard-foot">
                     <span className="mcard-price tnum">{fmt(m.price)}đ</span>
                     <div className="mcard-acts">
+                      {!q.trim() && (
+                        <>
+                          <button className="mca" onClick={() => moveProduct(m.id, -1)} title="Di chuyển lên" disabled={mi === 0}><Icon name="chevup" size={16} /></button>
+                          <button className="mca" onClick={() => moveProduct(m.id, 1)} title="Di chuyển xuống" disabled={mi === filtered.length - 1}><Icon name="chevdown" size={16} /></button>
+                        </>
+                      )}
                       <button className="mca" onClick={() => setEditor(m)} title="Sửa"><Icon name="edit" size={16} /></button>
                       <button className="mca del" onClick={() => remove(m)} title="Xoá"><Icon name="trash" size={16} /></button>
                     </div>

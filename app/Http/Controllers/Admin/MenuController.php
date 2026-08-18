@@ -37,6 +37,7 @@ class MenuController extends Controller
                     'updateProduct'  => route('admin.menu.products.update', ['product' => '__ID__']),
                     'deleteProduct'  => route('admin.menu.products.destroy', ['product' => '__ID__']),
                     'toggleProduct'  => route('admin.menu.products.toggle', ['product' => '__ID__']),
+                    'reorderProducts'=> route('admin.menu.products.reorder'),
                     'updateVariants' => route('admin.menu.products.variants', ['product' => '__ID__']),
                     'storeCategory'  => route('admin.menu.categories.store'),
                     'updateCategory' => route('admin.menu.categories.update', ['category' => '__ID__']),
@@ -151,12 +152,22 @@ class MenuController extends Controller
     /** DELETE /admin/menu/products/{product} */
     public function destroyProduct(Product $product): JsonResponse
     {
+        // Món đã nằm trong đơn hàng cũ → không xoá cứng (vướng khoá ngoại
+        // order_items, và làm mất lịch sử). Xoá mềm: ẩn khỏi thực đơn nhưng
+        // giữ nguyên dữ liệu đơn cũ. Món chưa từng được đặt → xoá hẳn.
+        if ($product->orderItems()->exists()) {
+            $product->update(['is_available' => false]);
+            $product->delete(); // soft delete (giữ ảnh + dữ liệu cho lịch sử)
+
+            return response()->json(['message' => 'Món đã có trong đơn cũ nên được ẩn khỏi thực đơn (giữ lịch sử đơn hàng).']);
+        }
+
         if ($product->image_url) {
             $oldPath = str_replace('/storage/', '', $product->image_url);
             Storage::disk('public')->delete($oldPath);
         }
 
-        $product->delete();
+        $product->forceDelete(); // xoá hẳn: variant/khuyến mãi tự xoá theo (cascade)
 
         return response()->json(['message' => 'Đã xoá món']);
     }
@@ -168,6 +179,21 @@ class MenuController extends Controller
         $product->load(['category', 'variants' => fn ($q) => $q->orderBy('sort_order')]);
 
         return response()->json(['product' => $this->presentProduct($product)]);
+    }
+
+    /** POST /admin/menu/products/reorder  (ids: [id, id, ...]) — sắp thứ tự món */
+    public function reorderProducts(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'ids'   => ['required', 'array'],
+            'ids.*' => ['required', 'integer', Rule::exists('products', 'id')],
+        ]);
+
+        foreach ($data['ids'] as $order => $id) {
+            Product::where('id', $id)->update(['sort_order' => $order + 1]);
+        }
+
+        return response()->json(['message' => 'Đã cập nhật thứ tự món']);
     }
 
     /** POST /admin/menu/products/{product}/variants */
@@ -378,7 +404,9 @@ class MenuController extends Controller
         $slug  = $base;
         $count = 1;
 
-        while (Product::where('slug', $slug)->exists()) {
+        // Kể cả món đã xoá mềm vẫn giữ slug (unique) → phải tính withTrashed
+        // để không trùng khi tạo món mới cùng tên.
+        while (Product::withTrashed()->where('slug', $slug)->exists()) {
             $slug = $base . '-' . $count;
             $count++;
         }
