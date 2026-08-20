@@ -776,10 +776,11 @@ class ReportsController extends Controller
         $testIds = $this->testIds();
 
         // Tất cả đơn trong khoảng (mọi trạng thái) — tính 1 lần rồi tổng hợp PHP.
-        $orders = Order::when($storeId, fn ($q) => $q->where('store_id', $storeId))
+        $orders = Order::with('customer.user:id,name')
+            ->when($storeId, fn ($q) => $q->where('store_id', $storeId))
             ->when($testIds, fn ($q) => $q->whereNotIn('customer_id', $testIds))
             ->whereBetween('created_at', [$from, $to])
-            ->get(['created_at', 'status', 'total_amount', 'delivery_address', 'shipping_fee']);
+            ->get(['id', 'customer_id', 'created_at', 'status', 'total_amount', 'delivery_address', 'shipping_fee']);
 
         $total     = $orders->count();
         $completed = $orders->where('status', 'COMPLETED');
@@ -832,6 +833,17 @@ class ReportsController extends Controller
         }
         usort($daily, fn ($a, $b) => strcmp($b['date'], $a['date']));
 
+        // Danh sách đơn (để bấm vào biểu đồ xem chi tiết) — tối đa 500 đơn gần nhất.
+        $orderList = $orders->sortByDesc('created_at')->take(500)->map(fn ($o) => [
+            'code'        => 'LB-' . str_pad((string) $o->id, 4, '0', STR_PAD_LEFT),
+            'date'        => $o->created_at->copy()->setTimezone('Asia/Ho_Chi_Minh')->format('H:i d/m/Y'),
+            'status'      => $o->status,
+            'statusLabel' => self::ORDER_STATUS_LABEL[$o->status] ?? $o->status,
+            'type'        => (!empty($o->delivery_address) || (int) $o->shipping_fee > 0) ? 'ship' : 'pickup',
+            'total'       => (int) $o->total_amount,
+            'customer'    => $o->customer?->user?->name ?? 'Khách',
+        ])->values();
+
         return response()->json([
             'kpis' => [
                 'total'      => $total,
@@ -847,10 +859,11 @@ class ReportsController extends Controller
             'status'     => $statusData,
             'byHour'     => $byHour,
             'fulfillment'=> [
-                ['label' => 'Giao hàng', 'value' => $shipN],
-                ['label' => 'Tại quầy',  'value' => $pickupN],
+                ['label' => 'Giao hàng', 'value' => $shipN, 'type' => 'ship'],
+                ['label' => 'Tại quầy',  'value' => $pickupN, 'type' => 'pickup'],
             ],
             'daily'      => $daily,
+            'orders'     => $orderList,
         ]);
     }
 
