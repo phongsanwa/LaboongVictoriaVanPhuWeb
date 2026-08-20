@@ -181,6 +181,12 @@ function App() {
         </header>
 
         <div className="content">
+          {/* Tabs chuyển báo cáo */}
+          <div className="rp-tabs">
+            <a href="/admin/reports/customers" className="rp-tab on">Tổng quan khách hàng</a>
+            <a href="/admin/reports/new-customers" className="rp-tab">Khách hàng mới</a>
+          </div>
+
           {/* Bộ lọc */}
           <div className="rp-filters">
             <div className="rp-fld">
