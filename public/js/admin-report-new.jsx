@@ -116,6 +116,10 @@ function App() {
           <div className="rp-tabs">
             <a href="/admin/reports/customers" className="rp-tab">Tổng quan khách hàng</a>
             <a href="/admin/reports/new-customers" className="rp-tab on">Khách hàng mới</a>
+            <a href="/admin/reports/returning" className="rp-tab">Khách quay lại</a>
+            <a href="/admin/reports/top-spenders" className="rp-tab">Top chi tiêu</a>
+            <a href="/admin/reports/rfm" className="rp-tab">Phân tích RFM</a>
+            <a href="/admin/reports/cohort" className="rp-tab">Cohort giữ chân</a>
           </div>
 
           {/* Bộ lọc */}
@@ -142,7 +146,7 @@ function App() {
           </div>
 
           {/* KPI */}
-          <div className="rp-kpis" style={{ gridTemplateColumns: 'repeat(4, minmax(0,1fr))' }}>
+          <div className="rp-kpis">
             <div className="rp-kpi">
               <div className="k-ic" style={{ background: '#0F623F' }}><Icon name="star" size={20} color="#fff" /></div>
               <div className="k-lbl">Khách mới kỳ này</div>

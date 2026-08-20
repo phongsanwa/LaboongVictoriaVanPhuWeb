@@ -68,6 +68,14 @@ Route::middleware(['auth', 'admin.perm'])->prefix('admin')->name('admin.')->grou
         Route::get('/reports/customers/data', [ReportsController::class, 'customersData'])->name('reports.customers.data');
         Route::get('/reports/new-customers', [ReportsController::class, 'newCustomers'])->name('reports.new-customers');
         Route::get('/reports/new-customers/data', [ReportsController::class, 'newCustomersData'])->name('reports.new-customers.data');
+        Route::get('/reports/returning', [ReportsController::class, 'returning'])->name('reports.returning');
+        Route::get('/reports/returning/data', [ReportsController::class, 'returningData'])->name('reports.returning.data');
+        Route::get('/reports/top-spenders', [ReportsController::class, 'topSpenders'])->name('reports.top-spenders');
+        Route::get('/reports/top-spenders/data', [ReportsController::class, 'topSpendersData'])->name('reports.top-spenders.data');
+        Route::get('/reports/rfm', [ReportsController::class, 'rfm'])->name('reports.rfm');
+        Route::get('/reports/rfm/data', [ReportsController::class, 'rfmData'])->name('reports.rfm.data');
+        Route::get('/reports/cohort', [ReportsController::class, 'cohort'])->name('reports.cohort');
+        Route::get('/reports/cohort/data', [ReportsController::class, 'cohortData'])->name('reports.cohort.data');
     });
 
     // Email marketing — gửi email cho khách + quản lý mẫu email
