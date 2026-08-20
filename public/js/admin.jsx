@@ -165,6 +165,12 @@ function App() {
               <div><div className="lbl">Điểm đã phát hành</div><div className="val tnum">{fmt(stats.pts)}</div><div className="chg up">Trên toàn hệ thống</div></div></div>
           </div>
 
+          {/* Ô tìm kiếm cho mobile (desktop đã có trên topbar) */}
+          <div className="searchbox mobile-search">
+            <Icon name="search" size={18} color="var(--ink-3)" />
+            <input placeholder="Tìm tên, SĐT, email…" value={q} onChange={e => setQ(e.target.value)} />
+          </div>
+
           {/* table panel */}
           <div className="panel">
             <div className="toolbar">
@@ -247,7 +253,10 @@ function App() {
                             {c.online && <span title="Đang online" style={{ position: "absolute", right: -1, bottom: -1, width: 11, height: 11, borderRadius: "50%", background: "#22C55E", border: "2px solid var(--panel, #fff)" }} />}
                           </div>
                           <div style={{ minWidth: 0 }}>
-                            <div className="nm" title={c.name}>{c.name}</div>
+                            <div className="nm" title={c.name} style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                              <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{c.name}</span>
+                              {c.is_test && <span className="test-badge">TEST</span>}
+                            </div>
                             <div className="em">{c.email}</div>
                             <div style={{ fontSize: 11, marginTop: 1, color: c.online ? "#16A34A" : "var(--ink-3)", fontWeight: c.online ? 600 : 400 }}>
                               {c.online ? "● Đang online" : ("○ " + (c.lastSeen || "Offline"))}

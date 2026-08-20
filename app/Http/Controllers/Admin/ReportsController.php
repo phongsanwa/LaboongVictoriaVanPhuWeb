@@ -10,6 +10,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 
 class ReportsController extends Controller
 {
@@ -718,6 +719,467 @@ class ReportsController extends Controller
     {
         [$y, $m] = explode('-', $ym);
         return $m . '/' . $y;
+    }
+
+    /* ─────────── Báo cáo đơn hàng ─────────── */
+
+    private const ORDER_STATUS_LABEL = [
+        'PENDING'   => 'Chờ xác nhận',
+        'CONFIRMED' => 'Đã xác nhận',
+        'PREPARING' => 'Đang pha chế',
+        'READY'     => 'Sẵn sàng',
+        'COMPLETED' => 'Hoàn tất',
+        'CANCELLED' => 'Đã huỷ',
+    ];
+
+    private const ORDER_STATUS_COLOR = [
+        'PENDING'   => '#C99A2E',
+        'CONFIRMED' => '#4FC3D9',
+        'PREPARING' => '#1E8FA8',
+        'READY'     => '#7BC96F',
+        'COMPLETED' => '#0F623F',
+        'CANCELLED' => '#D4584B',
+    ];
+
+    public function orders()
+    {
+        $admin = Auth::user();
+
+        return view('admin.reports.orders', [
+            'reportData' => [
+                'admin' => ['name' => $admin->name, 'email' => $admin->email, 'initials' => $this->initials($admin->name)],
+                'stores' => Store::orderBy('id')->get(['id', 'name'])->map(fn ($s) => ['id' => $s->id, 'name' => $s->name])->all(),
+                'defaults' => [
+                    'from'        => now()->subDays(29)->toDateString(),
+                    'to'          => now()->toDateString(),
+                    'granularity' => 'day',
+                ],
+                'urls' => ['data' => route('admin.reports.orders.data')],
+            ],
+        ]);
+    }
+
+    public function ordersData(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'from'        => ['nullable', 'date'],
+            'to'          => ['nullable', 'date'],
+            'granularity' => ['nullable', 'in:day,week,month'],
+            'store_id'    => ['nullable', 'integer'],
+        ]);
+
+        $from = isset($data['from']) ? Carbon::parse($data['from'])->startOfDay() : now()->subDays(29)->startOfDay();
+        $to   = isset($data['to']) ? Carbon::parse($data['to'])->endOfDay() : now()->endOfDay();
+        if ($to->lt($from)) [$from, $to] = [$to->copy()->startOfDay(), $from->copy()->endOfDay()];
+        $gran    = $data['granularity'] ?? 'day';
+        $storeId = $data['store_id'] ?? null;
+        $testIds = $this->testIds();
+
+        // Tất cả đơn trong khoảng (mọi trạng thái) — tính 1 lần rồi tổng hợp PHP.
+        $orders = Order::when($storeId, fn ($q) => $q->where('store_id', $storeId))
+            ->when($testIds, fn ($q) => $q->whereNotIn('customer_id', $testIds))
+            ->whereBetween('created_at', [$from, $to])
+            ->get(['created_at', 'status', 'total_amount', 'delivery_address', 'shipping_fee']);
+
+        $total     = $orders->count();
+        $completed = $orders->where('status', 'COMPLETED');
+        $completedN = $completed->count();
+        $cancelledN = $orders->where('status', 'CANCELLED')->count();
+        $revenue   = (int) $completed->sum('total_amount');
+        $aov       = $completedN > 0 ? (int) round($revenue / $completedN) : 0;
+        $cancelRate = $total > 0 ? round($cancelledN / $total * 100, 1) : 0.0;
+
+        $shipN = $orders->filter(fn ($o) => !empty($o->delivery_address) || (int) $o->shipping_fee > 0)->count();
+        $pickupN = $total - $shipN;
+
+        // Cơ cấu trạng thái
+        $statusData = [];
+        foreach (self::ORDER_STATUS_LABEL as $key => $label) {
+            $c = $orders->where('status', $key)->count();
+            if ($c > 0) $statusData[] = ['label' => $label, 'value' => $c, 'color' => self::ORDER_STATUS_COLOR[$key]];
+        }
+
+        // Đơn theo khung giờ (0–23h)
+        $byHour = array_fill(0, 24, 0);
+        foreach ($orders as $o) {
+            $h = $o->created_at->copy()->setTimezone('Asia/Ho_Chi_Minh')->hour;
+            $byHour[$h]++;
+        }
+
+        // Xu hướng theo ngày/tuần/tháng
+        $buckets = $this->makeBuckets($from, $to, $gran);
+        $trend = [];
+        foreach ($buckets as $b) {
+            $in = $orders->filter(fn ($o) => $o->created_at->gte($b['from']) && $o->created_at->lte($b['to']));
+            $trend[] = [
+                'label'   => $b['label'],
+                'orders'  => $in->count(),
+                'revenue' => (int) $in->where('status', 'COMPLETED')->sum('total_amount'),
+            ];
+        }
+
+        // Bảng theo ngày
+        $daily = [];
+        foreach ($orders->groupBy(fn ($o) => $o->created_at->copy()->setTimezone('Asia/Ho_Chi_Minh')->format('Y-m-d')) as $date => $rows) {
+            $comp = $rows->where('status', 'COMPLETED');
+            $daily[] = [
+                'date'      => Carbon::parse($date)->format('d/m/Y'),
+                'orders'    => $rows->count(),
+                'completed' => $comp->count(),
+                'cancelled' => $rows->where('status', 'CANCELLED')->count(),
+                'revenue'   => (int) $comp->sum('total_amount'),
+            ];
+        }
+        usort($daily, fn ($a, $b) => strcmp($b['date'], $a['date']));
+
+        return response()->json([
+            'kpis' => [
+                'total'      => $total,
+                'revenue'    => $revenue,
+                'aov'        => $aov,
+                'completed'  => $completedN,
+                'cancelled'  => $cancelledN,
+                'cancelRate' => $cancelRate,
+                'ship'       => $shipN,
+                'pickup'     => $pickupN,
+            ],
+            'trend'      => $trend,
+            'status'     => $statusData,
+            'byHour'     => $byHour,
+            'fulfillment'=> [
+                ['label' => 'Giao hàng', 'value' => $shipN],
+                ['label' => 'Tại quầy',  'value' => $pickupN],
+            ],
+            'daily'      => $daily,
+        ]);
+    }
+
+    /* ─────────── Báo cáo sản phẩm bán chạy ─────────── */
+
+    private const CAT_COLORS = ['#0F623F', '#1E8FA8', '#C99A2E', '#6B4FA0', '#D4584B', '#7BC96F', '#4FC3D9', '#E0A458', '#8A9199'];
+
+    public function products()
+    {
+        $admin = Auth::user();
+
+        return view('admin.reports.products', [
+            'reportData' => [
+                'admin' => ['name' => $admin->name, 'email' => $admin->email, 'initials' => $this->initials($admin->name)],
+                'stores' => Store::orderBy('id')->get(['id', 'name'])->map(fn ($s) => ['id' => $s->id, 'name' => $s->name])->all(),
+                'defaults' => ['from' => now()->subDays(29)->toDateString(), 'to' => now()->toDateString(), 'top_n' => 15],
+                'urls' => ['data' => route('admin.reports.products.data')],
+            ],
+        ]);
+    }
+
+    public function productsData(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'from'     => ['nullable', 'date'],
+            'to'       => ['nullable', 'date'],
+            'top_n'    => ['nullable', 'integer', 'min:5', 'max:100'],
+            'store_id' => ['nullable', 'integer'],
+        ]);
+
+        $from = isset($data['from']) ? Carbon::parse($data['from'])->startOfDay() : now()->subDays(29)->startOfDay();
+        $to   = isset($data['to']) ? Carbon::parse($data['to'])->endOfDay() : now()->endOfDay();
+        $topN = (int) ($data['top_n'] ?? 15);
+        $storeId = $data['store_id'] ?? null;
+        $testIds = $this->testIds();
+
+        // Điều kiện đơn hoàn tất trong khoảng (dùng chung cho món + topping).
+        $applyOrderScope = function ($q) use ($from, $to, $storeId, $testIds) {
+            $q->where('orders.status', 'COMPLETED')
+              ->whereBetween('orders.created_at', [$from, $to]);
+            if ($storeId) $q->where('orders.store_id', $storeId);
+            if ($testIds) $q->whereNotIn('orders.customer_id', $testIds);
+            return $q;
+        };
+
+        // ─── Bán theo sản phẩm ───
+        $rows = $applyOrderScope(
+            DB::table('order_items')
+                ->join('orders', 'orders.id', '=', 'order_items.order_id')
+                ->leftJoin('products', 'products.id', '=', 'order_items.product_id')
+                ->leftJoin('categories', 'categories.id', '=', 'products.category_id')
+        )
+            ->selectRaw('order_items.product_id, products.name as pname, categories.name as cat,
+                         SUM(order_items.quantity) as qty, SUM(order_items.item_total) as revenue,
+                         COUNT(DISTINCT order_items.order_id) as orders')
+            ->groupBy('order_items.product_id', 'products.name', 'categories.name')
+            ->orderByDesc('qty')
+            ->get();
+
+        $products = $rows->map(fn ($r) => [
+            'name'    => $r->pname ?? ('Sản phẩm #' . $r->product_id),
+            'cat'     => $r->cat ?? '—',
+            'qty'     => (int) $r->qty,
+            'revenue' => (int) $r->revenue,
+            'orders'  => (int) $r->orders,
+        ])->values();
+
+        $itemsSold       = (int) $products->sum('qty');
+        $productRevenue  = (int) $products->sum('revenue');
+        $distinctProducts = $products->count();
+        $best            = $products->first();
+
+        // Thêm % đóng góp doanh thu
+        $products = $products->map(function ($p) use ($productRevenue) {
+            $p['share'] = $productRevenue > 0 ? round($p['revenue'] / $productRevenue * 100, 1) : 0;
+            return $p;
+        });
+
+        // ─── Doanh thu theo danh mục ───
+        $catAgg = [];
+        foreach ($products as $p) {
+            $catAgg[$p['cat']] = ($catAgg[$p['cat']] ?? 0) + $p['revenue'];
+        }
+        arsort($catAgg);
+        $i = 0;
+        $byCategory = [];
+        foreach ($catAgg as $cat => $rev) {
+            $byCategory[] = ['label' => $cat, 'value' => $rev, 'color' => self::CAT_COLORS[$i % count(self::CAT_COLORS)]];
+            $i++;
+        }
+
+        // ─── Top topping ───
+        try {
+            $toppings = $applyOrderScope(
+                DB::table('order_item_toppings')
+                    ->join('order_items', 'order_items.id', '=', 'order_item_toppings.order_item_id')
+                    ->join('orders', 'orders.id', '=', 'order_items.order_id')
+            )
+                ->selectRaw('order_item_toppings.topping_name, SUM(order_item_toppings.quantity) as qty')
+                ->groupBy('order_item_toppings.topping_name')
+                ->orderByDesc('qty')
+                ->limit(10)
+                ->get()
+                ->map(fn ($t) => ['name' => $t->topping_name, 'qty' => (int) $t->qty])
+                ->values();
+        } catch (\Throwable $e) {
+            $toppings = collect(); // môi trường chưa có cột quantity → bỏ qua phần topping
+        }
+
+        return response()->json([
+            'kpis' => [
+                'itemsSold'        => $itemsSold,
+                'productRevenue'   => $productRevenue,
+                'distinctProducts' => $distinctProducts,
+                'bestName'         => $best['name'] ?? '—',
+                'bestQty'          => $best['qty'] ?? 0,
+            ],
+            'topProducts' => $products->take($topN)->values(),
+            'byCategory'  => $byCategory,
+            'toppings'    => $toppings,
+            'all'         => $products,
+        ]);
+    }
+
+    /* ─────────── Hiệu quả khuyến mãi & voucher ─────────── */
+
+    private const DISC_META = [
+        'PROMOTION_VOUCHER' => ['label' => 'Giảm đơn hàng',       'color' => '#0F623F'],
+        'GIFT_VOUCHER'      => ['label' => 'Quà tặng / đổi điểm', 'color' => '#C99A2E'],
+        'SHIPPING'          => ['label' => 'Giảm phí ship',       'color' => '#1E8FA8'],
+    ];
+
+    public function promotions()
+    {
+        $admin = Auth::user();
+
+        return view('admin.reports.promotions', [
+            'reportData' => [
+                'admin' => ['name' => $admin->name, 'email' => $admin->email, 'initials' => $this->initials($admin->name)],
+                'stores' => Store::orderBy('id')->get(['id', 'name'])->map(fn ($s) => ['id' => $s->id, 'name' => $s->name])->all(),
+                'defaults' => ['from' => now()->subDays(29)->toDateString(), 'to' => now()->toDateString()],
+                'urls' => ['data' => route('admin.reports.promotions.data')],
+            ],
+        ]);
+    }
+
+    public function promotionsData(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'from'     => ['nullable', 'date'],
+            'to'       => ['nullable', 'date'],
+            'store_id' => ['nullable', 'integer'],
+        ]);
+
+        $from = isset($data['from']) ? Carbon::parse($data['from'])->startOfDay() : now()->subDays(29)->startOfDay();
+        $to   = isset($data['to']) ? Carbon::parse($data['to'])->endOfDay() : now()->endOfDay();
+        $storeId = $data['store_id'] ?? null;
+        $testIds = $this->testIds();
+
+        // Đơn HOÀN TẤT trong khoảng.
+        $completed = Order::where('status', 'COMPLETED')
+            ->whereBetween('created_at', [$from, $to])
+            ->when($storeId, fn ($q) => $q->where('store_id', $storeId))
+            ->when($testIds, fn ($q) => $q->whereNotIn('customer_id', $testIds))
+            ->get(['id', 'total_amount']);
+
+        $compIds = $completed->pluck('id');
+        $totalCompleted = $completed->count();
+
+        // Các khoản giảm trên các đơn hoàn tất đó.
+        $disc = \App\Models\OrderDiscount::whereIn('order_id', $compIds)
+            ->get(['discount_category', 'discount_amount', 'description', 'order_id']);
+
+        $totalDiscount = (int) $disc->sum('discount_amount');
+
+        // Theo loại
+        $byCategory = [];
+        foreach ($disc->groupBy('discount_category') as $cat => $rows) {
+            $meta = self::DISC_META[$cat] ?? ['label' => $cat, 'color' => '#8A9199'];
+            $byCategory[] = ['label' => $meta['label'], 'value' => (int) $rows->sum('discount_amount'), 'color' => $meta['color']];
+        }
+
+        // Top ưu đãi theo tên (description)
+        $byName = [];
+        foreach ($disc->groupBy(fn ($d) => $d->description ?: 'Khác') as $name => $rows) {
+            $byName[] = [
+                'name'   => $name,
+                'amount' => (int) $rows->sum('discount_amount'),
+                'uses'   => $rows->pluck('order_id')->unique()->count(),
+            ];
+        }
+        usort($byName, fn ($a, $b) => $b['amount'] <=> $a['amount']);
+
+        // Đơn có ưu đãi vs không
+        $discOrderIds = $disc->pluck('order_id')->unique()->flip();
+        $withOrders    = $completed->filter(fn ($o) => $discOrderIds->has($o->id));
+        $withoutOrders = $completed->reject(fn ($o) => $discOrderIds->has($o->id));
+        $countWith     = $withOrders->count();
+        $revenueWith   = (int) $withOrders->sum('total_amount');
+        $countWithout  = $withoutOrders->count();
+        $revenueWithout = (int) $withoutOrders->sum('total_amount');
+        $aovWith    = $countWith > 0 ? (int) round($revenueWith / $countWith) : 0;
+        $aovWithout = $countWithout > 0 ? (int) round($revenueWithout / $countWithout) : 0;
+        $usageRate  = $totalCompleted > 0 ? round($countWith / $totalCompleted * 100, 1) : 0.0;
+
+        // Voucher: phát hành & sử dụng trong khoảng
+        $issued = \App\Models\Voucher::whereBetween('created_at', [$from, $to])
+            ->when($testIds, fn ($q) => $q->whereNotIn('customer_id', $testIds))
+            ->count();
+        $used = \App\Models\Voucher::where('status', 'used')
+            ->whereBetween('used_at', [$from, $to])
+            ->when($testIds, fn ($q) => $q->whereNotIn('customer_id', $testIds))
+            ->count();
+        $redemptionRate = $issued > 0 ? round($used / $issued * 100, 1) : 0.0;
+
+        return response()->json([
+            'kpis' => [
+                'totalDiscount' => $totalDiscount,
+                'ordersWith'    => $countWith,
+                'usageRate'     => $usageRate,
+                'revenueWith'   => $revenueWith,
+                'aovWith'       => $aovWith,
+                'aovWithout'    => $aovWithout,
+                'issued'        => $issued,
+                'used'          => $used,
+                'redemptionRate'=> $redemptionRate,
+            ],
+            'byCategory' => $byCategory,
+            'byName'     => $byName,
+        ]);
+    }
+
+    /* ─────────── Báo cáo điểm thưởng ─────────── */
+
+    private const POINT_TYPE_META = [
+        'purchase'   => ['label' => 'Mua hàng',   'color' => '#0F623F'],
+        'bonus'      => ['label' => 'Thưởng',      'color' => '#C99A2E'],
+        'campaign'   => ['label' => 'Chiến dịch',  'color' => '#1E8FA8'],
+        'referral'   => ['label' => 'Giới thiệu',  'color' => '#6B4FA0'],
+        'admin'      => ['label' => 'Điều chỉnh',  'color' => '#8A9199'],
+        'redemption' => ['label' => 'Đổi quà',     'color' => '#D4584B'],
+    ];
+
+    public function points()
+    {
+        $admin = Auth::user();
+
+        return view('admin.reports.points', [
+            'reportData' => [
+                'admin' => ['name' => $admin->name, 'email' => $admin->email, 'initials' => $this->initials($admin->name)],
+                'defaults' => ['from' => now()->subDays(29)->toDateString(), 'to' => now()->toDateString(), 'granularity' => 'day'],
+                'urls' => ['data' => route('admin.reports.points.data')],
+            ],
+        ]);
+    }
+
+    public function pointsData(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'from'        => ['nullable', 'date'],
+            'to'          => ['nullable', 'date'],
+            'granularity' => ['nullable', 'in:day,week,month'],
+        ]);
+
+        $from = isset($data['from']) ? Carbon::parse($data['from'])->startOfDay() : now()->subDays(29)->startOfDay();
+        $to   = isset($data['to']) ? Carbon::parse($data['to'])->endOfDay() : now()->endOfDay();
+        if ($to->lt($from)) [$from, $to] = [$to->copy()->startOfDay(), $from->copy()->endOfDay()];
+        $gran    = $data['granularity'] ?? 'day';
+        $testIds = $this->testIds();
+
+        // Sổ cái điểm trong khoảng (loại tài khoản thử).
+        $ledger = \App\Models\CustomerPoint::whereBetween('created_at', [$from, $to])
+            ->when($testIds, fn ($q) => $q->whereNotIn('customer_id', $testIds))
+            ->get(['point_type', 'points', 'created_at']);
+
+        $earned = (int) $ledger->where('points', '>', 0)->sum('points');
+        $spent  = (int) abs($ledger->where('points', '<', 0)->sum('points'));
+        $net    = $earned - $spent;
+        $burnRate = $earned > 0 ? round($spent / $earned * 100, 1) : 0.0;
+
+        // Phát hành theo nguồn (điểm dương)
+        $bySource = [];
+        foreach ($ledger->where('points', '>', 0)->groupBy('point_type') as $type => $rows) {
+            $meta = self::POINT_TYPE_META[$type] ?? ['label' => $type, 'color' => '#8A9199'];
+            $bySource[] = ['label' => $meta['label'], 'value' => (int) $rows->sum('points'), 'color' => $meta['color']];
+        }
+        usort($bySource, fn ($a, $b) => $b['value'] <=> $a['value']);
+
+        // Xu hướng phát hành vs tiêu theo thời gian
+        $buckets = $this->makeBuckets($from, $to, $gran);
+        $trend = [];
+        foreach ($buckets as $b) {
+            $in = $ledger->filter(fn ($p) => $p->created_at->gte($b['from']) && $p->created_at->lte($b['to']));
+            $trend[] = [
+                'label'  => $b['label'],
+                'earned' => (int) $in->where('points', '>', 0)->sum('points'),
+                'spent'  => (int) abs($in->where('points', '<', 0)->sum('points')),
+            ];
+        }
+
+        // Điểm đang lưu hành (tổng số dư hiện tại)
+        $outstanding = (int) Customer::when($testIds, fn ($q) => $q->whereNotIn('id', $testIds))->sum('total_points');
+
+        // Đổi quà trong khoảng
+        $redemptions = \App\Models\Redemption::with('reward:id,name')
+            ->whereBetween('created_at', [$from, $to])
+            ->when($testIds, fn ($q) => $q->whereNotIn('customer_id', $testIds))
+            ->get(['reward_id', 'points_spent', 'customer_id']);
+
+        $redeemCount = $redemptions->count();
+        $topRewards = [];
+        foreach ($redemptions->groupBy(fn ($r) => $r->reward?->name ?: 'Khác') as $name => $rows) {
+            $topRewards[] = ['name' => $name, 'count' => $rows->count(), 'points' => (int) $rows->sum('points_spent')];
+        }
+        usort($topRewards, fn ($a, $b) => $b['count'] <=> $a['count']);
+
+        return response()->json([
+            'kpis' => [
+                'earned'      => $earned,
+                'spent'       => $spent,
+                'net'         => $net,
+                'burnRate'    => $burnRate,
+                'redeemCount' => $redeemCount,
+                'outstanding' => $outstanding,
+            ],
+            'bySource'   => $bySource,
+            'trend'      => $trend,
+            'topRewards' => $topRewards,
+        ]);
     }
 
     /** Chia khoảng [start,end] thành các rổ theo ngày/tuần/tháng. */

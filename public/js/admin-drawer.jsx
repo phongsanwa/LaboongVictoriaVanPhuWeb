@@ -230,7 +230,10 @@ function Drawer({ c, onClose, onCustomerUpdated, onCustomerDeleted }) {
           <div className="dr-prof">
             <div className="dr-av" style={{ background: avColor(customer.name) }}>{initials(customer.name)}</div>
             <div style={{ minWidth: 0 }}>
-              <div className="nm">{customer.name}</div>
+              <div className="nm" style={{ display: "flex", alignItems: "center", gap: 7 }}>
+                <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{customer.name}</span>
+                {customer.is_test && <span className="test-badge">TEST</span>}
+              </div>
               <div className="meta">
                 <span>{customer.id}</span><span>·</span>
                 <span>{customer.status === "on" ? "Đang hoạt động" : "Ngừng hoạt động"}</span>
