@@ -1,5 +1,13 @@
 /* Báo cáo khách hàng — bố cục KPI, biểu đồ, bảng + chỉnh theme các thư viện */
 
+.rp-tabs { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; }
+.rp-tab {
+  padding: 9px 16px; border-radius: 999px; font-weight: 700; font-size: 13.5px;
+  text-decoration: none; color: var(--ink-2); border: 1.5px solid var(--line, #ddd);
+  background: var(--card, #fff); transition: .14s;
+}
+.rp-tab.on { background: var(--brand, #0F623F); color: #fff; border-color: var(--brand, #0F623F); }
+
 .rp-filters {
   display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-end;
   margin-bottom: 18px; padding: 16px; border-radius: 14px;

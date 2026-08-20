@@ -137,6 +137,149 @@ class ReportsController extends Controller
         ]);
     }
 
+    /* ─────────── Báo cáo khách hàng mới (tăng trưởng) ─────────── */
+
+    public function newCustomers()
+    {
+        $admin = Auth::user();
+
+        return view('admin.reports.new-customers', [
+            'reportData' => [
+                'admin' => [
+                    'name'     => $admin->name,
+                    'email'    => $admin->email,
+                    'initials' => $this->initials($admin->name),
+                ],
+                'stores' => Store::orderBy('id')->get(['id', 'name'])
+                    ->map(fn ($s) => ['id' => $s->id, 'name' => $s->name])->all(),
+                'defaults' => [
+                    'from'        => now()->subDays(29)->toDateString(),
+                    'to'          => now()->toDateString(),
+                    'granularity' => 'day',
+                ],
+                'urls' => [
+                    'data' => route('admin.reports.new-customers.data'),
+                ],
+            ],
+        ]);
+    }
+
+    public function newCustomersData(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'from'        => ['nullable', 'date'],
+            'to'          => ['nullable', 'date'],
+            'granularity' => ['nullable', 'in:day,week,month'],
+            'store_id'    => ['nullable', 'integer'],
+        ]);
+
+        $from = isset($data['from']) ? Carbon::parse($data['from'])->startOfDay() : now()->subDays(29)->startOfDay();
+        $to   = isset($data['to']) ? Carbon::parse($data['to'])->endOfDay() : now()->endOfDay();
+        if ($to->lt($from)) [$from, $to] = [$to->copy()->startOfDay(), $from->copy()->endOfDay()];
+
+        $gran    = $data['granularity'] ?? 'day';
+        $storeId = $data['store_id'] ?? null;
+
+        // Kỳ trước: cùng độ dài ngày, ngay liền trước kỳ này.
+        $days    = $from->diffInDays($to) + 1;
+        $prevTo  = $from->copy()->subDay()->endOfDay();
+        $prevFrom = $from->copy()->subDays($days)->startOfDay();
+
+        // Lấy 1 lần tất cả ngày tạo trong [prevFrom, to] rồi chia rổ trong PHP.
+        $dates = Customer::query()
+            ->when($storeId, fn ($q) => $q->where('store_id', $storeId))
+            ->whereBetween('created_at', [$prevFrom, $to])
+            ->pluck('created_at');
+
+        $countIn = fn ($a, $b) => $dates->filter(fn ($d) => $d->gte($a) && $d->lte($b))->count();
+
+        $curBuckets  = $this->makeBuckets($from, $to, $gran);
+        $prevBuckets = $this->makeBuckets($prevFrom, $prevTo, $gran);
+
+        $labels  = array_map(fn ($b) => $b['label'], $curBuckets);
+        $current = array_map(fn ($b) => $countIn($b['from'], $b['to']), $curBuckets);
+
+        // Căn kỳ trước theo VỊ TRÍ rổ (pad/cắt cho khớp độ dài kỳ này).
+        $prevVals = array_map(fn ($b) => $countIn($b['from'], $b['to']), $prevBuckets);
+        $previous = [];
+        for ($i = 0; $i < count($labels); $i++) {
+            $previous[] = $prevVals[$i] ?? 0;
+        }
+
+        $currentTotal = array_sum($current);
+        $prevTotal    = $countIn($prevFrom, $prevTo);
+        $changePct    = $prevTotal > 0
+            ? round(($currentTotal - $prevTotal) / $prevTotal * 100, 1)
+            : ($currentTotal > 0 ? 100.0 : 0.0);
+
+        $peak = 0; $peakLabel = '—';
+        foreach ($current as $i => $v) {
+            if ($v > $peak) { $peak = $v; $peakLabel = $labels[$i]; }
+        }
+        $avg = count($current) ? round($currentTotal / count($current), 1) : 0;
+
+        $granLabel = ['day' => 'ngày', 'week' => 'tuần', 'month' => 'tháng'][$gran];
+
+        return response()->json([
+            'labels'   => $labels,
+            'current'  => $current,
+            'previous' => $previous,
+            'summary'  => [
+                'currentTotal' => $currentTotal,
+                'prevTotal'    => $prevTotal,
+                'changePct'    => $changePct,
+                'avg'          => $avg,
+                'peak'         => $peak,
+                'peakLabel'    => $peakLabel,
+                'granLabel'    => $granLabel,
+                'days'         => $days,
+            ],
+        ]);
+    }
+
+    /** Chia khoảng [start,end] thành các rổ theo ngày/tuần/tháng. */
+    private function makeBuckets(Carbon $start, Carbon $end, string $gran): array
+    {
+        $buckets = [];
+
+        if ($gran === 'month') {
+            $cur = $start->copy()->startOfMonth();
+            while ($cur->lte($end)) {
+                $bs = $cur->copy()->startOfMonth();
+                $be = $cur->copy()->endOfMonth();
+                $buckets[] = [
+                    'from'  => $bs->gt($start) ? $bs : $start->copy(),
+                    'to'    => $be->lt($end) ? $be : $end->copy(),
+                    'label' => $cur->format('m/Y'),
+                ];
+                $cur->addMonth();
+            }
+        } elseif ($gran === 'week') {
+            $cur = $start->copy()->startOfDay();
+            while ($cur->lte($end)) {
+                $be = $cur->copy()->addDays(6)->endOfDay();
+                $buckets[] = [
+                    'from'  => $cur->copy(),
+                    'to'    => $be->lt($end) ? $be : $end->copy(),
+                    'label' => $cur->format('d/m'),
+                ];
+                $cur->addDays(7);
+            }
+        } else { // day
+            $cur = $start->copy()->startOfDay();
+            while ($cur->lte($end)) {
+                $buckets[] = [
+                    'from'  => $cur->copy()->startOfDay(),
+                    'to'    => $cur->copy()->endOfDay(),
+                    'label' => $cur->format('d/m'),
+                ];
+                $cur->addDay();
+            }
+        }
+
+        return $buckets;
+    }
+
     private function initials(string $name): string
     {
         $parts = preg_split('/\s+/', trim($name));
