@@ -12,6 +12,7 @@ const TABS = [
   ['/admin/reports/top-spenders', 'Top chi tiêu'],
   ['/admin/reports/rfm', 'Phân tích RFM'],
   ['/admin/reports/cohort', 'Cohort giữ chân'],
+  ['/admin/reports/orders', 'Đơn hàng'],
 ];
 
 /* Màu ô theo % giữ chân (đậm dần) */

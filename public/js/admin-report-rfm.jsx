@@ -13,6 +13,7 @@ const TABS = [
   ['/admin/reports/top-spenders', 'Top chi tiêu'],
   ['/admin/reports/rfm', 'Phân tích RFM'],
   ['/admin/reports/cohort', 'Cohort giữ chân'],
+  ['/admin/reports/orders', 'Đơn hàng'],
 ];
 
 function App() {

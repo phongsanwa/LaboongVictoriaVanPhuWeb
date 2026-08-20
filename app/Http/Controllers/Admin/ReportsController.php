@@ -720,6 +720,139 @@ class ReportsController extends Controller
         return $m . '/' . $y;
     }
 
+    /* ─────────── Báo cáo đơn hàng ─────────── */
+
+    private const ORDER_STATUS_LABEL = [
+        'PENDING'   => 'Chờ xác nhận',
+        'CONFIRMED' => 'Đã xác nhận',
+        'PREPARING' => 'Đang pha chế',
+        'READY'     => 'Sẵn sàng',
+        'COMPLETED' => 'Hoàn tất',
+        'CANCELLED' => 'Đã huỷ',
+    ];
+
+    private const ORDER_STATUS_COLOR = [
+        'PENDING'   => '#C99A2E',
+        'CONFIRMED' => '#4FC3D9',
+        'PREPARING' => '#1E8FA8',
+        'READY'     => '#7BC96F',
+        'COMPLETED' => '#0F623F',
+        'CANCELLED' => '#D4584B',
+    ];
+
+    public function orders()
+    {
+        $admin = Auth::user();
+
+        return view('admin.reports.orders', [
+            'reportData' => [
+                'admin' => ['name' => $admin->name, 'email' => $admin->email, 'initials' => $this->initials($admin->name)],
+                'stores' => Store::orderBy('id')->get(['id', 'name'])->map(fn ($s) => ['id' => $s->id, 'name' => $s->name])->all(),
+                'defaults' => [
+                    'from'        => now()->subDays(29)->toDateString(),
+                    'to'          => now()->toDateString(),
+                    'granularity' => 'day',
+                ],
+                'urls' => ['data' => route('admin.reports.orders.data')],
+            ],
+        ]);
+    }
+
+    public function ordersData(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'from'        => ['nullable', 'date'],
+            'to'          => ['nullable', 'date'],
+            'granularity' => ['nullable', 'in:day,week,month'],
+            'store_id'    => ['nullable', 'integer'],
+        ]);
+
+        $from = isset($data['from']) ? Carbon::parse($data['from'])->startOfDay() : now()->subDays(29)->startOfDay();
+        $to   = isset($data['to']) ? Carbon::parse($data['to'])->endOfDay() : now()->endOfDay();
+        if ($to->lt($from)) [$from, $to] = [$to->copy()->startOfDay(), $from->copy()->endOfDay()];
+        $gran    = $data['granularity'] ?? 'day';
+        $storeId = $data['store_id'] ?? null;
+        $testIds = $this->testIds();
+
+        // Tất cả đơn trong khoảng (mọi trạng thái) — tính 1 lần rồi tổng hợp PHP.
+        $orders = Order::when($storeId, fn ($q) => $q->where('store_id', $storeId))
+            ->when($testIds, fn ($q) => $q->whereNotIn('customer_id', $testIds))
+            ->whereBetween('created_at', [$from, $to])
+            ->get(['created_at', 'status', 'total_amount', 'delivery_address', 'shipping_fee']);
+
+        $total     = $orders->count();
+        $completed = $orders->where('status', 'COMPLETED');
+        $completedN = $completed->count();
+        $cancelledN = $orders->where('status', 'CANCELLED')->count();
+        $revenue   = (int) $completed->sum('total_amount');
+        $aov       = $completedN > 0 ? (int) round($revenue / $completedN) : 0;
+        $cancelRate = $total > 0 ? round($cancelledN / $total * 100, 1) : 0.0;
+
+        $shipN = $orders->filter(fn ($o) => !empty($o->delivery_address) || (int) $o->shipping_fee > 0)->count();
+        $pickupN = $total - $shipN;
+
+        // Cơ cấu trạng thái
+        $statusData = [];
+        foreach (self::ORDER_STATUS_LABEL as $key => $label) {
+            $c = $orders->where('status', $key)->count();
+            if ($c > 0) $statusData[] = ['label' => $label, 'value' => $c, 'color' => self::ORDER_STATUS_COLOR[$key]];
+        }
+
+        // Đơn theo khung giờ (0–23h)
+        $byHour = array_fill(0, 24, 0);
+        foreach ($orders as $o) {
+            $h = $o->created_at->copy()->setTimezone('Asia/Ho_Chi_Minh')->hour;
+            $byHour[$h]++;
+        }
+
+        // Xu hướng theo ngày/tuần/tháng
+        $buckets = $this->makeBuckets($from, $to, $gran);
+        $trend = [];
+        foreach ($buckets as $b) {
+            $in = $orders->filter(fn ($o) => $o->created_at->gte($b['from']) && $o->created_at->lte($b['to']));
+            $trend[] = [
+                'label'   => $b['label'],
+                'orders'  => $in->count(),
+                'revenue' => (int) $in->where('status', 'COMPLETED')->sum('total_amount'),
+            ];
+        }
+
+        // Bảng theo ngày
+        $daily = [];
+        foreach ($orders->groupBy(fn ($o) => $o->created_at->copy()->setTimezone('Asia/Ho_Chi_Minh')->format('Y-m-d')) as $date => $rows) {
+            $comp = $rows->where('status', 'COMPLETED');
+            $daily[] = [
+                'date'      => Carbon::parse($date)->format('d/m/Y'),
+                'orders'    => $rows->count(),
+                'completed' => $comp->count(),
+                'cancelled' => $rows->where('status', 'CANCELLED')->count(),
+                'revenue'   => (int) $comp->sum('total_amount'),
+            ];
+        }
+        usort($daily, fn ($a, $b) => strcmp($b['date'], $a['date']));
+
+        return response()->json([
+            'kpis' => [
+                'total'      => $total,
+                'revenue'    => $revenue,
+                'aov'        => $aov,
+                'completed'  => $completedN,
+                'cancelled'  => $cancelledN,
+                'cancelRate' => $cancelRate,
+                'ship'       => $shipN,
+                'pickup'     => $pickupN,
+            ],
+            'trend'      => $trend,
+            'status'     => $statusData,
+            'byHour'     => $byHour,
+            'fulfillment'=> [
+                ['label' => 'Giao hàng', 'value' => $shipN],
+                ['label' => 'Tại quầy',  'value' => $pickupN],
+            ],
+            'daily'      => $daily,
+        ]);
+    }
+
     /** Chia khoảng [start,end] thành các rổ theo ngày/tuần/tháng. */
     private function makeBuckets(Carbon $start, Carbon $end, string $gran): array
     {

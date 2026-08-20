@@ -132,6 +132,7 @@ function App() {
             <a href="/admin/reports/top-spenders" className="rp-tab on">Top chi tiêu</a>
             <a href="/admin/reports/rfm" className="rp-tab">Phân tích RFM</a>
             <a href="/admin/reports/cohort" className="rp-tab">Cohort giữ chân</a>
+            <a href="/admin/reports/orders" className="rp-tab">Đơn hàng</a>
           </div>
 
           <div className="rp-filters">
