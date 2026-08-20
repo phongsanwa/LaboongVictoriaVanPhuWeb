@@ -22,6 +22,7 @@ class AdminAccess
         'Phí ship'            => 'ship_edit',
         'Đổi quà'             => 'gift_edit',
         'Chiến dịch'          => 'camp_view',
+        'Báo cáo'             => 'report',
         'Email'               => 'email_send',
         'Tin tức'             => 'news_edit',
         'Banner'              => 'banner_edit',
