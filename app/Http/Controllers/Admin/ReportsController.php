@@ -10,6 +10,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 
 class ReportsController extends Controller
 {
@@ -850,6 +851,127 @@ class ReportsController extends Controller
                 ['label' => 'Tại quầy',  'value' => $pickupN],
             ],
             'daily'      => $daily,
+        ]);
+    }
+
+    /* ─────────── Báo cáo sản phẩm bán chạy ─────────── */
+
+    private const CAT_COLORS = ['#0F623F', '#1E8FA8', '#C99A2E', '#6B4FA0', '#D4584B', '#7BC96F', '#4FC3D9', '#E0A458', '#8A9199'];
+
+    public function products()
+    {
+        $admin = Auth::user();
+
+        return view('admin.reports.products', [
+            'reportData' => [
+                'admin' => ['name' => $admin->name, 'email' => $admin->email, 'initials' => $this->initials($admin->name)],
+                'stores' => Store::orderBy('id')->get(['id', 'name'])->map(fn ($s) => ['id' => $s->id, 'name' => $s->name])->all(),
+                'defaults' => ['from' => now()->subDays(29)->toDateString(), 'to' => now()->toDateString(), 'top_n' => 15],
+                'urls' => ['data' => route('admin.reports.products.data')],
+            ],
+        ]);
+    }
+
+    public function productsData(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'from'     => ['nullable', 'date'],
+            'to'       => ['nullable', 'date'],
+            'top_n'    => ['nullable', 'integer', 'min:5', 'max:100'],
+            'store_id' => ['nullable', 'integer'],
+        ]);
+
+        $from = isset($data['from']) ? Carbon::parse($data['from'])->startOfDay() : now()->subDays(29)->startOfDay();
+        $to   = isset($data['to']) ? Carbon::parse($data['to'])->endOfDay() : now()->endOfDay();
+        $topN = (int) ($data['top_n'] ?? 15);
+        $storeId = $data['store_id'] ?? null;
+        $testIds = $this->testIds();
+
+        // Điều kiện đơn hoàn tất trong khoảng (dùng chung cho món + topping).
+        $applyOrderScope = function ($q) use ($from, $to, $storeId, $testIds) {
+            $q->where('orders.status', 'COMPLETED')
+              ->whereBetween('orders.created_at', [$from, $to]);
+            if ($storeId) $q->where('orders.store_id', $storeId);
+            if ($testIds) $q->whereNotIn('orders.customer_id', $testIds);
+            return $q;
+        };
+
+        // ─── Bán theo sản phẩm ───
+        $rows = $applyOrderScope(
+            DB::table('order_items')
+                ->join('orders', 'orders.id', '=', 'order_items.order_id')
+                ->leftJoin('products', 'products.id', '=', 'order_items.product_id')
+                ->leftJoin('categories', 'categories.id', '=', 'products.category_id')
+        )
+            ->selectRaw('order_items.product_id, products.name as pname, categories.name as cat,
+                         SUM(order_items.quantity) as qty, SUM(order_items.item_total) as revenue,
+                         COUNT(DISTINCT order_items.order_id) as orders')
+            ->groupBy('order_items.product_id', 'products.name', 'categories.name')
+            ->orderByDesc('qty')
+            ->get();
+
+        $products = $rows->map(fn ($r) => [
+            'name'    => $r->pname ?? ('Sản phẩm #' . $r->product_id),
+            'cat'     => $r->cat ?? '—',
+            'qty'     => (int) $r->qty,
+            'revenue' => (int) $r->revenue,
+            'orders'  => (int) $r->orders,
+        ])->values();
+
+        $itemsSold       = (int) $products->sum('qty');
+        $productRevenue  = (int) $products->sum('revenue');
+        $distinctProducts = $products->count();
+        $best            = $products->first();
+
+        // Thêm % đóng góp doanh thu
+        $products = $products->map(function ($p) use ($productRevenue) {
+            $p['share'] = $productRevenue > 0 ? round($p['revenue'] / $productRevenue * 100, 1) : 0;
+            return $p;
+        });
+
+        // ─── Doanh thu theo danh mục ───
+        $catAgg = [];
+        foreach ($products as $p) {
+            $catAgg[$p['cat']] = ($catAgg[$p['cat']] ?? 0) + $p['revenue'];
+        }
+        arsort($catAgg);
+        $i = 0;
+        $byCategory = [];
+        foreach ($catAgg as $cat => $rev) {
+            $byCategory[] = ['label' => $cat, 'value' => $rev, 'color' => self::CAT_COLORS[$i % count(self::CAT_COLORS)]];
+            $i++;
+        }
+
+        // ─── Top topping ───
+        try {
+            $toppings = $applyOrderScope(
+                DB::table('order_item_toppings')
+                    ->join('order_items', 'order_items.id', '=', 'order_item_toppings.order_item_id')
+                    ->join('orders', 'orders.id', '=', 'order_items.order_id')
+            )
+                ->selectRaw('order_item_toppings.topping_name, SUM(order_item_toppings.quantity) as qty')
+                ->groupBy('order_item_toppings.topping_name')
+                ->orderByDesc('qty')
+                ->limit(10)
+                ->get()
+                ->map(fn ($t) => ['name' => $t->topping_name, 'qty' => (int) $t->qty])
+                ->values();
+        } catch (\Throwable $e) {
+            $toppings = collect(); // môi trường chưa có cột quantity → bỏ qua phần topping
+        }
+
+        return response()->json([
+            'kpis' => [
+                'itemsSold'        => $itemsSold,
+                'productRevenue'   => $productRevenue,
+                'distinctProducts' => $distinctProducts,
+                'bestName'         => $best['name'] ?? '—',
+                'bestQty'          => $best['qty'] ?? 0,
+            ],
+            'topProducts' => $products->take($topN)->values(),
+            'byCategory'  => $byCategory,
+            'toppings'    => $toppings,
+            'all'         => $products,
         ]);
     }
 

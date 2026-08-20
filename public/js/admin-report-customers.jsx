@@ -190,6 +190,7 @@ function App() {
             <a href="/admin/reports/rfm" className="rp-tab">Phân tích RFM</a>
             <a href="/admin/reports/cohort" className="rp-tab">Cohort giữ chân</a>
             <a href="/admin/reports/orders" className="rp-tab">Đơn hàng</a>
+            <a href="/admin/reports/products" className="rp-tab">Sản phẩm bán chạy</a>
           </div>
 
           {/* Bộ lọc */}

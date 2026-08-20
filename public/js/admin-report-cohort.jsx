@@ -13,6 +13,7 @@ const TABS = [
   ['/admin/reports/rfm', 'Phân tích RFM'],
   ['/admin/reports/cohort', 'Cohort giữ chân'],
   ['/admin/reports/orders', 'Đơn hàng'],
+  ['/admin/reports/products', 'Sản phẩm bán chạy'],
 ];
 
 /* Màu ô theo % giữ chân (đậm dần) */
