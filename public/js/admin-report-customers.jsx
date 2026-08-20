@@ -144,9 +144,9 @@ function App() {
 
     // Select2: cửa hàng + số ngày không mua
     if ($ && $.fn.select2) {
-      $('#rp-store').select2({ minimumResultsForSearch: Infinity, width: '210px' })
+      $('#rp-store').select2({ minimumResultsForSearch: Infinity, width: '100%' })
         .on('change', function () { filters.current.store_id = this.value; load(); });
-      $('#rp-inactive').select2({ minimumResultsForSearch: Infinity, width: '210px' })
+      $('#rp-inactive').select2({ minimumResultsForSearch: Infinity, width: '100%' })
         .on('change', function () { filters.current.inactive_days = this.value; load(); });
     }
 
