@@ -237,6 +237,101 @@ class ReportsController extends Controller
         ]);
     }
 
+    /* ─────────── Báo cáo khách hàng quay lại ─────────── */
+
+    public function returning()
+    {
+        $admin = Auth::user();
+
+        return view('admin.reports.returning', [
+            'reportData' => [
+                'admin' => [
+                    'name'     => $admin->name,
+                    'email'    => $admin->email,
+                    'initials' => $this->initials($admin->name),
+                ],
+                'stores' => Store::orderBy('id')->get(['id', 'name'])
+                    ->map(fn ($s) => ['id' => $s->id, 'name' => $s->name])->all(),
+                'defaults' => [
+                    'from' => now()->subYear()->toDateString(),
+                    'to'   => now()->toDateString(),
+                ],
+                'urls' => [
+                    'data' => route('admin.reports.returning.data'),
+                ],
+            ],
+        ]);
+    }
+
+    public function returningData(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'from'     => ['nullable', 'date'],
+            'to'       => ['nullable', 'date'],
+            'store_id' => ['nullable', 'integer'],
+        ]);
+
+        $from = isset($data['from']) ? Carbon::parse($data['from'])->startOfDay() : now()->subYear()->startOfDay();
+        $to   = isset($data['to']) ? Carbon::parse($data['to'])->endOfDay() : now()->endOfDay();
+        $storeId = $data['store_id'] ?? null;
+
+        // Đơn HOÀN TẤT trong khoảng → nhóm theo khách để đếm số lần mua.
+        $orders = Order::where('status', 'COMPLETED')
+            ->when($storeId, fn ($q) => $q->where('store_id', $storeId))
+            ->whereBetween('created_at', [$from, $to])
+            ->orderBy('created_at')
+            ->get(['customer_id', 'created_at'])
+            ->groupBy('customer_id');
+
+        $buyers = $firstOnly = $repeat2 = $loyal3 = 0;
+        $dist = [1 => 0, 2 => 0, 3 => 0, 4 => 0, 5 => 0]; // 5 = "5 lần trở lên"
+        $gapDays = []; // thời gian TB giữa 2 lần mua của từng khách
+
+        foreach ($orders as $rows) {
+            $n = $rows->count();
+            if ($n < 1) continue;
+            $buyers++;
+            if ($n === 1) $firstOnly++;
+            if ($n >= 2) $repeat2++;
+            if ($n >= 3) $loyal3++;
+
+            $bucket = $n >= 5 ? 5 : $n;
+            $dist[$bucket]++;
+
+            if ($n >= 2) {
+                $first = $rows->first()->created_at;
+                $last  = $rows->last()->created_at;
+                $gapDays[] = $first->diffInDays($last) / ($n - 1);
+            }
+        }
+
+        $returnRate = $buyers > 0 ? round($repeat2 / $buyers * 100, 1) : 0.0;
+        $avgGap = count($gapDays) > 0 ? round(array_sum($gapDays) / count($gapDays), 1) : null;
+
+        return response()->json([
+            'kpis' => [
+                'firstOnly'  => $firstOnly,
+                'repeat2'    => $repeat2,
+                'loyal3'     => $loyal3,
+                'buyers'     => $buyers,
+                'returnRate' => $returnRate,
+                'avgGap'     => $avgGap, // ngày; null nếu chưa đủ dữ liệu
+            ],
+            'funnel' => [
+                ['label' => 'Đã mua (≥1 lần)',      'value' => $buyers],
+                ['label' => 'Quay lại (≥2 lần)',    'value' => $repeat2],
+                ['label' => 'Trung thành (≥3 lần)', 'value' => $loyal3],
+            ],
+            'distribution' => [
+                ['label' => '1 lần',          'value' => $dist[1]],
+                ['label' => '2 lần',          'value' => $dist[2]],
+                ['label' => '3 lần',          'value' => $dist[3]],
+                ['label' => '4 lần',          'value' => $dist[4]],
+                ['label' => '5 lần trở lên',  'value' => $dist[5]],
+            ],
+        ]);
+    }
+
     /** Chia khoảng [start,end] thành các rổ theo ngày/tuần/tháng. */
     private function makeBuckets(Carbon $start, Carbon $end, string $gran): array
     {

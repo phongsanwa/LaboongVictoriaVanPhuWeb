@@ -185,6 +185,7 @@ function App() {
           <div className="rp-tabs">
             <a href="/admin/reports/customers" className="rp-tab on">Tổng quan khách hàng</a>
             <a href="/admin/reports/new-customers" className="rp-tab">Khách hàng mới</a>
+            <a href="/admin/reports/returning" className="rp-tab">Khách quay lại</a>
           </div>
 
           {/* Bộ lọc */}
