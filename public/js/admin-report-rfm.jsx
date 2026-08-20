@@ -124,7 +124,7 @@ function App() {
             </div>
           </div>
 
-          <div className="rp-kpis" style={{ gridTemplateColumns: 'repeat(4, minmax(0,1fr))' }}>
+          <div className="rp-kpis">
             <div className="rp-kpi"><div className="k-ic" style={{ background: '#0F623F' }}><Icon name="users" size={20} color="#fff" /></div><div className="k-lbl">Khách phân tích</div><div className="k-val tnum">{kpis ? vnd(kpis.total) : '…'}</div><div className="k-sub">Có mua ≥ 1 lần</div></div>
             <div className="rp-kpi"><div className="k-ic" style={{ background: '#1AA86A' }}><Icon name="star" size={20} color="#fff" /></div><div className="k-lbl">Nhà vô địch</div><div className="k-val tnum">{kpis ? vnd(kpis.champions) : '…'}</div><div className="k-sub">R & F cao nhất</div></div>
             <div className="rp-kpi"><div className="k-ic" style={{ background: '#D4584B' }}><Icon name="clock" size={20} color="#fff" /></div><div className="k-lbl">Nguy cơ rời bỏ</div><div className="k-val tnum">{kpis ? vnd(kpis.atRisk) : '…'}</div><div className="k-sub">Cần chăm sóc lại</div></div>

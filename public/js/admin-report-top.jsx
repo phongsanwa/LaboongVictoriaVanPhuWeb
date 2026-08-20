@@ -154,7 +154,7 @@ function App() {
             </div>
           </div>
 
-          <div className="rp-kpis" style={{ gridTemplateColumns: 'repeat(4, minmax(0,1fr))' }}>
+          <div className="rp-kpis">
             <div className="rp-kpi">
               <div className="k-ic" style={{ background: '#0F623F' }}><Icon name="coin" size={20} color="#fff" /></div>
               <div className="k-lbl">Tổng doanh thu (khách)</div>
