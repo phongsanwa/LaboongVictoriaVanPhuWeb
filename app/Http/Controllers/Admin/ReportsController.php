@@ -280,14 +280,15 @@ class ReportsController extends Controller
             ->when($storeId, fn ($q) => $q->where('store_id', $storeId))
             ->whereBetween('created_at', [$from, $to])
             ->orderBy('created_at')
-            ->get(['customer_id', 'created_at'])
+            ->get(['customer_id', 'created_at', 'total_amount'])
             ->groupBy('customer_id');
 
         $buyers = $firstOnly = $repeat2 = $loyal3 = 0;
         $dist = [1 => 0, 2 => 0, 3 => 0, 4 => 0, 5 => 0]; // 5 = "5 lần trở lên"
         $gapDays = []; // thời gian TB giữa 2 lần mua của từng khách
+        $perCustomer = []; // customer_id => [orders, spent, last]
 
-        foreach ($orders as $rows) {
+        foreach ($orders as $customerId => $rows) {
             $n = $rows->count();
             if ($n < 1) continue;
             $buyers++;
@@ -303,10 +304,32 @@ class ReportsController extends Controller
                 $last  = $rows->last()->created_at;
                 $gapDays[] = $first->diffInDays($last) / ($n - 1);
             }
+
+            $perCustomer[$customerId] = [
+                'orders' => $n,
+                'spent'  => (int) $rows->sum('total_amount'),
+                'last'   => $rows->last()->created_at,
+            ];
         }
 
         $returnRate = $buyers > 0 ? round($repeat2 / $buyers * 100, 1) : 0.0;
         $avgGap = count($gapDays) > 0 ? round(array_sum($gapDays) / count($gapDays), 1) : null;
+
+        // Danh sách khách kèm số lần mua để bấm vào phễu là xem được.
+        $names = Customer::with('user:id,name,phone')
+            ->whereIn('id', array_keys($perCustomer))->get()->keyBy('id');
+        $customers = [];
+        foreach ($perCustomer as $cid => $info) {
+            $customers[] = [
+                'name'   => $names->get($cid)?->user?->name ?? ('KH #' . $cid),
+                'phone'  => $names->get($cid)?->user?->phone ?? '',
+                'orders' => $info['orders'],
+                'spent'  => $info['spent'],
+                'last'   => $info['last']?->setTimezone('Asia/Ho_Chi_Minh')->format('d/m/Y') ?? '—',
+            ];
+        }
+        // Sắp theo số lần mua giảm dần rồi tới chi tiêu.
+        usort($customers, fn ($a, $b) => ($b['orders'] <=> $a['orders']) ?: ($b['spent'] <=> $a['spent']));
 
         return response()->json([
             'kpis' => [
@@ -329,6 +352,7 @@ class ReportsController extends Controller
                 ['label' => '4 lần',          'value' => $dist[4]],
                 ['label' => '5 lần trở lên',  'value' => $dist[5]],
             ],
+            'customers' => $customers,
         ]);
     }
 
