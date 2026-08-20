@@ -34,6 +34,7 @@ Route::middleware(['auth', 'admin.perm'])->prefix('admin')->name('admin.')->grou
     Route::get('/customers', [CustomersController::class, 'index'])->middleware('admin.perm:cust_list')->name('customers.index');
     Route::put('/customers/{customer}', [CustomersController::class, 'update'])->middleware('admin.perm:cust_edit')->name('customers.update');
     Route::post('/customers/{customer}/toggle', [CustomersController::class, 'toggle'])->middleware('admin.perm:cust_edit')->name('customers.toggle');
+    Route::post('/customers/{customer}/test', [CustomersController::class, 'toggleTest'])->middleware('admin.perm:cust_edit')->name('customers.test');
     Route::delete('/customers/{customer}', [CustomersController::class, 'destroy'])->middleware('admin.perm:cust_edit')->name('customers.destroy');
 
     // Đơn hàng

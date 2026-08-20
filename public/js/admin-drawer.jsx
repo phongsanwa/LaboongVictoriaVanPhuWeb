@@ -201,6 +201,26 @@ function Drawer({ c, onClose, onCustomerUpdated, onCustomerDeleted }) {
     if (onCustomerUpdated) onCustomerUpdated(merged);
   };
 
+  const [savingTest, setSavingTest] = React.useState(false);
+  const toggleTest = async () => {
+    if (savingTest) return;
+    setSavingTest(true);
+    try {
+      const res = await fetch(`/admin/customers/${customer.customerId}/test`, {
+        method: "POST",
+        headers: { "X-CSRF-TOKEN": document.querySelector('meta[name="csrf-token"]')?.content || "", "Accept": "application/json" },
+      });
+      const data = await res.json();
+      if (res.ok) {
+        const merged = { ...customer, is_test: data.customer.is_test };
+        setCustomer(merged);
+        if (onCustomerUpdated) onCustomerUpdated(merged);
+      }
+    } catch (e) { /* ignore */ } finally {
+      setSavingTest(false);
+    }
+  };
+
   return (
     <>
       <div className="scrim" onClick={onClose} />
@@ -240,6 +260,20 @@ function Drawer({ c, onClose, onCustomerUpdated, onCustomerDeleted }) {
             <div className="ir"><div className="ic"><Icon name="users" size={16} /></div><span className="ik">Trạng thái</span><span className="iv"><span className={"status " + customer.status}>{customer.status === "on" ? "Active" : "Inactive"}</span></span></div>
             <div className="ir"><div className="ic"><Icon name="clock" size={16} /></div><span className="ik">Truy cập</span><span className="iv" style={customer.online ? { color: "#16A34A", fontWeight: 700 } : {}}>{customer.online ? "● Đang online" : ("○ " + (customer.lastSeen || "Chưa truy cập"))}</span></div>
           </div>
+
+          <div className="dr-sec-t">Tuỳ chọn báo cáo</div>
+          <div className="switch-row" onClick={toggleTest} style={{ cursor: "pointer", opacity: savingTest ? 0.6 : 1 }}>
+            <div>
+              <div className="sl">Tài khoản thử nghiệm</div>
+              <div className="sd">Loại khách này khỏi tất cả báo cáo (dùng cho tài khoản đăng ký để test)</div>
+            </div>
+            <div className={"switch" + (customer.is_test ? " on" : "")} />
+          </div>
+          {customer.is_test && (
+            <div style={{ fontSize: 12, color: "var(--hot, #D4584B)", fontWeight: 600, margin: "6px 2px 0" }}>
+              <Icon name="alert" size={12} color="currentColor" /> Khách này đang bị loại khỏi báo cáo.
+            </div>
+          )}
 
           <div className="dr-sec-t">Lịch sử giao dịch ({customer.tx.length})</div>
           <div className="dr-tx">

@@ -11,6 +11,7 @@ class Customer extends Model
     protected $fillable = [
         'user_id',
         'store_id',
+        'is_test',
         'date_of_birth',
         'gender',
         'address',
@@ -36,6 +37,7 @@ class Customer extends Model
             'last_purchase_at' => 'datetime',
             'is_newsletter' => 'boolean',
             'is_push_enabled' => 'boolean',
+            'is_test' => 'boolean',
             'favorite_items' => 'array',
             'total_points' => 'float',
             'lifetime_points' => 'float',
