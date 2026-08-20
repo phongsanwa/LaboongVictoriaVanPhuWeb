@@ -1,0 +1,56 @@
+/* Báo cáo khách hàng — bố cục KPI, biểu đồ, bảng + chỉnh theme các thư viện */
+
+.rp-filters {
+  display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-end;
+  margin-bottom: 18px; padding: 16px; border-radius: 14px;
+  background: var(--card, #fff); border: 1px solid var(--line, #eee);
+}
+.rp-fld { display: flex; flex-direction: column; gap: 5px; }
+.rp-fld > label { font-size: 12.5px; font-weight: 700; color: var(--ink-2); }
+.rp-fld .flat-inp {
+  padding: 9px 12px; border: 1.5px solid var(--line, #ddd); border-radius: 10px;
+  background: var(--card, #fff); color: var(--ink); font-size: 14px; min-width: 210px;
+}
+
+.rp-kpis {
+  display: grid; grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px; margin-bottom: 20px;
+}
+@media (max-width: 980px) { .rp-kpis { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 560px) { .rp-kpis { grid-template-columns: 1fr; } }
+
+.rp-kpi {
+  padding: 16px 18px; border-radius: 14px; background: var(--card, #fff);
+  border: 1px solid var(--line, #eee); position: relative; overflow: hidden;
+}
+.rp-kpi .k-ic {
+  width: 40px; height: 40px; border-radius: 11px; display: grid; place-items: center;
+  color: #fff; margin-bottom: 12px;
+}
+.rp-kpi .k-lbl { font-size: 12.5px; color: var(--ink-2); font-weight: 600; }
+.rp-kpi .k-val { font-size: 26px; font-weight: 800; line-height: 1.1; margin-top: 3px; letter-spacing: -.5px; }
+.rp-kpi .k-sub { font-size: 12px; color: var(--ink-3); margin-top: 4px; }
+
+.rp-charts { display: grid; grid-template-columns: 1.6fr 1fr; gap: 14px; margin-bottom: 20px; }
+@media (max-width: 900px) { .rp-charts { grid-template-columns: 1fr; } }
+.rp-card {
+  padding: 16px 18px; border-radius: 14px; background: var(--card, #fff);
+  border: 1px solid var(--line, #eee);
+}
+.rp-card .rp-card-t { font-weight: 800; font-size: 15px; margin-bottom: 10px; }
+
+.rp-table-wrap { padding: 16px 18px; border-radius: 14px; background: var(--card, #fff); border: 1px solid var(--line, #eee); }
+table.dataTable thead th { font-weight: 700; }
+.rp-tag { font-size: 11.5px; font-weight: 700; padding: 2px 9px; border-radius: 999px; white-space: nowrap; }
+.rp-tag.active   { background: rgba(22,163,74,.12); color: #16A34A; }
+.rp-tag.inactive { background: rgba(212,88,75,.12); color: #D4584B; }
+.rp-tag.idle     { background: rgba(0,0,0,.06); color: var(--ink-2); }
+.rp-tag.never    { background: rgba(0,0,0,.05); color: var(--ink-3); }
+
+/* Select2 hợp theme */
+.select2-container--default .select2-selection--single {
+  height: 40px; border: 1.5px solid var(--line, #ddd); border-radius: 10px;
+  display: flex; align-items: center;
+}
+.select2-container--default .select2-selection--single .select2-selection__rendered { line-height: 38px; color: var(--ink); }
+.select2-container--default .select2-selection--single .select2-selection__arrow { height: 38px; }

@@ -9,6 +9,7 @@ const SIDEBAR_NAV = [
   { ic: 'truck',   label: 'Phí ship',            href: '/admin/shipping' },
   { ic: 'gift',    label: 'Đổi quà',             href: '/admin/rewards' },
   { ic: 'mega',    label: 'Chiến dịch',          href: '/admin/campaigns' },
+  { ic: 'chart',   label: 'Báo cáo',             href: '/admin/reports/customers' },
   { ic: 'mail',    label: 'Email',               href: '/admin/emails' },
   { ic: 'star',    label: 'Tin tức',             href: '/admin/news' },
   { ic: 'image',   label: 'Banner',              href: '/admin/banners' },

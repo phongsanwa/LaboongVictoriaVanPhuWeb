@@ -15,6 +15,7 @@ use App\Http\Controllers\Admin\StoresController;
 use App\Http\Controllers\Admin\MenuController;
 use App\Http\Controllers\Admin\NewsController;
 use App\Http\Controllers\Admin\PromotionsController;
+use App\Http\Controllers\Admin\ReportsController;
 use App\Http\Controllers\Admin\VariantsController;
 use Illuminate\Support\Facades\Route;
 
@@ -60,6 +61,12 @@ Route::middleware(['auth', 'admin.perm'])->prefix('admin')->name('admin.')->grou
     Route::put('/campaigns/{campaign}', [CampaignsController::class, 'update'])->middleware('admin.perm:camp_edit')->name('campaigns.update');
     Route::post('/campaigns/{campaign}/toggle', [CampaignsController::class, 'toggle'])->middleware('admin.perm:camp_edit')->name('campaigns.toggle');
     Route::post('/campaigns/{campaign}/push', [CampaignsController::class, 'push'])->middleware('admin.perm:push')->name('campaigns.push');
+
+    // Báo cáo — thống kê khách hàng
+    Route::middleware('admin.perm:report')->group(function () {
+        Route::get('/reports/customers', [ReportsController::class, 'customers'])->name('reports.customers');
+        Route::get('/reports/customers/data', [ReportsController::class, 'customersData'])->name('reports.customers.data');
+    });
 
     // Email marketing — gửi email cho khách + quản lý mẫu email
     Route::middleware('admin.perm:email_send')->group(function () {
