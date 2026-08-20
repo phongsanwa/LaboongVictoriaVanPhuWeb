@@ -10,6 +10,7 @@ function App() {
   const [kpis, setKpis] = useState(null);
   const [loading, setLoading] = useState(true);
   const [sideOpen, setSideOpen] = useState(false);
+  const [modal, setModal] = useState(null); // { title, list }
 
   const filters = useRef({
     from: DATA.defaults?.from || '',
@@ -21,15 +22,31 @@ function App() {
   const distEl = useRef(null);
   const funnel = useRef(null);
   const dist = useRef(null);
+  const allCustomers = useRef([]);
 
   const load = () => {
     setLoading(true);
     const p = new URLSearchParams(filters.current);
     fetch(URLS.data + '?' + p.toString(), { headers: { Accept: 'application/json' } })
       .then(r => r.json())
-      .then(d => { setKpis(d.kpis); renderCharts(d); })
+      .then(d => { setKpis(d.kpis); allCustomers.current = d.customers || []; renderCharts(d); })
       .catch(() => {})
       .finally(() => setLoading(false));
+  };
+
+  // Mở danh sách khách theo nhóm khi bấm vào cột/phễu.
+  const openGroup = (type, idx) => {
+    const all = allCustomers.current;
+    let list = [], title = '';
+    if (type === 'funnel') {
+      const min = idx + 1; // 0→≥1, 1→≥2, 2→≥3
+      list = all.filter(c => c.orders >= min);
+      title = ['Khách đã mua (≥1 lần)', 'Khách quay lại (≥2 lần)', 'Khách trung thành (≥3 lần)'][idx] || 'Khách';
+    } else {
+      if (idx >= 4) { list = all.filter(c => c.orders >= 5); title = 'Khách mua 5 lần trở lên'; }
+      else { list = all.filter(c => c.orders === idx + 1); title = `Khách mua ${idx + 1} lần`; }
+    }
+    setModal({ title, list });
   };
 
   const renderCharts = (d) => {
@@ -38,7 +55,7 @@ function App() {
     const fCats = d.funnel.map(x => x.label);
     if (!funnel.current && funnelEl.current) {
       funnel.current = new ApexCharts(funnelEl.current, {
-        chart: { type: 'bar', height: 320, fontFamily: 'inherit', toolbar: { show: false } },
+        chart: { type: 'bar', height: 320, fontFamily: 'inherit', toolbar: { show: false }, events: { dataPointSelection: (e, ctx, cfg) => openGroup('funnel', cfg.dataPointIndex) } },
         series: [{ name: 'Khách', data: fVals }],
         xaxis: { categories: fCats },
         plotOptions: { bar: { horizontal: true, barHeight: '62%', borderRadius: 4, distributed: true, isFunnel: true } },
@@ -59,7 +76,7 @@ function App() {
     const dCats = d.distribution.map(x => x.label);
     if (!dist.current && distEl.current) {
       dist.current = new ApexCharts(distEl.current, {
-        chart: { type: 'bar', height: 320, fontFamily: 'inherit', toolbar: { show: false } },
+        chart: { type: 'bar', height: 320, fontFamily: 'inherit', toolbar: { show: false }, events: { dataPointSelection: (e, ctx, cfg) => openGroup('dist', cfg.dataPointIndex) } },
         series: [{ name: 'Số khách', data: dVals }],
         xaxis: { categories: dCats },
         plotOptions: { bar: { borderRadius: 6, columnWidth: '55%', distributed: true } },
@@ -173,6 +190,9 @@ function App() {
             </div>
           </div>
 
+          <div style={{ fontSize: 12.5, color: 'var(--ink-3)', marginBottom: 10 }}>
+            💡 Bấm vào từng cột trong biểu đồ để xem danh sách khách trong nhóm đó.
+          </div>
           <div className="rp-charts">
             <div className="rp-card">
               <div className="rp-card-t">Phễu quay lại (≥1 → ≥2 → ≥3 lần)</div>
@@ -185,6 +205,37 @@ function App() {
           </div>
         </div>
       </div>
+
+      {modal && (
+        <div className="modal-scrim" onClick={() => setModal(null)}>
+          <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 560, width: '100%' }}>
+            <div className="modal-h">
+              <div className="mh-ic"><Icon name="users" size={20} /></div>
+              <div><h3>{modal.title}</h3><p>{modal.list.length} khách hàng</p></div>
+              <button className="x" onClick={() => setModal(null)}><Icon name="close" size={18} /></button>
+            </div>
+            <div className="modal-b" style={{ maxHeight: '60vh', overflowY: 'auto' }}>
+              {modal.list.length === 0 && <div style={{ padding: 16, color: 'var(--ink-3)', textAlign: 'center' }}>Không có khách trong nhóm này.</div>}
+              {modal.list.map((c, i) => (
+                <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 4px', borderBottom: '1px solid var(--line, #f0f0f0)' }}>
+                  <span style={{ width: 24, textAlign: 'right', color: 'var(--ink-3)', fontSize: 12, flexShrink: 0 }}>{i + 1}</span>
+                  <div style={{ minWidth: 0, flex: 1 }}>
+                    <div style={{ fontWeight: 600, fontSize: 14, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{c.name}</div>
+                    <div style={{ fontSize: 12, color: 'var(--ink-3)' }}>{c.phone || '—'} · mua gần nhất {c.last}</div>
+                  </div>
+                  <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                    <div style={{ fontWeight: 700, color: 'var(--brand)' }}>{c.orders} lần</div>
+                    <div style={{ fontSize: 12, color: 'var(--ink-2)' }}>{vnd(c.spent)}đ</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div className="modal-f">
+              <button className="btn ghost" onClick={() => setModal(null)}>Đóng</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
