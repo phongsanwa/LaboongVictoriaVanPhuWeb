@@ -482,10 +482,10 @@ function App() {
     }
   }, [lines, note]);
 
-  /* set default address */
+  /* set default address (chỉ giao hàng — không còn nhận tại quầy) */
   useEffect(() => {
     const def = addresses.find(a => a.def) || addresses[0];
-    setAddrId(def ? def.id : "pickup");
+    setAddrId(def ? def.id : null);
   }, []);  // eslint-disable-line
 
   useEffect(() => {
@@ -872,7 +872,10 @@ function App() {
         }
         return next;
       });
-      if (addrId === id) setAddrId("pickup");
+      if (addrId === id) setAddrId(prev => {
+        const rest = addresses.filter(a => a.id !== id);
+        return rest[0]?.id ?? null;
+      });
     };
     if (!LIVE) { removeLocal(); return; }
     try {
@@ -919,6 +922,13 @@ function App() {
     setOrderErr("");
 
     if (!LIVE) { setActualPts(earnPts); setPlaced(true); clearCart(); return; }
+
+    // Chỉ nhận đơn GIAO HÀNG online — bắt buộc có địa chỉ nhận hàng.
+    if (!selectedAddr) {
+      setOrderErr("Vui lòng chọn địa chỉ giao hàng.");
+      setAddrView(true);
+      return;
+    }
 
     // Bắt buộc chọn chi nhánh khi có nhiều cửa hàng (không còn mặc định "Giao từ").
     if (liveStores.length > 1 && !selectedStore) {
@@ -1414,7 +1424,7 @@ function App() {
                       return (
                         <button key={s.id}
                           className={"aopt" + (selectedStoreId === s.id ? " on" : "")}
-                          onClick={() => { setSelectedStoreId(s.id); if (storeViewMode === "pickup") setAddrId("pickup"); setStoreView(false); }}>
+                          onClick={() => { setSelectedStoreId(s.id); setStoreView(false); }}>
                           <span className="ai"><Icon name="pin" size={19} color="currentColor" /></span>
                           <div style={{ minWidth: 0, flex: 1 }}>
                             <div className="albl">
@@ -1510,17 +1520,6 @@ function App() {
                     </button>
                   )}
 
-                  <div className="cp-sec">Hoặc</div>
-                  <button className={"aopt pickup" + (addrId === "pickup" ? " on" : "")}
-                    onClick={() => { setAddrId("pickup"); setAddrView(false); if (liveStores.length > 1) { setStoreViewMode("pickup"); setStoreView(true); } }}>
-                    <span className="ai"><Icon name="bag" size={19} color="currentColor" /></span>
-                    <div style={{ minWidth: 0, flex: 1 }}>
-                      <div className="albl"><span className="atag">Nhận tại quầy</span></div>
-                      <div className="atext">{pickupLabel}</div>
-                    </div>
-                    <span className="aradio" />
-                  </button>
-
                   <a className="manage-addr" href={NAV_URLS.profile}><Icon name="plus2" size={15} color="currentColor" /> Quản lý địa chỉ trong Hồ sơ</a>
                 </div>
               </>
@@ -1560,10 +1559,9 @@ function App() {
                         <div className="dl">Giao đến <span className="dtag">{selectedAddr.label}</span>{selectedAddr.def && <span className="dtag" style={{ background: "var(--bg-2)", color: "var(--ink-2)" }}>Mặc định</span>}</div>
                         <div className="dt">{selectedAddr.text}</div>
                       </>) : (<>
-                        <div className="dl">Nhận tại quầy</div>
-                        <div className="dt">{pickupLabel}</div>
+                        <div className="dl">Chọn địa chỉ giao hàng</div>
                         <div className="dt" style={{ marginTop: 2, fontSize: 12.5, fontWeight: 600, color: "var(--brand)" }}>
-                          Muốn giao tận nơi? Bấm để thêm địa chỉ
+                          Bấm để chọn hoặc thêm địa chỉ nhận hàng
                         </div>
                       </>)}
                     </div>
