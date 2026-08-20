@@ -14,6 +14,7 @@ const TABS = [
   ['/admin/reports/cohort', 'Cohort giữ chân'],
   ['/admin/reports/orders', 'Đơn hàng'],
   ['/admin/reports/products', 'Sản phẩm bán chạy'],
+  ['/admin/reports/promotions', 'Khuyến mãi & voucher'],
 ];
 
 /* Màu ô theo % giữ chân (đậm dần) */

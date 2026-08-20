@@ -122,6 +122,7 @@ function App() {
             <a href="/admin/reports/cohort" className="rp-tab">Cohort giữ chân</a>
             <a href="/admin/reports/orders" className="rp-tab">Đơn hàng</a>
             <a href="/admin/reports/products" className="rp-tab">Sản phẩm bán chạy</a>
+            <a href="/admin/reports/promotions" className="rp-tab">Khuyến mãi & voucher</a>
           </div>
 
           {/* Bộ lọc */}

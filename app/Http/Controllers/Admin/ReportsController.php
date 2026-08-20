@@ -975,6 +975,114 @@ class ReportsController extends Controller
         ]);
     }
 
+    /* ─────────── Hiệu quả khuyến mãi & voucher ─────────── */
+
+    private const DISC_META = [
+        'PROMOTION_VOUCHER' => ['label' => 'Giảm đơn hàng',       'color' => '#0F623F'],
+        'GIFT_VOUCHER'      => ['label' => 'Quà tặng / đổi điểm', 'color' => '#C99A2E'],
+        'SHIPPING'          => ['label' => 'Giảm phí ship',       'color' => '#1E8FA8'],
+    ];
+
+    public function promotions()
+    {
+        $admin = Auth::user();
+
+        return view('admin.reports.promotions', [
+            'reportData' => [
+                'admin' => ['name' => $admin->name, 'email' => $admin->email, 'initials' => $this->initials($admin->name)],
+                'stores' => Store::orderBy('id')->get(['id', 'name'])->map(fn ($s) => ['id' => $s->id, 'name' => $s->name])->all(),
+                'defaults' => ['from' => now()->subDays(29)->toDateString(), 'to' => now()->toDateString()],
+                'urls' => ['data' => route('admin.reports.promotions.data')],
+            ],
+        ]);
+    }
+
+    public function promotionsData(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'from'     => ['nullable', 'date'],
+            'to'       => ['nullable', 'date'],
+            'store_id' => ['nullable', 'integer'],
+        ]);
+
+        $from = isset($data['from']) ? Carbon::parse($data['from'])->startOfDay() : now()->subDays(29)->startOfDay();
+        $to   = isset($data['to']) ? Carbon::parse($data['to'])->endOfDay() : now()->endOfDay();
+        $storeId = $data['store_id'] ?? null;
+        $testIds = $this->testIds();
+
+        // Đơn HOÀN TẤT trong khoảng.
+        $completed = Order::where('status', 'COMPLETED')
+            ->whereBetween('created_at', [$from, $to])
+            ->when($storeId, fn ($q) => $q->where('store_id', $storeId))
+            ->when($testIds, fn ($q) => $q->whereNotIn('customer_id', $testIds))
+            ->get(['id', 'total_amount']);
+
+        $compIds = $completed->pluck('id');
+        $totalCompleted = $completed->count();
+
+        // Các khoản giảm trên các đơn hoàn tất đó.
+        $disc = \App\Models\OrderDiscount::whereIn('order_id', $compIds)
+            ->get(['discount_category', 'discount_amount', 'description', 'order_id']);
+
+        $totalDiscount = (int) $disc->sum('discount_amount');
+
+        // Theo loại
+        $byCategory = [];
+        foreach ($disc->groupBy('discount_category') as $cat => $rows) {
+            $meta = self::DISC_META[$cat] ?? ['label' => $cat, 'color' => '#8A9199'];
+            $byCategory[] = ['label' => $meta['label'], 'value' => (int) $rows->sum('discount_amount'), 'color' => $meta['color']];
+        }
+
+        // Top ưu đãi theo tên (description)
+        $byName = [];
+        foreach ($disc->groupBy(fn ($d) => $d->description ?: 'Khác') as $name => $rows) {
+            $byName[] = [
+                'name'   => $name,
+                'amount' => (int) $rows->sum('discount_amount'),
+                'uses'   => $rows->pluck('order_id')->unique()->count(),
+            ];
+        }
+        usort($byName, fn ($a, $b) => $b['amount'] <=> $a['amount']);
+
+        // Đơn có ưu đãi vs không
+        $discOrderIds = $disc->pluck('order_id')->unique()->flip();
+        $withOrders    = $completed->filter(fn ($o) => $discOrderIds->has($o->id));
+        $withoutOrders = $completed->reject(fn ($o) => $discOrderIds->has($o->id));
+        $countWith     = $withOrders->count();
+        $revenueWith   = (int) $withOrders->sum('total_amount');
+        $countWithout  = $withoutOrders->count();
+        $revenueWithout = (int) $withoutOrders->sum('total_amount');
+        $aovWith    = $countWith > 0 ? (int) round($revenueWith / $countWith) : 0;
+        $aovWithout = $countWithout > 0 ? (int) round($revenueWithout / $countWithout) : 0;
+        $usageRate  = $totalCompleted > 0 ? round($countWith / $totalCompleted * 100, 1) : 0.0;
+
+        // Voucher: phát hành & sử dụng trong khoảng
+        $issued = \App\Models\Voucher::whereBetween('created_at', [$from, $to])
+            ->when($testIds, fn ($q) => $q->whereNotIn('customer_id', $testIds))
+            ->count();
+        $used = \App\Models\Voucher::where('status', 'used')
+            ->whereBetween('used_at', [$from, $to])
+            ->when($testIds, fn ($q) => $q->whereNotIn('customer_id', $testIds))
+            ->count();
+        $redemptionRate = $issued > 0 ? round($used / $issued * 100, 1) : 0.0;
+
+        return response()->json([
+            'kpis' => [
+                'totalDiscount' => $totalDiscount,
+                'ordersWith'    => $countWith,
+                'usageRate'     => $usageRate,
+                'revenueWith'   => $revenueWith,
+                'aovWith'       => $aovWith,
+                'aovWithout'    => $aovWithout,
+                'issued'        => $issued,
+                'used'          => $used,
+                'redemptionRate'=> $redemptionRate,
+            ],
+            'byCategory' => $byCategory,
+            'byName'     => $byName,
+        ]);
+    }
+
     /** Chia khoảng [start,end] thành các rổ theo ngày/tuần/tháng. */
     private function makeBuckets(Carbon $start, Carbon $end, string $gran): array
     {
