@@ -16,6 +16,7 @@ const TABS = [
   ['/admin/reports/orders', 'Đơn hàng'],
   ['/admin/reports/products', 'Sản phẩm bán chạy'],
   ['/admin/reports/promotions', 'Khuyến mãi & voucher'],
+  ['/admin/reports/points', 'Điểm thưởng'],
 ];
 
 function App() {

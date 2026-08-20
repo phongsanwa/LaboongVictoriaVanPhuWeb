@@ -1083,6 +1083,105 @@ class ReportsController extends Controller
         ]);
     }
 
+    /* ─────────── Báo cáo điểm thưởng ─────────── */
+
+    private const POINT_TYPE_META = [
+        'purchase'   => ['label' => 'Mua hàng',   'color' => '#0F623F'],
+        'bonus'      => ['label' => 'Thưởng',      'color' => '#C99A2E'],
+        'campaign'   => ['label' => 'Chiến dịch',  'color' => '#1E8FA8'],
+        'referral'   => ['label' => 'Giới thiệu',  'color' => '#6B4FA0'],
+        'admin'      => ['label' => 'Điều chỉnh',  'color' => '#8A9199'],
+        'redemption' => ['label' => 'Đổi quà',     'color' => '#D4584B'],
+    ];
+
+    public function points()
+    {
+        $admin = Auth::user();
+
+        return view('admin.reports.points', [
+            'reportData' => [
+                'admin' => ['name' => $admin->name, 'email' => $admin->email, 'initials' => $this->initials($admin->name)],
+                'defaults' => ['from' => now()->subDays(29)->toDateString(), 'to' => now()->toDateString(), 'granularity' => 'day'],
+                'urls' => ['data' => route('admin.reports.points.data')],
+            ],
+        ]);
+    }
+
+    public function pointsData(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'from'        => ['nullable', 'date'],
+            'to'          => ['nullable', 'date'],
+            'granularity' => ['nullable', 'in:day,week,month'],
+        ]);
+
+        $from = isset($data['from']) ? Carbon::parse($data['from'])->startOfDay() : now()->subDays(29)->startOfDay();
+        $to   = isset($data['to']) ? Carbon::parse($data['to'])->endOfDay() : now()->endOfDay();
+        if ($to->lt($from)) [$from, $to] = [$to->copy()->startOfDay(), $from->copy()->endOfDay()];
+        $gran    = $data['granularity'] ?? 'day';
+        $testIds = $this->testIds();
+
+        // Sổ cái điểm trong khoảng (loại tài khoản thử).
+        $ledger = \App\Models\CustomerPoint::whereBetween('created_at', [$from, $to])
+            ->when($testIds, fn ($q) => $q->whereNotIn('customer_id', $testIds))
+            ->get(['point_type', 'points', 'created_at']);
+
+        $earned = (int) $ledger->where('points', '>', 0)->sum('points');
+        $spent  = (int) abs($ledger->where('points', '<', 0)->sum('points'));
+        $net    = $earned - $spent;
+        $burnRate = $earned > 0 ? round($spent / $earned * 100, 1) : 0.0;
+
+        // Phát hành theo nguồn (điểm dương)
+        $bySource = [];
+        foreach ($ledger->where('points', '>', 0)->groupBy('point_type') as $type => $rows) {
+            $meta = self::POINT_TYPE_META[$type] ?? ['label' => $type, 'color' => '#8A9199'];
+            $bySource[] = ['label' => $meta['label'], 'value' => (int) $rows->sum('points'), 'color' => $meta['color']];
+        }
+        usort($bySource, fn ($a, $b) => $b['value'] <=> $a['value']);
+
+        // Xu hướng phát hành vs tiêu theo thời gian
+        $buckets = $this->makeBuckets($from, $to, $gran);
+        $trend = [];
+        foreach ($buckets as $b) {
+            $in = $ledger->filter(fn ($p) => $p->created_at->gte($b['from']) && $p->created_at->lte($b['to']));
+            $trend[] = [
+                'label'  => $b['label'],
+                'earned' => (int) $in->where('points', '>', 0)->sum('points'),
+                'spent'  => (int) abs($in->where('points', '<', 0)->sum('points')),
+            ];
+        }
+
+        // Điểm đang lưu hành (tổng số dư hiện tại)
+        $outstanding = (int) Customer::when($testIds, fn ($q) => $q->whereNotIn('id', $testIds))->sum('total_points');
+
+        // Đổi quà trong khoảng
+        $redemptions = \App\Models\Redemption::with('reward:id,name')
+            ->whereBetween('created_at', [$from, $to])
+            ->when($testIds, fn ($q) => $q->whereNotIn('customer_id', $testIds))
+            ->get(['reward_id', 'points_spent', 'customer_id']);
+
+        $redeemCount = $redemptions->count();
+        $topRewards = [];
+        foreach ($redemptions->groupBy(fn ($r) => $r->reward?->name ?: 'Khác') as $name => $rows) {
+            $topRewards[] = ['name' => $name, 'count' => $rows->count(), 'points' => (int) $rows->sum('points_spent')];
+        }
+        usort($topRewards, fn ($a, $b) => $b['count'] <=> $a['count']);
+
+        return response()->json([
+            'kpis' => [
+                'earned'      => $earned,
+                'spent'       => $spent,
+                'net'         => $net,
+                'burnRate'    => $burnRate,
+                'redeemCount' => $redeemCount,
+                'outstanding' => $outstanding,
+            ],
+            'bySource'   => $bySource,
+            'trend'      => $trend,
+            'topRewards' => $topRewards,
+        ]);
+    }
+
     /** Chia khoảng [start,end] thành các rổ theo ngày/tuần/tháng. */
     private function makeBuckets(Carbon $start, Carbon $end, string $gran): array
     {

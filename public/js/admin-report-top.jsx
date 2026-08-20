@@ -135,6 +135,7 @@ function App() {
             <a href="/admin/reports/orders" className="rp-tab">Đơn hàng</a>
             <a href="/admin/reports/products" className="rp-tab">Sản phẩm bán chạy</a>
             <a href="/admin/reports/promotions" className="rp-tab">Khuyến mãi & voucher</a>
+            <a href="/admin/reports/points" className="rp-tab">Điểm thưởng</a>
           </div>
 
           <div className="rp-filters">

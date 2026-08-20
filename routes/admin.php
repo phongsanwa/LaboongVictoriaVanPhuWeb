@@ -83,6 +83,8 @@ Route::middleware(['auth', 'admin.perm'])->prefix('admin')->name('admin.')->grou
         Route::get('/reports/products/data', [ReportsController::class, 'productsData'])->name('reports.products.data');
         Route::get('/reports/promotions', [ReportsController::class, 'promotions'])->name('reports.promotions');
         Route::get('/reports/promotions/data', [ReportsController::class, 'promotionsData'])->name('reports.promotions.data');
+        Route::get('/reports/points', [ReportsController::class, 'points'])->name('reports.points');
+        Route::get('/reports/points/data', [ReportsController::class, 'pointsData'])->name('reports.points.data');
     });
 
     // Email marketing — gửi email cho khách + quản lý mẫu email
