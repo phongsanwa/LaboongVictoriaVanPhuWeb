@@ -32,16 +32,33 @@ function App() {
 
   const comboEl = useRef(null); const combo = useRef(null);
   const statusEl = useRef(null); const statusCh = useRef(null);
+  const fulfillEl = useRef(null); const fulfillCh = useRef(null);
   const hourEl = useRef(null); const hourCh = useRef(null);
   const tableEl = useRef(null); const dt = useRef(null);
+  const allOrders = useRef([]);
+  const [modal, setModal] = useState(null); // { title, list }
 
   const load = () => {
     setLoading(true);
     const p = new URLSearchParams(filters.current);
     fetch(URLS.data + '?' + p.toString(), { headers: { Accept: 'application/json' } })
       .then(r => r.json())
-      .then(d => { setKpis(d.kpis); renderCharts(d); renderTable(d.daily); })
+      .then(d => { setKpis(d.kpis); allOrders.current = d.orders || []; renderCharts(d); renderTable(d.daily); })
       .catch(() => {}).finally(() => setLoading(false));
+  };
+
+  // Mở danh sách đơn khi bấm vào biểu đồ tròn
+  const openOrders = (kind, value) => {
+    const all = allOrders.current;
+    let list = [], title = '';
+    if (kind === 'type') {
+      list = all.filter(o => o.type === value);
+      title = value === 'ship' ? 'Đơn giao hàng' : 'Đơn tại quầy';
+    } else {
+      list = all.filter(o => o.statusLabel === value);
+      title = 'Đơn: ' + value;
+    }
+    setModal({ title, list });
   };
 
   const renderCharts = (d) => {
@@ -69,11 +86,11 @@ function App() {
     if (combo.current) { combo.current.destroy(); combo.current = null; }
     if (comboEl.current) { combo.current = new ApexCharts(comboEl.current, comboOpts); combo.current.render(); }
 
-    // Donut trạng thái
+    // Donut trạng thái (bấm để xem đơn)
     if (statusCh.current) { statusCh.current.destroy(); statusCh.current = null; }
     if (statusEl.current && d.status?.length) {
       statusCh.current = new ApexCharts(statusEl.current, {
-        chart: { type: 'donut', height: 320, fontFamily: 'inherit' },
+        chart: { type: 'donut', height: 320, fontFamily: 'inherit', events: { dataPointSelection: (e, ctx, cfg) => openOrders('status', d.status[cfg.dataPointIndex].label) } },
         series: d.status.map(s => s.value),
         labels: d.status.map(s => s.label),
         colors: d.status.map(s => s.color),
@@ -82,6 +99,21 @@ function App() {
         tooltip: { y: { formatter: (v) => vnd(v) + ' đơn' } },
       });
       statusCh.current.render();
+    }
+
+    // Donut Giao / Tại quầy (bấm để xem đơn)
+    if (fulfillCh.current) { fulfillCh.current.destroy(); fulfillCh.current = null; }
+    if (fulfillEl.current && d.fulfillment?.length) {
+      fulfillCh.current = new ApexCharts(fulfillEl.current, {
+        chart: { type: 'donut', height: 320, fontFamily: 'inherit', events: { dataPointSelection: (e, ctx, cfg) => openOrders('type', d.fulfillment[cfg.dataPointIndex].type) } },
+        series: d.fulfillment.map(f => f.value),
+        labels: d.fulfillment.map(f => f.label),
+        colors: ['#6B4FA0', '#1E8FA8'],
+        legend: { position: 'bottom' },
+        dataLabels: { enabled: true, formatter: (v) => Math.round(v) + '%' },
+        tooltip: { y: { formatter: (v) => vnd(v) + ' đơn' } },
+      });
+      fulfillCh.current.render();
     }
 
     // Đơn theo khung giờ
@@ -133,7 +165,7 @@ function App() {
         .on('change', function () { filters.current.store_id = this.value; load(); });
     }
     load();
-    return () => { try { combo.current?.destroy(); statusCh.current?.destroy(); hourCh.current?.destroy(); dt.current?.destroy(); } catch (e) { /* ignore */ } };
+    return () => { try { combo.current?.destroy(); statusCh.current?.destroy(); fulfillCh.current?.destroy(); hourCh.current?.destroy(); dt.current?.destroy(); } catch (e) { /* ignore */ } };
   }, []); // eslint-disable-line
 
   const setGranularity = (g) => { setGran(g); filters.current.granularity = g; load(); };
@@ -191,9 +223,17 @@ function App() {
             <div ref={comboEl} />
           </div>
 
+          <div style={{ fontSize: 12.5, color: 'var(--ink-3)', marginBottom: 10 }}>
+            💡 Bấm vào phần biểu đồ tròn (trạng thái, giao/tại quầy) để xem danh sách đơn tương ứng.
+          </div>
           <div className="rp-charts">
             <div className="rp-card"><div className="rp-card-t">Cơ cấu trạng thái đơn</div><div ref={statusEl} /></div>
-            <div className="rp-card"><div className="rp-card-t">Đơn theo khung giờ (giờ cao điểm)</div><div ref={hourEl} /></div>
+            <div className="rp-card"><div className="rp-card-t">Giao hàng / Tại quầy</div><div ref={fulfillEl} /></div>
+          </div>
+
+          <div className="rp-card" style={{ marginBottom: 20 }}>
+            <div className="rp-card-t">Đơn theo khung giờ (giờ cao điểm)</div>
+            <div ref={hourEl} />
           </div>
 
           <div className="rp-table-wrap">
@@ -202,6 +242,32 @@ function App() {
           </div>
         </div>
       </div>
+
+      {modal && (
+        <div className="modal-scrim" onClick={() => setModal(null)}>
+          <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 580, width: '100%' }}>
+            <div className="modal-h">
+              <div className="mh-ic"><Icon name="bag" size={20} /></div>
+              <div><h3>{modal.title}</h3><p>{modal.list.length} đơn</p></div>
+              <button className="x" onClick={() => setModal(null)}><Icon name="close" size={18} /></button>
+            </div>
+            <div className="modal-b" style={{ maxHeight: '60vh', overflowY: 'auto' }}>
+              {modal.list.length === 0 && <div style={{ padding: 16, color: 'var(--ink-3)', textAlign: 'center' }}>Không có đơn trong nhóm này.</div>}
+              {modal.list.map((o, i) => (
+                <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 4px', borderBottom: '1px solid var(--line, #f0f0f0)' }}>
+                  <span style={{ flexShrink: 0, color: o.type === 'ship' ? '#6B4FA0' : '#1E8FA8' }}><Icon name={o.type === 'ship' ? 'truck' : 'bag'} size={16} /></span>
+                  <div style={{ minWidth: 0, flex: 1 }}>
+                    <div style={{ fontWeight: 700, fontSize: 13.5 }}>{o.code} · <span style={{ fontWeight: 500 }}>{o.customer}</span></div>
+                    <div style={{ fontSize: 12, color: 'var(--ink-3)' }}>{o.date} · {o.statusLabel}</div>
+                  </div>
+                  <div style={{ fontWeight: 800, fontSize: 13.5, whiteSpace: 'nowrap' }}>{vnd(o.total)}đ</div>
+                </div>
+              ))}
+            </div>
+            <div className="modal-f"><button className="btn ghost" onClick={() => setModal(null)}>Đóng</button></div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
