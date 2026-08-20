@@ -186,6 +186,7 @@ function App() {
             <a href="/admin/reports/customers" className="rp-tab on">Tổng quan khách hàng</a>
             <a href="/admin/reports/new-customers" className="rp-tab">Khách hàng mới</a>
             <a href="/admin/reports/returning" className="rp-tab">Khách quay lại</a>
+            <a href="/admin/reports/top-spenders" className="rp-tab">Top chi tiêu</a>
           </div>
 
           {/* Bộ lọc */}

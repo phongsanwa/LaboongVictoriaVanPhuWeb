@@ -332,6 +332,99 @@ class ReportsController extends Controller
         ]);
     }
 
+    /* ─────────── Top khách chi tiêu ─────────── */
+
+    public function topSpenders()
+    {
+        $admin = Auth::user();
+
+        return view('admin.reports.top-spenders', [
+            'reportData' => [
+                'admin' => [
+                    'name'     => $admin->name,
+                    'email'    => $admin->email,
+                    'initials' => $this->initials($admin->name),
+                ],
+                'stores' => Store::orderBy('id')->get(['id', 'name'])
+                    ->map(fn ($s) => ['id' => $s->id, 'name' => $s->name])->all(),
+                'defaults' => [
+                    'from'  => now()->subYear()->toDateString(),
+                    'to'    => now()->toDateString(),
+                    'top_n' => 20,
+                ],
+                'urls' => [
+                    'data' => route('admin.reports.top-spenders.data'),
+                ],
+            ],
+        ]);
+    }
+
+    public function topSpendersData(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'from'     => ['nullable', 'date'],
+            'to'       => ['nullable', 'date'],
+            'top_n'    => ['nullable', 'integer', 'min:5', 'max:100'],
+            'store_id' => ['nullable', 'integer'],
+        ]);
+
+        $from = isset($data['from']) ? Carbon::parse($data['from'])->startOfDay() : now()->subYear()->startOfDay();
+        $to   = isset($data['to']) ? Carbon::parse($data['to'])->endOfDay() : now()->endOfDay();
+        $topN = (int) ($data['top_n'] ?? 20);
+        $storeId = $data['store_id'] ?? null;
+
+        // Doanh thu theo khách từ đơn HOÀN TẤT trong khoảng.
+        $agg = Order::where('status', 'COMPLETED')
+            ->when($storeId, fn ($q) => $q->where('store_id', $storeId))
+            ->whereBetween('created_at', [$from, $to])
+            ->selectRaw('customer_id, COUNT(*) as orders, SUM(total_amount) as revenue, MAX(created_at) as last_at')
+            ->groupBy('customer_id')
+            ->orderByDesc('revenue')
+            ->get();
+
+        $custIds = $agg->pluck('customer_id')->all();
+        $customers = Customer::with(['user:id,name,phone', 'store:id,name'])
+            ->whereIn('id', $custIds)->get()->keyBy('id');
+
+        $ranked = $agg->map(function ($r) use ($customers) {
+            $c = $customers->get($r->customer_id);
+            $orders  = (int) $r->orders;
+            $revenue = (int) $r->revenue;
+
+            return [
+                'name'    => $c?->user?->name ?? ('KH #' . $r->customer_id),
+                'phone'   => $c?->user?->phone ?? '',
+                'store'   => $c?->store?->name ?? '—',
+                'orders'  => $orders,
+                'revenue' => $revenue,
+                'aov'     => $orders > 0 ? (int) round($revenue / $orders) : 0,
+                'last'    => $r->last_at ? Carbon::parse($r->last_at)->setTimezone('Asia/Ho_Chi_Minh')->format('d/m/Y') : '—',
+            ];
+        })->values();
+
+        $totalRevenue    = (int) $ranked->sum('revenue');
+        $payingCustomers = $ranked->count();
+        $avgPerCustomer  = $payingCustomers > 0 ? (int) round($totalRevenue / $payingCustomers) : 0;
+        $top10Revenue    = (int) $ranked->take(10)->sum('revenue');
+        $top10Share      = $totalRevenue > 0 ? round($top10Revenue / $totalRevenue * 100, 1) : 0.0;
+        $topCustomer     = $ranked->first();
+
+        return response()->json([
+            'kpis' => [
+                'totalRevenue'    => $totalRevenue,
+                'payingCustomers' => $payingCustomers,
+                'avgPerCustomer'  => $avgPerCustomer,
+                'top10Share'      => $top10Share,
+                'topName'         => $topCustomer['name'] ?? '—',
+                'topRevenue'      => $topCustomer['revenue'] ?? 0,
+            ],
+            // Top N cho biểu đồ (từ cao xuống thấp)
+            'top'   => $ranked->take($topN)->values(),
+            // Toàn bộ cho bảng
+            'all'   => $ranked,
+        ]);
+    }
+
     /** Chia khoảng [start,end] thành các rổ theo ngày/tuần/tháng. */
     private function makeBuckets(Carbon $start, Carbon $end, string $gran): array
     {
