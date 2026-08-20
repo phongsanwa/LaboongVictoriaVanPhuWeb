@@ -5,12 +5,14 @@
   margin-bottom: 18px; padding: 16px; border-radius: 14px;
   background: var(--card, #fff); border: 1px solid var(--line, #eee);
 }
-.rp-fld { display: flex; flex-direction: column; gap: 5px; }
+.rp-fld { display: flex; flex-direction: column; gap: 5px; flex: 1 1 210px; min-width: 0; }
 .rp-fld > label { font-size: 12.5px; font-weight: 700; color: var(--ink-2); }
 .rp-fld .flat-inp {
   padding: 9px 12px; border: 1.5px solid var(--line, #ddd); border-radius: 10px;
-  background: var(--card, #fff); color: var(--ink); font-size: 14px; min-width: 210px;
+  background: var(--card, #fff); color: var(--ink); font-size: 14px; width: 100%; box-sizing: border-box;
 }
+/* Select2 trong bộ lọc chiếm đủ chiều rộng cột */
+.rp-fld .select2-container { width: 100% !important; }
 
 .rp-kpis {
   display: grid; grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -40,7 +42,13 @@
 .rp-card .rp-card-t { font-weight: 800; font-size: 15px; margin-bottom: 10px; }
 
 .rp-table-wrap { padding: 16px 18px; border-radius: 14px; background: var(--card, #fff); border: 1px solid var(--line, #eee); }
+/* Bảng cuộn ngang trên màn hẹp thay vì tràn trang */
+.rp-table-wrap .dt-container { overflow-x: auto; }
+.rp-table-wrap table.dataTable { min-width: 620px; }
 table.dataTable thead th { font-weight: 700; }
+/* Hàng điều khiển (tìm kiếm / số dòng / phân trang) tự xuống dòng */
+.dt-container .dt-layout-row { flex-wrap: wrap; gap: 8px; row-gap: 10px; }
+.dt-container .dt-search input { max-width: 100%; }
 .rp-tag { font-size: 11.5px; font-weight: 700; padding: 2px 9px; border-radius: 999px; white-space: nowrap; }
 .rp-tag.active   { background: rgba(22,163,74,.12); color: #16A34A; }
 .rp-tag.inactive { background: rgba(212,88,75,.12); color: #D4584B; }
@@ -54,3 +62,11 @@ table.dataTable thead th { font-weight: 700; }
 }
 .select2-container--default .select2-selection--single .select2-selection__rendered { line-height: 38px; color: var(--ink); }
 .select2-container--default .select2-selection--single .select2-selection__arrow { height: 38px; }
+
+/* ── Mobile ── */
+@media (max-width: 640px) {
+  .rp-filters { flex-direction: column; align-items: stretch; padding: 14px; }
+  .rp-fld { flex: 1 1 auto; width: 100%; }
+  .rp-kpi .k-val { font-size: 22px; }
+  .rp-card, .rp-table-wrap { padding: 14px; }
+}
