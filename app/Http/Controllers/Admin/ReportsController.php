@@ -425,6 +425,256 @@ class ReportsController extends Controller
         ]);
     }
 
+    /* ─────────── Phân tích RFM ─────────── */
+
+    /** Bảng nhãn nhóm RFM theo (R,F) điểm 1..5 + màu. */
+    private const RFM_GRID = [
+        5 => [1 => 'new', 2 => 'potential', 3 => 'potential', 4 => 'loyal', 5 => 'champions'],
+        4 => [1 => 'promising', 2 => 'potential', 3 => 'loyal', 4 => 'loyal', 5 => 'champions'],
+        3 => [1 => 'about_sleep', 2 => 'attention', 3 => 'attention', 4 => 'loyal', 5 => 'loyal'],
+        2 => [1 => 'hibernating', 2 => 'at_risk', 3 => 'at_risk', 4 => 'cant_lose', 5 => 'cant_lose'],
+        1 => [1 => 'lost', 2 => 'hibernating', 3 => 'at_risk', 4 => 'cant_lose', 5 => 'cant_lose'],
+    ];
+
+    private const RFM_META = [
+        'champions'   => ['label' => 'Nhà vô địch',            'color' => '#0F623F'],
+        'loyal'       => ['label' => 'Trung thành',            'color' => '#1AA86A'],
+        'potential'   => ['label' => 'Tiềm năng trung thành',  'color' => '#1E8FA8'],
+        'new'         => ['label' => 'Khách mới',              'color' => '#4FC3D9'],
+        'promising'   => ['label' => 'Có triển vọng',          'color' => '#7BC96F'],
+        'attention'   => ['label' => 'Cần chú ý',              'color' => '#C99A2E'],
+        'about_sleep' => ['label' => 'Sắp rời bỏ',             'color' => '#E0A458'],
+        'at_risk'     => ['label' => 'Nguy cơ rời bỏ',         'color' => '#E07A5F'],
+        'cant_lose'   => ['label' => 'Không thể để mất',       'color' => '#D4584B'],
+        'hibernating' => ['label' => 'Ngủ đông',               'color' => '#9B8AA0'],
+        'lost'        => ['label' => 'Đã mất',                 'color' => '#8A9199'],
+    ];
+
+    public function rfm()
+    {
+        $admin = Auth::user();
+
+        return view('admin.reports.rfm', [
+            'reportData' => [
+                'admin' => ['name' => $admin->name, 'email' => $admin->email, 'initials' => $this->initials($admin->name)],
+                'stores' => Store::orderBy('id')->get(['id', 'name'])->map(fn ($s) => ['id' => $s->id, 'name' => $s->name])->all(),
+                'urls' => ['data' => route('admin.reports.rfm.data')],
+            ],
+        ]);
+    }
+
+    public function rfmData(Request $request): JsonResponse
+    {
+        $data = $request->validate(['store_id' => ['nullable', 'integer']]);
+        $storeId = $data['store_id'] ?? null;
+
+        $agg = Order::where('status', 'COMPLETED')
+            ->when($storeId, fn ($q) => $q->where('store_id', $storeId))
+            ->selectRaw('customer_id, COUNT(*) as freq, SUM(total_amount) as monetary, MAX(created_at) as last_at')
+            ->groupBy('customer_id')
+            ->get();
+
+        if ($agg->isEmpty()) {
+            return response()->json(['kpis' => ['total' => 0], 'segments' => [], 'grid' => [], 'customers' => []]);
+        }
+
+        $now = now();
+        $recency = []; $frequency = []; $monetary = [];
+        foreach ($agg as $r) {
+            $recency[$r->customer_id]   = Carbon::parse($r->last_at)->diffInDays($now);
+            $frequency[$r->customer_id] = (int) $r->freq;
+            $monetary[$r->customer_id]  = (int) $r->monetary;
+        }
+
+        $rScore = $this->quintile($recency, false);   // recency thấp = tốt
+        $fScore = $this->quintile($frequency, true);
+        $mScore = $this->quintile($monetary, true);
+
+        $custIds = array_keys($recency);
+        $customers = Customer::with('user:id,name,phone')->whereIn('id', $custIds)->get()->keyBy('id');
+
+        $rows = [];
+        $segCount = []; $segMonetary = [];
+        $grid = []; // grid[r][f] = count
+        foreach ($custIds as $id) {
+            $r = $rScore[$id]; $f = $fScore[$id]; $m = $mScore[$id];
+            $seg = self::RFM_GRID[$r][$f] ?? 'attention';
+
+            $segCount[$seg] = ($segCount[$seg] ?? 0) + 1;
+            $segMonetary[$seg] = ($segMonetary[$seg] ?? 0) + $monetary[$id];
+            $grid[$r][$f] = ($grid[$r][$f] ?? 0) + 1;
+
+            $rows[] = [
+                'name'    => $customers->get($id)?->user?->name ?? ('KH #' . $id),
+                'phone'   => $customers->get($id)?->user?->phone ?? '',
+                'recency' => $recency[$id],
+                'freq'    => $frequency[$id],
+                'monetary'=> $monetary[$id],
+                'r' => $r, 'f' => $f, 'm' => $m,
+                'seg'     => self::RFM_META[$seg]['label'],
+            ];
+        }
+
+        // Sắp nhóm theo số lượng giảm dần
+        $segments = [];
+        foreach ($segCount as $key => $cnt) {
+            $segments[] = [
+                'key'      => $key,
+                'label'    => self::RFM_META[$key]['label'],
+                'color'    => self::RFM_META[$key]['color'],
+                'count'    => $cnt,
+                'monetary' => $segMonetary[$key] ?? 0,
+            ];
+        }
+        usort($segments, fn ($a, $b) => $b['count'] <=> $a['count']);
+
+        // Lưới heatmap R×F (đủ 5×5)
+        $heat = [];
+        for ($r = 5; $r >= 1; $r--) {
+            $rowData = [];
+            for ($f = 1; $f <= 5; $f++) {
+                $rowData[] = ['x' => 'F' . $f, 'y' => $grid[$r][$f] ?? 0];
+            }
+            $heat[] = ['name' => 'R' . $r, 'data' => $rowData];
+        }
+
+        $total = count($custIds);
+        $champ = $segCount['champions'] ?? 0;
+        $risk  = ($segCount['at_risk'] ?? 0) + ($segCount['cant_lose'] ?? 0);
+        $lost  = ($segCount['lost'] ?? 0) + ($segCount['hibernating'] ?? 0);
+
+        return response()->json([
+            'kpis' => [
+                'total'     => $total,
+                'champions' => $champ,
+                'atRisk'    => $risk,
+                'lost'      => $lost,
+            ],
+            'segments'  => $segments,
+            'grid'      => $heat,
+            'customers' => $rows,
+        ]);
+    }
+
+    /** Chấm điểm ngũ phân vị 1..5. $higherBetter=false đảo cho recency. */
+    private function quintile(array $vals, bool $higherBetter): array
+    {
+        $n = count($vals);
+        if ($n === 0) return [];
+        asort($vals); // theo giá trị tăng dần, giữ key
+        $scores = [];
+        $i = 0;
+        foreach ($vals as $key => $_) {
+            $q = (int) min(5, floor((($i + 0.5) / $n) * 5) + 1);
+            $scores[$key] = $higherBetter ? $q : (6 - $q);
+            $i++;
+        }
+        return $scores;
+    }
+
+    /* ─────────── Cohort retention theo tháng ─────────── */
+
+    public function cohort()
+    {
+        $admin = Auth::user();
+
+        return view('admin.reports.cohort', [
+            'reportData' => [
+                'admin' => ['name' => $admin->name, 'email' => $admin->email, 'initials' => $this->initials($admin->name)],
+                'stores' => Store::orderBy('id')->get(['id', 'name'])->map(fn ($s) => ['id' => $s->id, 'name' => $s->name])->all(),
+                'urls' => ['data' => route('admin.reports.cohort.data')],
+            ],
+        ]);
+    }
+
+    public function cohortData(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'store_id' => ['nullable', 'integer'],
+            'months'   => ['nullable', 'integer', 'min:3', 'max:24'],
+        ]);
+        $storeId = $data['store_id'] ?? null;
+        $months  = (int) ($data['months'] ?? 12);
+
+        $earliest = now()->copy()->subMonths($months - 1)->startOfMonth();
+
+        // Đơn hoàn tất từ tháng cohort sớm nhất tới nay.
+        $orders = Order::where('status', 'COMPLETED')
+            ->when($storeId, fn ($q) => $q->where('store_id', $storeId))
+            ->where('created_at', '>=', $earliest)
+            ->orderBy('created_at')
+            ->get(['customer_id', 'created_at']);
+
+        // Tháng mua ĐẦU của mỗi khách (trong phạm vi xét) = cohort.
+        $firstMonth = [];       // customer_id => 'Y-m'
+        $activity = [];         // 'Y-m' cohort => [monthIndex => set(customer_id)]
+        $cohortSet = [];        // 'Y-m' => set(customer_id)
+
+        foreach ($orders as $o) {
+            $cid = $o->customer_id;
+            $ym  = $o->created_at->format('Y-m');
+            if (!isset($firstMonth[$cid])) {
+                $firstMonth[$cid] = $ym;
+                $cohortSet[$ym][$cid] = true;
+            }
+            $cohort = $firstMonth[$cid];
+            $idx = $this->monthDiff($cohort, $ym);
+            $activity[$cohort][$idx][$cid] = true;
+        }
+
+        // Dựng ma trận cohort theo thứ tự tháng.
+        $cohortMonths = [];
+        for ($i = 0; $i < $months; $i++) {
+            $cohortMonths[] = now()->copy()->subMonths($months - 1 - $i)->format('Y-m');
+        }
+
+        $cohorts = [];
+        $curveSum = array_fill(0, $months, 0.0);
+        $curveCnt = array_fill(0, $months, 0);
+
+        foreach ($cohortMonths as $ym) {
+            $size = isset($cohortSet[$ym]) ? count($cohortSet[$ym]) : 0;
+            if ($size === 0) {
+                $cohorts[] = ['month' => $this->ymLabel($ym), 'size' => 0, 'values' => []];
+                continue;
+            }
+            $maxIdx = $this->monthDiff($ym, now()->format('Y-m'));
+            $values = [];
+            for ($k = 0; $k <= $maxIdx && $k < $months; $k++) {
+                $act = isset($activity[$ym][$k]) ? count($activity[$ym][$k]) : 0;
+                $pct = round($act / $size * 100, 1);
+                $values[] = $pct;
+                $curveSum[$k] += $pct;
+                $curveCnt[$k]++;
+            }
+            $cohorts[] = ['month' => $this->ymLabel($ym), 'size' => $size, 'values' => $values];
+        }
+
+        $avgCurve = [];
+        for ($k = 0; $k < $months; $k++) {
+            if ($curveCnt[$k] > 0) $avgCurve[] = round($curveSum[$k] / $curveCnt[$k], 1);
+        }
+
+        return response()->json([
+            'cohorts'  => $cohorts,
+            'avgCurve' => $avgCurve,
+            'months'   => $months,
+        ]);
+    }
+
+    private function monthDiff(string $fromYm, string $toYm): int
+    {
+        [$fy, $fm] = array_map('intval', explode('-', $fromYm));
+        [$ty, $tm] = array_map('intval', explode('-', $toYm));
+        return ($ty - $fy) * 12 + ($tm - $fm);
+    }
+
+    private function ymLabel(string $ym): string
+    {
+        [$y, $m] = explode('-', $ym);
+        return $m . '/' . $y;
+    }
+
     /** Chia khoảng [start,end] thành các rổ theo ngày/tuần/tháng. */
     private function makeBuckets(Carbon $start, Carbon $end, string $gran): array
     {
