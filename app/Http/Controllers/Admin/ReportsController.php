@@ -55,37 +55,48 @@ class ReportsController extends Controller
         $to   = isset($data['to']) ? Carbon::parse($data['to'])->endOfDay() : now()->endOfDay();
         $inactiveDays = (int) ($data['inactive_days'] ?? 30);
         $storeId = $data['store_id'] ?? null;
+        $testIds = $this->testIds();
 
-        $storeFilter = fn ($q) => $storeId ? $q->where('store_id', $storeId) : $q;
+        // Loại tài khoản thử: Customer theo id, Order theo customer_id.
+        $custFilter = function ($q) use ($storeId, $testIds) {
+            if ($storeId) $q->where('store_id', $storeId);
+            if ($testIds) $q->whereNotIn('id', $testIds);
+            return $q;
+        };
+        $orderFilter = function ($q) use ($storeId, $testIds) {
+            if ($storeId) $q->where('store_id', $storeId);
+            if ($testIds) $q->whereNotIn('customer_id', $testIds);
+            return $q;
+        };
 
         // ─── Chỉ số khách hàng (snapshot hiện tại) ───
-        $total     = $storeFilter(Customer::query())->count();
-        $buyers    = $storeFilter(Customer::query())->where('total_orders', '>=', 1)->count();
-        $returning = $storeFilter(Customer::query())->where('total_orders', '>=', 2)->count();
-        $newC      = $storeFilter(Customer::query())->whereBetween('created_at', [$from, $to])->count();
-        $active    = $storeFilter(Customer::query())
+        $total     = $custFilter(Customer::query())->count();
+        $buyers    = $custFilter(Customer::query())->where('total_orders', '>=', 1)->count();
+        $returning = $custFilter(Customer::query())->where('total_orders', '>=', 2)->count();
+        $newC      = $custFilter(Customer::query())->whereBetween('created_at', [$from, $to])->count();
+        $active    = $custFilter(Customer::query())
             ->where('last_purchase_at', '>=', now()->subDays(self::ACTIVE_DAYS))->count();
-        $inactive  = $storeFilter(Customer::query())
+        $inactive  = $custFilter(Customer::query())
             ->whereNotNull('last_purchase_at')
             ->where('last_purchase_at', '<', now()->subDays($inactiveDays))->count();
         $returnRate = $buyers > 0 ? round($returning / $buyers * 100, 1) : 0.0;
 
         // ─── Doanh thu / AOV (đơn HOÀN TẤT trong khoảng) ───
-        $rangeOrders = $storeFilter(Order::where('status', 'COMPLETED'))
+        $rangeOrders = $orderFilter(Order::where('status', 'COMPLETED'))
             ->whereBetween('created_at', [$from, $to]);
         $revenue     = (int) (clone $rangeOrders)->sum('total_amount');
         $ordersCount = (int) (clone $rangeOrders)->count();
         $aov         = $ordersCount > 0 ? (int) round($revenue / $ordersCount) : 0;
 
         // Doanh thu trung bình / khách (theo tổng chi tiêu trọn đời của KH có mua)
-        $lifetimeRevenue = (int) $storeFilter(Customer::query())->sum('total_spent');
+        $lifetimeRevenue = (int) $custFilter(Customer::query())->sum('total_spent');
         $revenuePerCustomer = $buyers > 0 ? (int) round($lifetimeRevenue / $buyers) : 0;
 
         // ─── Chart: khách mới theo 12 tháng gần nhất ───
         $newByMonth = [];
         for ($i = 11; $i >= 0; $i--) {
             $m = now()->startOfMonth()->subMonths($i);
-            $count = $storeFilter(Customer::query())
+            $count = $custFilter(Customer::query())
                 ->whereBetween('created_at', [$m->copy()->startOfMonth(), $m->copy()->endOfMonth()])
                 ->count();
             $newByMonth[] = ['label' => $m->format('m/Y'), 'value' => $count];
@@ -99,7 +110,7 @@ class ReportsController extends Controller
         ];
 
         // ─── Bảng khách hàng (DataTables) ───
-        $rows = $storeFilter(Customer::with(['user:id,name,phone', 'store:id,name']))
+        $rows = $custFilter(Customer::with(['user:id,name,phone', 'store:id,name']))
             ->orderByDesc('total_spent')
             ->get()
             ->map(function (Customer $c) use ($inactiveDays) {
@@ -186,8 +197,10 @@ class ReportsController extends Controller
         $prevFrom = $from->copy()->subDays($days)->startOfDay();
 
         // Lấy 1 lần tất cả ngày tạo trong [prevFrom, to] rồi chia rổ trong PHP.
+        $testIds = $this->testIds();
         $dates = Customer::query()
             ->when($storeId, fn ($q) => $q->where('store_id', $storeId))
+            ->when($testIds, fn ($q) => $q->whereNotIn('id', $testIds))
             ->whereBetween('created_at', [$prevFrom, $to])
             ->pluck('created_at');
 
@@ -276,8 +289,10 @@ class ReportsController extends Controller
         $storeId = $data['store_id'] ?? null;
 
         // Đơn HOÀN TẤT trong khoảng → nhóm theo khách để đếm số lần mua.
+        $testIds = $this->testIds();
         $orders = Order::where('status', 'COMPLETED')
             ->when($storeId, fn ($q) => $q->where('store_id', $storeId))
+            ->when($testIds, fn ($q) => $q->whereNotIn('customer_id', $testIds))
             ->whereBetween('created_at', [$from, $to])
             ->orderBy('created_at')
             ->get(['customer_id', 'created_at', 'total_amount'])
@@ -398,8 +413,10 @@ class ReportsController extends Controller
         $storeId = $data['store_id'] ?? null;
 
         // Doanh thu theo khách từ đơn HOÀN TẤT trong khoảng.
+        $testIds = $this->testIds();
         $agg = Order::where('status', 'COMPLETED')
             ->when($storeId, fn ($q) => $q->where('store_id', $storeId))
+            ->when($testIds, fn ($q) => $q->whereNotIn('customer_id', $testIds))
             ->whereBetween('created_at', [$from, $to])
             ->selectRaw('customer_id, COUNT(*) as orders, SUM(total_amount) as revenue, MAX(created_at) as last_at')
             ->groupBy('customer_id')
@@ -492,8 +509,10 @@ class ReportsController extends Controller
         $data = $request->validate(['store_id' => ['nullable', 'integer']]);
         $storeId = $data['store_id'] ?? null;
 
+        $testIds = $this->testIds();
         $agg = Order::where('status', 'COMPLETED')
             ->when($storeId, fn ($q) => $q->where('store_id', $storeId))
+            ->when($testIds, fn ($q) => $q->whereNotIn('customer_id', $testIds))
             ->selectRaw('customer_id, COUNT(*) as freq, SUM(total_amount) as monetary, MAX(created_at) as last_at')
             ->groupBy('customer_id')
             ->get();
@@ -623,8 +642,10 @@ class ReportsController extends Controller
         $earliest = now()->copy()->subMonths($months - 1)->startOfMonth();
 
         // Đơn hoàn tất từ tháng cohort sớm nhất tới nay.
+        $testIds = $this->testIds();
         $orders = Order::where('status', 'COMPLETED')
             ->when($storeId, fn ($q) => $q->where('store_id', $storeId))
+            ->when($testIds, fn ($q) => $q->whereNotIn('customer_id', $testIds))
             ->where('created_at', '>=', $earliest)
             ->orderBy('created_at')
             ->get(['customer_id', 'created_at']);
@@ -749,5 +770,11 @@ class ReportsController extends Controller
         $first = $parts[0] ?? '';
 
         return mb_strtoupper(mb_substr($first, 0, 1) . mb_substr($last, 0, 1));
+    }
+
+    /** ID các tài khoản thử nghiệm — loại khỏi mọi báo cáo. */
+    private function testIds(): array
+    {
+        return Customer::where('is_test', true)->pluck('id')->all();
     }
 }

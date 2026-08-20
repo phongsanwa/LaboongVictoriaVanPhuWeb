@@ -158,6 +158,7 @@ class CustomersController extends Controller
                 'date_of_birth' => $c->date_of_birth?->toDateString(),
                 'gender' => $c->gender,
                 'status' => $c->user->status === 'active' ? 'on' : 'off',
+                'is_test' => (bool) $c->is_test,
                 'online' => $c->user->isOnline(),
                 'lastSeen' => $this->lastSeenLabel($c->user->last_seen_at, $now),
                 'visits' => $c->transactions_count,
@@ -233,6 +234,14 @@ class CustomersController extends Controller
         return response()->json(['customer' => $this->present($customer->fresh(['user', 'store', 'tier']))]);
     }
 
+    /** Bật/tắt cờ tài khoản thử nghiệm (loại khỏi báo cáo). */
+    public function toggleTest(Customer $customer)
+    {
+        $customer->update(['is_test' => !$customer->is_test]);
+
+        return response()->json(['customer' => $this->present($customer->fresh(['user', 'store', 'tier']))]);
+    }
+
     /**
      * Xoá vĩnh viễn khách hàng cùng toàn bộ dữ liệu liên quan.
      * orders là restrictOnDelete và daily_checkins không có FK nên xoá tay;
@@ -278,6 +287,7 @@ class CustomersController extends Controller
             'spent'      => (float) $c->total_spent,
             'date_of_birth' => $c->date_of_birth?->toDateString(),
             'gender'     => $c->gender,
+            'is_test'    => (bool) $c->is_test,
             'tx'         => [],
         ];
     }
