@@ -89,12 +89,46 @@ const IOS_GUIDE_HTML = (HOME.iosGuideHtml && HOME.iosGuideHtml.trim()) ? HOME.io
 const BANNERS = Array.isArray(HOME.banners) ? HOME.banners : [];
 
 /* Banner trang chủ: dùng Swiper.js (CDN). Có nhiều banner thì chạy slide + phân trang. */
-function BannerMedia({ b }) {
+function bannerHasText(b) {
+  return (b.textPos === "inside" || b.textPos === "outside") && ((b.title && b.title.trim()) || (b.subtitle && b.subtitle.trim()));
+}
+
+// Khối chữ (tiêu đề + phụ đề) hiển thị trên/dưới ảnh banner.
+function BannerText({ b, where }) {
+  const align = b.textAlign || "left";
   return (
-    <picture>
-      <source media="(max-width: 640px)" srcSet={b.mobile} />
-      <img src={b.desktop} alt={b.title || "Banner"} className="hb-img" loading="lazy" draggable={false} />
-    </picture>
+    <div className={"hb-text hb-text--" + where + " hb-text--" + align}>
+      {b.title && b.title.trim() ? <div className="hb-title">{b.title}</div> : null}
+      {b.subtitle && b.subtitle.trim() ? <div className="hb-sub">{b.subtitle}</div> : null}
+    </div>
+  );
+}
+
+function BannerMedia({ b }) {
+  const inside = b.textPos === "inside" && bannerHasText(b);
+  return (
+    <div className="hb-media">
+      <picture>
+        <source media="(max-width: 640px)" srcSet={b.mobile} />
+        <img src={b.desktop} alt={b.title || "Banner"} className="hb-img" loading="lazy" draggable={false} />
+      </picture>
+      {inside && <BannerText b={b} where="inside" />}
+    </div>
+  );
+}
+
+// Một slide: ảnh (chữ trong ảnh nếu chọn) + chữ ngoài ảnh (nếu chọn).
+function BannerSlide({ b }) {
+  const outside = b.textPos === "outside" && bannerHasText(b);
+  const media = b.link
+    ? <a href={b.link} className="hb-link" aria-label={b.title || "Banner"}><BannerMedia b={b} /></a>
+    : <BannerMedia b={b} />;
+  if (!outside) return media;
+  return (
+    <div className="hb-with-caption">
+      {media}
+      <BannerText b={b} where="outside" />
+    </div>
   );
 }
 
@@ -125,9 +159,7 @@ function HomeBanners() {
         <div className="swiper-wrapper">
           {BANNERS.map((b, i) => (
             <div className="swiper-slide" key={i}>
-              {b.link
-                ? <a href={b.link} className="hb-link" aria-label={b.title || "Banner"}><BannerMedia b={b} /></a>
-                : <BannerMedia b={b} />}
+              <BannerSlide b={b} />
             </div>
           ))}
         </div>

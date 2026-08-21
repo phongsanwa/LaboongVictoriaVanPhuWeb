@@ -72,6 +72,9 @@ function ImageDrop({ label, hint, url, onUrl, onErr }) {
 function BannerEditor({ initial, onClose, onSaved }) {
   const isEdit = !!initial.id;
   const [title, setTitle]     = useState(initial.title || "");
+  const [subtitle, setSubtitle] = useState(initial.subtitle || "");
+  const [textPos, setTextPos] = useState(initial.text_position || "none");
+  const [textAlign, setTextAlign] = useState(initial.text_align || "left");
   const [desktop, setDesktop] = useState(initial.image_desktop || null);
   const [mobile, setMobile]   = useState(initial.image_mobile || null);
   const [link, setLink]       = useState(initial.link_url || "");
@@ -91,6 +94,9 @@ function BannerEditor({ initial, onClose, onSaved }) {
     try {
       const payload = {
         title: title.trim() || null,
+        subtitle: subtitle.trim() || null,
+        text_position: textPos,
+        text_align: textAlign,
         image_desktop: desktop,
         image_mobile: mobile || null,
         link_url: link.trim() || null,
@@ -115,9 +121,48 @@ function BannerEditor({ initial, onClose, onSaved }) {
 
         <div className="modal-b" style={{ overflowY: "auto", flex: 1 }}>
           <div className="fld">
-            <label>Tên banner (nội bộ, không bắt buộc)</label>
+            <label>Tiêu đề (không bắt buộc)</label>
             <input className="inp" value={title} onChange={e => setTitle(e.target.value)} placeholder="VD: Khuyến mãi hè 2026" maxLength={150} />
+            <div style={{ fontSize: 12, color: "var(--ink-3)", marginTop: 6 }}>Dùng làm tên nội bộ. Nếu chọn hiển thị chữ bên dưới, tiêu đề này sẽ hiện trên slide.</div>
           </div>
+
+          <div className="fld">
+            <label>Mô tả / phụ đề (không bắt buộc)</label>
+            <textarea className="inp" value={subtitle} onChange={e => setSubtitle(e.target.value)} placeholder="VD: Mua 1 tặng 1 mọi ngày trong tuần" maxLength={300} rows={2} style={{ resize: "vertical" }} />
+          </div>
+
+          <div className="fld">
+            <label>Vị trí chữ trên slide</label>
+            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+              {[["none", "Không hiện chữ"], ["inside", "Chữ trong ảnh"], ["outside", "Chữ ngoài ảnh"]].map(([v, lbl]) => (
+                <button key={v} type="button"
+                  className={"btn " + (textPos === v ? "primary" : "ghost")}
+                  onClick={() => setTextPos(v)}
+                  style={{ flex: "1 1 auto", minWidth: 110, justifyContent: "center" }}>
+                  {textPos === v && <Icon name="check" size={14} color="#fff" />} {lbl}
+                </button>
+              ))}
+            </div>
+            <div style={{ fontSize: 12, color: "var(--ink-3)", marginTop: 6 }}>
+              “Chữ trong ảnh” đè tiêu đề & phụ đề lên ảnh. “Chữ ngoài ảnh” hiển thị chữ ngay bên dưới ảnh.
+            </div>
+          </div>
+
+          {textPos !== "none" && (
+            <div className="fld">
+              <label>Canh lề chữ</label>
+              <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                {[["left", "Trái"], ["center", "Giữa"], ["right", "Phải"]].map(([v, lbl]) => (
+                  <button key={v} type="button"
+                    className={"btn " + (textAlign === v ? "primary" : "ghost")}
+                    onClick={() => setTextAlign(v)}
+                    style={{ flex: "1 1 auto", minWidth: 80, justifyContent: "center" }}>
+                    {textAlign === v && <Icon name="check" size={14} color="#fff" />} {lbl}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
 
           <ImageDrop label="Banner desktop (bắt buộc)" hint="Ảnh ngang, hiển thị trên máy tính & màn hình rộng. Nên rộng tối thiểu 1200px."
             url={desktop} onUrl={setDesktop} onErr={setErr} />
@@ -278,6 +323,12 @@ function App() {
                 </div>
                 <div style={{ padding: 14 }}>
                   <div style={{ fontWeight: 800, fontSize: 15, marginBottom: 4, lineHeight: 1.35 }}>{n.title || "Banner"}</div>
+                  {n.subtitle && <div style={{ fontSize: 12.5, color: "var(--ink-2)", marginBottom: 6, lineHeight: 1.4 }}>{n.subtitle}</div>}
+                  {n.text_position && n.text_position !== "none" && (
+                    <div style={{ fontSize: 11.5, color: "var(--brand)", fontWeight: 700, marginBottom: 8, display: "inline-flex", alignItems: "center", gap: 5 }}>
+                      <Icon name="edit" size={12} /> {n.text_position === "inside" ? "Chữ trong ảnh" : "Chữ ngoài ảnh"}
+                    </div>
+                  )}
                   {n.link_url
                     ? <div style={{ fontSize: 12.5, color: "var(--ink-2)", marginBottom: 10, wordBreak: "break-all" }}><Icon name="link" size={12} /> {n.link_url}</div>
                     : <div style={{ fontSize: 12.5, color: "var(--ink-3)", marginBottom: 10 }}>Không có link</div>}
