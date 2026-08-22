@@ -33,7 +33,7 @@ class MenuPageController extends Controller
     private function buildMenuPageData(): array
     {
         // --- Products (available only, ordered by sort_order) ---
-        $products = Product::with('category')
+        $products = Product::with('category', 'comboItems.item')
             ->where('is_available', true)
             ->orderBy('sort_order')
             ->get();
@@ -98,6 +98,17 @@ class MenuPageController extends Controller
                 ];
             }
 
+            // Combo: danh sách món con (tên + số lượng) để hiển thị "Gồm: …".
+            $comboItems = [];
+            if ($p->is_combo) {
+                foreach ($p->comboItems as $ci) {
+                    $comboItems[] = [
+                        'name'     => $ci->item?->name ?? '',
+                        'quantity' => (int) $ci->quantity,
+                    ];
+                }
+            }
+
             return [
                 'id'         => 'p' . $p->id,
                 'cat'        => $catSlug,
@@ -110,6 +121,8 @@ class MenuPageController extends Controller
                 'img'        => $p->image_url ?: null,
                 'tags'       => $tags,
                 'available'  => (bool) $p->is_available,
+                'isCombo'    => (bool) $p->is_combo,
+                'comboItems' => $comboItems,
                 'variants'   => $variants,
             ];
         })->values()->toArray();

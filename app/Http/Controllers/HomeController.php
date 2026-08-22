@@ -164,10 +164,13 @@ class HomeController extends Controller
             ->orderBy('sort_order')->orderByDesc('id')
             ->get()
             ->map(fn (\App\Models\Banner $b) => [
-                'desktop' => $b->image_desktop,
-                'mobile'  => $b->image_mobile ?: $b->image_desktop,
-                'link'    => $b->link_url,
-                'title'   => $b->title,
+                'desktop'  => $b->image_desktop,
+                'mobile'   => $b->image_mobile ?: $b->image_desktop,
+                'link'     => $b->link_url,
+                'title'    => $b->title,
+                'subtitle' => $b->subtitle,
+                'textPos'  => $b->text_position ?: 'none',
+                'textAlign' => $b->text_align ?: 'left',
             ])->all();
     }
 

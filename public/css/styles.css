@@ -156,6 +156,40 @@ a { color: inherit; text-decoration: none; }
 }
 .hb-link { display: block; }
 .hb-img { width: 100%; height: auto; display: block; object-fit: cover; }
+.hb-media { position: relative; }
+
+/* Chữ trên slide (tiêu đề + phụ đề) — dùng chung cho chữ trong ảnh & ngoài ảnh */
+.hb-text { display: flex; flex-direction: column; gap: 6px; }
+.hb-title { font-weight: 800; font-size: 22px; line-height: 1.2; }
+.hb-sub { font-size: 14.5px; font-weight: 500; line-height: 1.4; opacity: .95; }
+.hb-text--left { text-align: left; align-items: flex-start; }
+.hb-text--center { text-align: center; align-items: center; }
+.hb-text--right { text-align: right; align-items: flex-end; }
+
+/* Chữ trong ảnh: đè lên ảnh, có lớp phủ tối để dễ đọc */
+.hb-text--inside {
+  position: absolute; inset: 0; z-index: 2;
+  justify-content: flex-end;
+  padding: clamp(14px, 4vw, 34px);
+  color: #fff;
+  text-shadow: 0 1px 12px rgba(0, 0, 0, .55);
+  background: linear-gradient(to top, rgba(0, 0, 0, .55) 0%, rgba(0, 0, 0, .12) 45%, rgba(0, 0, 0, 0) 75%);
+}
+
+/* Chữ ngoài ảnh: nằm dưới ảnh trong cùng khung slide */
+.hb-with-caption { display: flex; flex-direction: column; }
+.hb-text--outside {
+  padding: 14px 18px 16px;
+  color: var(--ink);
+  background: var(--card);
+}
+.hb-text--outside .hb-sub { color: var(--ink-2); opacity: 1; }
+
+@media (max-width: 640px) {
+  .hb-title { font-size: 18px; }
+  .hb-sub { font-size: 13px; }
+}
+
 /* Phân trang Swiper theo màu thương hiệu */
 .hb-swiper .swiper-pagination-bullet { background: #fff; opacity: .7; }
 .hb-swiper .swiper-pagination-bullet-active { background: var(--brand); opacity: 1; width: 22px; border-radius: 999px; }

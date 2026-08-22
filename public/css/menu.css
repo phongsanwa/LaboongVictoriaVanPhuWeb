@@ -92,6 +92,9 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
 .tg.new { background: color-mix(in srgb,#1E8FA8 14%, var(--card)); color: #1E8FA8; }
 .item-name { font-weight: 700; font-size: 14.5px; line-height: 1.3; letter-spacing: -.01em; }
 .item-desc { font-size: 12px; color: var(--ink-2); margin-top: 3px; line-height: 1.4; overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; flex: 1; }
+/* Combo: nhãn + danh sách món con trong thẻ */
+.combo-badge { display: inline-block; margin-left: 6px; vertical-align: middle; font-size: 9.5px; font-weight: 800; letter-spacing: .04em; color: #fff; background: linear-gradient(135deg,#D4584B,#F2854A); padding: 1.5px 6px; border-radius: 999px; }
+.item-combo { font-size: 11.5px; color: var(--brand); font-weight: 600; margin-top: 4px; line-height: 1.4; overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
 .item-foot { display: flex; align-items: center; gap: 8px; margin-top: 8px; }
 .item-price-wrap { display: flex; align-items: baseline; flex-wrap: wrap; gap: 3px; flex: 1; }
 .item-price { font-family: var(--display); font-weight: 800; font-size: 16px; }

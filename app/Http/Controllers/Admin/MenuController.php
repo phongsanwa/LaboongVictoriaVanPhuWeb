@@ -60,6 +60,8 @@ class MenuController extends Controller
             'color'         => ['nullable', 'string', 'max:255'],
             'tags'          => ['nullable', 'string'],
             'is_available'  => ['nullable'],
+            'is_combo'      => ['nullable'],
+            'combo_items'   => ['nullable', 'string'],
             'prep_minutes'  => ['nullable', 'integer', 'min:0', 'max:120'],
             'image'         => ['nullable', 'image', 'max:4096', 'mimes:jpg,jpeg,png,webp'],
         ]);
@@ -68,6 +70,7 @@ class MenuController extends Controller
         $slug      = $this->uniqueSlug($data['name']);
         $sortOrder = (Product::max('sort_order') ?? 0) + 1;
         $imageUrl  = null;
+        $isCombo   = (bool) $request->input('is_combo', false);
 
         if ($request->hasFile('image')) {
             $path     = Storage::disk('public')->put('products', $request->file('image'));
@@ -76,6 +79,7 @@ class MenuController extends Controller
 
         $product = Product::create([
             'category_id'  => $category->id,
+            'is_combo'     => $isCombo,
             'name'         => $data['name'],
             'slug'         => $slug,
             'description'  => $data['description'] ?? null,
@@ -88,11 +92,14 @@ class MenuController extends Controller
             'sort_order'   => $sortOrder,
         ]);
 
-        if ($data['category_slug'] !== 'topping') {
+        // Combo dùng giá cố định, không có size/topping → không sinh variant mặc định.
+        if ($isCombo) {
+            $this->syncComboItems($product, $data['combo_items'] ?? null);
+        } elseif ($data['category_slug'] !== 'topping') {
             $this->createDefaultVariants($product);
         }
 
-        $product->load(['category', 'variants' => fn ($q) => $q->orderBy('sort_order')]);
+        $product->load(['category', 'variants' => fn ($q) => $q->orderBy('sort_order'), 'comboItems.item']);
 
         return response()->json(['product' => $this->presentProduct($product)], 201);
     }
@@ -108,6 +115,8 @@ class MenuController extends Controller
             'color'         => ['nullable', 'string', 'max:255'],
             'tags'          => ['nullable', 'string'],
             'is_available'  => ['nullable'],
+            'is_combo'      => ['nullable'],
+            'combo_items'   => ['nullable', 'string'],
             'prep_minutes'  => ['nullable', 'integer', 'min:0', 'max:120'],
             'image'         => ['nullable', 'image', 'max:4096', 'mimes:jpg,jpeg,png,webp'],
             'remove_image'  => ['nullable'],
@@ -115,6 +124,7 @@ class MenuController extends Controller
 
         $category = Category::where('slug', $data['category_slug'])->firstOrFail();
         $imageUrl = $product->image_url;
+        $isCombo  = (bool) $request->input('is_combo', false);
 
         if ($request->hasFile('image')) {
             // Delete old image
@@ -134,6 +144,7 @@ class MenuController extends Controller
 
         $product->update([
             'category_id'  => $category->id,
+            'is_combo'     => $isCombo,
             'name'         => $data['name'],
             'description'  => $data['description'] ?? null,
             'base_price'   => (int) $data['base_price'],
@@ -144,7 +155,16 @@ class MenuController extends Controller
             'prep_minutes' => $request->filled('prep_minutes') ? (int) $request->input('prep_minutes') : null,
         ]);
 
-        $product->load(['category', 'variants' => fn ($q) => $q->orderBy('sort_order')]);
+        if ($isCombo) {
+            // Chuyển thành combo → bỏ mọi variant cũ (nếu có) rồi lưu danh sách món con.
+            $product->variants()->delete();
+            $this->syncComboItems($product, $data['combo_items'] ?? null);
+        } else {
+            // Không còn là combo → xoá danh sách món con.
+            $product->comboItems()->delete();
+        }
+
+        $product->load(['category', 'variants' => fn ($q) => $q->orderBy('sort_order'), 'comboItems.item']);
 
         return response()->json(['product' => $this->presentProduct($product)]);
     }
@@ -300,13 +320,42 @@ class MenuController extends Controller
 
     private function buildProducts(): array
     {
-        return Product::with(['category', 'variants' => fn ($q) => $q->orderBy('sort_order')])
+        return Product::with(['category', 'variants' => fn ($q) => $q->orderBy('sort_order'), 'comboItems.item'])
             ->orderBy('category_id')
             ->orderBy('sort_order')
             ->get()
             ->map(fn (Product $p) => $this->presentProduct($p))
             ->values()
             ->toArray();
+    }
+
+    /** Lưu danh sách món con của combo từ chuỗi JSON [{product_id, quantity}, ...]. */
+    private function syncComboItems(Product $combo, ?string $json): void
+    {
+        $rows = json_decode($json ?? '[]', true);
+        if (! is_array($rows)) {
+            $rows = [];
+        }
+
+        $combo->comboItems()->delete();
+
+        $order = 0;
+        foreach ($rows as $row) {
+            $pid = (int) ($row['product_id'] ?? 0);
+            $qty = max(1, (int) ($row['quantity'] ?? 1));
+            // Món con phải tồn tại và không phải chính combo này (tránh vòng lặp).
+            if ($pid <= 0 || $pid === $combo->id) {
+                continue;
+            }
+            if (! Product::where('id', $pid)->where('is_combo', false)->exists()) {
+                continue;
+            }
+            $combo->comboItems()->create([
+                'item_product_id' => $pid,
+                'quantity'        => $qty,
+                'sort_order'      => $order++,
+            ]);
+        }
     }
 
     private function buildVariantGroups(): array
@@ -330,6 +379,17 @@ class MenuController extends Controller
             $tags = is_array($product->tags) ? $product->tags : (json_decode($product->tags, true) ?? []);
         }
 
+        $comboItems = [];
+        if ($product->is_combo && $product->relationLoaded('comboItems')) {
+            foreach ($product->comboItems as $ci) {
+                $comboItems[] = [
+                    'product_id' => $ci->item_product_id,
+                    'name'       => $ci->item?->name ?? 'Món đã xoá',
+                    'quantity'   => (int) $ci->quantity,
+                ];
+            }
+        }
+
         return [
             'id'        => $product->id,
             'cat'       => $product->category->slug,
@@ -342,6 +402,8 @@ class MenuController extends Controller
             'available' => (bool) $product->is_available,
             'prep_minutes' => $product->prep_minutes,
             'sold'      => 0,
+            'is_combo'  => (bool) $product->is_combo,
+            'combo_items' => $comboItems,
             'variants'  => $this->groupVariants($product),
         ];
     }

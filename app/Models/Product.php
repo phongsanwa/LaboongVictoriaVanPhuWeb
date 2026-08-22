@@ -13,6 +13,7 @@ class Product extends Model
 
     protected $fillable = [
         'category_id',
+        'is_combo',
         'name',
         'slug',
         'description',
@@ -29,6 +30,7 @@ class Product extends Model
     {
         return [
             'is_available' => 'boolean',
+            'is_combo'     => 'boolean',
             'tags'         => 'array',
         ];
     }
@@ -56,5 +58,11 @@ class Product extends Model
     public function orderItems(): HasMany
     {
         return $this->hasMany(OrderItem::class);
+    }
+
+    /** Các món con thuộc combo này (chỉ dùng khi is_combo = true). */
+    public function comboItems(): HasMany
+    {
+        return $this->hasMany(ComboItem::class, 'combo_id')->orderBy('sort_order');
     }
 }

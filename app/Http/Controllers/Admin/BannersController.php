@@ -115,6 +115,9 @@ class BannersController extends Controller
     {
         $data = $request->validate([
             'title'         => ['nullable', 'string', 'max:150'],
+            'subtitle'      => ['nullable', 'string', 'max:300'],
+            'text_position' => ['nullable', Rule::in(['none', 'inside', 'outside'])],
+            'text_align'    => ['nullable', Rule::in(['left', 'center', 'right'])],
             'image_desktop' => ['required', 'string', 'max:500'],
             'image_mobile'  => ['nullable', 'string', 'max:500'],
             'link_url'      => ['nullable', 'string', 'max:500'],
@@ -125,6 +128,9 @@ class BannersController extends Controller
 
         return [
             'title'         => trim($data['title'] ?? '') ?: null,
+            'subtitle'      => trim($data['subtitle'] ?? '') ?: null,
+            'text_position' => $data['text_position'] ?? 'none',
+            'text_align'    => $data['text_align'] ?? 'left',
             'image_desktop' => $data['image_desktop'],
             'image_mobile'  => $data['image_mobile'] ?? null,
             'link_url'      => trim($data['link_url'] ?? '') ?: null,
@@ -137,6 +143,9 @@ class BannersController extends Controller
         return [
             'id'            => $b->id,
             'title'         => $b->title ?? '',
+            'subtitle'      => $b->subtitle ?? '',
+            'text_position' => $b->text_position ?: 'none',
+            'text_align'    => $b->text_align ?: 'left',
             'image_desktop' => $b->image_desktop,
             'image_mobile'  => $b->image_mobile,
             'link_url'      => $b->link_url ?? '',
