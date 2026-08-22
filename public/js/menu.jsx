@@ -1077,6 +1077,11 @@ function App() {
               {c.items.map(m => {
                 const qty       = qtyOfItem(m.id);
                 const isTopping = m.cat === "topping";
+                // Combo: giá cố định, không có size/topping → thêm nhanh như topping.
+                const quickAdd  = isTopping || m.isCombo;
+                const comboText = (m.isCombo && Array.isArray(m.comboItems) && m.comboItems.length)
+                  ? "Gồm: " + m.comboItems.map(ci => ci.quantity > 1 ? `${ci.name} x${ci.quantity}` : ci.name).join(" + ")
+                  : "";
                 return (
                   <div className="item" key={m.id}>
                     <div className="item-thumb" style={{ background: m.grad }}>
@@ -1096,8 +1101,9 @@ function App() {
                           })}
                         </div>
                       )}
-                      <div className="item-name">{m.name}</div>
+                      <div className="item-name">{m.name}{m.isCombo && <span className="combo-badge">COMBO</span>}</div>
                       <div className="item-desc">{m.desc}</div>
+                      {comboText && <div className="item-combo">{comboText}</div>}
                       <div className="item-foot">
                         <div className="item-price-wrap">
                           {m.salePrice != null ? (
@@ -1110,7 +1116,7 @@ function App() {
                             <span className="item-price tnum">{fmt(m.price)}đ</span>
                           )}
                         </div>
-                        {isTopping
+                        {quickAdd
                           ? (qty === 0
                               ? <button className="add-btn" onClick={() => addSimple(m, 1)} aria-label="Thêm"><Icon name="plus" size={18} color="#fff" /></button>
                               : <div className="stepper">

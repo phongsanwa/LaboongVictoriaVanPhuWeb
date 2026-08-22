@@ -73,7 +73,7 @@ function makeInitialItems() {
 }
 
 /* ---- editor modal ---- */
-function MenuEditor({ initial, groups, onClose, onSave, saving }) {
+function MenuEditor({ initial, groups, allItems, onClose, onSave, saving }) {
   const isEdit = !!initial.id;
   const [name, setName] = useState(initial.name || "");
   const [cat, setCat] = useState(initial.cat || groups[0].key);
@@ -87,7 +87,26 @@ function MenuEditor({ initial, groups, onClose, onSave, saving }) {
   const [prepMin, setPrepMin] = useState(initial.prep_minutes ?? "");
   const [opts, setOpts] = useState(initial.opts || defaultOpts(initial.cat || groups[0].key));
   const [productVariants, setProductVariants] = useState(initial.variants || {});
+  const [isCombo, setIsCombo] = useState(!!initial.is_combo);
+  // Danh sách món con của combo: [{product_id, quantity}]
+  const [comboItems, setComboItems] = useState(() =>
+    (initial.combo_items || []).map(ci => ({ product_id: ci.product_id, quantity: ci.quantity || 1 })));
   const fileRef = useRef(null);
+
+  // Món có thể đưa vào combo: mọi món KHÔNG phải combo và khác chính nó.
+  const comboCandidates = (allItems || []).filter(p => !p.is_combo && p.id !== initial.id && typeof p.id === 'number');
+  const addComboItem = (pid) => {
+    const id = Number(pid);
+    if (!id) return;
+    setComboItems(list => list.some(ci => ci.product_id === id) ? list : [...list, { product_id: id, quantity: 1 }]);
+  };
+  const setComboQty = (pid, delta) => setComboItems(list => list.flatMap(ci => {
+    if (ci.product_id !== pid) return [ci];
+    const nq = ci.quantity + delta;
+    return nq <= 0 ? [] : [{ ...ci, quantity: nq }];
+  }));
+  const removeComboItem = (pid) => setComboItems(list => list.filter(ci => ci.product_id !== pid));
+  const comboName = (pid) => (allItems || []).find(p => p.id === pid)?.name || 'Món đã xoá';
 
   useEffect(() => {
     const h = e => { if (e.key === "Escape") onClose(); };
@@ -96,7 +115,7 @@ function MenuEditor({ initial, groups, onClose, onSave, saving }) {
 
   const grpIcon = (groups.find(g => g.key === cat) || groups[0]).ic;
   const toggleTag = (t) => setTags(ts => ts.includes(t) ? ts.filter(x => x !== t) : [...ts, t]);
-  const valid = name.trim() && Number(price) > 0;
+  const valid = name.trim() && Number(price) > 0 && (!isCombo || comboItems.length > 0);
   const toggleVariantAvail = (type, vname) => setProductVariants(pv => ({
     ...pv,
     [type]: (pv[type] || []).map(v => v.name === vname ? { ...v, available: !v.available } : v),
@@ -104,7 +123,7 @@ function MenuEditor({ initial, groups, onClose, onSave, saving }) {
 
   const submit = () => {
     if (!valid) return;
-    onSave({ ...initial, id: initial.id || (LIVE ? null : ("new" + Date.now())), name: name.trim(), cat, price: Number(price), desc: desc.trim(), grad, img: imgPrev, imgFile, hadImg: !!initial.img, tags, available, opts, variants: productVariants, prep_minutes: prepMin === "" ? null : Number(prepMin), sold: initial.sold || 0 });
+    onSave({ ...initial, id: initial.id || (LIVE ? null : ("new" + Date.now())), name: name.trim(), cat, price: Number(price), desc: desc.trim(), grad, img: imgPrev, imgFile, hadImg: !!initial.img, tags, available, opts, variants: isCombo ? {} : productVariants, is_combo: isCombo, combo_items: isCombo ? comboItems : [], prep_minutes: prepMin === "" ? null : Number(prepMin), sold: initial.sold || 0 });
   };
 
   const onFile = (e) => {
@@ -204,22 +223,67 @@ function MenuEditor({ initial, groups, onClose, onSave, saving }) {
             <div className={"switch" + (available ? " on" : "")} />
           </div>
 
-          {VARIANT_GROUPS.filter(g => (productVariants[g.key] || []).length > 0).map(g => (
-            <div key={g.key} className="fld" style={{ marginTop: 4 }}>
-              <label style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 2 }}>
-                <Icon name={g.ic} size={14} color="currentColor" /> {g.label}
+          <div className="switch-row" onClick={() => setIsCombo(c => !c)} style={{ cursor: "pointer" }}>
+            <div><div className="sl">Đây là combo</div><div className="sd">Gộp nhiều món lại, giá cố định, không chọn size/topping</div></div>
+            <div className={"switch" + (isCombo ? " on" : "")} />
+          </div>
+
+          {isCombo ? (
+            <div className="fld" style={{ marginTop: 4 }}>
+              <label style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                <Icon name="bag" size={14} color="currentColor" /> Các món trong combo
               </label>
-              {(productVariants[g.key] || []).map(v => (
-                <div key={v.name} className="switch-row" onClick={() => toggleVariantAvail(g.key, v.name)} style={{ cursor: "pointer", paddingTop: 8, paddingBottom: 8 }}>
-                  <div>
-                    <div className="sl">{v.name}</div>
-                    <div className="sd">{v.available ? "Đang bán" : "Đã tắt (chỉ món này)"}</div>
-                  </div>
-                  <div className={"switch" + (v.available ? " on" : "")} />
+              <div className="field">
+                <select className="select" style={{ width: "100%" }} value="" onChange={e => { addComboItem(e.target.value); e.target.value = ""; }}>
+                  <option value="">+ Thêm món vào combo…</option>
+                  {comboCandidates
+                    .filter(p => !comboItems.some(ci => ci.product_id === p.id))
+                    .map(p => <option key={p.id} value={p.id}>{p.name} — {fmt(p.price)}đ</option>)}
+                </select>
+                <span className="chev"><Icon name="chevdown" size={16} /></span>
+              </div>
+
+              {comboItems.length === 0 ? (
+                <div style={{ fontSize: 12.5, color: "var(--ink-3)", marginTop: 8 }}>Chưa có món nào. Hãy chọn ít nhất 1 món để tạo combo.</div>
+              ) : (
+                <div style={{ marginTop: 8, display: "flex", flexDirection: "column", gap: 6 }}>
+                  {comboItems.map(ci => (
+                    <div key={ci.product_id} className="switch-row" style={{ paddingTop: 8, paddingBottom: 8 }}>
+                      <div style={{ minWidth: 0 }}><div className="sl" style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{comboName(ci.product_id)}</div></div>
+                      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                        <div className="stepper" style={{ display: "inline-flex" }}>
+                          <button type="button" onClick={() => setComboQty(ci.product_id, -1)}><Icon name="minus" size={15} color="currentColor" /></button>
+                          <span className="qn">{ci.quantity}</span>
+                          <button type="button" onClick={() => setComboQty(ci.product_id, 1)}><Icon name="plus" size={15} color="currentColor" /></button>
+                        </div>
+                        <button type="button" className="mca" title="Bỏ khỏi combo" onClick={() => removeComboItem(ci.product_id)} style={{ color: "var(--hot)" }}><Icon name="trash" size={15} /></button>
+                      </div>
+                    </div>
+                  ))}
                 </div>
-              ))}
+              )}
+              <div style={{ fontSize: 11.5, color: "var(--ink-3)", marginTop: 6 }}>
+                Giá combo là giá cố định bạn nhập ở ô "Giá" phía trên (không tự cộng giá các món lẻ).
+              </div>
             </div>
-          ))}
+          ) : (
+            VARIANT_GROUPS.filter(g => (productVariants[g.key] || []).length > 0).map(g => (
+              <div key={g.key} className="fld" style={{ marginTop: 4 }}>
+                <label style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 2 }}>
+                  <Icon name={g.ic} size={14} color="currentColor" /> {g.label}
+                </label>
+                {(productVariants[g.key] || []).map(v => (
+                  <div key={v.name} className="switch-row" onClick={() => toggleVariantAvail(g.key, v.name)} style={{ cursor: "pointer", paddingTop: 8, paddingBottom: 8 }}>
+                    <div>
+                      <div className="sl">{v.name}</div>
+                      <div className="sd">{v.available ? "Đang bán" : "Đã tắt (chỉ món này)"}</div>
+                    </div>
+                    <div className={"switch" + (v.available ? " on" : "")} />
+                  </div>
+                ))}
+              </div>
+            ))
+          )}
         </div>
         <div className="modal-f">
           <button className="btn ghost" onClick={onClose}>Huỷ</button>
@@ -381,6 +445,8 @@ function App() {
       form.append('color', item.grad || '');
       form.append('tags', JSON.stringify(item.tags || []));
       form.append('is_available', item.available ? '1' : '0');
+      form.append('is_combo', item.is_combo ? '1' : '0');
+      form.append('combo_items', JSON.stringify(item.combo_items || []));
       form.append('prep_minutes', item.prep_minutes != null ? String(item.prep_minutes) : '');
       if (item.imgFile) form.append('image', item.imgFile);
       else if (item.hadImg && !item.img) form.append('remove_image', '1');
@@ -583,8 +649,10 @@ function App() {
                       })}
                     </div>
                   )}
-                  <div className="mcard-name">{m.name}</div>
-                  <div className="mcard-desc">{m.desc || "—"}</div>
+                  <div className="mcard-name">{m.name}{m.is_combo && <span className="combo-badge">COMBO</span>}</div>
+                  <div className="mcard-desc">{m.is_combo && (m.combo_items || []).length
+                    ? "Gồm: " + m.combo_items.map(ci => ci.quantity > 1 ? `${ci.name} x${ci.quantity}` : ci.name).join(" + ")
+                    : (m.desc || "—")}</div>
                   <div className="mcard-foot">
                     <span className="mcard-price tnum">{fmt(m.price)}đ</span>
                     <div className="mcard-acts">
@@ -605,7 +673,7 @@ function App() {
         </div>
       </div>
 
-      {editor && <MenuEditor initial={editor} groups={groups} onClose={() => setEditor(null)} onSave={save} saving={saving} />}
+      {editor && <MenuEditor initial={editor} groups={groups} allItems={items} onClose={() => setEditor(null)} onSave={save} saving={saving} />}
       {groupMgr && <GroupManager groups={groups} counts={counts} onClose={() => setGroupMgr(false)} onSave={saveGroups} />}
       {toast && (
         <div className={"toast" + (toast.type === 'err' ? ' err' : '')}>
