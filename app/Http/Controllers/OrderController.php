@@ -2,7 +2,9 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Controllers\Admin\SettingsController;
 use App\Jobs\SendOrderNotification;
+use App\Models\AppSetting;
 use App\Models\Customer;
 use App\Models\Order;
 use App\Models\OrderDiscount;
@@ -254,9 +256,19 @@ class OrderController extends Controller
         $shipPromoDiscAmt   = $shipPromo       ? $this->calcShipPromoDiscount($shipPromo, $shippingFee)        : 0;
         $shipDiscAmt        = min($shippingFee, $shipVoucherDiscAmt + $shipPromoDiscAmt);
 
+        // --- Phụ thu thời tiết xấu (server tự tính từ cài đặt, không tin client) ---
+        // Chỉ áp cho đơn GIAO tận nơi (có địa chỉ giao) khi admin đang bật.
+        $weatherSurcharge = 0;
+        if (!empty($data['delivery_address'])) {
+            $sc = array_merge(SettingsController::SURCHARGE_DEFAULTS, AppSetting::get('surcharge', []));
+            if (!empty($sc['weather_enabled'])) {
+                $weatherSurcharge = max(0, (int) $sc['weather_fee']);
+            }
+        }
+
         $discountAmt  = $badgeDiscAmt + $orderDiscAmt + $shipDiscAmt;
-        $totalAmount  = max(0.0, round($saleSubtotal - $orderDiscAmt + $shippingFee - $shipDiscAmt, 2));
-        // Điểm thưởng chỉ tính trên tiền HÀNG (sau giảm giá), KHÔNG tính phí ship.
+        $totalAmount  = max(0.0, round($saleSubtotal - $orderDiscAmt + $shippingFee - $shipDiscAmt + $weatherSurcharge, 2));
+        // Điểm thưởng chỉ tính trên tiền HÀNG (sau giảm giá), KHÔNG tính phí ship / phụ thu.
         $pointsBase   = max(0.0, round($saleSubtotal - $orderDiscAmt, 2));
         $pointsEarned = (int) floor($pointsBase / self::PER_POINT);
 
@@ -264,7 +276,7 @@ class OrderController extends Controller
 
         DB::transaction(function () use (
             $customer, $store, $data, $itemData,
-            $subtotal, $discountAmt, $shippingFee, $totalAmount, $pointsEarned,
+            $subtotal, $discountAmt, $shippingFee, $weatherSurcharge, $totalAmount, $pointsEarned,
             $orderVoucher, $shippingVoucher, $orderPromo, $shipPromo, $badgeDiscAmt,
             $voucherDiscAmt, $orderPromoDiscAmt, $shipVoucherDiscAmt, $shipPromoDiscAmt,
             &$orderId
@@ -276,6 +288,7 @@ class OrderController extends Controller
                 'subtotal'        => $subtotal,
                 'discount_amount' => $discountAmt,
                 'shipping_fee'    => $shippingFee,
+                'weather_surcharge' => $weatherSurcharge,
                 'total_amount'    => $totalAmount,
                 'points_earned'   => $pointsEarned,
                 'note'            => $data['note'] ?? null,

@@ -269,6 +269,7 @@ class OrdersController extends Controller
             'discount'  => (int) $o->discount_amount,
             'discounts' => $discountLines,
             'ship'      => (int) $o->shipping_fee,
+            'weatherSurcharge' => (int) ($o->weather_surcharge ?? 0),
             'sub'       => (int) $o->subtotal,
             'total'     => (int) $o->total_amount,
             'note'      => $o->note ?? '',

@@ -564,6 +564,7 @@ function OrderDrawer({ o, saving, onClose, onAdvance, onCancel }) {
             {(o.discounts || []).filter(d => d.ship).map((d, i) => (
               <div className="od-trow discount" key={"s" + i}><span>{d.label}</span><span className="v">−{fmt(d.amount)}đ</span></div>
             ))}
+            {o.weatherSurcharge > 0 && <div className="od-trow"><span>Phụ thu thời tiết xấu</span><span className="v">+{fmt(o.weatherSurcharge)}đ</span></div>}
             <div className="od-trow grand"><span>Tổng cộng</span><span className="v">{fmt(o.total)}đ</span></div>
           </div>
         </div>

@@ -17,6 +17,7 @@ class Order extends Model
         'points_used',
         'discount_amount',
         'shipping_fee',
+        'weather_surcharge',
         'total_amount',
         'points_earned',
         'points_awarded_at',
@@ -66,9 +67,9 @@ class Order extends Model
         return $this->hasMany(OrderDiscount::class);
     }
 
-    /** Điểm thưởng: chỉ tính trên tiền hàng (đã trừ phí ship), 1 điểm / 10.000đ. */
+    /** Điểm thưởng: chỉ tính trên tiền hàng (đã trừ phí ship & phụ thu), 1 điểm / 10.000đ. */
     public function calculatePointsEarned(): int
     {
-        return (int) floor(max(0, $this->total_amount - $this->shipping_fee) / 10000);
+        return (int) floor(max(0, $this->total_amount - $this->shipping_fee - ($this->weather_surcharge ?? 0)) / 10000);
     }
 }
