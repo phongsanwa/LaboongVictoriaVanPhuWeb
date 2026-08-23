@@ -60,6 +60,9 @@ function buildState() {
     prepBase: (DATA.timing || {}).prep_base ?? 5,
     prepPerCup: (DATA.timing || {}).prep_per_cup ?? 2,
     shipMinutes: (DATA.timing || {}).ship_minutes ?? 15,
+    weatherEnabled: !!(DATA.surcharge && DATA.surcharge.weather_enabled),
+    weatherFee: (DATA.surcharge || {}).weather_fee ?? 0,
+    weatherLabel: (DATA.surcharge || {}).weather_label || "Phụ thu thời tiết xấu",
     tiers: DATA.tiers,
     notif: DATA.notifications,
     integ: DATA.integrations,
@@ -162,6 +165,7 @@ function App() {
       general: { brand: form.brand, tagline: form.tagline, email: form.email, hotline: form.hotline, checkin_enabled: form.checkinEnabled, ios_guide_html: form.iosGuide || null },
       points: { per_point: form.perPoint, welcome: form.welcome, expiry: form.expiry, rounding: form.rounding },
       timing: { prep_base: form.prepBase, prep_per_cup: form.prepPerCup, ship_minutes: form.shipMinutes },
+      surcharge: { weather_enabled: form.weatherEnabled, weather_fee: form.weatherFee, weather_label: (form.weatherLabel || "").trim() },
       tiers: form.tiers.map(t => ({ id: t.id, min: t.min, mult: t.mult })),
       notifications: form.notif,
       integrations: form.integ.map(g => ({ id: g.id, on: g.on })),
@@ -391,6 +395,23 @@ function App() {
                       <div className="frow">
                         <div className="flabel">Thời gian giao hàng<div className="fsub">Cộng thêm với đơn giao tận nơi</div></div>
                         <div className="fcontrol"><div className="sinp-affix"><input className="sinp tnum" type="number" value={form.shipMinutes} onChange={e => set("shipMinutes", +e.target.value || 0)} /><span className="suffix">phút</span></div></div>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="scard">
+                    <div className="scard-h"><div className="st">Phụ thu thời tiết xấu</div><div className="sd">Bật khi trời mưa/bão để cộng thêm phụ thu vào phí giao hàng. Chỉ áp dụng cho đơn giao tận nơi; hiện thành một dòng riêng trong giỏ của khách.</div></div>
+                    <div className="scard-b">
+                      <div className="frow">
+                        <div className="flabel">Bật phụ thu<div className="fsub">Tắt khi thời tiết bình thường</div></div>
+                        <div className="fcontrol"><Tog on={form.weatherEnabled} onClick={() => set("weatherEnabled", !form.weatherEnabled)} /></div>
+                      </div>
+                      <div className="frow">
+                        <div className="flabel">Số tiền phụ thu<div className="fsub">Cộng vào mỗi đơn giao khi đang bật</div></div>
+                        <div className="fcontrol"><div className="sinp-affix"><input className="sinp tnum" type="number" min="0" value={form.weatherFee} disabled={!form.weatherEnabled} onChange={e => set("weatherFee", +e.target.value || 0)} /><span className="suffix">đ</span></div></div>
+                      </div>
+                      <div className="frow">
+                        <div className="flabel">Nhãn hiển thị<div className="fsub">Tên dòng phụ thu khách nhìn thấy</div></div>
+                        <div className="fcontrol"><input className="sinp" type="text" maxLength={60} value={form.weatherLabel} disabled={!form.weatherEnabled} onChange={e => set("weatherLabel", e.target.value)} placeholder="Phụ thu thời tiết xấu" /></div>
                       </div>
                     </div>
                   </div>

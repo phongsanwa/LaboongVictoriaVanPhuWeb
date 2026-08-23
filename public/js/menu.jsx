@@ -24,6 +24,7 @@ function getLiveStoreId()       { return LIVE ? (LIVE_D.storeId       ?? null) :
 function getLiveShippingTiers()  { return LIVE ? (LIVE_D.shippingTiers  || []) : []; }
 function getLiveShippingPromos() { return LIVE ? (LIVE_D.shippingPromos || []) : []; }
 function getLiveOrderPromos()    { return LIVE ? (LIVE_D.orderPromos    || []) : []; }
+function getLiveWeatherSurcharge() { return (LIVE && LIVE_D.weatherSurcharge) ? LIVE_D.weatherSurcharge : { enabled: false, fee: 0, label: 'Phụ thu thời tiết xấu' }; }
 
 const GEO_CACHE_KEY  = 'laboong_geo_v1';
 const CART_STATE_KEY = 'laboong_cart_v2';
@@ -454,6 +455,7 @@ function App() {
   const [liveShippingTiers,  ] = useState(getLiveShippingTiers);
   const [liveShippingPromos, ] = useState(getLiveShippingPromos);
   const [liveOrderPromos,    ] = useState(getLiveOrderPromos);
+  const [weatherCfg,         ] = useState(getLiveWeatherSurcharge);
   // Chỉ tự chọn sẵn khi CHỈ CÓ 1 chi nhánh; nhiều chi nhánh thì để trống, khách phải tự bấm chọn "Giao từ".
   const [selectedStoreId, setSelectedStoreId] = useState(() => {
     const stores = getLiveStores();
@@ -726,8 +728,11 @@ function App() {
     ? calcVoucherDiscount(shippingVoucher, shipFee)
     : calcShipPromoDiscount(selectedShipPromo, shipFee, subtotal, dist);
   const totalDiscount   = orderDiscount + shipDiscount;
-  const payable         = Math.max(0, subtotal - orderDiscount + shipFee - shipDiscount);
-  // Điểm thưởng chỉ tính trên tiền hàng (sau giảm giá), KHÔNG tính phí ship.
+  // Phụ thu thời tiết xấu: cộng thêm cho đơn GIAO tận nơi khi admin đang bật.
+  const isDelivery      = !!selectedAddr && addrId !== 'pickup';
+  const weatherFee      = (weatherCfg.enabled && isDelivery) ? (weatherCfg.fee || 0) : 0;
+  const payable         = Math.max(0, subtotal - orderDiscount + shipFee - shipDiscount + weatherFee);
+  // Điểm thưởng chỉ tính trên tiền hàng (sau giảm giá), KHÔNG tính phí ship / phụ thu.
   const earnBase        = Math.max(0, subtotal - orderDiscount);
   const earnPts       = Math.floor(earnBase / livePerPoint);
 
@@ -1735,6 +1740,12 @@ function App() {
                     <div className="csum" style={{ color: "var(--brand)" }}>
                       <span>{selectedShipPromo ? selectedShipPromo.name : "Giảm phí ship"}</span>
                       <span className="v tnum" style={{ color: "var(--brand)" }}>−{fmt(shipDiscount)}đ</span>
+                    </div>
+                  )}
+                  {weatherFee > 0 && (
+                    <div className="csum" style={{ color: "var(--hot)" }}>
+                      <span><Icon name="alert" size={13} color="var(--hot)" /> {weatherCfg.label || "Phụ thu thời tiết xấu"}</span>
+                      <span className="v tnum" style={{ color: "var(--hot)" }}>+{fmt(weatherFee)}đ</span>
                     </div>
                   )}
                   <div className="csum earn"><span>Điểm tích được</span><span className="v">+{fmt(earnPts)} điểm</span></div>

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\AppSetting;
 use App\Models\Category;
 use App\Models\Product;
 use App\Models\ProductVariant;
@@ -273,6 +274,7 @@ class MenuPageController extends Controller
                 ->values()
                 ->toArray(),
             'perPoint'      => 10000,
+            'weatherSurcharge' => $this->weatherSurcharge(),
             'promos'        => $promoCodes,
             'addresses'     => $addresses,
             'customerName'  => Auth::user()?->name ?? '',
@@ -287,6 +289,24 @@ class MenuPageController extends Controller
                 'veg' => ['l' => 'Healthy', 'ic' => 'plant'],
                 'new' => ['l' => 'Mới',    'ic' => 'sparkle2'],
             ],
+        ];
+    }
+
+    /** Cấu hình phụ thu thời tiết xấu cho giỏ hàng (đã chuẩn hoá). */
+    private function weatherSurcharge(): array
+    {
+        $s = array_merge(
+            \App\Http\Controllers\Admin\SettingsController::SURCHARGE_DEFAULTS,
+            AppSetting::get('surcharge', [])
+        );
+
+        $enabled = (bool) $s['weather_enabled'];
+        $fee     = max(0, (int) $s['weather_fee']);
+
+        return [
+            'enabled' => $enabled && $fee > 0,
+            'fee'     => $fee,
+            'label'   => trim((string) $s['weather_label']) ?: 'Phụ thu thời tiết xấu',
         ];
     }
 }

@@ -38,6 +38,13 @@ class SettingsController extends Controller
         'ship_minutes' => 15, // thời gian giao hàng
     ];
 
+    /** Phụ thu giao hàng khi thời tiết xấu (admin tự bật khi mưa/bão). */
+    public const SURCHARGE_DEFAULTS = [
+        'weather_enabled' => false,
+        'weather_fee'     => 0,                       // số tiền phụ thu (đồng)
+        'weather_label'   => 'Phụ thu thời tiết xấu', // nhãn hiển thị trong giỏ
+    ];
+
     private const NOTIF_DEFAULTS = [
         'earn' => true,
         'expiry' => true,
@@ -71,6 +78,7 @@ class SettingsController extends Controller
         $points = AppSetting::get('points', self::POINTS_DEFAULTS);
         $notif = AppSetting::get('notifications', self::NOTIF_DEFAULTS);
         $timing = AppSetting::get('timing', self::TIMING_DEFAULTS);
+        $surcharge = array_merge(self::SURCHARGE_DEFAULTS, AppSetting::get('surcharge', []));
         $integEnabled = AppSetting::get('integrations', collect(self::INTEGRATIONS)->mapWithKeys(fn ($i) => [$i['id'] => $i['default']])->all());
 
         $tiers = CustomerTier::orderBy('level')->get()->values()->map(function (CustomerTier $tier, int $i) {
@@ -107,6 +115,7 @@ class SettingsController extends Controller
                 'tiers' => $tiers,
                 'notifications' => array_merge(self::NOTIF_DEFAULTS, $notif),
                 'timing' => $timing,
+                'surcharge' => $surcharge,
                 'integrations' => $integrations,
                 'telegram' => \App\Support\TelegramNotifier::config(),
                 'ntfy' => \App\Support\NtfyNotifier::config(),
@@ -135,6 +144,11 @@ class SettingsController extends Controller
             'timing.prep_base' => ['required', 'integer', 'min:0', 'max:120'],
             'timing.prep_per_cup' => ['required', 'integer', 'min:0', 'max:60'],
             'timing.ship_minutes' => ['required', 'integer', 'min:0', 'max:180'],
+
+            'surcharge' => ['nullable', 'array'],
+            'surcharge.weather_enabled' => ['nullable', 'boolean'],
+            'surcharge.weather_fee' => ['nullable', 'integer', 'min:0', 'max:1000000'],
+            'surcharge.weather_label' => ['nullable', 'string', 'max:60'],
 
             'tiers' => ['required', 'array'],
             'tiers.*.id' => ['required', 'integer', 'exists:customer_tiers,id'],
@@ -176,6 +190,12 @@ class SettingsController extends Controller
         AppSetting::set('points', $data['points']);
         AppSetting::set('timing', $data['timing']);
         AppSetting::set('notifications', $data['notifications']);
+
+        AppSetting::set('surcharge', [
+            'weather_enabled' => (bool) ($data['surcharge']['weather_enabled'] ?? false),
+            'weather_fee'     => max(0, (int) ($data['surcharge']['weather_fee'] ?? 0)),
+            'weather_label'   => trim((string) ($data['surcharge']['weather_label'] ?? '')) ?: 'Phụ thu thời tiết xấu',
+        ]);
 
         $integEnabled = collect($data['integrations'])->mapWithKeys(fn ($i) => [$i['id'] => (bool) $i['on']])->all();
         AppSetting::set('integrations', $integEnabled);
