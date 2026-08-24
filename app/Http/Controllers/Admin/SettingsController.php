@@ -45,6 +45,11 @@ class SettingsController extends Controller
         'weather_label'   => 'Phụ thu thời tiết xấu', // nhãn hiển thị trong giỏ
     ];
 
+    /** Bản đồ dự phòng: key SerpApi dùng khi Google Maps JS lỗi. */
+    public const MAPS_DEFAULTS = [
+        'serpapi_key' => '',
+    ];
+
     private const NOTIF_DEFAULTS = [
         'earn' => true,
         'expiry' => true,
@@ -79,6 +84,7 @@ class SettingsController extends Controller
         $notif = AppSetting::get('notifications', self::NOTIF_DEFAULTS);
         $timing = AppSetting::get('timing', self::TIMING_DEFAULTS);
         $surcharge = array_merge(self::SURCHARGE_DEFAULTS, AppSetting::get('surcharge', []));
+        $maps = array_merge(self::MAPS_DEFAULTS, AppSetting::get('maps', []));
         $integEnabled = AppSetting::get('integrations', collect(self::INTEGRATIONS)->mapWithKeys(fn ($i) => [$i['id'] => $i['default']])->all());
 
         $tiers = CustomerTier::orderBy('level')->get()->values()->map(function (CustomerTier $tier, int $i) {
@@ -116,6 +122,7 @@ class SettingsController extends Controller
                 'notifications' => array_merge(self::NOTIF_DEFAULTS, $notif),
                 'timing' => $timing,
                 'surcharge' => $surcharge,
+                'maps' => $maps,
                 'integrations' => $integrations,
                 'telegram' => \App\Support\TelegramNotifier::config(),
                 'ntfy' => \App\Support\NtfyNotifier::config(),
@@ -149,6 +156,9 @@ class SettingsController extends Controller
             'surcharge.weather_enabled' => ['nullable', 'boolean'],
             'surcharge.weather_fee' => ['nullable', 'integer', 'min:0', 'max:1000000'],
             'surcharge.weather_label' => ['nullable', 'string', 'max:60'],
+
+            'maps' => ['nullable', 'array'],
+            'maps.serpapi_key' => ['nullable', 'string', 'max:200'],
 
             'tiers' => ['required', 'array'],
             'tiers.*.id' => ['required', 'integer', 'exists:customer_tiers,id'],
@@ -195,6 +205,10 @@ class SettingsController extends Controller
             'weather_enabled' => (bool) ($data['surcharge']['weather_enabled'] ?? false),
             'weather_fee'     => max(0, (int) ($data['surcharge']['weather_fee'] ?? 0)),
             'weather_label'   => trim((string) ($data['surcharge']['weather_label'] ?? '')) ?: 'Phụ thu thời tiết xấu',
+        ]);
+
+        AppSetting::set('maps', [
+            'serpapi_key' => trim((string) ($data['maps']['serpapi_key'] ?? '')),
         ]);
 
         $integEnabled = collect($data['integrations'])->mapWithKeys(fn ($i) => [$i['id'] => (bool) $i['on']])->all();

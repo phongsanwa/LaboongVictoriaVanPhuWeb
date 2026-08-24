@@ -63,6 +63,7 @@ function buildState() {
     weatherEnabled: !!(DATA.surcharge && DATA.surcharge.weather_enabled),
     weatherFee: (DATA.surcharge || {}).weather_fee ?? 0,
     weatherLabel: (DATA.surcharge || {}).weather_label || "Phụ thu thời tiết xấu",
+    serpapiKey: (DATA.maps || {}).serpapi_key || "",
     tiers: DATA.tiers,
     notif: DATA.notifications,
     integ: DATA.integrations,
@@ -166,6 +167,7 @@ function App() {
       points: { per_point: form.perPoint, welcome: form.welcome, expiry: form.expiry, rounding: form.rounding },
       timing: { prep_base: form.prepBase, prep_per_cup: form.prepPerCup, ship_minutes: form.shipMinutes },
       surcharge: { weather_enabled: form.weatherEnabled, weather_fee: form.weatherFee, weather_label: (form.weatherLabel || "").trim() },
+      maps: { serpapi_key: (form.serpapiKey || "").trim() },
       tiers: form.tiers.map(t => ({ id: t.id, min: t.min, mult: t.mult })),
       notifications: form.notif,
       integrations: form.integ.map(g => ({ id: g.id, on: g.on })),
@@ -412,6 +414,15 @@ function App() {
                       <div className="frow">
                         <div className="flabel">Nhãn hiển thị<div className="fsub">Tên dòng phụ thu khách nhìn thấy</div></div>
                         <div className="fcontrol"><input className="sinp" type="text" maxLength={60} value={form.weatherLabel} disabled={!form.weatherEnabled} onChange={e => set("weatherLabel", e.target.value)} placeholder="Phụ thu thời tiết xấu" /></div>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="scard">
+                    <div className="scard-h"><div className="st">Bản đồ dự phòng (SerpApi)</div><div className="sd">Khi Google Maps trên trình duyệt lỗi (hết hạn mức, chặn key…), hệ thống tự dùng SerpApi để gợi ý địa chỉ & tính toạ độ. Dán API key từ serpapi.com; để trống nếu không dùng.</div></div>
+                    <div className="scard-b">
+                      <div className="frow">
+                        <div className="flabel">SerpApi API key<div className="fsub">Lấy tại serpapi.com → Dashboard → Api Key</div></div>
+                        <div className="fcontrol"><input className="sinp" type="password" autoComplete="off" maxLength={200} value={form.serpapiKey} onChange={e => set("serpapiKey", e.target.value)} placeholder="Dán API key…" /></div>
                       </div>
                     </div>
                   </div>

@@ -39,4 +39,10 @@ return [
         'key' => env('GOOGLE_MAPS_KEY', ''),
     ],
 
+    // SerpApi (serpapi.com) — dùng làm dự phòng khi Google Maps JS lỗi.
+    // Key có thể đặt ở .env hoặc trong Admin → Cài đặt (AppSetting 'maps').
+    'serpapi' => [
+        'key' => env('SERPAPI_KEY', ''),
+    ],
+
 ];
