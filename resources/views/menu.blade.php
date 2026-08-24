@@ -21,7 +21,8 @@
 <script>
 window.MENU_PAGE_DATA = @json($menuPageData);
 </script>
-@if(config('services.google_maps.key'))
+{{-- Chỉ nạp Google Maps khi admin không chọn "Chỉ SerpApi" (tránh tốn phí Google khi dùng SerpApi) --}}
+@if(config('services.google_maps.key') && (($menuPageData['mapsProvider'] ?? 'auto') !== 'serpapi'))
 <script src="https://maps.googleapis.com/maps/api/js?key={{ config('services.google_maps.key') }}&libraries=places&language=vi&region=VN"></script>
 @endif
 
