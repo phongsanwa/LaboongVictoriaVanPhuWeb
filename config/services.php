@@ -45,4 +45,12 @@ return [
         'key' => env('SERPAPI_KEY', ''),
     ],
 
+    // Apify (apify.com) — chạy actor để lấy toạ độ/địa chỉ & khoảng cách.
+    // Token + slug actor có thể đặt ở .env hoặc trong Admin → Cài đặt.
+    'apify' => [
+        'token'            => env('APIFY_TOKEN', ''),
+        'place_actor'      => env('APIFY_PLACE_ACTOR', 'compass~crawler-google-places'),
+        'directions_actor' => env('APIFY_DIRECTIONS_ACTOR', 'zen-studio~google-maps-directions-api'),
+    ],
+
 ];

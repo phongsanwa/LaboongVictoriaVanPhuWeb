@@ -65,6 +65,9 @@ function buildState() {
     weatherLabel: (DATA.surcharge || {}).weather_label || "Phụ thu thời tiết xấu",
     mapsProvider: (DATA.maps || {}).provider || "auto",
     serpapiKey: (DATA.maps || {}).serpapi_key || "",
+    apifyToken: (DATA.maps || {}).apify_token || "",
+    apifyPlaceActor: (DATA.maps || {}).apify_place_actor || "compass~crawler-google-places",
+    apifyDirActor: (DATA.maps || {}).apify_directions_actor || "zen-studio~google-maps-directions-api",
     tiers: DATA.tiers,
     notif: DATA.notifications,
     integ: DATA.integrations,
@@ -168,7 +171,13 @@ function App() {
       points: { per_point: form.perPoint, welcome: form.welcome, expiry: form.expiry, rounding: form.rounding },
       timing: { prep_base: form.prepBase, prep_per_cup: form.prepPerCup, ship_minutes: form.shipMinutes },
       surcharge: { weather_enabled: form.weatherEnabled, weather_fee: form.weatherFee, weather_label: (form.weatherLabel || "").trim() },
-      maps: { provider: form.mapsProvider, serpapi_key: (form.serpapiKey || "").trim() },
+      maps: {
+        provider: form.mapsProvider,
+        serpapi_key: (form.serpapiKey || "").trim(),
+        apify_token: (form.apifyToken || "").trim(),
+        apify_place_actor: (form.apifyPlaceActor || "").trim(),
+        apify_directions_actor: (form.apifyDirActor || "").trim(),
+      },
       tiers: form.tiers.map(t => ({ id: t.id, min: t.min, mult: t.mult })),
       notifications: form.notif,
       integrations: form.integ.map(g => ({ id: g.id, on: g.on })),
@@ -419,19 +428,20 @@ function App() {
                     </div>
                   </div>
                   <div className="scard">
-                    <div className="scard-h"><div className="st">Bản đồ (Google Maps / SerpApi)</div><div className="sd">Chọn nhà cung cấp bản đồ cho phần chọn địa chỉ giao hàng. "Tự động" dùng Google trước, khi lỗi (hết hạn mức, chặn key…) thì tự chuyển SerpApi.</div></div>
+                    <div className="scard-h"><div className="st">Bản đồ (Google / SerpApi / Apify)</div><div className="sd">Chọn nhà cung cấp bản đồ cho phần chọn địa chỉ giao hàng. "Tự động" dùng Google trước, khi lỗi (hết hạn mức, chặn key…) thì tự chuyển SerpApi.</div></div>
                     <div className="scard-b">
                       <div className="frow">
                         <div className="flabel">Nhà cung cấp<div className="fsub">Áp dụng cho gợi ý địa chỉ, toạ độ & khoảng cách</div></div>
                         <div className="fcontrol">
                           <div className="miniseg">
-                            {[["auto", "Tự động"], ["google", "Chỉ Google"], ["serpapi", "Chỉ SerpApi"]].map(([k, l]) => (
+                            {[["auto", "Tự động"], ["google", "Chỉ Google"], ["serpapi", "Chỉ SerpApi"], ["apify", "Chỉ Apify"]].map(([k, l]) => (
                               <button key={k} className={form.mapsProvider === k ? "on" : ""} onClick={() => set("mapsProvider", k)}>{l}</button>
                             ))}
                           </div>
                         </div>
                       </div>
-                      {form.mapsProvider !== "google" && (
+
+                      {(form.mapsProvider === "auto" || form.mapsProvider === "serpapi") && (
                         <div className="frow">
                           <div className="flabel">SerpApi API key<div className="fsub">Lấy tại serpapi.com → Dashboard → Api Key</div></div>
                           <div className="fcontrol"><input className="sinp" type="password" autoComplete="off" maxLength={200} value={form.serpapiKey} onChange={e => set("serpapiKey", e.target.value)} placeholder="Dán API key…" /></div>
@@ -442,6 +452,29 @@ function App() {
                           ⚠ Bạn đang chọn "Chỉ SerpApi" nhưng chưa nhập API key — phần chọn địa chỉ sẽ không hoạt động.
                         </div>
                       )}
+
+                      {form.mapsProvider === "apify" && (<>
+                        <div className="frow">
+                          <div className="flabel">Apify API token<div className="fsub">Lấy tại apify.com → Settings → Integrations → API token</div></div>
+                          <div className="fcontrol"><input className="sinp" type="password" autoComplete="off" maxLength={200} value={form.apifyToken} onChange={e => set("apifyToken", e.target.value)} placeholder="Dán API token…" /></div>
+                        </div>
+                        <div className="frow">
+                          <div className="flabel">Actor tìm địa điểm<div className="fsub">Geocode & gợi ý địa chỉ (mặc định compass~crawler-google-places)</div></div>
+                          <div className="fcontrol"><input className="sinp" type="text" autoComplete="off" maxLength={120} value={form.apifyPlaceActor} onChange={e => set("apifyPlaceActor", e.target.value)} placeholder="compass~crawler-google-places" /></div>
+                        </div>
+                        <div className="frow">
+                          <div className="flabel">Actor chỉ đường<div className="fsub">Tính khoảng cách (mặc định zen-studio~google-maps-directions-api)</div></div>
+                          <div className="fcontrol"><input className="sinp" type="text" autoComplete="off" maxLength={120} value={form.apifyDirActor} onChange={e => set("apifyDirActor", e.target.value)} placeholder="zen-studio~google-maps-directions-api" /></div>
+                        </div>
+                        {!((form.apifyToken || "").trim()) && (
+                          <div style={{ fontSize: 12.5, color: "var(--hot)", fontWeight: 600, padding: "2px 2px 6px" }}>
+                            ⚠ Bạn đang chọn "Chỉ Apify" nhưng chưa nhập API token — phần chọn địa chỉ sẽ không hoạt động.
+                          </div>
+                        )}
+                        <div style={{ fontSize: 12, color: "var(--ink-3)", padding: "2px 2px 4px", lineHeight: 1.5 }}>
+                          Apify chạy theo "actor run" nên gợi ý địa chỉ sẽ chậm hơn (vài giây) và tính phí mỗi lượt. Nếu cần gợi ý nhanh, dùng "Tự động" hoặc "Chỉ SerpApi".
+                        </div>
+                      </>)}
                     </div>
                   </div>
                 </>
