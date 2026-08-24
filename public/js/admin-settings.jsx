@@ -63,6 +63,7 @@ function buildState() {
     weatherEnabled: !!(DATA.surcharge && DATA.surcharge.weather_enabled),
     weatherFee: (DATA.surcharge || {}).weather_fee ?? 0,
     weatherLabel: (DATA.surcharge || {}).weather_label || "Phụ thu thời tiết xấu",
+    mapsProvider: (DATA.maps || {}).provider || "auto",
     serpapiKey: (DATA.maps || {}).serpapi_key || "",
     tiers: DATA.tiers,
     notif: DATA.notifications,
@@ -167,7 +168,7 @@ function App() {
       points: { per_point: form.perPoint, welcome: form.welcome, expiry: form.expiry, rounding: form.rounding },
       timing: { prep_base: form.prepBase, prep_per_cup: form.prepPerCup, ship_minutes: form.shipMinutes },
       surcharge: { weather_enabled: form.weatherEnabled, weather_fee: form.weatherFee, weather_label: (form.weatherLabel || "").trim() },
-      maps: { serpapi_key: (form.serpapiKey || "").trim() },
+      maps: { provider: form.mapsProvider, serpapi_key: (form.serpapiKey || "").trim() },
       tiers: form.tiers.map(t => ({ id: t.id, min: t.min, mult: t.mult })),
       notifications: form.notif,
       integrations: form.integ.map(g => ({ id: g.id, on: g.on })),
@@ -418,12 +419,29 @@ function App() {
                     </div>
                   </div>
                   <div className="scard">
-                    <div className="scard-h"><div className="st">Bản đồ dự phòng (SerpApi)</div><div className="sd">Khi Google Maps trên trình duyệt lỗi (hết hạn mức, chặn key…), hệ thống tự dùng SerpApi để gợi ý địa chỉ & tính toạ độ. Dán API key từ serpapi.com; để trống nếu không dùng.</div></div>
+                    <div className="scard-h"><div className="st">Bản đồ (Google Maps / SerpApi)</div><div className="sd">Chọn nhà cung cấp bản đồ cho phần chọn địa chỉ giao hàng. "Tự động" dùng Google trước, khi lỗi (hết hạn mức, chặn key…) thì tự chuyển SerpApi.</div></div>
                     <div className="scard-b">
                       <div className="frow">
-                        <div className="flabel">SerpApi API key<div className="fsub">Lấy tại serpapi.com → Dashboard → Api Key</div></div>
-                        <div className="fcontrol"><input className="sinp" type="password" autoComplete="off" maxLength={200} value={form.serpapiKey} onChange={e => set("serpapiKey", e.target.value)} placeholder="Dán API key…" /></div>
+                        <div className="flabel">Nhà cung cấp<div className="fsub">Áp dụng cho gợi ý địa chỉ, toạ độ & khoảng cách</div></div>
+                        <div className="fcontrol">
+                          <div className="miniseg">
+                            {[["auto", "Tự động"], ["google", "Chỉ Google"], ["serpapi", "Chỉ SerpApi"]].map(([k, l]) => (
+                              <button key={k} className={form.mapsProvider === k ? "on" : ""} onClick={() => set("mapsProvider", k)}>{l}</button>
+                            ))}
+                          </div>
+                        </div>
                       </div>
+                      {form.mapsProvider !== "google" && (
+                        <div className="frow">
+                          <div className="flabel">SerpApi API key<div className="fsub">Lấy tại serpapi.com → Dashboard → Api Key</div></div>
+                          <div className="fcontrol"><input className="sinp" type="password" autoComplete="off" maxLength={200} value={form.serpapiKey} onChange={e => set("serpapiKey", e.target.value)} placeholder="Dán API key…" /></div>
+                        </div>
+                      )}
+                      {form.mapsProvider === "serpapi" && !((form.serpapiKey || "").trim()) && (
+                        <div style={{ fontSize: 12.5, color: "var(--hot)", fontWeight: 600, padding: "2px 2px 6px" }}>
+                          ⚠ Bạn đang chọn "Chỉ SerpApi" nhưng chưa nhập API key — phần chọn địa chỉ sẽ không hoạt động.
+                        </div>
+                      )}
                     </div>
                   </div>
                 </>

@@ -275,6 +275,7 @@ class MenuPageController extends Controller
                 ->toArray(),
             'perPoint'      => 10000,
             'weatherSurcharge' => $this->weatherSurcharge(),
+            'mapsProvider'  => $this->mapsProvider(),
             'promos'        => $promoCodes,
             'addresses'     => $addresses,
             'customerName'  => Auth::user()?->name ?? '',
@@ -308,5 +309,13 @@ class MenuPageController extends Controller
             'fee'     => $fee,
             'label'   => trim((string) $s['weather_label']) ?: 'Phụ thu thời tiết xấu',
         ];
+    }
+
+    /** Nhà cung cấp bản đồ đang chọn: auto | google | serpapi. */
+    private function mapsProvider(): string
+    {
+        $p = AppSetting::get('maps', [])['provider'] ?? 'auto';
+
+        return in_array($p, ['auto', 'google', 'serpapi'], true) ? $p : 'auto';
     }
 }

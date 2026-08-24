@@ -45,8 +45,10 @@ class SettingsController extends Controller
         'weather_label'   => 'Phụ thu thời tiết xấu', // nhãn hiển thị trong giỏ
     ];
 
-    /** Bản đồ dự phòng: key SerpApi dùng khi Google Maps JS lỗi. */
+    /** Bản đồ: chọn nhà cung cấp + key SerpApi. */
     public const MAPS_DEFAULTS = [
+        // auto = Google trước, lỗi thì SerpApi | google = chỉ Google | serpapi = chỉ SerpApi
+        'provider'    => 'auto',
         'serpapi_key' => '',
     ];
 
@@ -158,6 +160,7 @@ class SettingsController extends Controller
             'surcharge.weather_label' => ['nullable', 'string', 'max:60'],
 
             'maps' => ['nullable', 'array'],
+            'maps.provider' => ['nullable', 'in:auto,google,serpapi'],
             'maps.serpapi_key' => ['nullable', 'string', 'max:200'],
 
             'tiers' => ['required', 'array'],
@@ -208,6 +211,7 @@ class SettingsController extends Controller
         ]);
 
         AppSetting::set('maps', [
+            'provider'    => $data['maps']['provider'] ?? 'auto',
             'serpapi_key' => trim((string) ($data['maps']['serpapi_key'] ?? '')),
         ]);
 
