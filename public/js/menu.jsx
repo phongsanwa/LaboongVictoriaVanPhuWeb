@@ -47,6 +47,28 @@ function clearCartState() {
   try { localStorage.removeItem(CART_STATE_KEY); } catch (e) { /* ignore */ }
 }
 
+/* Dự phòng qua SerpApi (server) khi Google Maps JS lỗi/không tải được. */
+async function serverGeocode(text) {
+  try {
+    const r = await fetch('/api/maps/geocode?q=' + encodeURIComponent(text), { headers: { Accept: 'application/json' } });
+    if (!r.ok) return null;
+    const j = await r.json();
+    return (j && j.ok && typeof j.lat === 'number' && typeof j.lng === 'number') ? { lat: j.lat, lng: j.lng } : null;
+  } catch (e) { return null; }
+}
+
+async function serverAutocomplete(text) {
+  try {
+    const r = await fetch('/api/maps/autocomplete?q=' + encodeURIComponent(text), { headers: { Accept: 'application/json' } });
+    if (!r.ok) return [];
+    const j = await r.json();
+    return Array.isArray(j.results)
+      ? j.results.filter(x => typeof x.lat === 'number' && typeof x.lng === 'number')
+                 .map(x => ({ text: x.text, lat: x.lat, lng: x.lng }))
+      : [];
+  } catch (e) { return []; }
+}
+
 async function geocodeAddress(text) {
   try {
     const cache = JSON.parse(localStorage.getItem(GEO_CACHE_KEY) || '{}');
@@ -54,15 +76,19 @@ async function geocodeAddress(text) {
   } catch(e) { /* ignore */ }
 
   const maps = window.google?.maps;
-  if (!maps) return null;
-  const loc = await new Promise(resolve => {
-    new maps.Geocoder().geocode({ address: text + ', Việt Nam', region: 'VN' }, (results, status) => {
-      if (status === 'OK' && results?.length) {
-        const l = results[0].geometry.location;
-        resolve({ lat: l.lat(), lng: l.lng() });
-      } else resolve(null);
+  let loc = null;
+  if (maps) {
+    loc = await new Promise(resolve => {
+      new maps.Geocoder().geocode({ address: text + ', Việt Nam', region: 'VN' }, (results, status) => {
+        if (status === 'OK' && results?.length) {
+          const l = results[0].geometry.location;
+          resolve({ lat: l.lat(), lng: l.lng() });
+        } else resolve(null);
+      });
     });
-  });
+  }
+  // Google không tải được / không ra kết quả → thử SerpApi qua server.
+  if (!loc) loc = await serverGeocode(text);
   if (loc) {
     try {
       const cache = JSON.parse(localStorage.getItem(GEO_CACHE_KEY) || '{}');
@@ -73,22 +99,28 @@ async function geocodeAddress(text) {
   return loc;
 }
 
-/* Gợi ý địa chỉ khi gõ (Google Places AutocompleteService) */
+/* Gợi ý địa chỉ khi gõ — Google Places, dự phòng SerpApi (server) khi lỗi.
+   Gợi ý Google có {text, placeId}; gợi ý SerpApi có sẵn {text, lat, lng}. */
 async function fetchAddressSuggestions(text) {
+  if (text.trim().length < 3) return [];
   const maps = window.google?.maps;
-  if (!maps?.places?.AutocompleteService || text.trim().length < 3) return [];
-  return new Promise(resolve => {
-    new maps.places.AutocompleteService().getPlacePredictions(
-      { input: text, componentRestrictions: { country: 'vn' } },
-      (predictions) => {
-        if (!predictions?.length) { resolve([]); return; }
-        resolve(predictions.slice(0, 5).map(p => ({
-          text: p.description.replace(/,?\s*Việt Nam$/i, "").trim(),
-          placeId: p.place_id,
-        })));
-      }
-    );
-  });
+  if (maps?.places?.AutocompleteService) {
+    const list = await new Promise(resolve => {
+      new maps.places.AutocompleteService().getPlacePredictions(
+        { input: text, componentRestrictions: { country: 'vn' } },
+        (predictions) => {
+          if (!predictions?.length) { resolve([]); return; }
+          resolve(predictions.slice(0, 5).map(p => ({
+            text: p.description.replace(/,?\s*Việt Nam$/i, "").trim(),
+            placeId: p.place_id,
+          })));
+        }
+      );
+    });
+    if (list.length) return list;
+  }
+  // Google không có/không ra gợi ý → SerpApi (mỗi gợi ý kèm sẵn toạ độ).
+  return await serverAutocomplete(text);
 }
 
 async function geocodePlaceId(placeId) {
@@ -117,23 +149,32 @@ async function roadDistanceKm(origin, dest) {
   } catch (e) { /* ignore */ }
 
   const maps = window.google?.maps;
-  if (!maps?.DistanceMatrixService) return null;
-  const km = await new Promise(resolve => {
-    new maps.DistanceMatrixService().getDistanceMatrix({
-      origins:      [new maps.LatLng(origin.lat, origin.lng)],
-      destinations: [new maps.LatLng(dest.lat, dest.lng)],
-      travelMode:   maps.TravelMode.DRIVING, // đường bộ — sát quãng đường xe máy thực tế
-      unitSystem:   maps.UnitSystem.METRIC,
-    }, (res, status) => {
-      const el = res?.rows?.[0]?.elements?.[0];
-      if (status === 'OK' && el?.status === 'OK' && el.distance?.value >= 0) {
-        resolve(el.distance.value / 1000);
-      } else {
-        console.warn('DistanceMatrix không khả dụng (' + (el?.status || status) + ') — dùng khoảng cách đường chim bay');
-        resolve(null);
-      }
+  let km = null;
+  if (maps?.DistanceMatrixService) {
+    km = await new Promise(resolve => {
+      new maps.DistanceMatrixService().getDistanceMatrix({
+        origins:      [new maps.LatLng(origin.lat, origin.lng)],
+        destinations: [new maps.LatLng(dest.lat, dest.lng)],
+        travelMode:   maps.TravelMode.DRIVING, // đường bộ — sát quãng đường xe máy thực tế
+        unitSystem:   maps.UnitSystem.METRIC,
+      }, (res, status) => {
+        const el = res?.rows?.[0]?.elements?.[0];
+        if (status === 'OK' && el?.status === 'OK' && el.distance?.value >= 0) {
+          resolve(el.distance.value / 1000);
+        } else {
+          console.warn('DistanceMatrix không khả dụng (' + (el?.status || status) + ') — thử SerpApi / đường chim bay');
+          resolve(null);
+        }
+      });
     });
-  });
+  }
+  // Google không có/không tính được → thử SerpApi (server). Vẫn null thì caller dùng Haversine.
+  if (km === null) {
+    try {
+      const r = await fetch(`/api/maps/distance?olat=${origin.lat}&olng=${origin.lng}&dlat=${dest.lat}&dlng=${dest.lng}`, { headers: { Accept: 'application/json' } });
+      if (r.ok) { const j = await r.json(); if (j.ok && typeof j.km === 'number') km = j.km; }
+    } catch (e) { /* ignore */ }
+  }
   if (km !== null) {
     try {
       const cache = JSON.parse(localStorage.getItem(ROUTE_DIST_CACHE_KEY) || '{}');
@@ -448,7 +489,10 @@ function App() {
 
   const pickAddrSuggest = async (s) => {
     setAddrFormText(s.text); setAddrSuggests([]); setAddrFormErr("");
-    const loc = await geocodePlaceId(s.placeId);
+    // Gợi ý SerpApi đã kèm sẵn toạ độ; gợi ý Google cần tra placeId; nếu thiếu thì geocode theo chữ.
+    let loc = (typeof s.lat === 'number' && typeof s.lng === 'number') ? { lat: s.lat, lng: s.lng } : null;
+    if (!loc && s.placeId) loc = await geocodePlaceId(s.placeId);
+    if (!loc) loc = await geocodeAddress(s.text);
     if (loc) setAddrFormCoords(loc);
   };
   const [liveStores,        ] = useState(getLiveStores);

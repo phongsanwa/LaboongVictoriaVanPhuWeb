@@ -100,6 +100,11 @@ Route::post('/checkin', [CheckinController::class, 'store'])->middleware('auth')
 Route::middleware('auth')->group(function () {
     Route::post('/promotions/claim', [PromotionController::class, 'claim'])->name('promotions.claim');
     Route::get('/cart/vouchers', [PromotionController::class, 'cartVouchers'])->name('cart.vouchers');
+
+    // Dự phòng bản đồ qua SerpApi — client gọi khi Google Maps JS lỗi.
+    Route::get('/api/maps/geocode', [\App\Http\Controllers\MapsController::class, 'geocode'])->name('maps.geocode');
+    Route::get('/api/maps/autocomplete', [\App\Http\Controllers\MapsController::class, 'autocomplete'])->name('maps.autocomplete');
+    Route::get('/api/maps/distance', [\App\Http\Controllers\MapsController::class, 'distance'])->name('maps.distance');
 });
 
 // Tin tức công khai — Google index được, không cần đăng nhập
