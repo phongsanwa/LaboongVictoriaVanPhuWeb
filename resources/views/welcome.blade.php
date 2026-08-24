@@ -26,7 +26,7 @@
   window.HOME_DATA = @json($homeData);
 </script>
 
-@if(config('services.google_maps.key'))
+@if(\App\Support\MapsConfig::useGoogleJs())
 <script>window.__gmapsReady = false; window.__gmapsCallbacks = []; window.initGoogleMaps = function(){ window.__gmapsReady = true; window.__gmapsCallbacks.forEach(fn => fn()); };</script>
 <script src="https://maps.googleapis.com/maps/api/js?key={{ config('services.google_maps.key') }}&language=vi&region=VN&callback=initGoogleMaps" async defer></script>
 @endif
