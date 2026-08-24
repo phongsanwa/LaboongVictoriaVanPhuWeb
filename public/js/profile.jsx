@@ -327,6 +327,27 @@ function onGmapsReady(fn) {
   else { fn(); }
 }
 
+/* Dự phòng qua server (SerpApi/Apify) khi không có Google Maps JS (admin chọn
+   nhà cung cấp khác). Server tự chọn dịch vụ theo cài đặt. */
+async function serverGeocode(text) {
+  try {
+    const r = await fetch('/api/maps/geocode?q=' + encodeURIComponent(text), { headers: { Accept: 'application/json' } });
+    if (!r.ok) return null;
+    const j = await r.json();
+    return (j && j.ok && typeof j.lat === 'number' && typeof j.lng === 'number') ? { lat: j.lat, lng: j.lng } : null;
+  } catch (e) { return null; }
+}
+async function serverAutocomplete(text) {
+  try {
+    const r = await fetch('/api/maps/autocomplete?q=' + encodeURIComponent(text), { headers: { Accept: 'application/json' } });
+    if (!r.ok) return [];
+    const j = await r.json();
+    return Array.isArray(j.results)
+      ? j.results.filter(x => typeof x.lat === 'number' && typeof x.lng === 'number').map(x => ({ text: x.text, lat: x.lat, lng: x.lng }))
+      : [];
+  } catch (e) { return []; }
+}
+
 async function reverseGeocode(lat, lng) {
   const maps = gmaps();
   if (!maps) return null;
@@ -343,19 +364,22 @@ async function reverseGeocode(lat, lng) {
    Toạ độ chỉ lấy khi người dùng chọn một gợi ý (geocodePlaceId). */
 async function smartNominatimSearch(text) {
   const maps = gmaps();
-  if (!maps?.places?.AutocompleteService) return [];
-  return new Promise(resolve => {
-    new maps.places.AutocompleteService().getPlacePredictions(
-      { input: text, componentRestrictions: { country: 'vn' } },
-      (predictions) => {
-        if (!predictions?.length) { resolve([]); return; }
-        resolve(predictions.slice(0, 6).map(p => ({
-          text: p.description.replace(/,?\s*Việt Nam$/i, "").trim(),
-          placeId: p.place_id,
-        })));
-      }
-    );
-  });
+  if (maps?.places?.AutocompleteService) {
+    return new Promise(resolve => {
+      new maps.places.AutocompleteService().getPlacePredictions(
+        { input: text, componentRestrictions: { country: 'vn' } },
+        (predictions) => {
+          if (!predictions?.length) { resolve([]); return; }
+          resolve(predictions.slice(0, 6).map(p => ({
+            text: p.description.replace(/,?\s*Việt Nam$/i, "").trim(),
+            placeId: p.place_id,
+          })));
+        }
+      );
+    });
+  }
+  // Không có Google (admin chọn SerpApi/Apify) → gợi ý qua server, kèm sẵn toạ độ.
+  return await serverAutocomplete(text);
 }
 
 async function geocodePlaceId(placeId) {
@@ -373,7 +397,7 @@ async function geocodePlaceId(placeId) {
 
 async function cascadeGeocode(text) {
   const maps = gmaps();
-  if (!maps) return null;
+  if (!maps) return await serverGeocode(text); // Google không có → server (SerpApi/Apify)
   const geocoder = new maps.Geocoder();
   const parts = text.split(",").map(p => p.trim()).filter(Boolean);
   const queries = [text];
@@ -439,7 +463,10 @@ function AddrModal({ init, onClose, onSave }) {
     setPickedFull(s.text);
     setSugg([]);
     setGeocoding(true);
-    const loc = await geocodePlaceId(s.placeId);
+    // Gợi ý từ server đã kèm toạ độ; gợi ý Google cần tra placeId; thiếu thì geocode theo chữ.
+    let loc = (typeof s.lat === 'number' && typeof s.lng === 'number') ? { lat: s.lat, lng: s.lng } : null;
+    if (!loc && s.placeId) loc = await geocodePlaceId(s.placeId);
+    if (!loc) loc = await cascadeGeocode(s.text);
     if (loc) setF(prev => ({ ...prev, lat: loc.lat, lng: loc.lng }));
     setGeocoding(false);
   };

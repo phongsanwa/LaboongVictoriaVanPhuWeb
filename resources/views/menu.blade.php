@@ -22,7 +22,7 @@
 window.MENU_PAGE_DATA = @json($menuPageData);
 </script>
 {{-- Chỉ nạp Google Maps khi admin chọn Tự động/Chỉ Google (tránh tốn phí Google khi dùng SerpApi/Apify) --}}
-@if(config('services.google_maps.key') && in_array(($menuPageData['mapsProvider'] ?? 'auto'), ['auto', 'google'], true))
+@if(\App\Support\MapsConfig::useGoogleJs())
 <script src="https://maps.googleapis.com/maps/api/js?key={{ config('services.google_maps.key') }}&libraries=places&language=vi&region=VN"></script>
 @endif
 
