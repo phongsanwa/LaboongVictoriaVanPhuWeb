@@ -25,10 +25,11 @@ function getLiveShippingTiers()  { return LIVE ? (LIVE_D.shippingTiers  || []) :
 function getLiveShippingPromos() { return LIVE ? (LIVE_D.shippingPromos || []) : []; }
 function getLiveOrderPromos()    { return LIVE ? (LIVE_D.orderPromos    || []) : []; }
 function getLiveWeatherSurcharge() { return (LIVE && LIVE_D.weatherSurcharge) ? LIVE_D.weatherSurcharge : { enabled: false, fee: 0, label: 'Phụ thu thời tiết xấu' }; }
-// Nhà cung cấp bản đồ do admin chọn: 'auto' (Google trước, lỗi thì SerpApi) | 'google' | 'serpapi'.
+// Nhà cung cấp bản đồ do admin chọn: 'auto' (Google trước, lỗi thì SerpApi) | 'google' | 'serpapi' | 'apify'.
 const MAPS_PROVIDER = (LIVE && LIVE_D.mapsProvider) ? LIVE_D.mapsProvider : 'auto';
-const USE_GOOGLE_MAPS = MAPS_PROVIDER !== 'serpapi';   // có thử Google không
-const USE_SERPAPI_MAPS = MAPS_PROVIDER !== 'google';   // có dùng SerpApi (dự phòng/ép) không
+const USE_GOOGLE_MAPS = (MAPS_PROVIDER === 'auto' || MAPS_PROVIDER === 'google'); // có thử Google JS không
+// Server lo phần dự phòng/ép (SerpApi hoặc Apify — server tự chọn theo cài đặt).
+const USE_SERVER_MAPS = MAPS_PROVIDER !== 'google';
 
 const GEO_CACHE_KEY  = 'laboong_geo_v1';
 const CART_STATE_KEY = 'laboong_cart_v2';
@@ -92,7 +93,7 @@ async function geocodeAddress(text) {
     });
   }
   // Google không tải được / không ra kết quả (hoặc admin chọn SerpApi) → dùng SerpApi qua server.
-  if (!loc && USE_SERPAPI_MAPS) loc = await serverGeocode(text);
+  if (!loc && USE_SERVER_MAPS) loc = await serverGeocode(text);
   if (loc) {
     try {
       const cache = JSON.parse(localStorage.getItem(GEO_CACHE_KEY) || '{}');
@@ -124,7 +125,7 @@ async function fetchAddressSuggestions(text) {
     if (list.length) return list;
   }
   // Google không có/không ra gợi ý (hoặc admin chọn SerpApi) → SerpApi (kèm sẵn toạ độ).
-  return USE_SERPAPI_MAPS ? await serverAutocomplete(text) : [];
+  return USE_SERVER_MAPS ? await serverAutocomplete(text) : [];
 }
 
 async function geocodePlaceId(placeId) {
@@ -173,7 +174,7 @@ async function roadDistanceKm(origin, dest) {
     });
   }
   // Google không có/không tính được (hoặc admin chọn SerpApi) → SerpApi (server). Vẫn null thì caller dùng Haversine.
-  if (km === null && USE_SERPAPI_MAPS) {
+  if (km === null && USE_SERVER_MAPS) {
     try {
       const r = await fetch(`/api/maps/distance?olat=${origin.lat}&olng=${origin.lng}&dlat=${dest.lat}&dlng=${dest.lng}`, { headers: { Accept: 'application/json' } });
       if (r.ok) { const j = await r.json(); if (j.ok && typeof j.km === 'number') km = j.km; }

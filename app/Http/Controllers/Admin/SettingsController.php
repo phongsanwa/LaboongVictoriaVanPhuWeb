@@ -45,11 +45,14 @@ class SettingsController extends Controller
         'weather_label'   => 'Phụ thu thời tiết xấu', // nhãn hiển thị trong giỏ
     ];
 
-    /** Bản đồ: chọn nhà cung cấp + key SerpApi. */
+    /** Bản đồ: chọn nhà cung cấp + key các dịch vụ. */
     public const MAPS_DEFAULTS = [
-        // auto = Google trước, lỗi thì SerpApi | google = chỉ Google | serpapi = chỉ SerpApi
-        'provider'    => 'auto',
-        'serpapi_key' => '',
+        // auto = Google trước, lỗi thì SerpApi | google = chỉ Google | serpapi = chỉ SerpApi | apify = chỉ Apify
+        'provider'               => 'auto',
+        'serpapi_key'            => '',
+        'apify_token'            => '',
+        'apify_place_actor'      => 'compass~crawler-google-places',
+        'apify_directions_actor' => 'zen-studio~google-maps-directions-api',
     ];
 
     private const NOTIF_DEFAULTS = [
@@ -160,8 +163,11 @@ class SettingsController extends Controller
             'surcharge.weather_label' => ['nullable', 'string', 'max:60'],
 
             'maps' => ['nullable', 'array'],
-            'maps.provider' => ['nullable', 'in:auto,google,serpapi'],
+            'maps.provider' => ['nullable', 'in:auto,google,serpapi,apify'],
             'maps.serpapi_key' => ['nullable', 'string', 'max:200'],
+            'maps.apify_token' => ['nullable', 'string', 'max:200'],
+            'maps.apify_place_actor' => ['nullable', 'string', 'max:120'],
+            'maps.apify_directions_actor' => ['nullable', 'string', 'max:120'],
 
             'tiers' => ['required', 'array'],
             'tiers.*.id' => ['required', 'integer', 'exists:customer_tiers,id'],
@@ -211,8 +217,11 @@ class SettingsController extends Controller
         ]);
 
         AppSetting::set('maps', [
-            'provider'    => $data['maps']['provider'] ?? 'auto',
-            'serpapi_key' => trim((string) ($data['maps']['serpapi_key'] ?? '')),
+            'provider'               => $data['maps']['provider'] ?? 'auto',
+            'serpapi_key'            => trim((string) ($data['maps']['serpapi_key'] ?? '')),
+            'apify_token'            => trim((string) ($data['maps']['apify_token'] ?? '')),
+            'apify_place_actor'      => trim((string) ($data['maps']['apify_place_actor'] ?? '')) ?: 'compass~crawler-google-places',
+            'apify_directions_actor' => trim((string) ($data['maps']['apify_directions_actor'] ?? '')) ?: 'zen-studio~google-maps-directions-api',
         ]);
 
         $integEnabled = collect($data['integrations'])->mapWithKeys(fn ($i) => [$i['id'] => (bool) $i['on']])->all();
