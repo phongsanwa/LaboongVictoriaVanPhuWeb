@@ -15,7 +15,7 @@ class MapsConfig
     {
         $p = AppSetting::get('maps', [])['provider'] ?? 'auto';
 
-        return in_array($p, ['auto', 'google', 'serpapi', 'apify'], true) ? $p : 'auto';
+        return in_array($p, ['auto', 'google', 'serpapi', 'apify', 'goong'], true) ? $p : 'auto';
     }
 
     /**

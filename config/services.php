@@ -53,4 +53,10 @@ return [
         'directions_actor' => env('APIFY_DIRECTIONS_ACTOR', 'zen-studio~google-maps-directions-api'),
     ],
 
+    // Goong (goong.io) — dịch vụ bản đồ Việt Nam, API REST giống Google Maps.
+    // Key REST đặt ở .env hoặc trong Admin → Cài đặt (AppSetting 'maps').
+    'goong' => [
+        'key' => env('GOONG_API_KEY', ''),
+    ],
+
 ];

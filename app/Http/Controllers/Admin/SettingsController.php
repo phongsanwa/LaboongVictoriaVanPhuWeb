@@ -47,12 +47,13 @@ class SettingsController extends Controller
 
     /** Bản đồ: chọn nhà cung cấp + key các dịch vụ. */
     public const MAPS_DEFAULTS = [
-        // auto = Google trước, lỗi thì SerpApi | google = chỉ Google | serpapi = chỉ SerpApi | apify = chỉ Apify
+        // auto | google | serpapi | apify | goong
         'provider'               => 'auto',
         'serpapi_key'            => '',
         'apify_token'            => '',
         'apify_place_actor'      => 'compass~crawler-google-places',
         'apify_directions_actor' => 'zen-studio~google-maps-directions-api',
+        'goong_key'              => '',
     ];
 
     private const NOTIF_DEFAULTS = [
@@ -163,11 +164,12 @@ class SettingsController extends Controller
             'surcharge.weather_label' => ['nullable', 'string', 'max:60'],
 
             'maps' => ['nullable', 'array'],
-            'maps.provider' => ['nullable', 'in:auto,google,serpapi,apify'],
+            'maps.provider' => ['nullable', 'in:auto,google,serpapi,apify,goong'],
             'maps.serpapi_key' => ['nullable', 'string', 'max:200'],
             'maps.apify_token' => ['nullable', 'string', 'max:200'],
             'maps.apify_place_actor' => ['nullable', 'string', 'max:120'],
             'maps.apify_directions_actor' => ['nullable', 'string', 'max:120'],
+            'maps.goong_key' => ['nullable', 'string', 'max:200'],
 
             'tiers' => ['required', 'array'],
             'tiers.*.id' => ['required', 'integer', 'exists:customer_tiers,id'],
@@ -222,6 +224,7 @@ class SettingsController extends Controller
             'apify_token'            => trim((string) ($data['maps']['apify_token'] ?? '')),
             'apify_place_actor'      => trim((string) ($data['maps']['apify_place_actor'] ?? '')) ?: 'compass~crawler-google-places',
             'apify_directions_actor' => trim((string) ($data['maps']['apify_directions_actor'] ?? '')) ?: 'zen-studio~google-maps-directions-api',
+            'goong_key'              => trim((string) ($data['maps']['goong_key'] ?? '')),
         ]);
 
         $integEnabled = collect($data['integrations'])->mapWithKeys(fn ($i) => [$i['id'] => (bool) $i['on']])->all();

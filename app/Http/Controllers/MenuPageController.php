@@ -316,6 +316,6 @@ class MenuPageController extends Controller
     {
         $p = AppSetting::get('maps', [])['provider'] ?? 'auto';
 
-        return in_array($p, ['auto', 'google', 'serpapi'], true) ? $p : 'auto';
+        return in_array($p, ['auto', 'google', 'serpapi', 'apify', 'goong'], true) ? $p : 'auto';
     }
 }
