@@ -1254,7 +1254,10 @@ function App() {
                 <p style={{ fontSize: 13, color: "var(--ink-2)", margin: "14px 6px 2px", lineHeight: 1.55 }}>
                   Điểm sẽ được cộng vào tài khoản khi đơn giao thành công.
                 </p>
-                <button className="ok-btn" onClick={reset} style={{ marginTop: 20 }}>Đặt thêm món khác</button>
+                <a className="ok-btn primary" href="/orders/history" style={{ marginTop: 20, display: "flex", alignItems: "center", justifyContent: "center", gap: 8, textDecoration: "none" }}>
+                  <Icon name="bag" size={17} color="#fff" /> Theo dõi đơn hàng
+                </a>
+                <button className="ok-btn" onClick={reset} style={{ marginTop: 10 }}>Đặt thêm món khác</button>
               </div>
             ) : couponView ? (
               <>

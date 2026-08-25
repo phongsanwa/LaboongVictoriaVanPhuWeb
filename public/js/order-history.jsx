@@ -60,6 +60,14 @@ const ORDERS = LIVE_OH
     }))
   : DEMO_ORDERS;
 
+// Thông tin ngân hàng để dựng lại mã VietQR cho đơn chuyển khoản chưa thanh toán.
+const BANK = (LIVE_OH && window.ORDER_HISTORY_DATA.bank) ? window.ORDER_HISTORY_DATA.bank : { ready: false };
+function vietQrUrl(o) {
+  if (!BANK.ready) return null;
+  return `https://img.vietqr.io/image/${encodeURIComponent(BANK.bankCode)}-${encodeURIComponent(BANK.accountNumber)}-compact2.png`
+    + `?amount=${o.total}&addInfo=${encodeURIComponent(o.code)}&accountName=${encodeURIComponent(BANK.accountName || '')}`;
+}
+
 const FILTERS = [{ key: "all", label: "Tất cả" }, { key: "active", label: "Đang xử lý" }, { key: "done", label: "Hoàn tất" }, { key: "cancel", label: "Đã huỷ" }];
 
 function dayKey(d) { if (d === 0) return "Hôm nay"; if (d === 1) return "Hôm qua"; if (d < 7) return `${d} ngày trước`; if (d < 30) return `${Math.floor(d / 7)} tuần trước`; return "Trước đó"; }
@@ -277,6 +285,12 @@ function App() {
 
 function OrderDetail({ o, onClose, onReorder }) {
   const st = STATUS[o.status];
+  const isBank = o.paymentMethod === "bank";
+  const unpaid = o.paymentStatus !== "paid";
+  // Đơn chuyển khoản chưa thanh toán & chưa huỷ → cho khách xem lại mã QR để trả.
+  const canPay = isBank && unpaid && o.status !== "cancel";
+  const [showQr, setShowQr] = useState(false);
+  const qrUrl = canPay ? vietQrUrl(o) : null;
   return (
     <div className="scrim" onClick={onClose}>
       <div className="od" onClick={e => e.stopPropagation()}>
@@ -323,6 +337,44 @@ function OrderDetail({ o, onClose, onReorder }) {
             ))}
             <div className="tr grand"><span>Tổng cộng</span><span className="v">{fmt(o.total)}đ</span></div>
           </div>
+
+          {o.paymentMethod && (
+            <div className="oh-pay">
+              <div className="oh-pay-row">
+                <span>Thanh toán</span>
+                <b>{isBank ? "Chuyển khoản ngân hàng" : "Thanh toán khi nhận hàng"}</b>
+              </div>
+              <div className="oh-pay-row">
+                <span>Trạng thái</span>
+                <span className={"oh-pay-badge " + (o.paymentStatus === "paid" ? "paid" : "unpaid")}>
+                  {o.paymentStatus === "paid" ? "Đã thanh toán" : "Chưa thanh toán"}
+                </span>
+              </div>
+
+              {canPay && qrUrl && (<>
+                <button className="b primary" style={{ marginTop: 10, width: "100%" }} onClick={() => setShowQr(v => !v)}>
+                  <Icon name="qr" size={17} color="#fff" /> {showQr ? "Ẩn mã QR" : "Xem mã QR chuyển khoản"}
+                </button>
+                {showQr && (
+                  <div className="qr-pay" style={{ marginTop: 12 }}>
+                    <div className="qr-pay-t">Quét mã để chuyển khoản</div>
+                    <img className="qr-pay-img" src={qrUrl} alt="VietQR chuyển khoản" loading="lazy" />
+                    <div className="qr-pay-info">
+                      <div><span>Ngân hàng</span><b>{BANK.bankCode}</b></div>
+                      <div><span>Số tài khoản</span><b>{BANK.accountNumber}</b></div>
+                      {BANK.accountName && <div><span>Chủ tài khoản</span><b>{BANK.accountName}</b></div>}
+                      <div><span>Số tiền</span><b>{fmt(o.total)}đ</b></div>
+                      <div><span>Nội dung</span><b>{o.code}</b></div>
+                    </div>
+                    <div className="qr-pay-note">Chuyển đúng số tiền & nội dung <b>{o.code}</b> để quán xác nhận nhanh.</div>
+                  </div>
+                )}
+              </>)}
+              {canPay && !qrUrl && (
+                <div className="qr-pay-note" style={{ marginTop: 10 }}>Vui lòng liên hệ quán để lấy thông tin chuyển khoản.</div>
+              )}
+            </div>
+          )}
           {o.points > 0 && o.status === "done" && (
             <div className="od-earn"><span className="bi"><Icon name="coin" size={19} color="#fff" /></span><span className="bt">Điểm đã tích từ đơn này</span><span className="bv">+{fmt(o.points)}</span></div>
           )}

@@ -41,7 +41,28 @@ class OrderHistoryController extends Controller
                 ->toArray();
         }
 
-        return view('order-history', ['historyData' => ['orders' => $orders]]);
+        return view('order-history', ['historyData' => [
+            'orders' => $orders,
+            'bank'   => $this->bankConfig(),
+        ]]);
+    }
+
+    /** Thông tin ngân hàng để dựng lại mã VietQR cho đơn chuyển khoản chưa thanh toán. */
+    private function bankConfig(): array
+    {
+        $p = array_merge(
+            \App\Http\Controllers\Admin\SettingsController::PAYMENT_DEFAULTS,
+            \App\Models\AppSetting::get('payment', [])
+        );
+        $code    = trim((string) $p['bank_code']);
+        $account = trim((string) $p['account_number']);
+
+        return [
+            'bankCode'      => $code,
+            'accountNumber' => $account,
+            'accountName'   => trim((string) $p['account_name']),
+            'ready'         => $code !== '' && $account !== '',
+        ];
     }
 
     private function presentOrder(Order $o, ?string $sizeKey, ?string $addonKey, ?string $sugarKey, ?string $iceKey): array
@@ -120,6 +141,8 @@ class OrderHistoryController extends Controller
             'ship'      => (int) $o->shipping_fee,
             'total'     => (int) $o->total_amount,
             'points'    => (int) $o->points_earned,
+            'paymentMethod' => $o->payment_method ?: 'cod',
+            'paymentStatus' => $o->payment_status ?: 'unpaid',
         ];
     }
 }

@@ -168,3 +168,22 @@ a { color: inherit; text-decoration: none; }
 .od-f .b.primary:hover { background: var(--brand-deep); }
 
 @media (max-width: 460px) { .hdr-sub { display: none; } .lp-step { width: 48px; } }
+
+/* Thanh toán trong chi tiết đơn (lịch sử) */
+.oh-pay { margin-top: 14px; padding: 12px 14px; border: 1px solid var(--line-2); border-radius: 14px; background: var(--card); }
+.oh-pay-row { display: flex; justify-content: space-between; align-items: center; gap: 10px; font-size: 13.5px; padding: 3px 0; }
+.oh-pay-row > span:first-child { color: var(--ink-2); }
+.oh-pay-row b { font-weight: 700; }
+.oh-pay-badge { font-size: 12px; font-weight: 800; padding: 3px 10px; border-radius: 999px; }
+.oh-pay-badge.paid { background: color-mix(in srgb,#16A34A 16%, var(--card)); color: #16A34A; }
+.oh-pay-badge.unpaid { background: color-mix(in srgb,#E8503A 14%, var(--card)); color: #E8503A; }
+
+/* VietQR */
+.qr-pay { border: 1.5px solid var(--line-2); border-radius: 16px; padding: 16px; background: var(--card); text-align: center; }
+.qr-pay-t { font-size: 14px; font-weight: 800; margin-bottom: 10px; }
+.qr-pay-img { width: 220px; max-width: 78%; height: auto; border-radius: 10px; display: block; margin: 0 auto 12px; border: 1px solid var(--line-2); }
+.qr-pay-info { display: flex; flex-direction: column; gap: 5px; text-align: left; font-size: 13px; margin-bottom: 10px; }
+.qr-pay-info > div { display: flex; justify-content: space-between; gap: 10px; }
+.qr-pay-info span { color: var(--ink-3); }
+.qr-pay-info b { font-weight: 700; color: var(--ink); word-break: break-all; text-align: right; }
+.qr-pay-note { font-size: 12px; color: var(--ink-2); line-height: 1.5; background: color-mix(in srgb, var(--brand) 6%, var(--card)); border-radius: 10px; padding: 9px 11px; }
