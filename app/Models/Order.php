@@ -19,6 +19,9 @@ class Order extends Model
         'shipping_fee',
         'weather_surcharge',
         'total_amount',
+        'payment_method',
+        'payment_status',
+        'paid_at',
         'points_earned',
         'points_awarded_at',
         'note',
@@ -39,6 +42,7 @@ class Order extends Model
             'points_awarded_at' => 'datetime',
             'confirmed_at' => 'datetime',
             'cancelled_at' => 'datetime',
+            'paid_at' => 'datetime',
         ];
     }
 

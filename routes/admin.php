@@ -42,6 +42,7 @@ Route::middleware(['auth', 'admin.perm'])->prefix('admin')->name('admin.')->grou
     Route::get('/orders/refresh', [OrdersController::class, 'refresh'])->middleware('admin.perm:order_view')->name('orders.refresh');
     Route::post('/orders/{order}/advance', [OrdersController::class, 'advance'])->middleware('admin.perm:order_advance')->name('orders.advance');
     Route::post('/orders/{order}/cancel', [OrdersController::class, 'cancel'])->middleware('admin.perm:order_cancel')->name('orders.cancel');
+    Route::post('/orders/{order}/payment', [OrdersController::class, 'markPayment'])->middleware('admin.perm:order_advance')->name('orders.payment');
 
     // Điểm & giao dịch
     Route::get('/points', [PointsController::class, 'index'])->middleware('admin.perm:tx_view')->name('points.index');

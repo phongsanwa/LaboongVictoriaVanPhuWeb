@@ -69,6 +69,10 @@ function buildState() {
     apifyPlaceActor: (DATA.maps || {}).apify_place_actor || "compass~crawler-google-places",
     apifyDirActor: (DATA.maps || {}).apify_directions_actor || "zen-studio~google-maps-directions-api",
     goongKey: (DATA.maps || {}).goong_key || "",
+    bankEnabled: !!(DATA.payment && DATA.payment.bank_enabled),
+    bankCode: (DATA.payment || {}).bank_code || "",
+    bankAccountNumber: (DATA.payment || {}).account_number || "",
+    bankAccountName: (DATA.payment || {}).account_name || "",
     tiers: DATA.tiers,
     notif: DATA.notifications,
     integ: DATA.integrations,
@@ -179,6 +183,12 @@ function App() {
         apify_place_actor: (form.apifyPlaceActor || "").trim(),
         apify_directions_actor: (form.apifyDirActor || "").trim(),
         goong_key: (form.goongKey || "").trim(),
+      },
+      payment: {
+        bank_enabled: form.bankEnabled,
+        bank_code: (form.bankCode || "").trim(),
+        account_number: (form.bankAccountNumber || "").trim(),
+        account_name: (form.bankAccountName || "").trim(),
       },
       tiers: form.tiers.map(t => ({ id: t.id, min: t.min, mult: t.mult })),
       notifications: form.notif,
@@ -492,6 +502,36 @@ function App() {
                           Goong dùng đúng key <b>REST API Key</b> (không phải Maptiles Key). Dịch vụ nhanh & hợp địa chỉ Việt Nam.
                         </div>
                       </>)}
+                    </div>
+                  </div>
+
+                  <div className="scard">
+                    <div className="scard-h"><div className="st">Thanh toán chuyển khoản (VietQR)</div><div className="sd">Bật để khách chọn "Chuyển khoản ngân hàng" khi đặt. Sau khi đặt, khách thấy mã VietQR (số tiền + mã đơn) để chuyển khoản; bạn xác nhận "Đã nhận chuyển khoản" trong Đơn hàng.</div></div>
+                    <div className="scard-b">
+                      <div className="frow">
+                        <div className="flabel">Bật chuyển khoản<div className="fsub">Cho khách thanh toán qua ngân hàng</div></div>
+                        <div className="fcontrol"><Tog on={form.bankEnabled} onClick={() => set("bankEnabled", !form.bankEnabled)} /></div>
+                      </div>
+                      <div className="frow">
+                        <div className="flabel">Mã ngân hàng<div className="fsub">Vd: VCB, MB, TCB, ACB, BIDV, VPB…</div></div>
+                        <div className="fcontrol"><input className="sinp" type="text" maxLength={20} value={form.bankCode} disabled={!form.bankEnabled} onChange={e => set("bankCode", e.target.value)} placeholder="VCB" /></div>
+                      </div>
+                      <div className="frow">
+                        <div className="flabel">Số tài khoản</div>
+                        <div className="fcontrol"><input className="sinp tnum" type="text" inputMode="numeric" maxLength={40} value={form.bankAccountNumber} disabled={!form.bankEnabled} onChange={e => set("bankAccountNumber", e.target.value)} placeholder="0123456789" /></div>
+                      </div>
+                      <div className="frow">
+                        <div className="flabel">Chủ tài khoản</div>
+                        <div className="fcontrol"><input className="sinp" type="text" maxLength={100} value={form.bankAccountName} disabled={!form.bankEnabled} onChange={e => set("bankAccountName", e.target.value)} placeholder="LABOONG VICTORIA VAN PHU" /></div>
+                      </div>
+                      {form.bankEnabled && (!(form.bankCode || "").trim() || !(form.bankAccountNumber || "").trim()) && (
+                        <div style={{ fontSize: 12.5, color: "var(--hot)", fontWeight: 600, padding: "2px 2px 6px" }}>
+                          ⚠ Cần nhập mã ngân hàng và số tài khoản thì mới hiện tùy chọn chuyển khoản cho khách.
+                        </div>
+                      )}
+                      <div style={{ fontSize: 12, color: "var(--ink-3)", padding: "2px 2px 4px", lineHeight: 1.5 }}>
+                        VietQR miễn phí, không cần hợp đồng. Mã QR tạo tự động từ tài khoản trên. Bạn tự xác nhận đã nhận tiền trong mục Đơn hàng.
+                      </div>
                     </div>
                   </div>
                 </>

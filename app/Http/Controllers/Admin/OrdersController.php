@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\CustomerPoint;
 use App\Models\Order;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 
@@ -67,6 +68,7 @@ class OrdersController extends Controller
                 'urls'   => [
                     'advance' => route('admin.orders.advance', ['order' => '__ID__']),
                     'cancel'  => route('admin.orders.cancel',  ['order' => '__ID__']),
+                    'payment' => route('admin.orders.payment', ['order' => '__ID__']),
                     'refresh' => route('admin.orders.refresh'),
                 ],
             ],
@@ -137,6 +139,25 @@ class OrdersController extends Controller
         return response()->json([
             'order'   => $this->presentOrder($order->fresh(['customer.user', 'items.product', 'items.toppings', 'discounts', 'store'])),
             'message' => 'Đã huỷ đơn hàng',
+        ]);
+    }
+
+    /** POST /admin/orders/{order}/payment — đánh dấu đã/chưa thanh toán (chuyển khoản). */
+    public function markPayment(Request $request, Order $order): JsonResponse
+    {
+        if (($locked = $this->lockedStoreIds()) !== null && !in_array($order->store_id, $locked, true)) {
+            return response()->json(['message' => 'Đơn này thuộc cửa hàng khác'], 403);
+        }
+
+        $paid = (bool) $request->boolean('paid');
+        $order->update([
+            'payment_status' => $paid ? 'paid' : 'unpaid',
+            'paid_at'        => $paid ? now() : null,
+        ]);
+
+        return response()->json([
+            'order'   => $this->presentOrder($order->fresh(['customer.user', 'items.product', 'items.toppings', 'discounts', 'store'])),
+            'message' => $paid ? 'Đã đánh dấu đã thanh toán' : 'Đã đánh dấu chưa thanh toán',
         ]);
     }
 
@@ -273,7 +294,9 @@ class OrdersController extends Controller
             'sub'       => (int) $o->subtotal,
             'total'     => (int) $o->total_amount,
             'note'      => $o->note ?? '',
-            'pay'       => 'Thanh toán tại quán',
+            'paymentMethod' => $o->payment_method ?: 'cod',
+            'paymentStatus' => $o->payment_status ?: 'unpaid',
+            'pay'       => ($o->payment_method === 'bank') ? 'Chuyển khoản ngân hàng' : 'Thanh toán khi nhận hàng',
             'createdAt' => $o->created_at->toISOString(),
         ];
     }
