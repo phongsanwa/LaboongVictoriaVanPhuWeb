@@ -68,6 +68,7 @@ function buildState() {
     apifyToken: (DATA.maps || {}).apify_token || "",
     apifyPlaceActor: (DATA.maps || {}).apify_place_actor || "compass~crawler-google-places",
     apifyDirActor: (DATA.maps || {}).apify_directions_actor || "zen-studio~google-maps-directions-api",
+    goongKey: (DATA.maps || {}).goong_key || "",
     tiers: DATA.tiers,
     notif: DATA.notifications,
     integ: DATA.integrations,
@@ -177,6 +178,7 @@ function App() {
         apify_token: (form.apifyToken || "").trim(),
         apify_place_actor: (form.apifyPlaceActor || "").trim(),
         apify_directions_actor: (form.apifyDirActor || "").trim(),
+        goong_key: (form.goongKey || "").trim(),
       },
       tiers: form.tiers.map(t => ({ id: t.id, min: t.min, mult: t.mult })),
       notifications: form.notif,
@@ -428,13 +430,13 @@ function App() {
                     </div>
                   </div>
                   <div className="scard">
-                    <div className="scard-h"><div className="st">Bản đồ (Google / SerpApi / Apify)</div><div className="sd">Chọn nhà cung cấp bản đồ cho phần chọn địa chỉ giao hàng. "Tự động" dùng Google trước, khi lỗi (hết hạn mức, chặn key…) thì tự chuyển SerpApi.</div></div>
+                    <div className="scard-h"><div className="st">Bản đồ (Google / SerpApi / Apify / Goong)</div><div className="sd">Chọn nhà cung cấp bản đồ cho phần chọn địa chỉ giao hàng. "Tự động" dùng Google trước, khi lỗi (hết hạn mức, chặn key…) thì tự chuyển SerpApi. "Goong" là dịch vụ Việt Nam, nhanh & hợp địa chỉ trong nước.</div></div>
                     <div className="scard-b">
                       <div className="frow">
                         <div className="flabel">Nhà cung cấp<div className="fsub">Áp dụng cho gợi ý địa chỉ, toạ độ & khoảng cách</div></div>
                         <div className="fcontrol">
                           <div className="miniseg">
-                            {[["auto", "Tự động"], ["google", "Chỉ Google"], ["serpapi", "Chỉ SerpApi"], ["apify", "Chỉ Apify"]].map(([k, l]) => (
+                            {[["auto", "Tự động"], ["google", "Chỉ Google"], ["serpapi", "Chỉ SerpApi"], ["apify", "Chỉ Apify"], ["goong", "Chỉ Goong"]].map(([k, l]) => (
                               <button key={k} className={form.mapsProvider === k ? "on" : ""} onClick={() => set("mapsProvider", k)}>{l}</button>
                             ))}
                           </div>
@@ -473,6 +475,21 @@ function App() {
                         )}
                         <div style={{ fontSize: 12, color: "var(--ink-3)", padding: "2px 2px 4px", lineHeight: 1.5 }}>
                           Apify chạy theo "actor run" nên gợi ý địa chỉ sẽ chậm hơn (vài giây) và tính phí mỗi lượt. Nếu cần gợi ý nhanh, dùng "Tự động" hoặc "Chỉ SerpApi".
+                        </div>
+                      </>)}
+
+                      {form.mapsProvider === "goong" && (<>
+                        <div className="frow">
+                          <div className="flabel">Goong API key<div className="fsub">Lấy tại goong.io → Dashboard → API key (REST API Key)</div></div>
+                          <div className="fcontrol"><input className="sinp" type="password" autoComplete="off" maxLength={200} value={form.goongKey} onChange={e => set("goongKey", e.target.value)} placeholder="Dán API key…" /></div>
+                        </div>
+                        {!((form.goongKey || "").trim()) && (
+                          <div style={{ fontSize: 12.5, color: "var(--hot)", fontWeight: 600, padding: "2px 2px 6px" }}>
+                            ⚠ Bạn đang chọn "Chỉ Goong" nhưng chưa nhập API key — phần chọn địa chỉ sẽ không hoạt động.
+                          </div>
+                        )}
+                        <div style={{ fontSize: 12, color: "var(--ink-3)", padding: "2px 2px 4px", lineHeight: 1.5 }}>
+                          Goong dùng đúng key <b>REST API Key</b> (không phải Maptiles Key). Dịch vụ nhanh & hợp địa chỉ Việt Nam.
                         </div>
                       </>)}
                     </div>
