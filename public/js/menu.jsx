@@ -25,6 +25,7 @@ function getLiveShippingTiers()  { return LIVE ? (LIVE_D.shippingTiers  || []) :
 function getLiveShippingPromos() { return LIVE ? (LIVE_D.shippingPromos || []) : []; }
 function getLiveOrderPromos()    { return LIVE ? (LIVE_D.orderPromos    || []) : []; }
 function getLiveWeatherSurcharge() { return (LIVE && LIVE_D.weatherSurcharge) ? LIVE_D.weatherSurcharge : { enabled: false, fee: 0, label: 'Phụ thu thời tiết xấu' }; }
+function getLivePayment() { return (LIVE && LIVE_D.payment) ? LIVE_D.payment : { bankEnabled: false, bankCode: '', accountNumber: '', accountName: '' }; }
 // Nhà cung cấp bản đồ do admin chọn: 'auto' (Google trước, lỗi thì SerpApi) | 'google' | 'serpapi' | 'apify'.
 const MAPS_PROVIDER = (LIVE && LIVE_D.mapsProvider) ? LIVE_D.mapsProvider : 'auto';
 const USE_GOOGLE_MAPS = (MAPS_PROVIDER === 'auto' || MAPS_PROVIDER === 'google'); // có thử Google JS không
@@ -505,6 +506,9 @@ function App() {
   const [liveShippingPromos, ] = useState(getLiveShippingPromos);
   const [liveOrderPromos,    ] = useState(getLiveOrderPromos);
   const [weatherCfg,         ] = useState(getLiveWeatherSurcharge);
+  const [payCfg,             ] = useState(getLivePayment);
+  const [paymentMethod, setPaymentMethod] = useState("cod"); // 'cod' | 'bank'
+  const [placedInfo, setPlacedInfo] = useState(null); // {code, amount, method} sau khi đặt
   // Chỉ tự chọn sẵn khi CHỈ CÓ 1 chi nhánh; nhiều chi nhánh thì để trống, khách phải tự bấm chọn "Giao từ".
   const [selectedStoreId, setSelectedStoreId] = useState(() => {
     const stores = getLiveStores();
@@ -968,7 +972,7 @@ function App() {
     setPlaced(false); setDrawer(false); setOrderErr("");
     setCouponView(false); setCouponErr("");
     setStoreView(false); setAddrView(false);
-    setActualPts(0);
+    setActualPts(0); setPlacedInfo(null);
   };
 
   const checkout = async () => {
@@ -1024,6 +1028,7 @@ function App() {
           ship_promo_id:       selectedShipPromo?.id  || null,
           store_id: selectedStoreId || null,
           shipping_fee: shipFee || 0,
+          payment_method: (payCfg.bankEnabled && paymentMethod === 'bank') ? 'bank' : 'cod',
           delivery_address: selectedAddr ? selectedAddr.text : null,
           delivery_phone: selectedAddr ? (deliveryPhone || null) : null,
           delivery_lat: selectedAddr?.lat ?? null,
@@ -1033,6 +1038,7 @@ function App() {
       const json = await res.json();
       if (!res.ok) throw new Error(json.message || 'Có lỗi xảy ra');
       setActualPts(json.points_earned ?? earnPts);
+      setPlacedInfo({ code: json.order_code || '', amount: json.total_amount ?? payable, method: json.payment_method || 'cod' });
       setPlaced(true);
       clearCart(); // xoá giỏ + cache ngay khi đặt thành công
     } catch (e) {
@@ -1227,6 +1233,22 @@ function App() {
                   <div className="ok-earn">
                     <span className="oi"><Icon name="coin" size={22} color="#fff" /></span>
                     <div><div className="ot">Sẽ nhận khi đơn hoàn tất</div><div className="ov">+{fmt(actualPts)} điểm</div></div>
+                  </div>
+                )}
+                {placedInfo?.method === "bank" && payCfg.bankCode && payCfg.accountNumber && (
+                  <div className="qr-pay">
+                    <div className="qr-pay-t">Quét mã để chuyển khoản</div>
+                    <img className="qr-pay-img"
+                      src={`https://img.vietqr.io/image/${encodeURIComponent(payCfg.bankCode)}-${encodeURIComponent(payCfg.accountNumber)}-compact2.png?amount=${placedInfo.amount}&addInfo=${encodeURIComponent(placedInfo.code)}&accountName=${encodeURIComponent(payCfg.accountName || '')}`}
+                      alt="VietQR chuyển khoản" loading="lazy" />
+                    <div className="qr-pay-info">
+                      <div><span>Ngân hàng</span><b>{payCfg.bankCode}</b></div>
+                      <div><span>Số tài khoản</span><b>{payCfg.accountNumber}</b></div>
+                      {payCfg.accountName && <div><span>Chủ tài khoản</span><b>{payCfg.accountName}</b></div>}
+                      <div><span>Số tiền</span><b>{fmt(placedInfo.amount)}đ</b></div>
+                      <div><span>Nội dung</span><b>{placedInfo.code}</b></div>
+                    </div>
+                    <div className="qr-pay-note">Vui lòng chuyển đúng số tiền & nội dung <b>{placedInfo.code}</b> để quán xác nhận nhanh. Đơn sẽ được chuẩn bị sau khi nhận được chuyển khoản.</div>
                   </div>
                 )}
                 <p style={{ fontSize: 13, color: "var(--ink-2)", margin: "14px 6px 2px", lineHeight: 1.55 }}>
@@ -1799,6 +1821,24 @@ function App() {
                   )}
                   <div className="csum earn"><span>Điểm tích được</span><span className="v">+{fmt(earnPts)} điểm</span></div>
                   <div className="csum total"><span>Tổng cộng</span><span className="v tnum">{fmt(payable)}đ</span></div>
+
+                  {/* Cách thanh toán */}
+                  <div className="pay-methods">
+                    <div className="pay-title">Cách thanh toán</div>
+                    <button type="button" className={"pay-opt" + (paymentMethod === "cod" ? " on" : "")} onClick={() => setPaymentMethod("cod")}>
+                      <span className="pay-ic"><Icon name="coin" size={18} color="currentColor" /></span>
+                      <span className="pay-txt"><b>Thanh toán khi nhận hàng</b><span>Trả tiền mặt cho shipper</span></span>
+                      <span className={"pay-radio" + (paymentMethod === "cod" ? " on" : "")} />
+                    </button>
+                    {payCfg.bankEnabled && (
+                      <button type="button" className={"pay-opt" + (paymentMethod === "bank" ? " on" : "")} onClick={() => setPaymentMethod("bank")}>
+                        <span className="pay-ic"><Icon name="wallet" size={18} color="currentColor" /></span>
+                        <span className="pay-txt"><b>Chuyển khoản ngân hàng</b><span>Quét mã VietQR sau khi đặt</span></span>
+                        <span className={"pay-radio" + (paymentMethod === "bank" ? " on" : "")} />
+                      </button>
+                    )}
+                  </div>
+
                   {orderErr && <div className="cp-err" style={{ marginBottom: 6 }}><Icon name="alert" size={14} color="var(--hot)" /> {orderErr}</div>}
                   {selectedAddr && geoInfo?.geocoding && (
                     <div style={{ fontSize: 12.5, color: "var(--ink-3)", marginBottom: 6, fontWeight: 600 }}>

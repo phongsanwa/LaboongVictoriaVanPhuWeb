@@ -276,6 +276,7 @@ class MenuPageController extends Controller
             'perPoint'      => 10000,
             'weatherSurcharge' => $this->weatherSurcharge(),
             'mapsProvider'  => $this->mapsProvider(),
+            'payment'       => $this->paymentConfig(),
             'promos'        => $promoCodes,
             'addresses'     => $addresses,
             'customerName'  => Auth::user()?->name ?? '',
@@ -317,5 +318,25 @@ class MenuPageController extends Controller
         $p = AppSetting::get('maps', [])['provider'] ?? 'auto';
 
         return in_array($p, ['auto', 'google', 'serpapi', 'apify', 'goong'], true) ? $p : 'auto';
+    }
+
+    /** Cấu hình thanh toán chuyển khoản (VietQR) cho giỏ hàng. */
+    private function paymentConfig(): array
+    {
+        $p = array_merge(
+            \App\Http\Controllers\Admin\SettingsController::PAYMENT_DEFAULTS,
+            AppSetting::get('payment', [])
+        );
+
+        $bankCode = trim((string) $p['bank_code']);
+        $account  = trim((string) $p['account_number']);
+        $enabled  = (bool) $p['bank_enabled'] && $bankCode !== '' && $account !== '';
+
+        return [
+            'bankEnabled'   => $enabled,
+            'bankCode'      => $bankCode,
+            'accountNumber' => $account,
+            'accountName'   => trim((string) $p['account_name']),
+        ];
     }
 }

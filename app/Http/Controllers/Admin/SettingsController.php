@@ -45,6 +45,14 @@ class SettingsController extends Controller
         'weather_label'   => 'Phụ thu thời tiết xấu', // nhãn hiển thị trong giỏ
     ];
 
+    /** Thanh toán: cấu hình chuyển khoản ngân hàng (VietQR). */
+    public const PAYMENT_DEFAULTS = [
+        'bank_enabled'   => false, // cho khách chọn chuyển khoản ngân hàng
+        'bank_code'      => '',    // mã ngân hàng VietQR (vd: VCB, MB, TCB, ACB…)
+        'account_number' => '',
+        'account_name'   => '',
+    ];
+
     /** Bản đồ: chọn nhà cung cấp + key các dịch vụ. */
     public const MAPS_DEFAULTS = [
         // auto | google | serpapi | apify | goong
@@ -91,6 +99,7 @@ class SettingsController extends Controller
         $timing = AppSetting::get('timing', self::TIMING_DEFAULTS);
         $surcharge = array_merge(self::SURCHARGE_DEFAULTS, AppSetting::get('surcharge', []));
         $maps = array_merge(self::MAPS_DEFAULTS, AppSetting::get('maps', []));
+        $payment = array_merge(self::PAYMENT_DEFAULTS, AppSetting::get('payment', []));
         $integEnabled = AppSetting::get('integrations', collect(self::INTEGRATIONS)->mapWithKeys(fn ($i) => [$i['id'] => $i['default']])->all());
 
         $tiers = CustomerTier::orderBy('level')->get()->values()->map(function (CustomerTier $tier, int $i) {
@@ -129,6 +138,7 @@ class SettingsController extends Controller
                 'timing' => $timing,
                 'surcharge' => $surcharge,
                 'maps' => $maps,
+                'payment' => $payment,
                 'integrations' => $integrations,
                 'telegram' => \App\Support\TelegramNotifier::config(),
                 'ntfy' => \App\Support\NtfyNotifier::config(),
@@ -170,6 +180,12 @@ class SettingsController extends Controller
             'maps.apify_place_actor' => ['nullable', 'string', 'max:120'],
             'maps.apify_directions_actor' => ['nullable', 'string', 'max:120'],
             'maps.goong_key' => ['nullable', 'string', 'max:200'],
+
+            'payment' => ['nullable', 'array'],
+            'payment.bank_enabled' => ['nullable', 'boolean'],
+            'payment.bank_code' => ['nullable', 'string', 'max:20'],
+            'payment.account_number' => ['nullable', 'string', 'max:40'],
+            'payment.account_name' => ['nullable', 'string', 'max:100'],
 
             'tiers' => ['required', 'array'],
             'tiers.*.id' => ['required', 'integer', 'exists:customer_tiers,id'],
@@ -225,6 +241,13 @@ class SettingsController extends Controller
             'apify_place_actor'      => trim((string) ($data['maps']['apify_place_actor'] ?? '')) ?: 'compass~crawler-google-places',
             'apify_directions_actor' => trim((string) ($data['maps']['apify_directions_actor'] ?? '')) ?: 'zen-studio~google-maps-directions-api',
             'goong_key'              => trim((string) ($data['maps']['goong_key'] ?? '')),
+        ]);
+
+        AppSetting::set('payment', [
+            'bank_enabled'   => (bool) ($data['payment']['bank_enabled'] ?? false),
+            'bank_code'      => trim((string) ($data['payment']['bank_code'] ?? '')),
+            'account_number' => trim((string) ($data['payment']['account_number'] ?? '')),
+            'account_name'   => trim((string) ($data['payment']['account_name'] ?? '')),
         ]);
 
         $integEnabled = collect($data['integrations'])->mapWithKeys(fn ($i) => [$i['id'] => (bool) $i['on']])->all();

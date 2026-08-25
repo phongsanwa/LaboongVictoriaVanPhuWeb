@@ -319,6 +319,23 @@ function App() {
     }
   };
 
+  const markPaid = async (o, paid) => {
+    if (!LIVE || !o.dbId) {
+      setOrders(list => list.map(x => x.id === o.id ? { ...x, paymentStatus: paid ? 'paid' : 'unpaid' } : x));
+      setSel(s => s && s.id === o.id ? { ...s, paymentStatus: paid ? 'paid' : 'unpaid' } : s);
+      return;
+    }
+    if (saving) return;
+    setSaving(true);
+    try {
+      const url = LIVE_D.urls.payment.replace('__ID__', o.dbId);
+      const json = await apiPost(url, { paid });
+      updateOrder(json.order);
+      flash(paid ? `${o.id} · đã thanh toán` : `${o.id} · chưa thanh toán`);
+    } catch (e) { flash('Lỗi: ' + e.message); }
+    finally { setSaving(false); }
+  };
+
   const adminInfo = LIVE ? LIVE_D.admin : { name: "Quản trị viên", email: "admin@laboong.vn", initials: "QT" };
 
   return (
@@ -445,7 +462,7 @@ function App() {
         </div>
       </div>
 
-      {sel && <OrderDrawer o={sel} saving={saving} onClose={() => setSel(null)} onAdvance={advance} onCancel={cancel} />}
+      {sel && <OrderDrawer o={sel} saving={saving} onClose={() => setSel(null)} onAdvance={advance} onCancel={cancel} onMarkPaid={markPaid} />}
       {toast && <div className="toast"><span className="tc"><Icon name="check" size={15} color="#fff" /></span>{toast}</div>}
 
       <TweaksPanel>
@@ -459,7 +476,7 @@ function App() {
   );
 }
 
-function OrderDrawer({ o, saving, onClose, onAdvance, onCancel }) {
+function OrderDrawer({ o, saving, onClose, onAdvance, onCancel, onMarkPaid }) {
   useEffect(() => {
     const h = e => { if (e.key === "Escape") onClose(); };
     window.addEventListener("keydown", h); return () => window.removeEventListener("keydown", h);
@@ -566,6 +583,25 @@ function OrderDrawer({ o, saving, onClose, onAdvance, onCancel }) {
             ))}
             {o.weatherSurcharge > 0 && <div className="od-trow"><span>Phụ thu thời tiết xấu</span><span className="v">+{fmt(o.weatherSurcharge)}đ</span></div>}
             <div className="od-trow grand"><span>Tổng cộng</span><span className="v">{fmt(o.total)}đ</span></div>
+          </div>
+
+          {/* Thanh toán */}
+          <div className="od-pay">
+            <div className="od-pay-row">
+              <span>Cách thanh toán</span>
+              <b>{o.pay || (o.paymentMethod === "bank" ? "Chuyển khoản ngân hàng" : "Thanh toán khi nhận hàng")}</b>
+            </div>
+            <div className="od-pay-row">
+              <span>Trạng thái</span>
+              <span className={"od-pay-badge " + (o.paymentStatus === "paid" ? "paid" : "unpaid")}>
+                {o.paymentStatus === "paid" ? "Đã thanh toán" : "Chưa thanh toán"}
+              </span>
+            </div>
+            {o.paymentMethod === "bank" && (
+              o.paymentStatus === "paid"
+                ? <button className="btn ghost tiny" disabled={saving} onClick={() => onMarkPaid(o, false)} style={{ marginTop: 8 }}>Bỏ đánh dấu đã thanh toán</button>
+                : <button className="btn primary" disabled={saving} onClick={() => onMarkPaid(o, true)} style={{ marginTop: 8, width: "100%" }}><Icon name="check" size={16} color="#fff" /> Đã nhận chuyển khoản</button>
+            )}
           </div>
         </div>
         {!ended && (

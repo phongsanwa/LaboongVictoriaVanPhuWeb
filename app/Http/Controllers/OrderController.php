@@ -40,6 +40,7 @@ class OrderController extends Controller
             'discount'            => ['nullable', 'numeric', 'min:0'],
             'store_id'            => ['nullable', 'integer'],
             'shipping_fee'        => ['nullable', 'integer', 'min:0'],
+            'payment_method'      => ['nullable', 'in:cod,bank'],
             'voucher_id'          => ['nullable', 'integer'],
             'shipping_voucher_id' => ['nullable', 'integer'],
             'order_promo_id'      => ['nullable', 'integer'],
@@ -266,6 +267,11 @@ class OrderController extends Controller
             }
         }
 
+        // --- Phương thức thanh toán --- (bank chỉ chấp nhận khi admin đã bật chuyển khoản)
+        $paymentCfg = array_merge(SettingsController::PAYMENT_DEFAULTS, AppSetting::get('payment', []));
+        $bankOn     = (bool) $paymentCfg['bank_enabled'] && trim((string) $paymentCfg['bank_code']) !== '' && trim((string) $paymentCfg['account_number']) !== '';
+        $paymentMethod = (($data['payment_method'] ?? 'cod') === 'bank' && $bankOn) ? 'bank' : 'cod';
+
         $discountAmt  = $badgeDiscAmt + $orderDiscAmt + $shipDiscAmt;
         $totalAmount  = max(0.0, round($saleSubtotal - $orderDiscAmt + $shippingFee - $shipDiscAmt + $weatherSurcharge, 2));
         // Điểm thưởng chỉ tính trên tiền HÀNG (sau giảm giá), KHÔNG tính phí ship / phụ thu.
@@ -276,7 +282,7 @@ class OrderController extends Controller
 
         DB::transaction(function () use (
             $customer, $store, $data, $itemData,
-            $subtotal, $discountAmt, $shippingFee, $weatherSurcharge, $totalAmount, $pointsEarned,
+            $subtotal, $discountAmt, $shippingFee, $weatherSurcharge, $totalAmount, $pointsEarned, $paymentMethod,
             $orderVoucher, $shippingVoucher, $orderPromo, $shipPromo, $badgeDiscAmt,
             $voucherDiscAmt, $orderPromoDiscAmt, $shipVoucherDiscAmt, $shipPromoDiscAmt,
             &$orderId
@@ -290,6 +296,8 @@ class OrderController extends Controller
                 'shipping_fee'    => $shippingFee,
                 'weather_surcharge' => $weatherSurcharge,
                 'total_amount'    => $totalAmount,
+                'payment_method'  => $paymentMethod,
+                'payment_status'  => 'unpaid',
                 'points_earned'   => $pointsEarned,
                 'note'            => $data['note'] ?? null,
                 'delivery_address' => $data['delivery_address'] ?? null,
@@ -400,6 +408,9 @@ class OrderController extends Controller
 
         return response()->json([
             'order_id'        => $orderId,
+            'order_code'      => 'LB-' . str_pad((string) $orderId, 4, '0', STR_PAD_LEFT),
+            'payment_method'  => $paymentMethod,
+            'total_amount'    => (int) $totalAmount,
             'points_earned'   => $pointsEarned,   // số điểm sẽ nhận khi đơn hoàn tất
             'points_pending'  => true,
             'message'         => $pointsEarned > 0

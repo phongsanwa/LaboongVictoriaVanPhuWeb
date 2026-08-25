@@ -1234,3 +1234,12 @@ textarea.sinp { resize: vertical; min-height: 70px; line-height: 1.5; }
 /* Nhãn tài khoản thử nghiệm (loại khỏi báo cáo) */
 .test-badge { flex: none; font-size: 9.5px; font-weight: 800; letter-spacing: .4px;
   color: #fff; background: var(--hot, #D4584B); padding: 1px 6px; border-radius: 5px; }
+
+/* Thanh toán trong chi tiết đơn */
+.od-pay { margin: 14px 18px 4px; padding: 12px 14px; border: 1px solid var(--line-2); border-radius: 12px; background: var(--panel); }
+.od-pay-row { display: flex; justify-content: space-between; align-items: center; gap: 10px; font-size: 13.5px; padding: 3px 0; }
+.od-pay-row > span:first-child { color: var(--ink-2); }
+.od-pay-row b { font-weight: 700; }
+.od-pay-badge { font-size: 12px; font-weight: 800; padding: 3px 10px; border-radius: 999px; }
+.od-pay-badge.paid { background: color-mix(in srgb,#16A34A 16%, var(--panel)); color: #16A34A; }
+.od-pay-badge.unpaid { background: color-mix(in srgb,#D4584B 14%, var(--panel)); color: #D4584B; }
