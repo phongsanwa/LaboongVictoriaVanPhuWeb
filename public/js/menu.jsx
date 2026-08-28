@@ -981,9 +981,9 @@ function App() {
 
     if (!LIVE) { setActualPts(earnPts); setPlaced(true); clearCart(); return; }
 
-    // Chỉ nhận đơn GIAO HÀNG online — bắt buộc có địa chỉ nhận hàng.
-    if (!selectedAddr) {
-      setOrderErr("Vui lòng chọn địa chỉ giao hàng.");
+    // Đơn giao tận nơi bắt buộc có địa chỉ; đơn nhận tại quầy thì không cần.
+    if (addrId !== "pickup" && !selectedAddr) {
+      setOrderErr("Vui lòng chọn địa chỉ giao hàng hoặc chọn nhận tại quầy.");
       setAddrView(true);
       return;
     }
@@ -1254,7 +1254,10 @@ function App() {
                 <p style={{ fontSize: 13, color: "var(--ink-2)", margin: "14px 6px 2px", lineHeight: 1.55 }}>
                   Điểm sẽ được cộng vào tài khoản khi đơn giao thành công.
                 </p>
-                <button className="ok-btn" onClick={reset} style={{ marginTop: 20 }}>Đặt thêm món khác</button>
+                <a className="ok-btn primary" href="/orders/history" style={{ marginTop: 20, display: "flex", alignItems: "center", justifyContent: "center", gap: 8, textDecoration: "none" }}>
+                  <Icon name="bag" size={17} color="#fff" /> Theo dõi đơn hàng
+                </a>
+                <button className="ok-btn" onClick={reset} style={{ marginTop: 10 }}>Đặt thêm món khác</button>
               </div>
             ) : couponView ? (
               <>
@@ -1486,7 +1489,7 @@ function App() {
               <>
                 <div className="cp-h">
                   <button className="cp-back" onClick={() => setStoreView(false)}><Icon name="arrowleft" size={18} /></button>
-                  <h3>Chọn chi nhánh</h3>
+                  <h3>{storeViewMode === "pickup" ? "Chọn quầy nhận" : "Chọn chi nhánh giao"}</h3>
                 </div>
                 <div className="cp-b">
                   {!userLoc && (
@@ -1506,7 +1509,7 @@ function App() {
                       return (
                         <button key={s.id}
                           className={"aopt" + (selectedStoreId === s.id ? " on" : "")}
-                          onClick={() => { setSelectedStoreId(s.id); setStoreView(false); }}>
+                          onClick={() => { setSelectedStoreId(s.id); if (storeViewMode === "pickup") setAddrId("pickup"); setStoreView(false); }}>
                           <span className="ai"><Icon name="pin" size={19} color="currentColor" /></span>
                           <div style={{ minWidth: 0, flex: 1 }}>
                             <div className="albl">
@@ -1602,6 +1605,17 @@ function App() {
                     </button>
                   )}
 
+                  <div className="cp-sec">Hoặc</div>
+                  <button className={"aopt pickup" + (addrId === "pickup" ? " on" : "")}
+                    onClick={() => { setAddrId("pickup"); setAddrView(false); if (liveStores.length > 1) { setStoreViewMode("pickup"); setStoreView(true); } }}>
+                    <span className="ai"><Icon name="bag" size={19} color="currentColor" /></span>
+                    <div style={{ minWidth: 0, flex: 1 }}>
+                      <div className="albl"><span className="atag">Nhận tại quầy</span></div>
+                      <div className="atext">{pickupLabel}</div>
+                    </div>
+                    <span className="aradio" />
+                  </button>
+
                   <a className="manage-addr" href={NAV_URLS.profile}><Icon name="plus2" size={15} color="currentColor" /> Quản lý địa chỉ trong Hồ sơ</a>
                 </div>
               </>
@@ -1635,15 +1649,21 @@ function App() {
                     </button>
                   )}
                   <button className="deliv" onClick={() => setAddrView(true)}>
-                    <span className="di"><Icon name={selectedAddr ? addrIcon(selectedAddr.label) : "pin"} size={19} color="currentColor" /></span>
+                    <span className="di"><Icon name={selectedAddr ? addrIcon(selectedAddr.label) : addrId === "pickup" ? "bag" : "pin"} size={19} color="currentColor" /></span>
                     <div style={{ minWidth: 0, flex: 1 }}>
                       {selectedAddr ? (<>
                         <div className="dl">Giao đến <span className="dtag">{selectedAddr.label}</span>{selectedAddr.def && <span className="dtag" style={{ background: "var(--bg-2)", color: "var(--ink-2)" }}>Mặc định</span>}</div>
                         <div className="dt">{selectedAddr.text}</div>
-                      </>) : (<>
-                        <div className="dl">Chọn địa chỉ giao hàng</div>
+                      </>) : addrId === "pickup" ? (<>
+                        <div className="dl">Nhận tại quầy</div>
+                        <div className="dt">{pickupLabel}</div>
                         <div className="dt" style={{ marginTop: 2, fontSize: 12.5, fontWeight: 600, color: "var(--brand)" }}>
-                          Bấm để chọn hoặc thêm địa chỉ nhận hàng
+                          Bấm để đổi nơi nhận / chuyển sang giao tận nơi
+                        </div>
+                      </>) : (<>
+                        <div className="dl">Chọn nơi nhận hàng</div>
+                        <div className="dt" style={{ marginTop: 2, fontSize: 12.5, fontWeight: 600, color: "var(--brand)" }}>
+                          Bấm để chọn giao tận nơi hoặc nhận tại quầy
                         </div>
                       </>)}
                     </div>
@@ -1827,7 +1847,7 @@ function App() {
                     <div className="pay-title">Cách thanh toán</div>
                     <button type="button" className={"pay-opt" + (paymentMethod === "cod" ? " on" : "")} onClick={() => setPaymentMethod("cod")}>
                       <span className="pay-ic"><Icon name="coin" size={18} color="currentColor" /></span>
-                      <span className="pay-txt"><b>Thanh toán khi nhận hàng</b><span>Trả tiền mặt cho shipper</span></span>
+                      <span className="pay-txt"><b>{addrId === "pickup" ? "Thanh toán tại quầy" : "Thanh toán khi nhận hàng"}</b><span>{addrId === "pickup" ? "Trả tiền khi đến lấy" : "Trả tiền mặt cho shipper"}</span></span>
                       <span className={"pay-radio" + (paymentMethod === "cod" ? " on" : "")} />
                     </button>
                     {payCfg.bankEnabled && (
