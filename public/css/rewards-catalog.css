@@ -91,7 +91,7 @@ a { color: inherit; text-decoration: none; }
 .gift:hover { box-shadow: var(--shadow-md); transform: translateY(-3px); }
 .gift.locked { opacity: .86; }
 
-.gift-thumb { height: 132px; position: relative; display: grid; place-items: center; overflow: hidden; }
+.gift-thumb { height: 210px; position: relative; display: grid; place-items: center; overflow: hidden; }
 .gift-thumb::after { content:""; position:absolute; inset:0; background-image: radial-gradient(circle at 16% 84%, rgba(255,255,255,.16) 0 20px, transparent 21px), radial-gradient(circle at 86% 22%, rgba(255,255,255,.12) 0 26px, transparent 27px); }
 .gift-thumb .ti { position: relative; z-index: 1; color: #fff; filter: drop-shadow(0 4px 10px rgba(0,0,0,.22)); }
 .gift-tags { position: absolute; top: 10px; left: 10px; z-index: 2; display: flex; gap: 6px; flex-wrap: wrap; }
