@@ -122,6 +122,21 @@ Dùng **chung logic với web** (server tự tính giá, khuyến mãi, phí shi
 
 ---
 
+## 8. Geocode địa chỉ *(cần token)*
+- `GET /api/geo/geocode?q=<địa chỉ>` → `{ ok, lat, lng }` (đổi địa chỉ → toạ độ để tính phí ship).
+- `GET /api/geo/autocomplete?q=<chuỗi>` → `{ ok, results:[{text,lat,lng}] }`.
+Dùng đúng nhà cung cấp bản đồ đã chọn trong Admin (Google/SerpApi/Apify/Goong).
+
+## Giao diện mẫu (public/zalo)
+Có sẵn một mini web app tĩnh tại **`public/zalo/`** (`index.html` + `css/app.css` + `js/app.js`),
+giao diện bám theo mobile của website và gọi thẳng các endpoint trên. Mở thử tại
+`https://<domain>/zalo/`. Để đăng nhập Zalo thật, cắm SDK Zalo qua hook:
+```js
+// Trả về { accessToken, phoneToken } từ SDK Zalo Mini App
+window.__zaloGetTokens = async () => ({ accessToken: await getAccessToken(), phoneToken: (await getPhoneNumber()).token });
+```
+Không có hook/SDK thì app vẫn cho xem thực đơn; đăng nhập chỉ chạy trong môi trường Zalo.
+
 ## Ghi chú kỹ thuật
 - Mọi số tiền là **VND (số nguyên)**. Điểm là số.
 - Giá & khuyến mãi **luôn được tính lại ở server** khi đặt hàng — Mini App chỉ hiển thị ước tính.

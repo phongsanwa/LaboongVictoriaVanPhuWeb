@@ -4,6 +4,7 @@ use App\Http\Controllers\Api\AddressController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\CatalogController;
 use App\Http\Controllers\Api\OrderController as ApiOrderController;
+use App\Http\Controllers\MapsController;
 use App\Http\Controllers\OrderController;
 use Illuminate\Support\Facades\Route;
 
@@ -30,4 +31,8 @@ Route::middleware('auth.api')->group(function () {
     // Đặt hàng dùng lại đúng logic web (tính giá/khuyến mãi/điểm ở server).
     Route::post('/orders', [OrderController::class, 'place']);
     Route::get('/orders', [ApiOrderController::class, 'index']);
+
+    // Geocode địa chỉ → toạ độ (để tính phí ship). Dùng nhà cung cấp bản đồ đã chọn.
+    Route::get('/geo/geocode', [MapsController::class, 'geocode']);
+    Route::get('/geo/autocomplete', [MapsController::class, 'autocomplete']);
 });
