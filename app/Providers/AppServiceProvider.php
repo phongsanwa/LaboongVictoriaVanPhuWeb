@@ -62,5 +62,10 @@ class AppServiceProvider extends ServiceProvider
                 ->by($request->ip())
                 ->response($tooMany('Bạn đã đăng ký quá nhiều lần. Vui lòng thử lại sau vài phút.'))
         );
+
+        // API (Zalo Mini App): giới hạn theo user (nếu đã đăng nhập) hoặc IP.
+        RateLimiter::for('api', fn (Request $request) =>
+            Limit::perMinute(90)->by($request->user()?->id ?: $request->ip())
+        );
     }
 }

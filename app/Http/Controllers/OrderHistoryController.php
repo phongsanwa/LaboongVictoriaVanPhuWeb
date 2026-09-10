@@ -19,6 +19,12 @@ class OrderHistoryController extends Controller
 
     public function index()
     {
+        return view('order-history', ['historyData' => $this->buildHistoryData()]);
+    }
+
+    /** Dữ liệu lịch sử đơn (dùng chung cho trang web & API Zalo Mini App). */
+    public function buildHistoryData(): array
+    {
         $customer = Auth::user()->customer()->first();
 
         $orders = [];
@@ -41,10 +47,10 @@ class OrderHistoryController extends Controller
                 ->toArray();
         }
 
-        return view('order-history', ['historyData' => [
+        return [
             'orders' => $orders,
             'bank'   => $this->bankConfig(),
-        ]]);
+        ];
     }
 
     /** Thông tin ngân hàng để dựng lại mã VietQR cho đơn chuyển khoản chưa thanh toán. */

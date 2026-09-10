@@ -59,4 +59,10 @@ return [
         'key' => env('GOONG_API_KEY', ''),
     ],
 
+    // Zalo Mini App — xác thực người dùng qua Zalo OpenAPI (graph.zalo.me).
+    'zalo' => [
+        'app_id'     => env('ZALO_APP_ID', ''),
+        'app_secret' => env('ZALO_APP_SECRET', ''),
+    ],
+
 ];

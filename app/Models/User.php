@@ -27,6 +27,7 @@ class User extends Authenticatable
         'user_type',
         'status',
         'avatar_url',
+        'zalo_id',
         'phone_verified_at',
         'last_seen_at',
     ];
