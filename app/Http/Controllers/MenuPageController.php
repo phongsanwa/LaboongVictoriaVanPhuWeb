@@ -31,7 +31,7 @@ class MenuPageController extends Controller
         return view('menu', ['menuPageData' => $this->buildMenuPageData()]);
     }
 
-    private function buildMenuPageData(): array
+    public function buildMenuPageData(): array
     {
         // --- Products (available only, ordered by sort_order) ---
         $products = Product::with('category', 'comboItems.item')
