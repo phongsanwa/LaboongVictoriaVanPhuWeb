@@ -166,6 +166,9 @@ const NAV_URLS = {
   adminCampaigns: "/admin/campaigns",
   adminCombos: "/admin/combos",
   adminStores: "/admin/stores",
+  adminIngredients: "/admin/ingredients",
+  adminRecipes: "/admin/recipes",
+  adminDailyEntries: "/admin/daily-entries",
   adminRoles: "/admin/roles",
   adminSettings: "/admin/settings",
 };
@@ -177,6 +180,9 @@ const ADMIN_NAV_HREF = {
   "Chiến dịch": NAV_URLS.adminCampaigns,
   "Combo": NAV_URLS.adminCombos,
   "Cửa hàng": NAV_URLS.adminStores,
+  "Nguyên liệu": NAV_URLS.adminIngredients,
+  "Công thức": NAV_URLS.adminRecipes,
+  "Nhập liệu": NAV_URLS.adminDailyEntries,
   "Phân quyền": NAV_URLS.adminRoles,
   "Cài đặt": NAV_URLS.adminSettings,
 };

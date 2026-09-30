@@ -2,12 +2,15 @@
 
 use App\Http\Controllers\Admin\CampaignsController;
 use App\Http\Controllers\Admin\CombosController;
+use App\Http\Controllers\Admin\DailyEntriesController;
+use App\Http\Controllers\Admin\RecipesController;
 use App\Http\Controllers\Admin\CustomersController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\PointsController;
 use App\Http\Controllers\Admin\RewardsController;
 use App\Http\Controllers\Admin\RolesController;
 use App\Http\Controllers\Admin\SettingsController;
+use App\Http\Controllers\Admin\IngredientsController;
 use App\Http\Controllers\Admin\StoresController;
 use Illuminate\Support\Facades\Route;
 
@@ -44,6 +47,12 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
     Route::put('/combos/{combo}', [CombosController::class, 'update'])->name('combos.update');
     Route::post('/combos/{combo}/toggle', [CombosController::class, 'toggle'])->name('combos.toggle');
     Route::delete('/combos/{combo}', [CombosController::class, 'destroy'])->name('combos.destroy');
+    Route::get('/ingredients', [IngredientsController::class, 'index'])->name('ingredients.index');
+    Route::post('/ingredients', [IngredientsController::class, 'store'])->name('ingredients.store');
+    Route::put('/ingredients/{ingredient}', [IngredientsController::class, 'update'])->name('ingredients.update');
+    Route::delete('/ingredients/{ingredient}', [IngredientsController::class, 'destroy'])->name('ingredients.destroy');
+    Route::post('/ingredients/{ingredient}/overrides/{store}', [IngredientsController::class, 'storeOverride'])->name('ingredients.overrides.store');
+    Route::delete('/ingredients/{ingredient}/overrides/{store}', [IngredientsController::class, 'destroyOverride'])->name('ingredients.overrides.destroy');
     Route::get('/stores', [StoresController::class, 'index'])->name('stores.index');
     Route::post('/stores', [StoresController::class, 'store'])->name('stores.store');
     Route::put('/stores/{store}', [StoresController::class, 'update'])->name('stores.update');
@@ -53,4 +62,11 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
     Route::delete('/stores/{store}/photos', [StoresController::class, 'deletePhoto'])->name('stores.photos.delete');
     Route::get('/stores/{store}/costs', [StoresController::class, 'getCosts'])->name('stores.costs.get');
     Route::post('/stores/{store}/costs', [StoresController::class, 'saveCosts'])->name('stores.costs.save');
+    Route::get('/recipes', [RecipesController::class, 'index'])->name('recipes.index');
+    Route::post('/recipes', [RecipesController::class, 'store'])->name('recipes.store');
+    Route::put('/recipes/{recipe}', [RecipesController::class, 'update'])->name('recipes.update');
+    Route::delete('/recipes/{recipe}', [RecipesController::class, 'destroy'])->name('recipes.destroy');
+    Route::post('/recipes/{recipe}/snapshot', [RecipesController::class, 'saveSnapshot'])->name('recipes.snapshot');
+    Route::get('/daily-entries', [DailyEntriesController::class, 'index'])->name('daily-entries.index');
+    Route::post('/daily-entries/{store}/{date}', [DailyEntriesController::class, 'save'])->name('daily-entries.save');
 });
