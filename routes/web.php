@@ -4,6 +4,7 @@ use App\Http\Controllers\Auth\ForgotPasswordController;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Auth\RegisterController;
 use App\Http\Controllers\HomeController;
+use App\Http\Controllers\OnboardingController;
 use App\Http\Controllers\PointsController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\RewardsCatalogController;
@@ -39,6 +40,9 @@ Route::post('/logout', [LoginController::class, 'logout'])->name('logout');
 
 Route::post('/forgot-password/send-otp', [ForgotPasswordController::class, 'sendOtp'])->name('forgot.otp');
 Route::post('/forgot-password/reset', [ForgotPasswordController::class, 'reset'])->name('forgot.reset');
+
+Route::get('/setup', [OnboardingController::class, 'index'])->name('onboarding');
+Route::post('/setup', [OnboardingController::class, 'store'])->name('onboarding.store');
 
 require __DIR__.'/admin.php';
 require __DIR__.'/pos.php';

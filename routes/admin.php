@@ -12,6 +12,8 @@ use App\Http\Controllers\Admin\RolesController;
 use App\Http\Controllers\Admin\SettingsController;
 use App\Http\Controllers\Admin\IngredientsController;
 use App\Http\Controllers\Admin\StoresController;
+use App\Http\Controllers\Admin\OverviewController;
+use App\Http\Controllers\Admin\ReportsController;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(function () {
@@ -69,4 +71,6 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
     Route::post('/recipes/{recipe}/snapshot', [RecipesController::class, 'saveSnapshot'])->name('recipes.snapshot');
     Route::get('/daily-entries', [DailyEntriesController::class, 'index'])->name('daily-entries.index');
     Route::post('/daily-entries/{store}/{date}', [DailyEntriesController::class, 'save'])->name('daily-entries.save');
+    Route::get('/overview', [OverviewController::class, 'index'])->name('overview.index');
+    Route::get('/reports', [ReportsController::class, 'index'])->name('reports.index');
 });

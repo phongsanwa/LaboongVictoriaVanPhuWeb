@@ -169,6 +169,8 @@ const NAV_URLS = {
   adminIngredients: "/admin/ingredients",
   adminRecipes: "/admin/recipes",
   adminDailyEntries: "/admin/daily-entries",
+  adminOverview: "/admin/overview",
+  adminReports: "/admin/reports",
   adminRoles: "/admin/roles",
   adminSettings: "/admin/settings",
 };
@@ -183,6 +185,8 @@ const ADMIN_NAV_HREF = {
   "Nguyên liệu": NAV_URLS.adminIngredients,
   "Công thức": NAV_URLS.adminRecipes,
   "Nhập liệu": NAV_URLS.adminDailyEntries,
+  "Tổng quan OPS": NAV_URLS.adminOverview,
+  "Báo cáo": NAV_URLS.adminReports,
   "Phân quyền": NAV_URLS.adminRoles,
   "Cài đặt": NAV_URLS.adminSettings,
 };
