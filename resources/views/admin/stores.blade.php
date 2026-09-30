@@ -25,6 +25,7 @@
 <script type="text/babel" src="{{ asset('js/tweaks-panel.jsx') }}"></script>
 <script type="text/babel" src="{{ asset('js/components.jsx') }}"></script>
 <script type="text/babel" src="{{ asset('js/admin-store-editor.jsx') }}"></script>
+<script type="text/babel" src="{{ asset('js/admin-store-costs.jsx') }}"></script>
 <script type="text/babel" src="{{ asset('js/admin-stores.jsx') }}"></script>
 </body>
 </html>

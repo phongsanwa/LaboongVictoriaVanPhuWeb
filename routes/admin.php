@@ -51,4 +51,6 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
     Route::delete('/stores/{store}', [StoresController::class, 'destroy'])->name('stores.destroy');
     Route::post('/stores/{store}/photos', [StoresController::class, 'uploadPhoto'])->name('stores.photos.upload');
     Route::delete('/stores/{store}/photos', [StoresController::class, 'deletePhoto'])->name('stores.photos.delete');
+    Route::get('/stores/{store}/costs', [StoresController::class, 'getCosts'])->name('stores.costs.get');
+    Route::post('/stores/{store}/costs', [StoresController::class, 'saveCosts'])->name('stores.costs.save');
 });

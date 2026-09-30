@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Staff;
 use App\Models\Store;
+use App\Models\StoreMonthlyCost;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
@@ -86,6 +87,50 @@ class StoresController extends Controller
         $store->update(['photos' => $photos]);
 
         return response()->json(['store' => $this->present($store)]);
+    }
+
+    // ─── monthly costs ────────────────────────────────────────────────────────
+
+    public function getCosts(Store $store)
+    {
+        $rows = $store->monthlyCosts()->get()->keyBy('year_month');
+
+        return response()->json([
+            'costs' => $rows->map(fn ($r) => $r->costs)->toArray(),
+        ]);
+    }
+
+    public function saveCosts(Request $request, Store $store)
+    {
+        $request->validate([
+            'year_month' => ['required', 'regex:/^\d{4}-\d{2}$/'],
+            'costs'      => ['required', 'array'],
+        ]);
+
+        $yearMonth = $request->input('year_month');
+        $costs     = $request->input('costs');
+
+        // Sanitise: keep only numeric amounts and string labels for custom items
+        $clean = [];
+        foreach ($costs as $key => $value) {
+            if (is_numeric($value)) {
+                $clean[$key] = (float) $value;
+            } elseif (is_array($value) && isset($value['label'], $value['amount'])) {
+                $clean[$key] = ['label' => (string) $value['label'], 'amount' => (float) $value['amount']];
+            }
+        }
+
+        StoreMonthlyCost::updateOrCreate(
+            ['store_id' => $store->id, 'year_month' => $yearMonth],
+            ['costs' => $clean]
+        );
+
+        // Return full cost map for this store
+        $rows = $store->monthlyCosts()->get()->keyBy('year_month');
+
+        return response()->json([
+            'costs' => $rows->map(fn ($r) => $r->costs)->toArray(),
+        ]);
     }
 
     public function deletePhoto(Request $request, Store $store)
