@@ -8,6 +8,7 @@ return new class extends Migration
 {
     public function up(): void
     {
+        if (Schema::hasTable('combo_items')) return;
         Schema::create('combo_items', function (Blueprint $table) {
             $table->id();
             // Sản phẩm combo (cha)
