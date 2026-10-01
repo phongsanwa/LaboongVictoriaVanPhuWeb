@@ -42,4 +42,9 @@ class Store extends Model
     {
         return $this->hasMany(Customer::class);
     }
+
+    public function monthlyCosts(): HasMany
+    {
+        return $this->hasMany(StoreMonthlyCost::class)->orderBy('year_month');
+    }
 }

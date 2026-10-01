@@ -4,9 +4,7 @@ use App\Http\Controllers\Auth\ForgotPasswordController;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Auth\RegisterController;
 use App\Http\Controllers\HomeController;
-use App\Http\Controllers\MenuPageController;
-use App\Http\Controllers\OrderController;
-use App\Http\Controllers\OrderHistoryController;
+use App\Http\Controllers\OnboardingController;
 use App\Http\Controllers\PointsController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\PromotionController;
@@ -120,6 +118,9 @@ Route::post('/logout', [LoginController::class, 'logout'])->name('logout');
 
 // Quên mật khẩu: mật khẩu mới được tạo và gửi về email đã đăng ký
 Route::post('/forgot-password/send-new-password', [ForgotPasswordController::class, 'sendNewPassword'])->middleware('throttle:otp')->name('forgot.password');
+
+Route::get('/setup', [OnboardingController::class, 'index'])->name('onboarding');
+Route::post('/setup', [OnboardingController::class, 'store'])->name('onboarding.store');
 
 require __DIR__.'/admin.php';
 require __DIR__.'/pos.php';

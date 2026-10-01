@@ -9,28 +9,24 @@ class ComboItem extends Model
 {
     protected $fillable = [
         'combo_id',
-        'item_product_id',
+        'product_id',
         'quantity',
+        'default_size_variant_id',
         'sort_order',
     ];
 
-    protected function casts(): array
-    {
-        return [
-            'quantity'   => 'integer',
-            'sort_order' => 'integer',
-        ];
-    }
-
-    /** Sản phẩm combo (cha). */
     public function combo(): BelongsTo
     {
-        return $this->belongsTo(Product::class, 'combo_id');
+        return $this->belongsTo(Combo::class);
     }
 
-    /** Món con trong combo. */
-    public function item(): BelongsTo
+    public function product(): BelongsTo
     {
-        return $this->belongsTo(Product::class, 'item_product_id')->withTrashed();
+        return $this->belongsTo(Product::class);
+    }
+
+    public function defaultSizeVariant(): BelongsTo
+    {
+        return $this->belongsTo(ProductVariant::class, 'default_size_variant_id');
     }
 }

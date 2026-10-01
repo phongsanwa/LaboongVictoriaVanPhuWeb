@@ -1,4 +1,4 @@
-/* global React, ReactDOM, Icon, fmt, StoreEditor, ConfirmDeleteStore, STORE_DAYS, useTweaks, TweaksPanel, TweakSection, TweakColor, TweakToggle, NAV_URLS, adminHref */
+/* global React, ReactDOM, Icon, fmt, StoreEditor, ConfirmDeleteStore, CostPanel, STORE_DAYS, useTweaks, TweaksPanel, TweakSection, TweakColor, TweakToggle, NAV_URLS, adminHref */
 const { useState, useEffect, useMemo } = React;
 
 const ST_DEFAULTS = /*EDITMODE-BEGIN*/{
@@ -40,6 +40,7 @@ function StoresApp() {
   const [status, setStatus] = useState("all");
   const [sideOpen, setSideOpen] = useState(false);
   const [editor, setEditor] = useState(null); // {store}
+  const [costsStore, setCostsStore] = useState(null); // store whose costs panel is open
   const [delTarget, setDelTarget] = useState(null);
   const [toast, setToast] = useState(null);
 
@@ -192,6 +193,7 @@ function StoresApp() {
                       <td><span className={"status " + (s.status === "active" ? "on" : "off")}>{s.status === "active" ? "Active" : "Inactive"}</span></td>
                       <td style={{ textAlign: "right" }}>
                         <div style={{ display: "inline-flex", gap: 6 }}>
+                          <button className="rw-btn" onClick={() => setCostsStore(s)} title="Chi phí cố định"><Icon name="chart" size={15} /></button>
                           <button className="rw-btn" onClick={() => setEditor({ store: s })} title="Chỉnh sửa"><Icon name="edit" size={15} /></button>
                           <button className="rw-btn" onClick={() => onToggle(s)} title={s.status === "active" ? "Ẩn (Inactive)" : "Kích hoạt (Active)"}>
                             <Icon name={s.status === "active" ? "eyeoff" : "eye"} size={15} />
@@ -209,6 +211,7 @@ function StoresApp() {
       </div>
 
       {editor && <StoreEditor initial={editor.store} onClose={() => setEditor(null)} onSave={onSave} />}
+      {costsStore && <CostPanel store={costsStore} onClose={() => setCostsStore(null)} />}
       {delTarget && <ConfirmDeleteStore name={delTarget.name} onClose={() => setDelTarget(null)} onConfirm={doDelete} />}
       {toast && <div className="toast"><span className="tc"><Icon name="check" size={15} color="#fff" /></span>{toast}</div>}
 

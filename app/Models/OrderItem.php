@@ -10,6 +10,7 @@ class OrderItem extends Model
 {
     protected $fillable = [
         'order_id',
+        'combo_id',
         'product_id',
         'quantity',
         'unit_price',
@@ -25,6 +26,11 @@ class OrderItem extends Model
     public function order(): BelongsTo
     {
         return $this->belongsTo(Order::class);
+    }
+
+    public function combo(): BelongsTo
+    {
+        return $this->belongsTo(Combo::class);
     }
 
     public function product(): BelongsTo
