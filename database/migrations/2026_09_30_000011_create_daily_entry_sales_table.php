@@ -8,7 +8,8 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::create('daily_entry_sales', function (Blueprint $table) {
+        if (!Schema::hasTable('daily_entry_sales')) {
+            Schema::create('daily_entry_sales', function (Blueprint $table) {
             $table->id();
             $table->foreignId('daily_entry_id')->constrained('daily_entries')->cascadeOnDelete();
             $table->foreignId('recipe_id')->constrained('recipes')->restrictOnDelete();
@@ -17,6 +18,7 @@ return new class extends Migration
             $table->timestamps();
             $table->unique(['daily_entry_id', 'recipe_id']);
         });
+        }
     }
 
     public function down(): void

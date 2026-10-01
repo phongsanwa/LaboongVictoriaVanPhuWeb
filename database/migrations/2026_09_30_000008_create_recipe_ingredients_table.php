@@ -8,7 +8,8 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::create('recipe_ingredients', function (Blueprint $table) {
+        if (!Schema::hasTable('recipe_ingredients')) {
+            Schema::create('recipe_ingredients', function (Blueprint $table) {
             $table->id();
             $table->foreignId('recipe_id')->constrained('recipes')->cascadeOnDelete();
             $table->foreignId('ingredient_id')->nullable()->constrained('ingredients')->nullOnDelete();
@@ -19,6 +20,7 @@ return new class extends Migration
             $table->unsignedSmallInteger('sort_order')->default(0);
             $table->timestamps();
         });
+        }
     }
 
     public function down(): void

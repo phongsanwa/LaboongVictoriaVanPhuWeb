@@ -8,7 +8,8 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::create('daily_entries', function (Blueprint $table) {
+        if (!Schema::hasTable('daily_entries')) {
+            Schema::create('daily_entries', function (Blueprint $table) {
             $table->id();
             $table->foreignId('store_id')->constrained('stores')->cascadeOnDelete();
             $table->date('entry_date');
@@ -16,6 +17,7 @@ return new class extends Migration
             $table->timestamps();
             $table->unique(['store_id', 'entry_date']);
         });
+        }
     }
 
     public function down(): void

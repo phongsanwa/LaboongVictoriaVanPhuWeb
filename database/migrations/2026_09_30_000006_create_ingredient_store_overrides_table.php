@@ -8,7 +8,8 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::create('ingredient_store_overrides', function (Blueprint $table) {
+        if (!Schema::hasTable('ingredient_store_overrides')) {
+            Schema::create('ingredient_store_overrides', function (Blueprint $table) {
             $table->id();
             $table->foreignId('ingredient_id')->constrained('ingredients')->cascadeOnDelete();
             $table->foreignId('store_id')->constrained('stores')->cascadeOnDelete();
@@ -16,6 +17,7 @@ return new class extends Migration
             $table->timestamps();
             $table->unique(['ingredient_id', 'store_id']);
         });
+        }
     }
 
     public function down(): void

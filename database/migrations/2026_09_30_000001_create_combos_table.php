@@ -8,7 +8,8 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::create('combos', function (Blueprint $table) {
+        if (!Schema::hasTable('combos')) {
+            Schema::create('combos', function (Blueprint $table) {
             $table->id();
             $table->string('name', 100);
             $table->string('slug', 100)->unique();
@@ -27,6 +28,7 @@ return new class extends Migration
 
             $table->index('status');
         });
+        }
     }
 
     public function down(): void
