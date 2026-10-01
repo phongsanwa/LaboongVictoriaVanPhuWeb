@@ -8,7 +8,8 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::create('recipe_cost_history', function (Blueprint $table) {
+        if (!Schema::hasTable('recipe_cost_history')) {
+            Schema::create('recipe_cost_history', function (Blueprint $table) {
             $table->id();
             $table->foreignId('recipe_id')->constrained('recipes')->cascadeOnDelete();
             $table->decimal('cogs_l', 10, 2);
@@ -16,6 +17,7 @@ return new class extends Migration
             $table->timestamps();
             $table->unique(['recipe_id', 'recorded_on']);
         });
+        }
     }
 
     public function down(): void

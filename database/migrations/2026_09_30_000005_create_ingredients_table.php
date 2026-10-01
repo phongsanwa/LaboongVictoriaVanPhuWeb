@@ -8,7 +8,8 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::create('ingredients', function (Blueprint $table) {
+        if (!Schema::hasTable('ingredients')) {
+            Schema::create('ingredients', function (Blueprint $table) {
             $table->id();
             $table->string('name');
             $table->string('buy_unit')->default('kg');
@@ -18,6 +19,7 @@ return new class extends Migration
             $table->unsignedSmallInteger('sort_order')->default(0);
             $table->timestamps();
         });
+        }
     }
 
     public function down(): void

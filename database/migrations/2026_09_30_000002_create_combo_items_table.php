@@ -8,7 +8,8 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::create('combo_items', function (Blueprint $table) {
+        if (!Schema::hasTable('combo_items')) {
+            Schema::create('combo_items', function (Blueprint $table) {
             $table->id();
             $table->foreignId('combo_id')->constrained('combos')->cascadeOnDelete();
             $table->foreignId('product_id')->constrained('products')->restrictOnDelete();
@@ -23,6 +24,7 @@ return new class extends Migration
 
             $table->unique(['combo_id', 'product_id']);
         });
+        }
     }
 
     public function down(): void

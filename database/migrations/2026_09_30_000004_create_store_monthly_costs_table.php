@@ -7,7 +7,8 @@ use Illuminate\Support\Facades\Schema;
 return new class extends Migration {
     public function up(): void
     {
-        Schema::create('store_monthly_costs', function (Blueprint $table) {
+        if (!Schema::hasTable('store_monthly_costs')) {
+            Schema::create('store_monthly_costs', function (Blueprint $table) {
             $table->id();
             $table->foreignId('store_id')->constrained('stores')->cascadeOnDelete();
             $table->char('year_month', 7); // e.g. "2026-07"
@@ -15,6 +16,7 @@ return new class extends Migration {
             $table->timestamps();
             $table->unique(['store_id', 'year_month']);
         });
+        }
     }
 
     public function down(): void
