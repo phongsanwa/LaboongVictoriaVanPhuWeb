@@ -3,13 +3,14 @@
 <head>
 <meta charset="UTF-8" />
 @include('partials.favicon')
+@include('partials.pwa')
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <meta name="csrf-token" content="{{ csrf_token() }}" />
-<title>Laboong · Danh mục đổi quà</title>
+@include('partials.seo', ['seoPage' => 'rewards', 'seoTitle' => 'Đổi quà · Laboong', 'seoDesc' => 'Dùng điểm tích luỹ Laboong đổi voucher, món miễn phí và quà tặng hấp dẫn.'])
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&family=Baloo+2:wght@600;700;800&display=swap" rel="stylesheet" />
-<link rel="stylesheet" href="{{ asset('css/rewards-catalog.css') }}" />
+<link rel="stylesheet" href="{{ asset('css/rewards-catalog.css') }}?v={{ filemtime(public_path('css/rewards-catalog.css')) }}" />
 </head>
 <body>
 <div id="root"></div>
@@ -22,8 +23,8 @@
   window.REWARDS_DATA = @json($rewardsData);
 </script>
 
-<script type="text/babel" src="{{ asset('js/tweaks-panel.jsx') }}"></script>
-<script type="text/babel" src="{{ asset('js/components.jsx') }}"></script>
-<script type="text/babel" src="{{ asset('js/rewards-catalog.jsx') }}"></script>
+<script type="text/babel" src="{{ asset('js/tweaks-panel.jsx') }}?v={{ filemtime(public_path('js/tweaks-panel.jsx')) }}"></script>
+<script type="text/babel" src="{{ asset('js/components.jsx') }}?v={{ filemtime(public_path('js/components.jsx')) }}"></script>
+<script type="text/babel" src="{{ asset('js/rewards-catalog.jsx') }}?v={{ filemtime(public_path('js/rewards-catalog.jsx')) }}"></script>
 </body>
 </html>

@@ -20,6 +20,9 @@ class SettingsController extends Controller
         'hotline' => '1900 8386',
         'logo_url' => null,
         'favicon_url' => null,
+        'app_icon_url' => null, // icon riêng cho "Thêm vào màn hình chính" (PWA); trống thì dùng logo
+        'checkin_enabled' => true, // bật/tắt chức năng điểm danh hàng ngày
+        'ios_guide_html' => null,  // hướng dẫn thêm ra màn hình chính iPhone (HTML từ trình soạn thảo)
     ];
 
     private const POINTS_DEFAULTS = [
@@ -27,6 +30,38 @@ class SettingsController extends Controller
         'welcome' => 50,
         'expiry' => 12,
         'rounding' => 'down',
+    ];
+
+    public const TIMING_DEFAULTS = [
+        'prep_base'    => 5,  // phút chuẩn bị chung mỗi đơn
+        'prep_per_cup' => 2,  // phút/ly mặc định (món không cài riêng)
+        'ship_minutes' => 15, // thời gian giao hàng
+    ];
+
+    /** Phụ thu giao hàng khi thời tiết xấu (admin tự bật khi mưa/bão). */
+    public const SURCHARGE_DEFAULTS = [
+        'weather_enabled' => false,
+        'weather_fee'     => 0,                       // số tiền phụ thu (đồng)
+        'weather_label'   => 'Phụ thu thời tiết xấu', // nhãn hiển thị trong giỏ
+    ];
+
+    /** Thanh toán: cấu hình chuyển khoản ngân hàng (VietQR). */
+    public const PAYMENT_DEFAULTS = [
+        'bank_enabled'   => false, // cho khách chọn chuyển khoản ngân hàng
+        'bank_code'      => '',    // mã ngân hàng VietQR (vd: VCB, MB, TCB, ACB…)
+        'account_number' => '',
+        'account_name'   => '',
+    ];
+
+    /** Bản đồ: chọn nhà cung cấp + key các dịch vụ. */
+    public const MAPS_DEFAULTS = [
+        // auto | google | serpapi | apify | goong
+        'provider'               => 'auto',
+        'serpapi_key'            => '',
+        'apify_token'            => '',
+        'apify_place_actor'      => 'compass~crawler-google-places',
+        'apify_directions_actor' => 'zen-studio~google-maps-directions-api',
+        'goong_key'              => '',
     ];
 
     private const NOTIF_DEFAULTS = [
@@ -57,9 +92,14 @@ class SettingsController extends Controller
     {
         $admin = Auth::user();
 
-        $general = AppSetting::get('general', self::GENERAL_DEFAULTS);
+        // Gộp mặc định để dữ liệu cũ (chưa có khoá mới như checkin_enabled) vẫn đủ trường.
+        $general = array_merge(self::GENERAL_DEFAULTS, AppSetting::get('general', []));
         $points = AppSetting::get('points', self::POINTS_DEFAULTS);
         $notif = AppSetting::get('notifications', self::NOTIF_DEFAULTS);
+        $timing = AppSetting::get('timing', self::TIMING_DEFAULTS);
+        $surcharge = array_merge(self::SURCHARGE_DEFAULTS, AppSetting::get('surcharge', []));
+        $maps = array_merge(self::MAPS_DEFAULTS, AppSetting::get('maps', []));
+        $payment = array_merge(self::PAYMENT_DEFAULTS, AppSetting::get('payment', []));
         $integEnabled = AppSetting::get('integrations', collect(self::INTEGRATIONS)->mapWithKeys(fn ($i) => [$i['id'] => $i['default']])->all());
 
         $tiers = CustomerTier::orderBy('level')->get()->values()->map(function (CustomerTier $tier, int $i) {
@@ -95,7 +135,13 @@ class SettingsController extends Controller
                 'points' => $points,
                 'tiers' => $tiers,
                 'notifications' => array_merge(self::NOTIF_DEFAULTS, $notif),
+                'timing' => $timing,
+                'surcharge' => $surcharge,
+                'maps' => $maps,
+                'payment' => $payment,
                 'integrations' => $integrations,
+                'telegram' => \App\Support\TelegramNotifier::config(),
+                'ntfy' => \App\Support\NtfyNotifier::config(),
             ],
         ]);
     }
@@ -108,12 +154,38 @@ class SettingsController extends Controller
             'general.tagline' => ['required', 'string', 'max:150'],
             'general.email' => ['required', 'email'],
             'general.hotline' => ['required', 'string', 'max:30'],
+            'general.checkin_enabled' => ['required', 'boolean'],
+            'general.ios_guide_html' => ['nullable', 'string', 'max:50000'],
 
             'points' => ['required', 'array'],
             'points.per_point' => ['required', 'integer', 'min:1'],
             'points.welcome' => ['required', 'integer', 'min:0'],
             'points.expiry' => ['required', 'integer', 'min:0'],
             'points.rounding' => ['required', 'in:down,nearest,up'],
+
+            'timing' => ['required', 'array'],
+            'timing.prep_base' => ['required', 'integer', 'min:0', 'max:120'],
+            'timing.prep_per_cup' => ['required', 'integer', 'min:0', 'max:60'],
+            'timing.ship_minutes' => ['required', 'integer', 'min:0', 'max:180'],
+
+            'surcharge' => ['nullable', 'array'],
+            'surcharge.weather_enabled' => ['nullable', 'boolean'],
+            'surcharge.weather_fee' => ['nullable', 'integer', 'min:0', 'max:1000000'],
+            'surcharge.weather_label' => ['nullable', 'string', 'max:60'],
+
+            'maps' => ['nullable', 'array'],
+            'maps.provider' => ['nullable', 'in:auto,google,serpapi,apify,goong'],
+            'maps.serpapi_key' => ['nullable', 'string', 'max:200'],
+            'maps.apify_token' => ['nullable', 'string', 'max:200'],
+            'maps.apify_place_actor' => ['nullable', 'string', 'max:120'],
+            'maps.apify_directions_actor' => ['nullable', 'string', 'max:120'],
+            'maps.goong_key' => ['nullable', 'string', 'max:200'],
+
+            'payment' => ['nullable', 'array'],
+            'payment.bank_enabled' => ['nullable', 'boolean'],
+            'payment.bank_code' => ['nullable', 'string', 'max:20'],
+            'payment.account_number' => ['nullable', 'string', 'max:40'],
+            'payment.account_name' => ['nullable', 'string', 'max:100'],
 
             'tiers' => ['required', 'array'],
             'tiers.*.id' => ['required', 'integer', 'exists:customer_tiers,id'],
@@ -131,18 +203,67 @@ class SettingsController extends Controller
             'integrations' => ['required', 'array'],
             'integrations.*.id' => ['required', 'string'],
             'integrations.*.on' => ['required', 'boolean'],
+
+            'telegram' => ['nullable', 'array'],
+            'telegram.enabled' => ['nullable', 'boolean'],
+            'telegram.bot_token' => ['nullable', 'string', 'max:120'],
+            'telegram.chat_id' => ['nullable', 'string', 'max:60'],
+
+            'ntfy' => ['nullable', 'array'],
+            'ntfy.enabled' => ['nullable', 'boolean'],
+            'ntfy.topic' => ['nullable', 'string', 'max:80'],
+            'ntfy.server' => ['nullable', 'string', 'max:120'],
         ]);
 
         $current = AppSetting::get('general', self::GENERAL_DEFAULTS);
         $general = $data['general'];
         $general['logo_url'] = $current['logo_url'] ?? null;
         $general['favicon_url'] = $current['favicon_url'] ?? null;
+        $general['app_icon_url'] = $current['app_icon_url'] ?? null;
+        $general['checkin_enabled'] = (bool) ($data['general']['checkin_enabled'] ?? true);
+        // Hướng dẫn iPhone là HTML từ trình soạn thảo → làm sạch chống XSS trước khi lưu.
+        $general['ios_guide_html'] = \App\Support\HtmlSanitizer::clean($data['general']['ios_guide_html'] ?? null);
         AppSetting::set('general', $general);
         AppSetting::set('points', $data['points']);
+        AppSetting::set('timing', $data['timing']);
         AppSetting::set('notifications', $data['notifications']);
+
+        AppSetting::set('surcharge', [
+            'weather_enabled' => (bool) ($data['surcharge']['weather_enabled'] ?? false),
+            'weather_fee'     => max(0, (int) ($data['surcharge']['weather_fee'] ?? 0)),
+            'weather_label'   => trim((string) ($data['surcharge']['weather_label'] ?? '')) ?: 'Phụ thu thời tiết xấu',
+        ]);
+
+        AppSetting::set('maps', [
+            'provider'               => $data['maps']['provider'] ?? 'auto',
+            'serpapi_key'            => trim((string) ($data['maps']['serpapi_key'] ?? '')),
+            'apify_token'            => trim((string) ($data['maps']['apify_token'] ?? '')),
+            'apify_place_actor'      => trim((string) ($data['maps']['apify_place_actor'] ?? '')) ?: 'compass~crawler-google-places',
+            'apify_directions_actor' => trim((string) ($data['maps']['apify_directions_actor'] ?? '')) ?: 'zen-studio~google-maps-directions-api',
+            'goong_key'              => trim((string) ($data['maps']['goong_key'] ?? '')),
+        ]);
+
+        AppSetting::set('payment', [
+            'bank_enabled'   => (bool) ($data['payment']['bank_enabled'] ?? false),
+            'bank_code'      => trim((string) ($data['payment']['bank_code'] ?? '')),
+            'account_number' => trim((string) ($data['payment']['account_number'] ?? '')),
+            'account_name'   => trim((string) ($data['payment']['account_name'] ?? '')),
+        ]);
 
         $integEnabled = collect($data['integrations'])->mapWithKeys(fn ($i) => [$i['id'] => (bool) $i['on']])->all();
         AppSetting::set('integrations', $integEnabled);
+
+        AppSetting::set('telegram', [
+            'enabled'   => (bool) ($data['telegram']['enabled'] ?? false),
+            'bot_token' => trim((string) ($data['telegram']['bot_token'] ?? '')),
+            'chat_id'   => trim((string) ($data['telegram']['chat_id'] ?? '')),
+        ]);
+
+        AppSetting::set('ntfy', [
+            'enabled' => (bool) ($data['ntfy']['enabled'] ?? false),
+            'topic'   => trim((string) ($data['ntfy']['topic'] ?? '')),
+            'server'  => trim((string) ($data['ntfy']['server'] ?? '')),
+        ]);
 
         foreach ($data['tiers'] as $tier) {
             CustomerTier::where('id', $tier['id'])->update([
@@ -198,6 +319,74 @@ class SettingsController extends Controller
         $this->removeGeneralImage('favicon_url');
 
         return response()->json(['message' => 'Đã xoá favicon']);
+    }
+
+    public function uploadAppIcon(Request $request): JsonResponse
+    {
+        $request->validate([
+            'app_icon' => ['required', 'image', 'mimes:png,jpg,jpeg,webp', 'max:2048'],
+        ], [
+            'app_icon.required' => 'Vui lòng chọn một tệp hình ảnh',
+            'app_icon.image' => 'Tệp phải là hình ảnh (PNG, JPG, WEBP)',
+            'app_icon.mimes' => 'Tệp phải là hình ảnh (PNG, JPG, WEBP)',
+            'app_icon.max' => 'Kích thước ảnh tối đa 2MB',
+        ]);
+
+        $url = $this->replaceGeneralImage('app_icon_url', $request->file('app_icon'), 'branding');
+
+        return response()->json(['message' => 'Đã tải lên icon màn hình chính', 'app_icon_url' => $url]);
+    }
+
+    public function deleteAppIcon(): JsonResponse
+    {
+        $this->removeGeneralImage('app_icon_url');
+
+        return response()->json(['message' => 'Đã xoá icon màn hình chính']);
+    }
+
+    /** Gửi tin nhắn thử tới Telegram để kiểm tra bot token + chat id. */
+    public function testTelegram(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'bot_token' => ['required', 'string', 'max:120'],
+            'chat_id'   => ['required', 'string', 'max:60'],
+        ], [
+            'bot_token.required' => 'Vui lòng nhập Bot Token',
+            'chat_id.required'   => 'Vui lòng nhập Chat ID',
+        ]);
+
+        $ok = \App\Support\TelegramNotifier::send(
+            "✅ <b>Laboong</b> — Kết nối Telegram thành công!\nĐơn hàng mới sẽ được gửi về đây.",
+            $data['bot_token'],
+            $data['chat_id'],
+        );
+
+        return $ok
+            ? response()->json(['message' => 'Đã gửi tin nhắn thử — kiểm tra Telegram nhé!'])
+            : response()->json(['message' => 'Không gửi được. Kiểm tra lại Bot Token và Chat ID.'], 422);
+    }
+
+    /** Gửi thông báo thử tới ntfy để kiểm tra topic. */
+    public function testNtfy(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'topic'  => ['required', 'string', 'max:80'],
+            'server' => ['nullable', 'string', 'max:120'],
+        ], [
+            'topic.required' => 'Vui lòng nhập Topic',
+        ]);
+
+        $ok = \App\Support\NtfyNotifier::send(
+            'Bạn có đơn hàng từ Laboong',
+            "✅ Kết nối ntfy thành công!\nĐơn hàng mới sẽ báo về đây kèm chuông.",
+            rtrim((string) config('app.url'), '/') . '/admin/orders',
+            $data['topic'],
+            $data['server'] ?? null,
+        );
+
+        return $ok
+            ? response()->json(['message' => 'Đã gửi thông báo thử — kiểm tra app ntfy nhé!'])
+            : response()->json(['message' => 'Không gửi được. Kiểm tra lại Topic / Server.'], 422);
     }
 
     /** Stores a new image for a general-settings field, removing the previous file, and returns its public URL. */

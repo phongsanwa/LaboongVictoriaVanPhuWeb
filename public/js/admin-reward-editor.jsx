@@ -1,5 +1,10 @@
-/* global React, Icon, REWARD_CATS */
+/* global React, Icon, REWARD_CATS, REWARD_PRODUCTS, REWARD_SIZES, fmt */
 const { useState: useStateEd, useEffect: useEffectEd } = React;
+
+function csrfTokenEd() {
+  const m = document.querySelector('meta[name="csrf-token"]');
+  return m ? m.content : "";
+}
 
 const GRADS = [
   "linear-gradient(135deg,#0F623F,#1AA86A)",
@@ -19,13 +24,34 @@ const GRADS = [
 function RewardEditor({ initial, onClose, onSave }) {
   const isEdit = !!initial;
   const [name, setName] = useStateEd(initial?.name || "");
-  const [cat, setCat] = useStateEd(initial?.cat || "voucher");
+  const [cat, setCat] = useStateEd(() => {
+    const c = initial?.cat || "voucher";
+    return REWARD_CATS[c] ? c : "topping";
+  });
   const [points, setPoints] = useStateEd(initial?.points ?? 300);
   const [qty, setQty] = useStateEd(initial?.qty ?? 200);
+  // Giới hạn số lần đổi mỗi khách — chuỗi rỗng = không giới hạn
+  const [perLimit, setPerLimit] = useStateEd(initial?.per_customer_limit != null ? String(initial.per_customer_limit) : "");
   const [expiry, setExpiry] = useStateEd(initial?.expiry || "2026-12-31");
   const [status, setStatus] = useStateEd(initial ? initial.status === "on" : true);
   const [grad, setGrad] = useStateEd(initial?.grad || GRADS[0]);
   const [img, setImg] = useStateEd(initial?.img || null);
+  // "all" = miễn phí món cho MỌI sản phẩm (product_id null); số = sản phẩm cụ thể
+  const [productId, setProductId] = useStateEd(() => {
+    if (initial?.cat === "drink" && initial?.product_id == null) return "all";
+    return initial?.product_id ?? null;
+  });
+  const [freeSize, setFreeSize] = useStateEd(initial?.free_item_size || "");
+  const [freeQty, setFreeQty]     = useStateEd(Number(initial?.free_item_quantity ?? 1) || 1);
+  const [toppingValue, setToppingValue] = useStateEd(initial?.value != null ? Number(initial.value) : 5000);
+  const isFreeItem  = cat === "drink";
+  const isGift      = cat === "gift"; // quà vật phẩm — không gắn sản phẩm menu
+  const isBuyGet    = cat === "buyget"; // mua X tặng Y
+  const isUpgrade   = cat === "topping" || cat === "upsize";
+  const [buyQty, setBuyQty] = useStateEd(() => {
+    const v = Number(initial?.value);
+    return (initial?.cat === "buyget" && v >= 1) ? v : 2;
+  });
 
   useEffectEd(() => {
     const h = (e) => { if (e.key === "Escape") onClose(); };
@@ -33,18 +59,64 @@ function RewardEditor({ initial, onClose, onSave }) {
     return () => window.removeEventListener("keydown", h);
   }, [onClose]);
 
-  const onFile = (e) => {
+  // Reset product/quantity when switching category
+  useEffectEd(() => {
+    if (cat !== "drink") { setProductId(null); }
+    if (cat === "voucher") setFreeQty(1);
+  }, [cat]);
+
+  const [uploading, setUploading] = useStateEd(false);
+  // Ảnh xem trước tạm (blob:) tách khỏi `img` — chỉ `img` (URL server) được lưu.
+  // Trước đây blob: bị lưu thẳng vào quà khi upload lỗi → ảnh không hiển thị được.
+  const [imgPreview, setImgPreview] = useStateEd(null);
+  const [uploadErr, setUploadErr] = useStateEd("");
+  const onFile = async (e) => {
     const f = e.target.files?.[0];
-    if (f) { const url = URL.createObjectURL(f); setImg(url); }
+    if (!f) return;
+    setImgPreview(URL.createObjectURL(f)); // preview ngay, KHÔNG đụng vào img
+    setUploadErr("");
+    setUploading(true);
+    try {
+      const fd = new FormData();
+      fd.append("image", f);
+      const res = await fetch("/admin/rewards/upload-image", {
+        method: "POST",
+        headers: { "X-CSRF-TOKEN": csrfTokenEd(), "Accept": "application/json" },
+        body: fd,
+      });
+      const data = await res.json();
+      if (res.ok && data.url) {
+        setImg(data.url);
+      } else {
+        setImgPreview(null);
+        setUploadErr(data.message || "Tải ảnh thất bại, vui lòng thử lại");
+      }
+    } catch (_) {
+      setImgPreview(null);
+      setUploadErr("Tải ảnh thất bại, vui lòng kiểm tra kết nối và thử lại");
+    }
+    setUploading(false);
   };
 
-  const valid = name.trim() && points > 0 && qty > 0 && expiry;
+  const valid = name.trim() && points > 0 && qty > 0 && expiry
+    && !uploading // đang tải ảnh thì chưa cho lưu — tránh lưu thiếu/sai URL ảnh
+    && (!isFreeItem || productId !== null)
+    && (!isUpgrade || (toppingValue > 0))
+    && (!isBuyGet || (Number(buyQty) >= 1 && Number(freeQty) >= 1));
   const submit = () => {
     if (!valid) return;
+    // Chốt chặn: không bao giờ lưu URL tạm blob: (chỉ sống trong phiên trình duyệt)
+    const safeImg = img && !String(img).startsWith("blob:") ? img : null;
     onSave({
       ...(initial || {}),
       name: name.trim(), cat, points: Number(points), qty: Number(qty),
-      expiry, status: status ? "on" : "off", grad, img,
+      per_customer_limit: perLimit === "" ? null : Math.max(1, Number(perLimit)),
+      expiry, status: status ? "on" : "off", grad, img: safeImg,
+      product_id:          isFreeItem ? (productId === "all" ? null : (productId ?? null)) : null,
+      free_item_size:      (isFreeItem && productId === "all" && freeSize) ? freeSize : null,
+      free_item_quantity:  (isFreeItem || isGift || isBuyGet || isUpgrade) ? Math.max(1, Number(freeQty) || 1) : 1,
+      value:               isUpgrade ? Math.max(0, Number(toppingValue) || 0)
+                          : isBuyGet ? Math.max(1, Number(buyQty) || 2) : undefined,
     });
   };
 
@@ -67,14 +139,15 @@ function RewardEditor({ initial, onClose, onSave }) {
             {/* thumbnail */}
             <div className="thumb-pick">
               <label style={{ fontSize: 12.5, fontWeight: 700, color: "var(--ink-2)" }}>Ảnh / Màu thẻ</label>
-              <div className="thumb-preview" style={{ background: img ? `url(${img}) center/cover` : grad }}>
-                {!img && <span className="ti"><Icon name={catIc} size={48} color="#fff" /></span>}
+              <div className="thumb-preview" style={{ background: (imgPreview || img) ? `url(${imgPreview || img}) center/cover` : grad }}>
+                {!(imgPreview || img) && <span className="ti"><Icon name={catIc} size={48} color="#fff" /></span>}
               </div>
-              <label className="rw-btn" style={{ cursor: "pointer", justifyContent: "center" }}>
-                <Icon name="image" size={15} /> {img ? "Đổi ảnh" : "Tải ảnh lên"}
-                <input type="file" accept="image/*" hidden onChange={onFile} />
+              <label className="rw-btn" style={{ cursor: uploading ? "wait" : "pointer", justifyContent: "center", opacity: uploading ? .6 : 1 }}>
+                <Icon name="image" size={15} /> {uploading ? "Đang tải…" : img ? "Đổi ảnh" : "Tải ảnh lên"}
+                <input type="file" accept="image/*" hidden onChange={onFile} disabled={uploading} />
               </label>
-              {img && <button className="rw-btn" onClick={() => setImg(null)}>Bỏ ảnh, dùng màu</button>}
+              {uploadErr && <div style={{ fontSize: 11.5, color: "var(--hot)", marginTop: 4 }}>{uploadErr}</div>}
+              {img && <button className="rw-btn" onClick={() => { setImg(null); setImgPreview(null); }}>Bỏ ảnh, dùng màu</button>}
               {!img && (
                 <div className="swatches">
                   {GRADS.map(g => (
@@ -103,6 +176,153 @@ function RewardEditor({ initial, onClose, onSave }) {
                 </div>
               </div>
 
+              {isFreeItem && (
+                <div className="fld">
+                  <label>Sản phẩm miễn phí <span style={{ color: "var(--hot)", fontWeight: 700 }}>*</span></label>
+                  <select
+                    className="inp"
+                    value={productId ?? ""}
+                    onChange={e => setProductId(e.target.value === "all" ? "all" : (e.target.value ? Number(e.target.value) : null))}
+                  >
+                    <option value="">— Chọn sản phẩm —</option>
+                    <option value="all">🌟 Tất cả sản phẩm (món bất kỳ)</option>
+                    {(REWARD_PRODUCTS || []).map(p => (
+                      <option key={p.id} value={p.id}>
+                        {p.name}{p.cat ? ` (${p.cat})` : ""} — {typeof fmt === 'function' ? fmt(p.price) : p.price.toLocaleString()}đ
+                      </option>
+                    ))}
+                  </select>
+                  <div style={{ fontSize: 11.5, color: "var(--ink-3)", marginTop: 4 }}>
+                    {productId === "all"
+                      ? "Khách được miễn phí món bất kỳ trong đơn (hệ thống trừ tiền món rẻ nhất đủ điều kiện)."
+                      : "Khách đổi quà sẽ nhận voucher miễn phí sản phẩm này khi đặt hàng."}
+                  </div>
+                </div>
+              )}
+
+              {isFreeItem && productId === "all" && (
+                <div className="fld">
+                  <label>Size áp dụng</label>
+                  <select className="inp" value={freeSize} onChange={e => setFreeSize(e.target.value)}>
+                    <option value="">Mọi size</option>
+                    {(REWARD_SIZES || []).map(s => <option key={s} value={s}>{s}</option>)}
+                  </select>
+                  <div style={{ fontSize: 11.5, color: "var(--ink-3)", marginTop: 4 }}>
+                    VD: tạo 2 quà — "{(REWARD_SIZES || [])[1] || 'Size M'}" 35 điểm và "{(REWARD_SIZES || [])[0] || 'Size L'}" 42 điểm.
+                    Chỉ món đúng size này trong giỏ mới được miễn phí.
+                  </div>
+                </div>
+              )}
+
+              {isUpgrade && (
+                <div className="two-col">
+                  <div className="fld">
+                    <label>Giá trị mỗi topping (đ) <span style={{ color: "var(--hot)", fontWeight: 700 }}>*</span></label>
+                    <input
+                      className="inp"
+                      type="text"
+                      inputMode="numeric"
+                      placeholder="VD: 5000"
+                      value={toppingValue}
+                      onChange={e => {
+                        const v = e.target.value.replace(/[^0-9]/g, "");
+                        setToppingValue(v === "" ? "" : Number(v));
+                      }}
+                    />
+                  </div>
+                  <div className="fld">
+                    <label>Số lượng topping miễn phí</label>
+                    <input
+                      className="inp"
+                      type="text"
+                      inputMode="numeric"
+                      value={freeQty}
+                      onChange={e => {
+                        const v = e.target.value.replace(/[^0-9]/g, "");
+                        setFreeQty(v === "" ? "" : Math.max(1, Number(v)));
+                      }}
+                    />
+                  </div>
+                </div>
+              )}
+              {isUpgrade && (
+                <div style={{ fontSize: 11.5, color: "var(--ink-3)", marginBottom: 12, marginTop: -4 }}>
+                  Voucher sẽ giảm <b>{typeof fmt === 'function' ? fmt(toppingValue * freeQty) : (toppingValue * freeQty).toLocaleString()}đ</b> ({freeQty} topping × {typeof fmt === 'function' ? fmt(toppingValue) : toppingValue.toLocaleString()}đ) vào đơn hàng.
+                </div>
+              )}
+
+              {isFreeItem && (
+                <div className="fld">
+                  <label>Số lượng miễn phí</label>
+                  <input
+                    className="inp"
+                    type="text"
+                    inputMode="numeric"
+                    value={freeQty}
+                    onChange={e => {
+                      const v = e.target.value.replace(/[^0-9]/g, "");
+                      setFreeQty(v === "" ? "" : Math.max(1, Number(v)));
+                    }}
+                  />
+                  <div style={{ fontSize: 11.5, color: "var(--ink-3)", marginTop: 4 }}>
+                    Voucher sẽ miễn phí tối đa <b>{freeQty}</b> sản phẩm trong đơn hàng.
+                  </div>
+                </div>
+              )}
+
+              {isBuyGet && (
+                <div className="two-col">
+                  <div className="fld">
+                    <label>Mua bao nhiêu món (X) <span style={{ color: "var(--hot)", fontWeight: 700 }}>*</span></label>
+                    <input
+                      className="inp" type="text" inputMode="numeric" value={buyQty}
+                      onChange={e => {
+                        const v = e.target.value.replace(/[^0-9]/g, "");
+                        setBuyQty(v === "" ? "" : Math.max(1, Number(v)));
+                      }}
+                    />
+                  </div>
+                  <div className="fld">
+                    <label>Tặng bao nhiêu món (Y) <span style={{ color: "var(--hot)", fontWeight: 700 }}>*</span></label>
+                    <input
+                      className="inp" type="text" inputMode="numeric" value={freeQty}
+                      onChange={e => {
+                        const v = e.target.value.replace(/[^0-9]/g, "");
+                        setFreeQty(v === "" ? "" : Math.max(1, Number(v)));
+                      }}
+                    />
+                  </div>
+                </div>
+              )}
+              {isBuyGet && (
+                <div style={{ fontSize: 11.5, color: "var(--ink-3)", marginBottom: 12, marginTop: -4 }}>
+                  Khách mua <b>{buyQty || "X"}</b> món sẽ được tặng <b>{freeQty || "Y"}</b> món —
+                  giỏ hàng cần tối thiểu <b>{(Number(buyQty) || 0) + (Number(freeQty) || 0)}</b> món,
+                  hệ thống tự trừ tiền <b>{freeQty || "Y"}</b> món có giá thấp nhất.
+                </div>
+              )}
+
+              {isGift && (
+                <div className="fld">
+                  <label>Số lượng quà mỗi lần đổi</label>
+                  <input
+                    className="inp"
+                    type="text"
+                    inputMode="numeric"
+                    value={freeQty}
+                    onChange={e => {
+                      const v = e.target.value.replace(/[^0-9]/g, "");
+                      setFreeQty(v === "" ? "" : Math.max(1, Number(v)));
+                    }}
+                  />
+                  <div style={{ fontSize: 11.5, color: "var(--ink-3)", marginTop: 4 }}>
+                    Quà vật phẩm (gấu bông, kẹp tóc…) — đặt tên quà ở ô "Tên phần thưởng".
+                    Khách áp dụng vào đơn hàng sẽ <b>không bị trừ tiền</b>; quà hiển thị trên
+                    đơn để quán chuẩn bị kèm theo.
+                  </div>
+                </div>
+              )}
+
               <div className="two-col">
                 <div className="fld">
                   <label>Điểm cần để đổi</label>
@@ -114,9 +334,22 @@ function RewardEditor({ initial, onClose, onSave }) {
                 </div>
               </div>
 
-              <div className="fld">
-                <label>Hạn đổi</label>
-                <input className="inp" type="date" value={expiry} onChange={e => setExpiry(e.target.value)} />
+              <div className="two-col">
+                <div className="fld">
+                  <label>Hạn đổi</label>
+                  <input className="inp" type="date" value={expiry} onChange={e => setExpiry(e.target.value)} />
+                </div>
+                <div className="fld">
+                  <label>Giới hạn mỗi khách</label>
+                  <input
+                    className="inp" type="text" inputMode="numeric" placeholder="Không giới hạn"
+                    value={perLimit}
+                    onChange={e => setPerLimit(e.target.value.replace(/[^0-9]/g, ""))}
+                  />
+                  <div style={{ fontSize: 11.5, color: "var(--ink-3)", marginTop: 4 }}>
+                    Số lần tối đa mỗi khách được đổi quà này — để trống = không giới hạn.
+                  </div>
+                </div>
               </div>
 
               <div className="switch-row" onClick={() => setStatus(s => !s)} style={{ cursor: "pointer" }}>

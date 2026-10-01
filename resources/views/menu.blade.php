@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8" />
+@include('partials.favicon')
+@include('partials.pwa')
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="csrf-token" content="{{ csrf_token() }}" />
+@include('partials.seo', ['seoPage' => 'menu', 'seoTitle' => 'Thực đơn · Laboong Victoria Văn Phú', 'seoDesc' => 'Thực đơn trà sữa Laboong: trà sữa trân châu, trà trái cây, topping đa dạng — đặt món online, giao nhanh tại Hà Đông.'])
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&family=Baloo+2:wght@600;700;800&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="{{ asset('css/menu.css') }}?v={{ filemtime(public_path('css/menu.css')) }}" />
+</head>
+<body>
+<div id="root"></div>
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" crossorigin="anonymous"></script>
+<script>
+window.MENU_PAGE_DATA = @json($menuPageData);
+</script>
+{{-- Chỉ nạp Google Maps khi admin chọn Tự động/Chỉ Google (tránh tốn phí Google khi dùng SerpApi/Apify) --}}
+@if(\App\Support\MapsConfig::useGoogleJs())
+<script src="https://maps.googleapis.com/maps/api/js?key={{ config('services.google_maps.key') }}&libraries=places&language=vi&region=VN"></script>
+@endif
+
+<script type="text/babel" src="{{ asset('js/tweaks-panel.jsx') }}?v={{ filemtime(public_path('js/tweaks-panel.jsx')) }}"></script>
+<script type="text/babel" src="{{ asset('js/components.jsx') }}?v={{ filemtime(public_path('js/components.jsx')) }}"></script>
+<script type="text/babel" src="{{ asset('js/menu-customize.jsx') }}?v={{ filemtime(public_path('js/menu-customize.jsx')) }}"></script>
+<script type="text/babel" src="{{ asset('js/menu.jsx') }}?v={{ filemtime(public_path('js/menu.jsx')) }}"></script>
+</body>
+</html>

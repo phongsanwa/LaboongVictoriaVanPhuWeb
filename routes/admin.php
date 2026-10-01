@@ -6,6 +6,8 @@ use App\Http\Controllers\Admin\DailyEntriesController;
 use App\Http\Controllers\Admin\RecipesController;
 use App\Http\Controllers\Admin\CustomersController;
 use App\Http\Controllers\Admin\DashboardController;
+use App\Http\Controllers\Admin\EmailController;
+use App\Http\Controllers\Admin\OrdersController;
 use App\Http\Controllers\Admin\PointsController;
 use App\Http\Controllers\Admin\RewardsController;
 use App\Http\Controllers\Admin\RolesController;
@@ -16,7 +18,14 @@ use App\Http\Controllers\Admin\OverviewController;
 use App\Http\Controllers\Admin\ReportsController;
 use Illuminate\Support\Facades\Route;
 
-Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(function () {
+/*
+ * Khu admin: admin toàn quyền; tài khoản quản lý (staff cashier/manager,
+ * status active) vào theo ma trận phân quyền trên trang /admin/roles.
+ * 'admin.perm'       = chỉ cần là admin / staff active
+ * 'admin.perm:key'   = thêm điều kiện vai trò có quyền `key`
+ */
+Route::middleware(['auth', 'admin.perm'])->prefix('admin')->name('admin.')->group(function () {
+    // Tổng quan — mọi tài khoản quản lý đều xem được
     Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
     Route::get('/customers', [CustomersController::class, 'index'])->name('customers.index');
     Route::put('/customers/{customer}', [CustomersController::class, 'update'])->name('customers.update');

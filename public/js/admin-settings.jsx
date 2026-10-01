@@ -18,6 +18,7 @@ const DATA = window.ADMIN_SETTINGS_DATA || {
   admin: { name: "Quản trị viên", email: "", initials: "QT" },
   general: { brand: "Laboong", tagline: "", email: "", hotline: "" },
   points: { per_point: 10000, welcome: 50, expiry: 12, rounding: "down" },
+  timing: { prep_base: 5, prep_per_cup: 2, ship_minutes: 15 },
   tiers: [],
   notifications: { earn: true, expiry: true, promo: true, tier: true, birthday: true, weekly: false },
   integrations: [],
@@ -50,13 +51,37 @@ function buildState() {
     tagline: DATA.general.tagline,
     email: DATA.general.email,
     hotline: DATA.general.hotline,
+    checkinEnabled: DATA.general.checkin_enabled !== false,
+    iosGuide: DATA.general.ios_guide_html || "",
     perPoint: DATA.points.per_point,
     welcome: DATA.points.welcome,
     expiry: DATA.points.expiry,
     rounding: DATA.points.rounding,
+    prepBase: (DATA.timing || {}).prep_base ?? 5,
+    prepPerCup: (DATA.timing || {}).prep_per_cup ?? 2,
+    shipMinutes: (DATA.timing || {}).ship_minutes ?? 15,
+    weatherEnabled: !!(DATA.surcharge && DATA.surcharge.weather_enabled),
+    weatherFee: (DATA.surcharge || {}).weather_fee ?? 0,
+    weatherLabel: (DATA.surcharge || {}).weather_label || "Phụ thu thời tiết xấu",
+    mapsProvider: (DATA.maps || {}).provider || "auto",
+    serpapiKey: (DATA.maps || {}).serpapi_key || "",
+    apifyToken: (DATA.maps || {}).apify_token || "",
+    apifyPlaceActor: (DATA.maps || {}).apify_place_actor || "compass~crawler-google-places",
+    apifyDirActor: (DATA.maps || {}).apify_directions_actor || "zen-studio~google-maps-directions-api",
+    goongKey: (DATA.maps || {}).goong_key || "",
+    bankEnabled: !!(DATA.payment && DATA.payment.bank_enabled),
+    bankCode: (DATA.payment || {}).bank_code || "",
+    bankAccountNumber: (DATA.payment || {}).account_number || "",
+    bankAccountName: (DATA.payment || {}).account_name || "",
     tiers: DATA.tiers,
     notif: DATA.notifications,
     integ: DATA.integrations,
+    tgEnabled: !!(DATA.telegram && DATA.telegram.enabled),
+    tgToken: (DATA.telegram && DATA.telegram.bot_token) || "",
+    tgChatId: (DATA.telegram && DATA.telegram.chat_id) || "",
+    ntfyEnabled: !!(DATA.ntfy && DATA.ntfy.enabled),
+    ntfyTopic: (DATA.ntfy && DATA.ntfy.topic) || "",
+    ntfyServer: (DATA.ntfy && DATA.ntfy.server) || "",
   };
 }
 
@@ -75,8 +100,14 @@ function App() {
   const [faviconUrl, setFaviconUrl] = useState(DATA.general.favicon_url || null);
   const [faviconBusy, setFaviconBusy] = useState(false);
   const faviconInputRef = React.useRef(null);
+  const [appIconUrl, setAppIconUrl] = useState(DATA.general.app_icon_url || null);
+  const [appIconBusy, setAppIconBusy] = useState(false);
+  const appIconInputRef = React.useRef(null);
 
   const dirty = useMemo(() => JSON.stringify(form) !== JSON.stringify(saved), [form, saved]);
+
+  const iosGuideRef = React.useRef(null);
+  const iosEditorRef = React.useRef(null);
 
   useEffect(() => {
     const r = document.documentElement;
@@ -87,20 +118,83 @@ function App() {
   }, [tw.brand, tw.dark]);
 
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
+
+  /* TinyMCE cho ô hướng dẫn cài đặt iPhone — chỉ khởi tạo khi đang ở tab "Thông tin chung";
+     CDN bị chặn thì tự dùng textarea thường (vẫn nhập & lưu được HTML). */
+  useEffect(() => {
+    if (tab !== "general") return;
+    const tiny = window.tinymce;
+    if (!tiny || !iosGuideRef.current) return;
+    tiny.init({
+      target: iosGuideRef.current,
+      height: 300,
+      menubar: false,
+      language: "vi",
+      branding: false,
+      plugins: "lists link image table autolink code",
+      toolbar: "undo redo | blocks | bold italic underline | bullist numlist | link image table | alignleft aligncenter alignright | removeformat | code",
+      relative_urls: false,
+      convert_urls: false,
+      setup: (editor) => {
+        iosEditorRef.current = editor;
+        editor.on("init", () => editor.setContent(form.iosGuide || ""));
+        editor.on("Change KeyUp Undo Redo SetContent", () => set("iosGuide", editor.getContent()));
+      },
+    });
+    return () => { try { iosEditorRef.current?.remove(); } catch (e) { /* ignore */ } iosEditorRef.current = null; };
+  }, [tab]); // eslint-disable-line
   const setTier = (i, k, v) => setForm(f => ({ ...f, tiers: f.tiers.map((x, j) => j === i ? { ...x, [k]: v } : x) }));
   const toggleNotif = (k) => setForm(f => ({ ...f, notif: { ...f.notif, [k]: !f.notif[k] } }));
   const toggleInteg = (i) => setForm(f => ({ ...f, integ: f.integ.map((x, j) => j === i ? { ...x, on: !x.on } : x) }));
+
+  const [tgTesting, setTgTesting] = useState(false);
+  const testTelegram = async () => {
+    if (tgTesting) return;
+    setTgTesting(true);
+    const { ok, data } = await apiCall("POST", "/admin/settings/telegram/test", { bot_token: (form.tgToken || "").trim(), chat_id: (form.tgChatId || "").trim() });
+    setTgTesting(false);
+    setToast(data.message || (ok ? "Đã gửi thử" : "Không gửi được"));
+    setTimeout(() => setToast(null), 3500);
+  };
+
+  const [ntfyTesting, setNtfyTesting] = useState(false);
+  const testNtfy = async () => {
+    if (ntfyTesting) return;
+    setNtfyTesting(true);
+    const { ok, data } = await apiCall("POST", "/admin/settings/ntfy/test", { topic: (form.ntfyTopic || "").trim(), server: (form.ntfyServer || "").trim() });
+    setNtfyTesting(false);
+    setToast(data.message || (ok ? "Đã gửi thử" : "Không gửi được"));
+    setTimeout(() => setToast(null), 3500);
+  };
 
   const discard = () => setForm(saved);
 
   const save = async () => {
     setSaving(true);
     const { ok, data } = await apiCall("POST", "/admin/settings", {
-      general: { brand: form.brand, tagline: form.tagline, email: form.email, hotline: form.hotline },
+      general: { brand: form.brand, tagline: form.tagline, email: form.email, hotline: form.hotline, checkin_enabled: form.checkinEnabled, ios_guide_html: form.iosGuide || null },
       points: { per_point: form.perPoint, welcome: form.welcome, expiry: form.expiry, rounding: form.rounding },
+      timing: { prep_base: form.prepBase, prep_per_cup: form.prepPerCup, ship_minutes: form.shipMinutes },
+      surcharge: { weather_enabled: form.weatherEnabled, weather_fee: form.weatherFee, weather_label: (form.weatherLabel || "").trim() },
+      maps: {
+        provider: form.mapsProvider,
+        serpapi_key: (form.serpapiKey || "").trim(),
+        apify_token: (form.apifyToken || "").trim(),
+        apify_place_actor: (form.apifyPlaceActor || "").trim(),
+        apify_directions_actor: (form.apifyDirActor || "").trim(),
+        goong_key: (form.goongKey || "").trim(),
+      },
+      payment: {
+        bank_enabled: form.bankEnabled,
+        bank_code: (form.bankCode || "").trim(),
+        account_number: (form.bankAccountNumber || "").trim(),
+        account_name: (form.bankAccountName || "").trim(),
+      },
       tiers: form.tiers.map(t => ({ id: t.id, min: t.min, mult: t.mult })),
       notifications: form.notif,
       integrations: form.integ.map(g => ({ id: g.id, on: g.on })),
+      telegram: { enabled: form.tgEnabled, bot_token: (form.tgToken || "").trim(), chat_id: (form.tgChatId || "").trim() },
+      ntfy: { enabled: form.ntfyEnabled, topic: (form.ntfyTopic || "").trim(), server: (form.ntfyServer || "").trim() },
     });
     setSaving(false);
     if (ok) {
@@ -153,46 +247,9 @@ function App() {
     location.href = NAV_URLS.login;
   };
 
-  const NAV = [
-    { ic: "chart", label: "Tổng quan" }, { ic: "users", label: "Khách hàng" },
-    { ic: "receipt", label: "Điểm & giao dịch" }, { ic: "gift", label: "Đổi quà" },
-    { ic: "mega", label: "Chiến dịch" }, { ic: "pin", label: "Cửa hàng" },
-    { ic: "shield", label: "Phân quyền" },
-    { ic: "gear", label: "Cài đặt", on: true },
-  ];
-
   return (
     <div className="shell">
-      {sideOpen && <div className="scrim" style={{ zIndex: 55 }} onClick={() => setSideOpen(false)} />}
-      <aside className={"side" + (sideOpen ? " open" : "")}>
-        <div className="side-brand">
-          <div className="side-mark"><span>L</span></div>
-          <div><div className="nm">Laboong</div><div className="sb">Bảng quản trị</div></div>
-        </div>
-        <div className="side-sec">Quản lý</div>
-        <nav className="side-nav">
-          {NAV.slice(0, 6).map(n => (
-            <a key={n.label} className={"side-link" + (n.on ? " on" : "")} href={adminHref(n.label)}>
-              <Icon name={n.ic} size={19} /> {n.label}
-            </a>
-          ))}
-        </nav>
-        <div className="side-sec">Hệ thống</div>
-        <nav className="side-nav">
-          {NAV.slice(6).map(n => (
-            <a key={n.label} className={"side-link" + (n.on ? " on" : "")} href={adminHref(n.label)}>
-              <Icon name={n.ic} size={19} /> {n.label}
-            </a>
-          ))}
-        </nav>
-        <div className="side-foot">
-          <div className="side-user">
-            <div className="side-av">{DATA.admin.initials}</div>
-            <div style={{ minWidth: 0 }}><div className="un">{DATA.admin.name}</div><div className="ur">{DATA.admin.email}</div></div>
-            <button className="icon-btn" style={{ width: 32, height: 32, marginLeft: "auto" }} onClick={logout} title="Đăng xuất"><Icon name="logout" size={16} /></button>
-          </div>
-        </div>
-      </aside>
+      <AdminSidebar activeLabel="Cài đặt" admin={DATA.admin} sideOpen={sideOpen} onClose={() => setSideOpen(false)} />
 
       <div className="main">
         <header className="topbar">
@@ -253,6 +310,22 @@ function App() {
                       </div>
                     </div>
                     <div className="frow">
+                      <div className="flabel">Icon màn hình chính<div className="fsub">Ảnh khi khách "Thêm vào màn hình chính". Nên vuông, nền đặc, ≥512px. Để trống thì dùng logo.</div></div>
+                      <div className="fcontrol">
+                        <div className="logo-up">
+                          <div className="logo-prev">
+                            {appIconUrl ? <img src={appIconUrl} alt="Icon" style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: "inherit" }} /> : <span>{(form.brand || "L")[0]}</span>}
+                          </div>
+                          <input ref={appIconInputRef} type="file" accept="image/png,image/jpeg,image/webp" style={{ display: "none" }}
+                            onChange={e => { uploadAsset("app_icon", e.target.files[0], setAppIconUrl, setAppIconBusy); e.target.value = ""; }} />
+                          <div className="logo-up-btns">
+                            <button className="btn ghost sm" disabled={appIconBusy} onClick={() => appIconInputRef.current?.click()}><Icon name="image" size={15} /> Tải lên</button>
+                            <button className="btn ghost sm" disabled={appIconBusy || !appIconUrl} onClick={() => deleteAsset("app_icon", setAppIconUrl, setAppIconBusy)}><Icon name="trash" size={15} /> Xoá</button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="frow">
                       <div className="flabel">Tên thương hiệu</div>
                       <div className="fcontrol"><input className="sinp" value={form.brand} onChange={e => set("brand", e.target.value)} /></div>
                     </div>
@@ -268,6 +341,27 @@ function App() {
                           <div className="sinp-affix"><input className="sinp" value={form.hotline} onChange={e => set("hotline", e.target.value)} /></div>
                         </div>
                         <div className="fsub" style={{ marginTop: 7, color: "var(--ink-3)", fontSize: 12 }}>Email hỗ trợ · Hotline</div>
+                      </div>
+                    </div>
+                    <div className="frow">
+                      <div className="flabel">Điểm danh hàng ngày<div className="fsub">Bật/tắt mục điểm danh nhận điểm ở trang chủ khách</div></div>
+                      <div className="fcontrol" style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                        <Tog on={form.checkinEnabled} onClick={() => set("checkinEnabled", !form.checkinEnabled)} />
+                        <span style={{ fontSize: 13.5, fontWeight: 600, color: form.checkinEnabled ? "var(--brand)" : "var(--ink-3)" }}>
+                          {form.checkinEnabled ? "Đang bật" : "Đang tắt"}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="frow" style={{ alignItems: "flex-start" }}>
+                      <div className="flabel">
+                        Hướng dẫn cài lên iPhone
+                        <div className="fsub">Nội dung hiện cho khách khi bấm "Thêm vào màn hình chính" trên iPhone. Để trống = dùng hướng dẫn mặc định.</div>
+                      </div>
+                      <div className="fcontrol">
+                        <textarea ref={iosGuideRef} className="inp" defaultValue={form.iosGuide}
+                          onChange={e => set("iosGuide", e.target.value)} rows={6}
+                          placeholder="VD: 1. Bấm nút Chia sẻ ở thanh dưới · 2. Chọn 'Thêm vào MH chính' · 3. Bấm Thêm"
+                          style={{ resize: "vertical", minHeight: 140, fontFamily: "inherit" }} />
                       </div>
                     </div>
                   </div>
@@ -308,6 +402,135 @@ function App() {
                       <div className="frow">
                         <div className="flabel">Thời hạn điểm</div>
                         <div className="fcontrol"><div className="sinp-affix"><input className="sinp tnum" type="number" value={form.expiry} onChange={e => set("expiry", +e.target.value || 0)} /><span className="suffix">tháng</span></div></div>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="scard">
+                    <div className="scard-h"><div className="st">Thời gian đơn hàng</div><div className="sd">Dùng để đếm ngược "dự kiến xong" cho khách. Món có thể cài thời gian pha riêng trong Thực đơn.</div></div>
+                    <div className="scard-b">
+                      <div className="frow">
+                        <div className="flabel">Chuẩn bị chung<div className="fsub">Cộng 1 lần cho mỗi đơn</div></div>
+                        <div className="fcontrol"><div className="sinp-affix"><input className="sinp tnum" type="number" value={form.prepBase} onChange={e => set("prepBase", +e.target.value || 0)} /><span className="suffix">phút</span></div></div>
+                      </div>
+                      <div className="frow">
+                        <div className="flabel">Pha chế mỗi ly<div className="fsub">Mặc định khi món không cài riêng</div></div>
+                        <div className="fcontrol"><div className="sinp-affix"><input className="sinp tnum" type="number" value={form.prepPerCup} onChange={e => set("prepPerCup", +e.target.value || 0)} /><span className="suffix">phút/ly</span></div></div>
+                      </div>
+                      <div className="frow">
+                        <div className="flabel">Thời gian giao hàng<div className="fsub">Cộng thêm với đơn giao tận nơi</div></div>
+                        <div className="fcontrol"><div className="sinp-affix"><input className="sinp tnum" type="number" value={form.shipMinutes} onChange={e => set("shipMinutes", +e.target.value || 0)} /><span className="suffix">phút</span></div></div>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="scard">
+                    <div className="scard-h"><div className="st">Phụ thu thời tiết xấu</div><div className="sd">Bật khi trời mưa/bão để cộng thêm phụ thu vào phí giao hàng. Chỉ áp dụng cho đơn giao tận nơi; hiện thành một dòng riêng trong giỏ của khách.</div></div>
+                    <div className="scard-b">
+                      <div className="frow">
+                        <div className="flabel">Bật phụ thu<div className="fsub">Tắt khi thời tiết bình thường</div></div>
+                        <div className="fcontrol"><Tog on={form.weatherEnabled} onClick={() => set("weatherEnabled", !form.weatherEnabled)} /></div>
+                      </div>
+                      <div className="frow">
+                        <div className="flabel">Số tiền phụ thu<div className="fsub">Cộng vào mỗi đơn giao khi đang bật</div></div>
+                        <div className="fcontrol"><div className="sinp-affix"><input className="sinp tnum" type="number" min="0" value={form.weatherFee} disabled={!form.weatherEnabled} onChange={e => set("weatherFee", +e.target.value || 0)} /><span className="suffix">đ</span></div></div>
+                      </div>
+                      <div className="frow">
+                        <div className="flabel">Nhãn hiển thị<div className="fsub">Tên dòng phụ thu khách nhìn thấy</div></div>
+                        <div className="fcontrol"><input className="sinp" type="text" maxLength={60} value={form.weatherLabel} disabled={!form.weatherEnabled} onChange={e => set("weatherLabel", e.target.value)} placeholder="Phụ thu thời tiết xấu" /></div>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="scard">
+                    <div className="scard-h"><div className="st">Bản đồ (Google / SerpApi / Apify / Goong)</div><div className="sd">Chọn nhà cung cấp bản đồ cho phần chọn địa chỉ giao hàng. "Tự động" dùng Google trước, khi lỗi (hết hạn mức, chặn key…) thì tự chuyển SerpApi. "Goong" là dịch vụ Việt Nam, nhanh & hợp địa chỉ trong nước.</div></div>
+                    <div className="scard-b">
+                      <div className="frow">
+                        <div className="flabel">Nhà cung cấp<div className="fsub">Áp dụng cho gợi ý địa chỉ, toạ độ & khoảng cách</div></div>
+                        <div className="fcontrol">
+                          <div className="miniseg">
+                            {[["auto", "Tự động"], ["google", "Chỉ Google"], ["serpapi", "Chỉ SerpApi"], ["apify", "Chỉ Apify"], ["goong", "Chỉ Goong"]].map(([k, l]) => (
+                              <button key={k} className={form.mapsProvider === k ? "on" : ""} onClick={() => set("mapsProvider", k)}>{l}</button>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+
+                      {(form.mapsProvider === "auto" || form.mapsProvider === "serpapi") && (
+                        <div className="frow">
+                          <div className="flabel">SerpApi API key<div className="fsub">Lấy tại serpapi.com → Dashboard → Api Key</div></div>
+                          <div className="fcontrol"><input className="sinp" type="password" autoComplete="off" maxLength={200} value={form.serpapiKey} onChange={e => set("serpapiKey", e.target.value)} placeholder="Dán API key…" /></div>
+                        </div>
+                      )}
+                      {form.mapsProvider === "serpapi" && !((form.serpapiKey || "").trim()) && (
+                        <div style={{ fontSize: 12.5, color: "var(--hot)", fontWeight: 600, padding: "2px 2px 6px" }}>
+                          ⚠ Bạn đang chọn "Chỉ SerpApi" nhưng chưa nhập API key — phần chọn địa chỉ sẽ không hoạt động.
+                        </div>
+                      )}
+
+                      {form.mapsProvider === "apify" && (<>
+                        <div className="frow">
+                          <div className="flabel">Apify API token<div className="fsub">Lấy tại apify.com → Settings → Integrations → API token</div></div>
+                          <div className="fcontrol"><input className="sinp" type="password" autoComplete="off" maxLength={200} value={form.apifyToken} onChange={e => set("apifyToken", e.target.value)} placeholder="Dán API token…" /></div>
+                        </div>
+                        <div className="frow">
+                          <div className="flabel">Actor tìm địa điểm<div className="fsub">Geocode & gợi ý địa chỉ (mặc định compass~crawler-google-places)</div></div>
+                          <div className="fcontrol"><input className="sinp" type="text" autoComplete="off" maxLength={120} value={form.apifyPlaceActor} onChange={e => set("apifyPlaceActor", e.target.value)} placeholder="compass~crawler-google-places" /></div>
+                        </div>
+                        <div className="frow">
+                          <div className="flabel">Actor chỉ đường<div className="fsub">Tính khoảng cách (mặc định zen-studio~google-maps-directions-api)</div></div>
+                          <div className="fcontrol"><input className="sinp" type="text" autoComplete="off" maxLength={120} value={form.apifyDirActor} onChange={e => set("apifyDirActor", e.target.value)} placeholder="zen-studio~google-maps-directions-api" /></div>
+                        </div>
+                        {!((form.apifyToken || "").trim()) && (
+                          <div style={{ fontSize: 12.5, color: "var(--hot)", fontWeight: 600, padding: "2px 2px 6px" }}>
+                            ⚠ Bạn đang chọn "Chỉ Apify" nhưng chưa nhập API token — phần chọn địa chỉ sẽ không hoạt động.
+                          </div>
+                        )}
+                        <div style={{ fontSize: 12, color: "var(--ink-3)", padding: "2px 2px 4px", lineHeight: 1.5 }}>
+                          Apify chạy theo "actor run" nên gợi ý địa chỉ sẽ chậm hơn (vài giây) và tính phí mỗi lượt. Nếu cần gợi ý nhanh, dùng "Tự động" hoặc "Chỉ SerpApi".
+                        </div>
+                      </>)}
+
+                      {form.mapsProvider === "goong" && (<>
+                        <div className="frow">
+                          <div className="flabel">Goong API key<div className="fsub">Lấy tại goong.io → Dashboard → API key (REST API Key)</div></div>
+                          <div className="fcontrol"><input className="sinp" type="password" autoComplete="off" maxLength={200} value={form.goongKey} onChange={e => set("goongKey", e.target.value)} placeholder="Dán API key…" /></div>
+                        </div>
+                        {!((form.goongKey || "").trim()) && (
+                          <div style={{ fontSize: 12.5, color: "var(--hot)", fontWeight: 600, padding: "2px 2px 6px" }}>
+                            ⚠ Bạn đang chọn "Chỉ Goong" nhưng chưa nhập API key — phần chọn địa chỉ sẽ không hoạt động.
+                          </div>
+                        )}
+                        <div style={{ fontSize: 12, color: "var(--ink-3)", padding: "2px 2px 4px", lineHeight: 1.5 }}>
+                          Goong dùng đúng key <b>REST API Key</b> (không phải Maptiles Key). Dịch vụ nhanh & hợp địa chỉ Việt Nam.
+                        </div>
+                      </>)}
+                    </div>
+                  </div>
+
+                  <div className="scard">
+                    <div className="scard-h"><div className="st">Thanh toán chuyển khoản (VietQR)</div><div className="sd">Bật để khách chọn "Chuyển khoản ngân hàng" khi đặt. Sau khi đặt, khách thấy mã VietQR (số tiền + mã đơn) để chuyển khoản; bạn xác nhận "Đã nhận chuyển khoản" trong Đơn hàng.</div></div>
+                    <div className="scard-b">
+                      <div className="frow">
+                        <div className="flabel">Bật chuyển khoản<div className="fsub">Cho khách thanh toán qua ngân hàng</div></div>
+                        <div className="fcontrol"><Tog on={form.bankEnabled} onClick={() => set("bankEnabled", !form.bankEnabled)} /></div>
+                      </div>
+                      <div className="frow">
+                        <div className="flabel">Mã ngân hàng<div className="fsub">Vd: VCB, MB, TCB, ACB, BIDV, VPB…</div></div>
+                        <div className="fcontrol"><input className="sinp" type="text" maxLength={20} value={form.bankCode} disabled={!form.bankEnabled} onChange={e => set("bankCode", e.target.value)} placeholder="VCB" /></div>
+                      </div>
+                      <div className="frow">
+                        <div className="flabel">Số tài khoản</div>
+                        <div className="fcontrol"><input className="sinp tnum" type="text" inputMode="numeric" maxLength={40} value={form.bankAccountNumber} disabled={!form.bankEnabled} onChange={e => set("bankAccountNumber", e.target.value)} placeholder="0123456789" /></div>
+                      </div>
+                      <div className="frow">
+                        <div className="flabel">Chủ tài khoản</div>
+                        <div className="fcontrol"><input className="sinp" type="text" maxLength={100} value={form.bankAccountName} disabled={!form.bankEnabled} onChange={e => set("bankAccountName", e.target.value)} placeholder="LABOONG VICTORIA VAN PHU" /></div>
+                      </div>
+                      {form.bankEnabled && (!(form.bankCode || "").trim() || !(form.bankAccountNumber || "").trim()) && (
+                        <div style={{ fontSize: 12.5, color: "var(--hot)", fontWeight: 600, padding: "2px 2px 6px" }}>
+                          ⚠ Cần nhập mã ngân hàng và số tài khoản thì mới hiện tùy chọn chuyển khoản cho khách.
+                        </div>
+                      )}
+                      <div style={{ fontSize: 12, color: "var(--ink-3)", padding: "2px 2px 4px", lineHeight: 1.5 }}>
+                        VietQR miễn phí, không cần hợp đồng. Mã QR tạo tự động từ tài khoản trên. Bạn tự xác nhận đã nhận tiền trong mục Đơn hàng.
                       </div>
                     </div>
                   </div>
@@ -372,6 +595,74 @@ function App() {
                         </div>
                       </div>
                     ))}
+                  </div>
+                </div>
+              )}
+
+              {tab === "integrations" && (
+                <div className="scard" style={{ marginTop: 16 }}>
+                  <div className="scard-h">
+                    <div className="st">Gửi đơn hàng qua Telegram</div>
+                    <div className="sd">Ngoài email, gửi thông báo đơn mới về nhóm/kênh Telegram.</div>
+                  </div>
+                  <div className="scard-b">
+                    <div className="frow">
+                      <div className="flabel">Bật gửi Telegram</div>
+                      <div className="fcontrol" style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                        <Tog on={form.tgEnabled} onClick={() => set("tgEnabled", !form.tgEnabled)} />
+                        <span style={{ fontSize: 13.5, fontWeight: 600, color: form.tgEnabled ? "var(--brand)" : "var(--ink-3)" }}>{form.tgEnabled ? "Đang bật" : "Đang tắt"}</span>
+                      </div>
+                    </div>
+                    <div className="frow">
+                      <div className="flabel">Bot Token<div className="fsub">Lấy từ @BotFather trên Telegram</div></div>
+                      <div className="fcontrol"><input className="sinp" value={form.tgToken} onChange={e => set("tgToken", e.target.value)} placeholder="123456:ABC-DEF..." /></div>
+                    </div>
+                    <div className="frow">
+                      <div className="flabel">Chat ID<div className="fsub">ID nhóm/kênh/cá nhân nhận thông báo</div></div>
+                      <div className="fcontrol">
+                        <input className="sinp" value={form.tgChatId} onChange={e => set("tgChatId", e.target.value)} placeholder="-1001234567890" />
+                        <div style={{ marginTop: 10 }}>
+                          <button className="btn ghost sm" disabled={tgTesting || !form.tgToken.trim() || !form.tgChatId.trim()} onClick={testTelegram}>
+                            <Icon name="send" size={15} /> {tgTesting ? "Đang gửi…" : "Gửi thử"}
+                          </button>
+                          <span style={{ marginLeft: 10, fontSize: 12, color: "var(--ink-3)" }}>Nhớ bấm “Lưu thay đổi” sau khi cấu hình.</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {tab === "integrations" && (
+                <div className="scard" style={{ marginTop: 16 }}>
+                  <div className="scard-h">
+                    <div className="st">Báo đơn qua ntfy.sh (chuông to)</div>
+                    <div className="sd">Thông báo đẩy về điện thoại kèm chuông báo lớn khi có đơn mới.</div>
+                  </div>
+                  <div className="scard-b">
+                    <div className="frow">
+                      <div className="flabel">Bật ntfy</div>
+                      <div className="fcontrol" style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                        <Tog on={form.ntfyEnabled} onClick={() => set("ntfyEnabled", !form.ntfyEnabled)} />
+                        <span style={{ fontSize: 13.5, fontWeight: 600, color: form.ntfyEnabled ? "var(--brand)" : "var(--ink-3)" }}>{form.ntfyEnabled ? "Đang bật" : "Đang tắt"}</span>
+                      </div>
+                    </div>
+                    <div className="frow">
+                      <div className="flabel">Topic<div className="fsub">Chuỗi bí mật, khó đoán. Cài app ntfy → Subscribe đúng topic này.</div></div>
+                      <div className="fcontrol"><input className="sinp" value={form.ntfyTopic} onChange={e => set("ntfyTopic", e.target.value)} placeholder="vd: laboong-vvp-donhang-8x2k" /></div>
+                    </div>
+                    <div className="frow">
+                      <div className="flabel">Server<div className="fsub">Để trống = dùng ntfy.sh miễn phí</div></div>
+                      <div className="fcontrol">
+                        <input className="sinp" value={form.ntfyServer} onChange={e => set("ntfyServer", e.target.value)} placeholder="https://ntfy.sh" />
+                        <div style={{ marginTop: 10 }}>
+                          <button className="btn ghost sm" disabled={ntfyTesting || !form.ntfyTopic.trim()} onClick={testNtfy}>
+                            <Icon name="send" size={15} /> {ntfyTesting ? "Đang gửi…" : "Gửi thử"}
+                          </button>
+                          <span style={{ marginLeft: 10, fontSize: 12, color: "var(--ink-3)" }}>Nhớ bấm “Lưu thay đổi” sau khi cấu hình.</span>
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 </div>
               )}

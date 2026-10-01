@@ -15,6 +15,7 @@ class OrderItem extends Model
         'quantity',
         'unit_price',
         'item_total',
+        'discount_amount',
         'sugar_level',
         'ice_level',
         'size_name',
@@ -34,7 +35,8 @@ class OrderItem extends Model
 
     public function product(): BelongsTo
     {
-        return $this->belongsTo(Product::class);
+        // withTrashed: món đã xoá mềm vẫn hiện đúng tên trong lịch sử đơn.
+        return $this->belongsTo(Product::class)->withTrashed();
     }
 
     public function toppings(): HasMany

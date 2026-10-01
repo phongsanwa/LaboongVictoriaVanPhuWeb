@@ -28,6 +28,7 @@ function Icon({ name, size = 20, stroke = 2.1, color = "currentColor", fill = "n
     download: <><path d="M12 4v11M7.5 10.5 12 15l4.5-4.5"/><path d="M5 19.5h14"/></>,
     sort: <path d="M8 4v16M8 20l-3-3M8 4l3 3M16 20V4M16 4l3 3M16 20l-3-3"/>,
     chevdown: <path d="m6 9 6 6 6-6"/>,
+    chevup: <path d="m6 15 6-6 6 6"/>,
     close: <path d="m6 6 12 12M18 6 6 18"/>,
     dots: <><circle cx="12" cy="5" r="1.4" fill={color} stroke="none"/><circle cx="12" cy="12" r="1.4" fill={color} stroke="none"/><circle cx="12" cy="19" r="1.4" fill={color} stroke="none"/></>,
     mail: <><rect x="3" y="5" width="18" height="14" rx="2.2"/><path d="m3.5 7 8.5 6 8.5-6"/></>,
@@ -38,6 +39,7 @@ function Icon({ name, size = 20, stroke = 2.1, color = "currentColor", fill = "n
     logout: <><path d="M14 4H6.5A1.5 1.5 0 0 0 5 5.5v13A1.5 1.5 0 0 0 6.5 20H14"/><path d="M17 8l4 4-4 4M9 12h12"/></>,
     edit: <path d="M16.5 4.5 19.5 7.5 8 19l-4 1 1-4z"/>,
     plus: <path d="M12 5v14M5 12h14"/>,
+    minus: <path d="M5 12h14"/>,
     check: <path d="m5 12.5 4.5 4.5L19 6.5"/>,
     chart: <><path d="M4 20V4M20 20H4"/><path d="M8 16v-4M12 16V8M16 16v-6"/></>,
     ext: <><path d="M14 4h6v6"/><path d="M20 4 11 13"/><path d="M18 14v4.5A1.5 1.5 0 0 1 16.5 20h-11A1.5 1.5 0 0 1 4 18.5v-11A1.5 1.5 0 0 1 5.5 6H10"/></>,
@@ -62,6 +64,8 @@ function Icon({ name, size = 20, stroke = 2.1, color = "currentColor", fill = "n
     pause: <><rect x="7" y="5.5" width="3.5" height="13" rx="1" fill={color} stroke="none"/><rect x="13.5" y="5.5" width="3.5" height="13" rx="1" fill={color} stroke="none"/></>,
     send: <><path d="M21 4 3 11l6 2.5L11.5 20 21 4Z"/><path d="m9 13.5 4-4"/></>,
     sparkle2: <path d="M12 4l1.8 4.7 4.7 1.8-4.7 1.8L12 17l-1.8-4.7L5.5 10.5l4.7-1.8z" fill={color} stroke="none"/>,
+    flame: <path d="M12 2.4c.8 2.6 2.2 3.9 3.4 5.4C16.6 9.3 17.2 10.7 17.2 12.4a5.2 5.2 0 0 1-10.4 0c0-1.3.4-2.4 1.1-3.3.2.9.8 1.6 1.6 1.9-.5-2.5.6-5.4 2.5-8.6Z" fill={color} stroke="none"/>,
+    plant: <><path d="M12 21v-7.5"/><path d="M11.8 14c0-3.1-2-5.1-5.3-5.1-.3 3.1 1.6 5.1 5.3 5.1Z" fill={color} stroke="none"/><path d="M12.2 12c0-2.7 1.8-4.6 4.7-4.6.3 2.8-1.6 4.6-4.7 4.6Z" fill={color} stroke="none"/></>,
     arrowleft: <path d="M19 12H5M11 6l-6 6 6 6"/>,
     shield: <><path d="M12 3 5 6v5.5c0 4 2.9 7.4 7 8.5 4.1-1.1 7-4.5 7-8.5V6z"/><path d="m9 12 2 2 4-4"/></>,
     lock: <><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></>,
@@ -86,6 +90,8 @@ function Icon({ name, size = 20, stroke = 2.1, color = "currentColor", fill = "n
     bike: <><circle cx="6" cy="17" r="3"/><circle cx="18" cy="17" r="3"/><path d="M6 17 10 8h4l2 4M9 8h5M13 8l3 9"/></>,
     walk: <><circle cx="13" cy="4.5" r="1.6"/><path d="M11 9 8 11M11 9l3 1 1 4M14 14l-2 6M14 14l3 3M11 13l-1 7"/></>,
     cake: <><path d="M4 17h16v2.5A1.5 1.5 0 0 1 18.5 21h-13A1.5 1.5 0 0 1 4 19.5z"/><path d="M4 17c0-3 1.5-4 4-4h8c2.5 0 4 1 4 4"/><path d="M12 13V9M9 9V7M15 9V7"/><path d="M7 7c0-1.1.9-2 2-2s2 .9 2 2M13 7c0-1.1.9-2 2-2s2 .9 2 2"/></>,
+    bag: <><path d="M6 2 3.5 5.5v15A1.5 1.5 0 0 0 5 22h14a1.5 1.5 0 0 0 1.5-1.5v-15L18 2z"/><path d="M3.5 5.5h17M16 10a4 4 0 0 1-8 0"/></>,
+    truck: <><rect x="1.5" y="5" width="13" height="11" rx="1.5"/><path d="M14.5 8.5H19l2.5 3v5h-7z"/><circle cx="5" cy="18.5" r="2"/><circle cx="18" cy="18.5" r="2"/><path d="M3 16.5h19"/></>,
   };
   return <svg {...p} style={{ display: "block", flex: "none" }}>{paths[name] || null}</svg>;
 }
@@ -145,12 +151,25 @@ function QRCanvas({ value }) {
 /* ---------------- helpers ---------------- */
 function fmt(n) { return n.toLocaleString("vi-VN"); }
 
+/* ---------------- Logo thương hiệu ----------------
+   Lấy logo đã upload ở Admin (Cài đặt chung → Logo) qua window.BRAND_LOGO.
+   Có logo: hiển thị ảnh; chưa có: dùng chữ "L" mặc định như trước. */
+const BRAND_LOGO_URL = (typeof window !== "undefined" && window.BRAND_LOGO) || null;
+function BrandGlyph({ letter = "L", alt = "Logo" }) {
+  if (BRAND_LOGO_URL) {
+    return <img className="brand-logo-img" src={BRAND_LOGO_URL} alt={alt} />;
+  }
+  return <span>{letter}</span>;
+}
+
 /* ---------------- Shared navigation map ---------------- */
 const NAV_URLS = {
   // customer
   register: "/register",
   login: "/login",
   home: "/",
+  menu: "/menu",
+  orderHistory: "/orders/history",
   points: "/points",
   catalog: "/rewards",
   wallet: "/rewards/wallet",
@@ -173,11 +192,14 @@ const NAV_URLS = {
   adminReports: "/admin/reports",
   adminRoles: "/admin/roles",
   adminSettings: "/admin/settings",
+  adminSeo: "/admin/seo",
 };
 const ADMIN_NAV_HREF = {
   "Tổng quan": NAV_URLS.adminHome,
   "Khách hàng": NAV_URLS.adminCustomers,
   "Điểm & giao dịch": NAV_URLS.adminPoints,
+  "Đơn hàng": NAV_URLS.adminOrders,
+  "Phí ship": NAV_URLS.adminShipping,
   "Đổi quà": NAV_URLS.adminRewards,
   "Chiến dịch": NAV_URLS.adminCampaigns,
   "Combo": NAV_URLS.adminCombos,
@@ -189,6 +211,7 @@ const ADMIN_NAV_HREF = {
   "Báo cáo": NAV_URLS.adminReports,
   "Phân quyền": NAV_URLS.adminRoles,
   "Cài đặt": NAV_URLS.adminSettings,
+  "SEO": NAV_URLS.adminSeo,
 };
 function adminHref(label) { return ADMIN_NAV_HREF[label] || "#"; }
 

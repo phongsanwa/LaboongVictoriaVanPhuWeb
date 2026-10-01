@@ -3,18 +3,23 @@
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
-use App\Models\OtpToken;
+use App\Mail\NewPassword;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Validator;
 
 class ForgotPasswordController extends Controller
 {
-    private const TTL = 180;
-
-    public function sendOtp(Request $request): JsonResponse
+    /**
+     * Quên mật khẩu: tạo mật khẩu mới và GỬI VỀ EMAIL đã đăng ký của khách.
+     * Chỉ đổi mật khẩu trong DB sau khi email gửi thành công — nếu gửi lỗi,
+     * mật khẩu cũ vẫn dùng được, khách không bị khoá ngoài tài khoản.
+     */
+    public function sendNewPassword(Request $request): JsonResponse
     {
         $v = Validator::make($request->all(), [
             'phone' => ['required', 'regex:/^0(3|5|7|8|9)\d{8}$/'],
@@ -24,73 +29,57 @@ class ForgotPasswordController extends Controller
             return response()->json(['message' => $v->errors()->first()], 422);
         }
 
-        $phone = $request->input('phone');
+        $user = User::where('phone', $request->input('phone'))->first();
 
-        if (!User::where('phone', $phone)->exists()) {
+        if (!$user) {
             return response()->json(['message' => 'Số điện thoại này chưa có tài khoản.', 'not_registered' => true], 422);
         }
 
-        OtpToken::where('phone', $phone)
-            ->where('purpose', 'password_reset')
-            ->where('is_used', false)
-            ->update(['is_used' => true, 'used_at' => now()]);
+        if (!$user->email) {
+            return response()->json([
+                'message' => 'Tài khoản chưa đăng ký email. Vui lòng liên hệ cửa hàng để được hỗ trợ đặt lại mật khẩu.',
+            ], 422);
+        }
 
-        $otp = str_pad(random_int(0, 999999), 6, '0', STR_PAD_LEFT);
+        $newPassword = $this->generatePassword();
 
-        OtpToken::create([
-            'phone'      => $phone,
-            'otp_code'   => $otp,
-            'purpose'    => 'password_reset',
-            'is_used'    => false,
-            'expires_at' => now()->addSeconds(self::TTL),
-        ]);
+        try {
+            Mail::to($user->email)->send(new NewPassword($user, $newPassword));
+        } catch (\Throwable $e) {
+            Log::error('Failed to send new password email', ['user_id' => $user->id, 'error' => $e->getMessage()]);
+
+            return response()->json([
+                'message' => 'Không gửi được email lúc này, vui lòng thử lại sau ít phút.',
+            ], 500);
+        }
+
+        // Email đã đi — giờ mới chốt mật khẩu mới
+        $user->forceFill(['password' => Hash::make($newPassword)])->save();
 
         return response()->json([
-            'message'   => 'Mã OTP đã được gửi',
-            'debug_otp' => $otp,
-            'ttl'       => self::TTL,
+            'message' => 'Mật khẩu mới đã được gửi về email của bạn',
+            'email'   => $this->maskEmail($user->email),
         ]);
     }
 
-    public function reset(Request $request): JsonResponse
+    /** Mật khẩu 8 ký tự dễ đọc — bỏ các ký tự dễ nhầm (0/O, 1/l/I). */
+    private function generatePassword(): string
     {
-        $v = Validator::make($request->all(), [
-            'phone'                 => ['required', 'regex:/^0(3|5|7|8|9)\d{8}$/'],
-            'otp_code'              => ['required', 'string', 'size:6'],
-            'password'              => ['required', 'string', 'min:6', 'confirmed'],
-            'password_confirmation' => ['required'],
-        ], [
-            'phone.regex'           => 'Số điện thoại không đúng định dạng',
-            'otp_code.size'         => 'Mã OTP phải đúng 6 chữ số',
-            'password.min'          => 'Mật khẩu tối thiểu 6 ký tự',
-            'password.confirmed'    => 'Xác nhận mật khẩu không khớp',
-        ]);
-
-        if ($v->fails()) {
-            return response()->json(['message' => $v->errors()->first()], 422);
+        $alphabet = 'abcdefghjkmnpqrstuvwxyzABCDEFGHJKMNPQRSTUVWXYZ23456789';
+        $out = '';
+        for ($i = 0; $i < 8; $i++) {
+            $out .= $alphabet[random_int(0, strlen($alphabet) - 1)];
         }
+        return $out;
+    }
 
-        $phone = $request->input('phone');
+    /** Che bớt email khi hiển thị: nguyenvana@gmail.com → ng•••a@gmail.com */
+    private function maskEmail(string $email): string
+    {
+        [$local, $domain] = explode('@', $email, 2);
+        $shown = mb_substr($local, 0, 2);
+        $tail  = mb_strlen($local) > 3 ? mb_substr($local, -1) : '';
 
-        $token = OtpToken::where('phone', $phone)
-            ->where('purpose', 'password_reset')
-            ->where('otp_code', $request->input('otp_code'))
-            ->where('is_used', false)
-            ->where('expires_at', '>', now())
-            ->latest()
-            ->first();
-
-        if (!$token) {
-            return response()->json(['message' => 'Mã OTP không hợp lệ hoặc đã hết hạn.'], 422);
-        }
-
-        $token->update(['is_used' => true, 'used_at' => now()]);
-
-        User::where('phone', $phone)
-            ->first()
-            ->forceFill(['password' => Hash::make($request->input('password'))])
-            ->save();
-
-        return response()->json(['message' => 'Đặt lại mật khẩu thành công']);
+        return $shown . '•••' . $tail . '@' . $domain;
     }
 }

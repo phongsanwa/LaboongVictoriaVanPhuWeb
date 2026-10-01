@@ -710,5 +710,128 @@ class LaboongDemoSeeder extends Seeder
                 ]);
             }
         }
+
+        $this->seedMenuAndVariants();
+    }
+
+    private function seedMenuAndVariants(): void
+    {
+        // Skip if already seeded
+        if (DB::table('categories')->exists()) {
+            return;
+        }
+
+        $now = Carbon::now();
+
+        // ── Categories ──
+        $cats = [
+            ['name' => 'Trà sữa',           'slug' => 'milktea', 'sort_order' => 1],
+            ['name' => 'Trà trái cây',       'slug' => 'fruit',   'sort_order' => 2],
+            ['name' => 'Cà phê',             'slug' => 'coffee',  'sort_order' => 3],
+            ['name' => 'Đá xay & Macchiato', 'slug' => 'special', 'sort_order' => 4],
+            ['name' => 'Topping',            'slug' => 'topping', 'sort_order' => 5],
+        ];
+        foreach ($cats as &$c) {
+            $c['is_active'] = true;
+            $c['created_at'] = $now;
+            $c['updated_at'] = $now;
+        }
+        unset($c);
+        DB::table('categories')->insert($cats);
+
+        $catIds = DB::table('categories')->pluck('id', 'slug');
+
+        // ── Products ──
+        $products = [
+            // milktea
+            ['slug' => 'tra-sua-tran-chau-duong-den', 'cat' => 'milktea', 'name' => 'Trà sữa trân châu đường đen',   'desc' => 'Trà sữa béo ngậy, trân châu đường đen dẻo thơm',  'price' => 45000, 'sort_order' => 1],
+            ['slug' => 'hong-tra-sua',                 'cat' => 'milktea', 'name' => 'Hồng trà sữa',                   'desc' => 'Hồng trà đậm vị, sữa tươi thanh nhẹ',              'price' => 40000, 'sort_order' => 2],
+            ['slug' => 'tra-sua-khoai-mon',            'cat' => 'milktea', 'name' => 'Trà sữa khoai môn',              'desc' => 'Khoai môn xay mịn, vị bùi tự nhiên',               'price' => 42000, 'sort_order' => 3],
+            ['slug' => 'sua-tuoi-tran-chau-duong-den', 'cat' => 'milktea', 'name' => 'Sữa tươi trân châu đường đen',  'desc' => 'Sữa tươi nguyên chất, trân châu nóng',             'price' => 50000, 'sort_order' => 4],
+            // fruit
+            ['slug' => 'tra-dao-cam-sa',   'cat' => 'fruit', 'name' => 'Trà đào cam sả',  'desc' => 'Trà đào thơm, cam tươi và sả thanh mát',           'price' => 39000, 'sort_order' => 1],
+            ['slug' => 'tra-vai-hat-sen',  'cat' => 'fruit', 'name' => 'Trà vải hạt sen', 'desc' => 'Vải ngọt mọng cùng hạt sen bùi',                   'price' => 42000, 'sort_order' => 2],
+            ['slug' => 'tra-dau-tam',      'cat' => 'fruit', 'name' => 'Trà dâu tằm',     'desc' => 'Dâu tằm chua ngọt, màu hồng tự nhiên',            'price' => 43000, 'sort_order' => 3],
+            ['slug' => 'tra-oi-hong',      'cat' => 'fruit', 'name' => 'Trà ổi hồng',     'desc' => 'Ổi ruột hồng ép tươi, vị thanh dịu',              'price' => 41000, 'sort_order' => 4],
+            // coffee
+            ['slug' => 'ca-phe-sua-da', 'cat' => 'coffee', 'name' => 'Cà phê sữa đá', 'desc' => 'Cà phê phin truyền thống, sữa đặc béo',          'price' => 29000, 'sort_order' => 1],
+            ['slug' => 'bac-xiu',       'cat' => 'coffee', 'name' => 'Bạc xỉu',        'desc' => 'Nhiều sữa, ít cà phê, vị nhẹ êm',               'price' => 32000, 'sort_order' => 2],
+            ['slug' => 'ca-phe-muoi',   'cat' => 'coffee', 'name' => 'Cà phê muối',    'desc' => 'Lớp kem muối béo mặn hài hoà',                  'price' => 35000, 'sort_order' => 3],
+            // special
+            ['slug' => 'macchiato-kem-pho-mai', 'cat' => 'special', 'name' => 'Macchiato kem phô mai', 'desc' => 'Lớp kem phô mai mặn ngọt phủ trên trà', 'price' => 48000, 'sort_order' => 1],
+            ['slug' => 'da-xay-socola',          'cat' => 'special', 'name' => 'Đá xay socola',          'desc' => 'Socola đá xay mịn, kem tươi phủ trên',   'price' => 52000, 'sort_order' => 2],
+            ['slug' => 'da-xay-tra-xanh',        'cat' => 'special', 'name' => 'Đá xay trà xanh',        'desc' => 'Trà xanh matcha đá xay, vị đắng dịu',   'price' => 52000, 'sort_order' => 3],
+            // topping (products sold standalone)
+            ['slug' => 'tran-chau-duong-den', 'cat' => 'topping', 'name' => 'Trân châu đường đen', 'desc' => 'Trân châu dẻo, ngấm đường đen',       'price' => 8000,  'sort_order' => 1],
+            ['slug' => 'thach-pho-mai',        'cat' => 'topping', 'name' => 'Thạch phô mai',        'desc' => 'Thạch phô mai mềm mịn',              'price' => 10000, 'sort_order' => 2],
+            ['slug' => 'kem-pho-mai',          'cat' => 'topping', 'name' => 'Kem phô mai',           'desc' => 'Lớp kem phô mai béo mặn',            'price' => 12000, 'sort_order' => 3],
+            ['slug' => 'pudding-trung',         'cat' => 'topping', 'name' => 'Pudding trứng',         'desc' => 'Pudding mềm tan, vị trứng thơm',     'price' => 10000, 'sort_order' => 4],
+        ];
+
+        $productRows = [];
+        foreach ($products as $p) {
+            $productRows[] = [
+                'category_id'  => $catIds[$p['cat']],
+                'name'         => $p['name'],
+                'slug'         => $p['slug'],
+                'description'  => $p['desc'],
+                'base_price'   => $p['price'],
+                'image_url'    => null,
+                'is_available' => true,
+                'sort_order'   => $p['sort_order'],
+                'created_at'   => $now,
+                'updated_at'   => $now,
+            ];
+        }
+        DB::table('products')->insert($productRows);
+
+        // ── Product Variants ──
+        // SIZE and TOPPING variants are added to every drink product (non-topping category)
+        $drinkProducts = DB::table('products')
+            ->join('categories', 'products.category_id', '=', 'categories.id')
+            ->where('categories.slug', '!=', 'topping')
+            ->pluck('products.id');
+
+        $sizeVariants = [
+            ['name' => 'Size M',  'extra_price' => 0,     'sort_order' => 1],
+            ['name' => 'Size L',  'extra_price' => 6000,  'sort_order' => 2],
+            ['name' => 'Size XL', 'extra_price' => 12000, 'sort_order' => 3],
+        ];
+
+        $toppingVariants = [
+            ['name' => 'Trân châu đường đen', 'extra_price' => 8000,  'sort_order' => 1],
+            ['name' => 'Thạch phô mai',        'extra_price' => 10000, 'sort_order' => 2],
+            ['name' => 'Kem phô mai',           'extra_price' => 12000, 'sort_order' => 3],
+            ['name' => 'Pudding trứng',         'extra_price' => 10000, 'sort_order' => 4],
+        ];
+
+        $variantRows = [];
+        foreach ($drinkProducts as $productId) {
+            foreach ($sizeVariants as $v) {
+                $variantRows[] = [
+                    'product_id'   => $productId,
+                    'variant_type' => 'SIZE',
+                    'name'         => $v['name'],
+                    'extra_price'  => $v['extra_price'],
+                    'is_available' => true,
+                    'sort_order'   => $v['sort_order'],
+                    'created_at'   => $now,
+                    'updated_at'   => $now,
+                ];
+            }
+            foreach ($toppingVariants as $v) {
+                $variantRows[] = [
+                    'product_id'   => $productId,
+                    'variant_type' => 'TOPPING',
+                    'name'         => $v['name'],
+                    'extra_price'  => $v['extra_price'],
+                    'is_available' => true,
+                    'sort_order'   => $v['sort_order'],
+                    'created_at'   => $now,
+                    'updated_at'   => $now,
+                ];
+            }
+        }
+        DB::table('product_variants')->insert($variantRows);
     }
 }

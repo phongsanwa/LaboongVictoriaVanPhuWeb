@@ -3,13 +3,17 @@
 
 const REWARD_CATS = {
   voucher: { label: "Voucher giảm giá", ic: "percent" },
-  drink:   { label: "Đồ uống miễn phí", ic: "cup" },
-  gift:    { label: "Quà tặng", ic: "gift" },
-  upgrade: { label: "Nâng cấp / Topping", ic: "spark" },
+  drink:   { label: "Miễn phí món",     ic: "cup" },
+  gift:    { label: "Quà vật phẩm",     ic: "gift" },
+  buyget:  { label: "Mua X tặng Y",     ic: "cart" },
+  topping: { label: "Freetopping",      ic: "spark" },
+  upsize:  { label: "Upsize",           ic: "arrowup" },
 };
 
-const ADMIN_REWARDS_DATA = window.ADMIN_REWARDS_DATA || { admin: null, rewards: [] };
+const ADMIN_REWARDS_DATA = window.ADMIN_REWARDS_DATA || { admin: null, rewards: [], products: [], sizes: [] };
 const REWARDS = ADMIN_REWARDS_DATA.rewards;
+const REWARD_PRODUCTS = ADMIN_REWARDS_DATA.products || [];
+const REWARD_SIZES = ADMIN_REWARDS_DATA.sizes || [];
 
 function expStatus(iso, todayISO) {
   if (iso < todayISO) return "expired";
@@ -19,4 +23,4 @@ function expStatus(iso, todayISO) {
   return "ok";
 }
 
-Object.assign(window, { REWARDS, REWARD_CATS, expStatus, ADMIN_REWARDS_DATA });
+Object.assign(window, { REWARDS, REWARD_CATS, REWARD_PRODUCTS, REWARD_SIZES, expStatus, ADMIN_REWARDS_DATA });

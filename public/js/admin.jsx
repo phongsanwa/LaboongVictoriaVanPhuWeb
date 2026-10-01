@@ -39,7 +39,9 @@ function App() {
   const [tier, setTier] = useState("all");
   const [store, setStore] = useState("all");
   const [status, setStatus] = useState("all");
-  const [sort, setSort] = useState({ key: "points", dir: "desc" });
+  const [onlineOnly, setOnlineOnly] = useState(false);
+  // Mặc định: khách đăng ký mới nhất hiển thị trên đầu
+  const [sort, setSort] = useState({ key: "joined", dir: "desc" });
   const [page, setPage] = useState(1);
   const [sel, setSel] = useState(null);
   const [customers, setCustomers] = useState(CUSTOMERS);
@@ -61,6 +63,7 @@ function App() {
       if (tier !== "all" && c.tier !== tier) return false;
       if (store !== "all" && c.store !== store) return false;
       if (status !== "all" && c.status !== status) return false;
+      if (onlineOnly && !c.online) return false;
       if (q.trim()) {
         const s = q.toLowerCase();
         if (!c.name.toLowerCase().includes(s) && !c.phone.replace(/\s/g, "").includes(s.replace(/\s/g, "")) && !c.email.toLowerCase().includes(s)) return false;
@@ -70,14 +73,14 @@ function App() {
     const dir = sort.dir === "asc" ? 1 : -1;
     rows = [...rows].sort((a, b) => {
       if (sort.key === "points") return (a.points - b.points) * dir;
-      if (sort.key === "joined") return (a.joined < b.joined ? -1 : 1) * dir;
+      if (sort.key === "joined") return (a.joined === b.joined ? a.customerId - b.customerId : (a.joined < b.joined ? -1 : 1)) * dir;
       if (sort.key === "name") return a.name.localeCompare(b.name, "vi") * dir;
       return 0;
     });
     return rows;
-  }, [q, tier, store, status, sort, customers]);
+  }, [q, tier, store, status, onlineOnly, sort, customers]);
 
-  useEffect(() => { setPage(1); }, [q, tier, store, status]);
+  useEffect(() => { setPage(1); }, [q, tier, store, status, onlineOnly]);
 
   const pages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const pageRows = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
@@ -107,7 +110,7 @@ function App() {
 
   const stats = useMemo(() => {
     const s = ADMIN_CUSTOMERS_DATA.stats;
-    return { total: s.total, active: s.active, newM: s.newThisMonth, pts: s.points };
+    return { total: s.total, active: s.active, online: s.online || 0, newM: s.newThisMonth, pts: s.points };
   }, []);
 
   const logout = async (e) => {
@@ -116,52 +119,21 @@ function App() {
     location.href = NAV_URLS.login;
   };
 
-  const NAV = [
-    { ic: "chart", label: "Tổng quan" },
-    { ic: "users", label: "Khách hàng", on: true, badge: String(CUSTOMERS.length) },
-    { ic: "receipt", label: "Điểm & giao dịch" },
-    { ic: "gift", label: "Đổi quà" },
-    { ic: "mega", label: "Chiến dịch" },
-    { ic: "pin", label: "Cửa hàng" },
-    { ic: "shield", label: "Phân quyền" },
-  ];
+  const [toggling, setToggling] = useState(null);
+  const toggleStatus = async (c) => {
+    if (toggling) return;
+    setToggling(c.customerId);
+    const { ok, data } = await apiCall("POST", `/admin/customers/${c.customerId}/toggle`);
+    setToggling(null);
+    if (!ok || !data.customer) return;
+    setCustomers(cs => cs.map(x => x.customerId === c.customerId ? { ...x, ...data.customer } : x));
+    setSel(prev => prev?.customerId === c.customerId ? { ...prev, ...data.customer } : prev);
+  };
 
   return (
     <div className="shell">
       {/* ---------- Sidebar ---------- */}
-      {sideOpen && <div className="scrim" style={{ zIndex: 55 }} onClick={() => setSideOpen(false)} />}
-      <aside className={"side" + (sideOpen ? " open" : "")}>
-        <div className="side-brand">
-          <div className="side-mark"><span>L</span></div>
-          <div>
-            <div className="nm">Laboong</div>
-            <div className="sb">Bảng quản trị</div>
-          </div>
-        </div>
-        <div className="side-sec">Quản lý</div>
-        <nav className="side-nav">
-          {NAV.map(n => (
-            <a key={n.label} className={"side-link" + (n.on ? " on" : "")} href={adminHref(n.label)}>
-              <Icon name={n.ic} size={19} /> {n.label}
-              {n.badge && <span className="badge">{n.badge}</span>}
-            </a>
-          ))}
-        </nav>
-        <div className="side-sec">Hệ thống</div>
-        <nav className="side-nav">
-          <a className="side-link" href={NAV_URLS.adminSettings}><Icon name="gear" size={19} /> Cài đặt</a>
-        </nav>
-        <div className="side-foot">
-          <div className="side-user">
-            <div className="side-av">{ADMIN_CUSTOMERS_DATA.admin.initials}</div>
-            <div style={{ minWidth: 0 }}>
-              <div className="un">{ADMIN_CUSTOMERS_DATA.admin.name}</div>
-              <div className="ur">{ADMIN_CUSTOMERS_DATA.admin.email}</div>
-            </div>
-            <button className="icon-btn" style={{ width: 32, height: 32, marginLeft: "auto" }} onClick={logout} title="Đăng xuất"><Icon name="logout" size={16} /></button>
-          </div>
-        </div>
-      </aside>
+      <AdminSidebar activeLabel="Khách hàng" badges={{ "Khách hàng": String(CUSTOMERS.length) }} admin={ADMIN_CUSTOMERS_DATA.admin} sideOpen={sideOpen} onClose={() => setSideOpen(false)} />
 
       {/* ---------- Main ---------- */}
       <div className="main">
@@ -185,11 +157,18 @@ function App() {
             <div className="stat"><div className="stat-ic g"><Icon name="users" size={22} /></div>
               <div><div className="lbl">Tổng khách hàng</div><div className="val tnum">{stats.total}</div><div className="chg up"><Icon name="spark" size={13} /> +3 tuần này</div></div></div>
             <div className="stat"><div className="stat-ic a"><Icon name="check" size={22} /></div>
-              <div><div className="lbl">Đang hoạt động</div><div className="val tnum">{stats.active}</div><div className="chg up">{Math.round(stats.active / stats.total * 100)}% tổng số</div></div></div>
+              <div><div className="lbl">Đang hoạt động</div><div className="val tnum">{stats.active}</div>
+                <div className="chg up"><span style={{ display: "inline-block", width: 7, height: 7, borderRadius: "50%", background: stats.online > 0 ? "#22C55E" : "var(--ink-3)", marginRight: 5 }} />{stats.online} đang online</div></div></div>
             <div className="stat"><div className="stat-ic y"><Icon name="star" size={20} /></div>
               <div><div className="lbl">Khách mới tháng này</div><div className="val tnum">{stats.newM}</div><div className="chg up"><Icon name="spark" size={13} /> Tăng trưởng tốt</div></div></div>
             <div className="stat"><div className="stat-ic p"><Icon name="coin" size={22} /></div>
               <div><div className="lbl">Điểm đã phát hành</div><div className="val tnum">{fmt(stats.pts)}</div><div className="chg up">Trên toàn hệ thống</div></div></div>
+          </div>
+
+          {/* Ô tìm kiếm cho mobile (desktop đã có trên topbar) */}
+          <div className="searchbox mobile-search">
+            <Icon name="search" size={18} color="var(--ink-3)" />
+            <input placeholder="Tìm tên, SĐT, email…" value={q} onChange={e => setQ(e.target.value)} />
           </div>
 
           {/* table panel */}
@@ -221,6 +200,20 @@ function App() {
                 <button className={status === "on" ? "on ok" : ""} onClick={() => setStatus("on")}>Active</button>
                 <button className={status === "off" ? "on off" : ""} onClick={() => setStatus("off")}>Inactive</button>
               </div>
+
+              <button
+                onClick={() => setOnlineOnly(v => !v)}
+                title={onlineOnly ? "Đang lọc: chỉ khách online — bấm để bỏ lọc" : "Chỉ hiện khách đang online"}
+                style={{
+                  display: "flex", alignItems: "center", gap: 7, padding: "8px 13px",
+                  borderRadius: "var(--r-sm)", fontWeight: 700, fontSize: 13.5, cursor: "pointer",
+                  border: `1.5px solid ${onlineOnly ? "#16A34A" : "var(--line)"}`,
+                  background: onlineOnly ? "rgba(34,197,94,.12)" : "transparent",
+                  color: onlineOnly ? "#16A34A" : "var(--ink-2)", transition: ".14s",
+                }}>
+                <span style={{ width: 9, height: 9, borderRadius: "50%", background: onlineOnly ? "#22C55E" : "var(--ink-3)" }} />
+                Đang online{onlineOnly ? ` (${stats.online})` : ""}
+              </button>
 
               <div className="menu-wrap">
                 <button className="btn primary" onClick={() => setExp(v => !v)}><Icon name="download" size={17} color="#fff" /> Export</button>
@@ -255,10 +248,19 @@ function App() {
                     <tr key={c.id} onClick={() => setSel(c)}>
                       <td>
                         <div className="cust">
-                          <div className="cust-av" style={{ background: avColor(c.name) }}>{initials(c.name)}</div>
+                          <div className="cust-av" style={{ background: avColor(c.name), position: "relative" }}>
+                            {initials(c.name)}
+                            {c.online && <span title="Đang online" style={{ position: "absolute", right: -1, bottom: -1, width: 11, height: 11, borderRadius: "50%", background: "#22C55E", border: "2px solid var(--panel, #fff)" }} />}
+                          </div>
                           <div style={{ minWidth: 0 }}>
-                            <div className="nm" title={c.name}>{c.name}</div>
+                            <div className="nm" title={c.name} style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                              <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{c.name}</span>
+                              {c.is_test && <span className="test-badge">TEST</span>}
+                            </div>
                             <div className="em">{c.email}</div>
+                            <div style={{ fontSize: 11, marginTop: 1, color: c.online ? "#16A34A" : "var(--ink-3)", fontWeight: c.online ? 600 : 400 }}>
+                              {c.online ? "● Đang online" : ("○ " + (c.lastSeen || "Offline"))}
+                            </div>
                           </div>
                         </div>
                       </td>
@@ -266,7 +268,17 @@ function App() {
                       <td><span className="pts tnum">{fmt(c.points)}<small>điểm</small></span></td>
                       <td><TierBadge tier={c.tier} /></td>
                       <td><span className="tnum" style={{ color: "var(--ink-2)", fontWeight: 500 }}>{fmtDate(c.joined)}</span></td>
-                      <td><span className={"status " + c.status}>{c.status === "on" ? "Active" : "Inactive"}</span></td>
+                      <td>
+                        <button
+                          className={"status " + c.status}
+                          disabled={toggling === c.customerId}
+                          title={c.status === "on" ? "Đang hoạt động — bấm để vô hiệu hoá" : "Đã vô hiệu hoá — bấm để kích hoạt"}
+                          onClick={e => { e.stopPropagation(); toggleStatus(c); }}
+                          style={{ cursor: "pointer", border: "none", opacity: toggling === c.customerId ? 0.5 : 1 }}
+                        >
+                          {c.status === "on" ? "Active" : "Inactive"}
+                        </button>
+                      </td>
                       <td style={{ textAlign: "right" }}>
                         <button className="row-act" onClick={e => { e.stopPropagation(); setSel(c); }}>Chi tiết <Icon name="chev" size={14} /></button>
                       </td>
@@ -294,6 +306,9 @@ function App() {
       {sel && <Drawer c={sel} onClose={() => setSel(null)} onCustomerUpdated={updated => {
         setCustomers(cs => cs.map(c => c.customerId === updated.customerId ? { ...c, ...updated } : c));
         setSel(prev => prev?.customerId === updated.customerId ? { ...prev, ...updated } : prev);
+      }} onCustomerDeleted={deleted => {
+        setCustomers(cs => cs.filter(c => c.customerId !== deleted.customerId));
+        setSel(null);
       }} />}
 
       {/* ---------- Tweaks ---------- */}

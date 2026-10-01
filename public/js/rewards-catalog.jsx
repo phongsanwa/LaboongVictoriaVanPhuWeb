@@ -32,8 +32,11 @@ const CATS = {
   all:     { label: "Tất cả", ic: "grid" },
   voucher: { label: "Voucher", ic: "percent" },
   drink:   { label: "Đồ uống", ic: "cup" },
-  upgrade: { label: "Nâng cấp", ic: "sparkle2" },
   gift:    { label: "Quà tặng", ic: "gift" },
+  buyget:  { label: "Mua X tặng Y", ic: "cart" },
+  topping: { label: "Freetopping", ic: "spark" },
+  upsize:  { label: "Upsize", ic: "arrowup" },
+  upgrade: { label: "Nâng cấp", ic: "spark" },
 };
 
 /* gradient palette, cycled by reward id */
@@ -56,14 +59,15 @@ function gradFor(id) { return GRADIENTS[id % GRADIENTS.length]; }
 const TAG_META = { hot: { label: "Hot", ic: "spark" }, new: { label: "Mới", ic: "sparkle2" }, low: { label: "Sắp hết", ic: "clock" } };
 
 function GiftCard({ g, can, balance, onRedeem }) {
-  const cat = CATS[g.cat];
+  const cat = CATS[g.cat] || CATS.gift;
   const hasStock = g.stock !== null && g.stock >= 0;
+  const bg = g.img ? `url(${g.img}) center/cover` : (g.grad || gradFor(g.id));
   return (
     <div className={"gift" + (can ? "" : " locked")}>
-      <div className="gift-thumb" style={{ background: gradFor(g.id) }}>
-        <span className="ti"><Icon name={cat.ic} size={42} color="#fff" /></span>
+      <div className="gift-thumb" style={{ background: bg }}>
+        {!g.img && <span className="ti"><Icon name={cat.ic} size={42} color="#fff" /></span>}
         <div className="gift-tags">
-          {g.tags.map(t => <span key={t} className={"tag " + t}><Icon name={TAG_META[t].ic} size={11} color="#fff" /> {TAG_META[t].label}</span>)}
+          {g.tags.filter(t => TAG_META[t]).map(t => <span key={t} className={"tag " + t}><Icon name={TAG_META[t].ic} size={11} color="#fff" /> {TAG_META[t].label}</span>)}
         </div>
         {!can && <span className="gift-locklbl"><Icon name="info" size={15} color="#fff" /></span>}
       </div>
@@ -74,7 +78,10 @@ function GiftCard({ g, can, balance, onRedeem }) {
       </div>
       <div className="gift-foot">
         <div className="gift-pts"><span className="p tnum">{fmt(g.points)}</span><span className="u">điểm</span></div>
-        {can
+        {g.limitReached
+          ? <><button className="gift-btn cant" disabled><Icon name="check" size={14} /> Đã đổi tối đa</button>
+              <div className="gift-need">Mỗi khách chỉ đổi được {g.perLimit} lần</div></>
+          : can
           ? <button className="gift-btn can" onClick={() => onRedeem(g)}><Icon name="gift" size={15} color="#fff" /> Đổi ngay</button>
           : <><button className="gift-btn cant" disabled><Icon name="info" size={14} /> Chưa đủ điểm</button>
               <div className="gift-need">Còn thiếu {fmt(g.points - balance)} điểm</div></>}
@@ -195,9 +202,9 @@ function App() {
       {redeem && (
         <div className="scrim" onClick={() => setRedeem(null)}>
           <div className="rd" onClick={e => e.stopPropagation()}>
-            <div className="rd-thumb" style={{ background: gradFor(redeem.id) }}>
+            <div className="rd-thumb" style={{ background: redeem.img ? `url(${redeem.img}) center/cover` : (redeem.grad || gradFor(redeem.id)) }}>
               <button className="rd-x" onClick={() => setRedeem(null)}>×</button>
-              <span className="ti"><Icon name={CATS[redeem.cat].ic} size={48} color="#fff" /></span>
+              {!redeem.img && <span className="ti"><Icon name={(CATS[redeem.cat] || CATS.gift).ic} size={48} color="#fff" /></span>}
             </div>
             <div className="rd-b">
               <div className="rd-name">{redeem.name}</div>

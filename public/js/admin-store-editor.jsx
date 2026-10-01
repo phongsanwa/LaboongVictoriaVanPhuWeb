@@ -1,6 +1,79 @@
 /* global React, Icon */
 const { useState: useStateSt, useEffect: useEffectSt, useRef: useRefSt } = React;
 
+/* ---- Google Maps (loaded async in stores.blade.php) ---- */
+function gmapsSt() { return window.google?.maps; }
+
+function onGmapsReadySt(fn) {
+  if (window.__gmapsReady || window.google?.maps) { fn(); return; }
+  if (window.__gmapsCallbacks) { window.__gmapsCallbacks.push(fn); }
+}
+
+async function reverseGeocodeSt(lat, lng) {
+  const maps = gmapsSt();
+  if (!maps) return null;
+  return new Promise(resolve => {
+    new maps.Geocoder().geocode({ location: { lat, lng } }, (results, status) => {
+      if (status === 'OK' && results?.length) {
+        resolve(results[0].formatted_address.replace(/,?\s*Việt Nam$/i, "").trim());
+      } else resolve(null);
+    });
+  });
+}
+
+/* Gợi ý địa chỉ từ Places predictions — toạ độ lấy khi chọn (geocodePlaceIdSt) */
+async function smartNominatimSearchSt(text) {
+  const maps = gmapsSt();
+  if (!maps?.places?.AutocompleteService || text.trim().length < 3) return [];
+  return new Promise(resolve => {
+    new maps.places.AutocompleteService().getPlacePredictions(
+      { input: text, componentRestrictions: { country: 'vn' } },
+      (predictions) => {
+        if (!predictions?.length) { resolve([]); return; }
+        resolve(predictions.slice(0, 6).map(p => ({
+          text: p.description.replace(/,?\s*Việt Nam$/i, "").trim(),
+          placeId: p.place_id,
+        })));
+      }
+    );
+  });
+}
+
+async function geocodePlaceIdSt(placeId) {
+  const maps = gmapsSt();
+  if (!maps) return null;
+  return new Promise(resolve => {
+    new maps.Geocoder().geocode({ placeId }, (results, status) => {
+      if (status === 'OK' && results?.length) {
+        const l = results[0].geometry.location;
+        resolve({ lat: l.lat(), lng: l.lng() });
+      } else resolve(null);
+    });
+  });
+}
+
+async function cascadeGeocodeSt(text) {
+  const maps = gmapsSt();
+  if (!maps) return null;
+  const geocoder = new maps.Geocoder();
+  const parts = text.split(",").map(p => p.trim()).filter(Boolean);
+  const queries = [text];
+  for (let i = 1; i < parts.length; i++) queries.push(parts.slice(i).join(", "));
+  for (const q of queries) {
+    if (q.trim().length < 3) continue;
+    const result = await new Promise(resolve => {
+      geocoder.geocode({ address: q + ', Việt Nam', region: 'VN' }, (results, status) => {
+        if (status === 'OK' && results?.length) {
+          const loc = results[0].geometry.location;
+          resolve({ lat: loc.lat(), lng: loc.lng() });
+        } else resolve(null);
+      });
+    });
+    if (result) return result;
+  }
+  return null;
+}
+
 function csrfTokenSt() {
   return document.querySelector('meta[name="csrf-token"]')?.content || "";
 }
@@ -14,8 +87,8 @@ function StoreEditor({ initial, onClose, onSave }) {
   const [city, setCity] = useStateSt(initial?.city || "Hà Nội");
   const [phone, setPhone] = useStateSt(initial?.phone || "");
   const [email, setEmail] = useStateSt(initial?.email || "");
-  const [latitude, setLatitude] = useStateSt(initial?.latitude ?? "");
-  const [longitude, setLongitude] = useStateSt(initial?.longitude ?? "");
+  const [latitude, setLatitude] = useStateSt(initial?.latitude ?? null);
+  const [longitude, setLongitude] = useStateSt(initial?.longitude ?? null);
   const [openingTime, setOpeningTime] = useStateSt(initial?.opening_time || "07:00");
   const [closingTime, setClosingTime] = useStateSt(initial?.closing_time || "22:00");
   const [days, setDays] = useStateSt(initial?.operating_days ?? [0, 1, 2, 3, 4, 5, 6]);
@@ -24,11 +97,129 @@ function StoreEditor({ initial, onClose, onSave }) {
   const [photoUploading, setPhotoUploading] = useStateSt(false);
   const photoRef = useRefSt(null);
 
+  const [sugg, setSugg] = useStateSt([]);
+  const [searching, setSearching] = useStateSt(false);
+  const debRef = useRefSt(null);
+  const [mapSearch, setMapSearch] = useStateSt("");
+  const [mapSugg, setMapSugg] = useStateSt([]);
+  const [mapSearching, setMapSearching] = useStateSt(false);
+  const mapDebRef = useRefSt(null);
+  const mapDivRef = useRefSt(null);
+  const mapRef = useRefSt(null);
+  const markerRef = useRefSt(null);
+
   useEffectSt(() => {
     const h = (e) => { if (e.key === "Escape") onClose(); };
     window.addEventListener("keydown", h);
     return () => window.removeEventListener("keydown", h);
   }, [onClose]);
+
+  // Init Google Map
+  useEffectSt(() => {
+    let destroyed = false;
+    onGmapsReadySt(() => {
+      if (destroyed || !mapDivRef.current || mapRef.current) return;
+      const maps = gmapsSt();
+      if (!maps) return;
+
+      const hasCoords = latitude != null && longitude != null;
+      const center = hasCoords
+        ? { lat: Number(latitude), lng: Number(longitude) }
+        : { lat: 20.9833, lng: 105.8412 };
+      const map = new maps.Map(mapDivRef.current, {
+        center, zoom: hasCoords ? 16 : 11,
+        mapTypeControl: false, streetViewControl: false, fullscreenControl: false,
+      });
+
+      const addMarker = (lat, lng) => {
+        markerRef.current = new maps.Marker({
+          position: { lat, lng }, map, draggable: true,
+          icon: { path: maps.SymbolPath.CIRCLE, scale: 9, fillColor: '#0F623F', fillOpacity: 1, strokeColor: '#fff', strokeWeight: 2 },
+        });
+        markerRef.current.addListener('dragend', e => {
+          const la = e.latLng.lat(), lo = e.latLng.lng();
+          setLatitude(la); setLongitude(lo);
+          reverseGeocodeSt(la, lo).then(addr => { if (addr) setAddress(addr); });
+        });
+      };
+
+      if (hasCoords) addMarker(Number(latitude), Number(longitude));
+
+      map.addListener('click', e => {
+        const lat = e.latLng.lat(), lng = e.latLng.lng();
+        setLatitude(lat); setLongitude(lng);
+        if (markerRef.current) markerRef.current.setPosition({ lat, lng });
+        else addMarker(lat, lng);
+        reverseGeocodeSt(lat, lng).then(addr => { if (addr) setAddress(addr); });
+      });
+
+      mapRef.current = map;
+    });
+    return () => { destroyed = true; mapRef.current = null; markerRef.current = null; };
+  }, []); // eslint-disable-line
+
+  // Pan + update marker when lat/lng change from suggestion
+  useEffectSt(() => {
+    const map = mapRef.current;
+    const maps = gmapsSt();
+    if (!map || !maps || latitude == null || longitude == null) return;
+    const pos = { lat: Number(latitude), lng: Number(longitude) };
+    if (markerRef.current) {
+      markerRef.current.setPosition(pos);
+    } else {
+      markerRef.current = new maps.Marker({
+        position: pos, map, draggable: true,
+        icon: { path: maps.SymbolPath.CIRCLE, scale: 9, fillColor: '#0F623F', fillOpacity: 1, strokeColor: '#fff', strokeWeight: 2 },
+      });
+      markerRef.current.addListener('dragend', e => {
+        const la = e.latLng.lat(), lo = e.latLng.lng();
+        setLatitude(la); setLongitude(lo);
+        reverseGeocodeSt(la, lo).then(addr => { if (addr) setAddress(addr); });
+      });
+    }
+    map.panTo(pos);
+    if (map.getZoom() < 15) map.setZoom(16);
+  }, [latitude, longitude]); // eslint-disable-line
+
+  const onAddressChange = e => {
+    const val = e.target.value;
+    setAddress(val);
+    if (debRef.current) clearTimeout(debRef.current);
+    if (val.trim().length < 4) { setSugg([]); setSearching(false); return; }
+    setSearching(true);
+    debRef.current = setTimeout(async () => {
+      const results = await smartNominatimSearchSt(val.trim());
+      setSugg(results);
+      setSearching(false);
+    }, 450);
+  };
+
+  const pickSugg = async s => {
+    setAddress(s.text);
+    setSugg([]);
+    const loc = await geocodePlaceIdSt(s.placeId);
+    if (loc) { setLatitude(loc.lat); setLongitude(loc.lng); }
+  };
+
+  const onMapSearchChange = e => {
+    const val = e.target.value;
+    setMapSearch(val);
+    if (mapDebRef.current) clearTimeout(mapDebRef.current);
+    if (val.trim().length < 3) { setMapSugg([]); setMapSearching(false); return; }
+    setMapSearching(true);
+    mapDebRef.current = setTimeout(async () => {
+      const results = await smartNominatimSearchSt(val.trim());
+      setMapSugg(results);
+      setMapSearching(false);
+    }, 400);
+  };
+
+  const pickMapSugg = async s => {
+    setMapSearch("");
+    setMapSugg([]);
+    const loc = await geocodePlaceIdSt(s.placeId);
+    if (loc) { setLatitude(loc.lat); setLongitude(loc.lng); }
+  };
 
   const toggleDay = (i) => {
     setDays(d => d.includes(i) ? d.filter(x => x !== i) : [...d, i].sort());
@@ -68,8 +259,8 @@ function StoreEditor({ initial, onClose, onSave }) {
       ...(initial || {}),
       name: name.trim(), address: address.trim(), city: city.trim(), phone: phone.trim(),
       email: email.trim() || null,
-      latitude: latitude === "" ? null : Number(latitude),
-      longitude: longitude === "" ? null : Number(longitude),
+      latitude: latitude ?? null,
+      longitude: longitude ?? null,
       opening_time: openingTime, closing_time: closingTime,
       operating_days: days, status: status ? "active" : "inactive",
     });
@@ -77,7 +268,7 @@ function StoreEditor({ initial, onClose, onSave }) {
 
   return (
     <div className="modal-scrim" onClick={onClose}>
-      <div className="modal wide" onClick={e => e.stopPropagation()}>
+      <div className="modal wide" onClick={e => e.stopPropagation()} style={{ maxHeight: "92vh", display: "flex", flexDirection: "column" }}>
         <div className="modal-h">
           <div className="mh-ic"><Icon name={isEdit ? "edit" : "plus"} size={20} /></div>
           <div>
@@ -87,15 +278,33 @@ function StoreEditor({ initial, onClose, onSave }) {
           <button className="x" onClick={onClose}><Icon name="close" size={18} /></button>
         </div>
 
-        <div className="modal-b">
+        <div className="modal-b" style={{ overflowY: "auto", flex: 1 }}>
           <div className="fld">
             <label>Tên cửa hàng</label>
             <input className="inp" value={name} onChange={e => setName(e.target.value)} placeholder="VD: Laboong Victoria Văn Phú" autoFocus />
           </div>
 
-          <div className="fld">
-            <label>Địa chỉ</label>
-            <input className="inp" value={address} onChange={e => setAddress(e.target.value)} placeholder="Số nhà, đường, phường/xã, quận/huyện" />
+          <div className="fld" style={{ position: "relative" }}>
+            <label style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+              <span>Địa chỉ</span>
+              {searching && <span style={{ fontWeight: 400, color: "var(--ink-3)", fontSize: 12 }}>Đang tìm…</span>}
+            </label>
+            <input className="inp" value={address} onChange={onAddressChange} placeholder="Số nhà, đường, phường/xã, quận/huyện" autoComplete="off"
+              onBlur={async () => {
+                if (latitude != null || !address.trim()) return;
+                const loc = await cascadeGeocodeSt(address.trim());
+                if (loc) { setLatitude(loc.lat); setLongitude(loc.lng); }
+              }} />
+            {sugg.length > 0 && (
+              <div style={{ position: "absolute", top: "100%", left: 0, right: 0, background: "var(--card)", border: "1.5px solid var(--brand)", borderRadius: 8, zIndex: 9999, boxShadow: "0 8px 24px rgba(0,0,0,.15)", marginTop: 4 }}>
+                {sugg.map((s, i) => (
+                  <button key={i} onMouseDown={() => pickSugg(s)} style={{ display: "flex", alignItems: "flex-start", gap: 8, width: "100%", padding: "9px 14px", textAlign: "left", fontSize: 13, borderBottom: i < sugg.length - 1 ? "1px solid var(--line)" : "none", color: "var(--ink)", lineHeight: 1.4 }}>
+                    <span style={{ flexShrink: 0, marginTop: 2 }}><Icon name="pin" size={13} color="var(--brand)" /></span>
+                    <span>{s.text}</span>
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
 
           <div className="two-col">
@@ -114,15 +323,37 @@ function StoreEditor({ initial, onClose, onSave }) {
             <input className="inp" type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="vanphu@laboong.vn" />
           </div>
 
-          <div className="two-col">
-            <div className="fld">
-              <label>Vĩ độ (latitude)</label>
-              <input className="inp" type="number" step="any" value={latitude} onChange={e => setLatitude(e.target.value)} placeholder="VD: 20.96523" />
+          <div className="fld">
+            <label style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+              <span>Vị trí trên bản đồ</span>
+              {latitude != null && longitude != null
+                ? <span style={{ fontWeight: 600, color: "var(--brand)", fontSize: 12 }}>✓ {Number(latitude).toFixed(5)}, {Number(longitude).toFixed(5)}</span>
+                : <span style={{ fontWeight: 400, color: "var(--ink-3)", fontSize: 12 }}>Tìm kiếm hoặc nhấp bản đồ để ghim vị trí</span>}
+            </label>
+            <div style={{ position: "relative", marginBottom: 6 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, border: "1.5px solid var(--line)", borderRadius: 8, padding: "8px 12px", background: "var(--card)" }}>
+                <Icon name="search" size={15} color="var(--ink-3)" />
+                <input
+                  value={mapSearch}
+                  onChange={onMapSearchChange}
+                  placeholder="Tìm địa điểm trên bản đồ… (VD: Laboong Victoria Văn Phú)"
+                  autoComplete="off"
+                  style={{ flex: 1, border: "none", outline: "none", background: "transparent", fontSize: 13.5, color: "var(--ink)" }}
+                />
+                {mapSearching && <span className="spin" style={{ width: 14, height: 14, borderWidth: 2, flexShrink: 0 }} />}
+              </div>
+              {mapSugg.length > 0 && (
+                <div style={{ position: "absolute", top: "100%", left: 0, right: 0, background: "var(--card)", border: "1.5px solid var(--brand)", borderRadius: 8, zIndex: 9999, boxShadow: "0 8px 24px rgba(0,0,0,.15)", marginTop: 4 }}>
+                  {mapSugg.map((s, i) => (
+                    <button key={i} onMouseDown={() => pickMapSugg(s)} style={{ display: "flex", alignItems: "flex-start", gap: 8, width: "100%", padding: "9px 14px", textAlign: "left", fontSize: 13, borderBottom: i < mapSugg.length - 1 ? "1px solid var(--line)" : "none", color: "var(--ink)", lineHeight: 1.4 }}>
+                      <span style={{ flexShrink: 0, marginTop: 2 }}><Icon name="pin" size={13} color="var(--brand)" /></span>
+                      <span>{s.text}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
-            <div className="fld">
-              <label>Kinh độ (longitude)</label>
-              <input className="inp" type="number" step="any" value={longitude} onChange={e => setLongitude(e.target.value)} placeholder="VD: 105.76488" />
-            </div>
+            <div ref={mapDivRef} style={{ height: 220, borderRadius: 8, overflow: "hidden", border: "1.5px solid var(--line)", isolation: "isolate" }} />
           </div>
 
           <div className="two-col">

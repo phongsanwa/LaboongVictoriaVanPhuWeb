@@ -16,9 +16,20 @@ class Order extends Model
         'subtotal',
         'points_used',
         'discount_amount',
+        'shipping_fee',
+        'weather_surcharge',
         'total_amount',
+        'payment_method',
+        'payment_status',
+        'paid_at',
         'points_earned',
+        'points_awarded_at',
         'note',
+        'delivery_address',
+        'delivery_phone',
+        'delivery_lat',
+        'delivery_lng',
+        'confirmed_at',
         'completed_at',
         'cancelled_at',
         'cancel_reason',
@@ -28,7 +39,10 @@ class Order extends Model
     {
         return [
             'completed_at' => 'datetime',
+            'points_awarded_at' => 'datetime',
+            'confirmed_at' => 'datetime',
             'cancelled_at' => 'datetime',
+            'paid_at' => 'datetime',
         ];
     }
 
@@ -52,9 +66,14 @@ class Order extends Model
         return $this->hasMany(OrderItem::class);
     }
 
-    /** Tính điểm thưởng theo công thức floor(total_amount / 1000) */
+    public function discounts(): HasMany
+    {
+        return $this->hasMany(OrderDiscount::class);
+    }
+
+    /** Điểm thưởng: chỉ tính trên tiền hàng (đã trừ phí ship & phụ thu), 1 điểm / 10.000đ. */
     public function calculatePointsEarned(): int
     {
-        return (int) floor($this->total_amount / 1000);
+        return (int) floor(max(0, $this->total_amount - $this->shipping_fee - ($this->weather_surcharge ?? 0)) / 10000);
     }
 }

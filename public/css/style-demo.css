@@ -1,0 +1,24 @@
+.ci-days {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+    padding: 16px 20px 10px;
+}
+.store-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    flex-wrap: wrap;
+    justify-content: flex-start;
+}
+.store-dist {
+    margin-left: initial;
+    flex: none;
+    text-align: right;
+}
+.news-list {
+    padding: 5px 10px;
+}
+.card-h {
+    padding: 18px 20px 5px;
+}

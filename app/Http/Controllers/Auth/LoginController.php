@@ -62,6 +62,11 @@ class LoginController extends Controller
         }
 
         if ($user->user_type === 'staff') {
+            // Quản lý vào thẳng trang admin; thu ngân vào POS như cũ
+            if ($user->staff?->role === 'manager' && $user->staff?->status === 'active') {
+                return route('admin.dashboard');
+            }
+
             return route('pos.points');
         }
 

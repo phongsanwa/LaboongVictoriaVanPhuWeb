@@ -39,17 +39,22 @@ class RolesController extends Controller
      * default state used the first time a permission is seen (before any
      * row exists in role_permissions).
      */
-    private const PERM_GROUPS = [
+    public const PERM_GROUPS = [
         ['title' => 'Tích điểm & giao dịch', 'ic' => 'receipt', 'perms' => [
             ['id' => 'scan', 'name' => 'Quét mã QR tích điểm', 'desc' => 'Quét mã thành viên để cộng điểm khi bán hàng', 'cashier' => true, 'manager' => true],
             ['id' => 'adjust', 'name' => 'Cộng / trừ điểm thủ công', 'desc' => 'Điều chỉnh điểm kèm lý do', 'cashier' => false, 'manager' => true],
             ['id' => 'tx_view', 'name' => 'Xem lịch sử giao dịch', 'desc' => 'Tra cứu các giao dịch tích / tiêu điểm', 'cashier' => true, 'manager' => true],
             ['id' => 'tx_void', 'name' => 'Huỷ / hoàn giao dịch', 'desc' => 'Thu hồi điểm khi sai sót hoặc hoàn hàng', 'cashier' => false, 'manager' => true],
         ]],
+        ['title' => 'Đơn hàng', 'ic' => 'bag', 'perms' => [
+            ['id' => 'order_view', 'name' => 'Xem đơn hàng', 'desc' => 'Xem danh sách và chi tiết đơn tại cửa hàng', 'cashier' => true, 'manager' => true],
+            ['id' => 'order_advance', 'name' => 'Xử lý / chuyển trạng thái đơn', 'desc' => 'Xác nhận, pha chế, hoàn tất đơn hàng', 'cashier' => true, 'manager' => true],
+            ['id' => 'order_cancel', 'name' => 'Huỷ đơn hàng', 'desc' => 'Huỷ đơn khi khách yêu cầu hoặc sai sót', 'cashier' => false, 'manager' => true],
+        ]],
         ['title' => 'Khách hàng', 'ic' => 'users', 'perms' => [
             ['id' => 'cust_list', 'name' => 'Xem danh sách khách hàng', 'desc' => 'Truy cập danh bạ thành viên', 'cashier' => true, 'manager' => true],
             ['id' => 'cust_detail', 'name' => 'Xem chi tiết hồ sơ', 'desc' => 'Hồ sơ, điểm và lịch sử của từng khách', 'cashier' => true, 'manager' => true],
-            ['id' => 'cust_edit', 'name' => 'Sửa thông tin khách', 'desc' => 'Cập nhật tên, SĐT, email…', 'cashier' => false, 'manager' => true],
+            ['id' => 'cust_edit', 'name' => 'Sửa thông tin khách', 'desc' => 'Cập nhật tên, SĐT, email, trạng thái…', 'cashier' => false, 'manager' => true],
             ['id' => 'cust_export', 'name' => 'Xuất dữ liệu (Excel/CSV)', 'desc' => 'Tải danh sách khách hàng', 'cashier' => false, 'manager' => true],
         ]],
         ['title' => 'Quà & Voucher', 'ic' => 'gift', 'perms' => [
@@ -57,15 +62,29 @@ class RolesController extends Controller
             ['id' => 'gift_edit', 'name' => 'Tạo / sửa voucher & quà', 'desc' => 'Quản lý danh mục phần thưởng', 'cashier' => false, 'manager' => true],
             ['id' => 'gift_del', 'name' => 'Xoá voucher & quà', 'desc' => 'Gỡ phần thưởng khỏi danh mục', 'cashier' => false, 'manager' => true],
         ]],
+        ['title' => 'Thực đơn & Sản phẩm', 'ic' => 'cup', 'perms' => [
+            ['id' => 'menu_edit', 'name' => 'Quản lý thực đơn', 'desc' => 'Thêm / sửa / xoá món & danh mục', 'cashier' => false, 'manager' => true],
+            ['id' => 'variant_edit', 'name' => 'Quản lý variant / tuỳ chọn', 'desc' => 'Size, topping, tuỳ chọn của món', 'cashier' => false, 'manager' => true],
+        ]],
         ['title' => 'Chiến dịch & Marketing', 'ic' => 'mega', 'perms' => [
             ['id' => 'camp_view', 'name' => 'Xem chiến dịch', 'desc' => 'Theo dõi các chương trình đang chạy', 'cashier' => true, 'manager' => true],
             ['id' => 'camp_edit', 'name' => 'Tạo / sửa chiến dịch', 'desc' => 'Thiết lập ưu đãi, điều kiện, đối tượng', 'cashier' => false, 'manager' => true],
+            ['id' => 'promo_edit', 'name' => 'Quản lý khuyến mãi', 'desc' => 'Mã giảm giá, khuyến mãi gạch giá', 'cashier' => false, 'manager' => true],
+            ['id' => 'news_edit', 'name' => 'Quản lý tin tức', 'desc' => 'Đăng / sửa bài tin tức hiển thị trang chủ', 'cashier' => false, 'manager' => true],
+            ['id' => 'banner_edit', 'name' => 'Quản lý banner', 'desc' => 'Banner hiển thị ngoài trang chủ khách', 'cashier' => false, 'manager' => true],
             ['id' => 'push', 'name' => 'Gửi push notification', 'desc' => 'Gửi thông báo đẩy tới khách hàng', 'cashier' => false, 'manager' => true],
+            ['id' => 'email_send', 'name' => 'Gửi email cho khách', 'desc' => 'Soạn mẫu và gửi email hàng loạt tới khách hàng', 'cashier' => false, 'manager' => true],
+        ]],
+        ['title' => 'Cửa hàng & Vận hành', 'ic' => 'pin', 'perms' => [
+            ['id' => 'store_edit', 'name' => 'Quản lý cửa hàng', 'desc' => 'Thông tin, giờ mở, bản đồ chi nhánh', 'cashier' => false, 'manager' => true],
+            ['id' => 'ship_edit', 'name' => 'Quản lý phí ship', 'desc' => 'Bậc phí, khuyến mãi phí giao hàng', 'cashier' => false, 'manager' => true],
+            ['id' => 'checkin_edit', 'name' => 'Cấu hình điểm danh', 'desc' => 'Thiết lập điểm thưởng điểm danh hằng ngày', 'cashier' => false, 'manager' => true],
         ]],
         ['title' => 'Báo cáo & Hệ thống', 'ic' => 'gear', 'perms' => [
             ['id' => 'report', 'name' => 'Xem báo cáo & thống kê', 'desc' => 'Doanh thu, điểm phát hành, hiệu quả CT', 'cashier' => false, 'manager' => true],
+            ['id' => 'seo_edit', 'name' => 'Quản lý SEO', 'desc' => 'Tiêu đề, mô tả, dữ liệu có cấu trúc', 'cashier' => false, 'manager' => true],
             ['id' => 'staff', 'name' => 'Quản lý nhân viên & phân quyền', 'desc' => 'Thêm nhân viên, gán vai trò', 'cashier' => false, 'manager' => true, 'lockManager' => true],
-            ['id' => 'settings', 'name' => 'Cài đặt hệ thống', 'desc' => 'Cấu hình cửa hàng, quy tắc tích điểm', 'cashier' => false, 'manager' => true],
+            ['id' => 'settings', 'name' => 'Cài đặt hệ thống', 'desc' => 'Cấu hình chung, quy tắc tích điểm, tích hợp', 'cashier' => false, 'manager' => true],
         ]],
     ];
 
@@ -111,6 +130,8 @@ class RolesController extends Controller
                 'total' => array_sum(array_map(fn ($g) => count($g['perms']), self::PERM_GROUPS)),
                 'permGroups' => $permGroups,
                 'perms' => $perms,
+                'stores' => Store::orderBy('id')->get(['id', 'name'])
+                    ->map(fn ($s) => ['id' => $s->id, 'name' => $s->name])->all(),
             ],
         ]);
     }
@@ -158,6 +179,9 @@ class RolesController extends Controller
         $data = $request->validate([
             'phone' => ['required', 'string'],
             'role' => ['required', Rule::in(array_keys(self::ROLES))],
+            // Nhiều cửa hàng nhân viên phụ trách (bỏ trống = giữ nguyên/mặc định cửa hàng đầu)
+            'store_ids'   => ['nullable', 'array'],
+            'store_ids.*' => ['integer', 'exists:stores,id'],
         ]);
 
         $user = User::where('phone', $data['phone'])->first();
@@ -174,22 +198,35 @@ class RolesController extends Controller
             ]);
         }
 
+        $storeIds = array_values(array_unique(array_map('intval', $data['store_ids'] ?? [])));
+        $primary  = $storeIds[0] ?? Store::orderBy('id')->value('id');
+
         $staff = Staff::where('user_id', $user->id)->first();
 
         if ($staff) {
             $staff->role = $data['role'];
             $staff->status = 'active';
+            if (!empty($storeIds)) {
+                $staff->store_id = $primary;
+            }
             $staff->save();
         } else {
-            Staff::create([
+            $staff = Staff::create([
                 'user_id' => $user->id,
-                'store_id' => Store::orderBy('id')->value('id'),
+                'store_id' => $primary,
                 'role' => $data['role'],
                 'employee_code' => $this->nextEmployeeCode(),
                 'pin' => (string) random_int(100000, 999999),
                 'status' => 'active',
                 'hired_date' => now(),
             ]);
+        }
+
+        // Đồng bộ bảng nối cửa hàng (chỉ khi có gửi lên; giữ nguyên nếu bỏ trống)
+        if (!empty($storeIds)) {
+            $staff->stores()->sync($storeIds);
+        } elseif ($staff->stores()->count() === 0 && $staff->store_id) {
+            $staff->stores()->sync([$staff->store_id]);
         }
 
         if ($user->user_type !== 'admin') {
@@ -199,6 +236,28 @@ class RolesController extends Controller
 
         return response()->json([
             'message' => "Đã gán \"{$user->name}\" vào vai trò " . self::ROLES[$data['role']]['label'],
+            'roles' => $this->buildRoles($this->currentPerms()),
+        ]);
+    }
+
+    /** Cập nhật danh sách cửa hàng nhân viên phụ trách. */
+    public function setStore(Request $request, Staff $staff): JsonResponse
+    {
+        $data = $request->validate([
+            'store_ids'   => ['required', 'array', 'min:1'],
+            'store_ids.*' => ['integer', 'exists:stores,id'],
+        ], [
+            'store_ids.required' => 'Vui lòng chọn ít nhất 1 cửa hàng',
+            'store_ids.min'      => 'Vui lòng chọn ít nhất 1 cửa hàng',
+        ]);
+
+        $storeIds = array_values(array_unique(array_map('intval', $data['store_ids'])));
+        $staff->stores()->sync($storeIds);
+        // Cửa hàng chính = cửa hàng đầu (giữ tương thích POS/thống kê)
+        $staff->update(['store_id' => $storeIds[0]]);
+
+        return response()->json([
+            'message' => 'Đã cập nhật cửa hàng cho "' . ($staff->user->name ?? 'nhân viên') . '"',
             'roles' => $this->buildRoles($this->currentPerms()),
         ]);
     }
@@ -238,7 +297,7 @@ class RolesController extends Controller
     /** Builds the role cards data (counts, team avatars) from the current permission matrix. */
     private function buildRoles(array $perms): array
     {
-        $staffByRole = Staff::with('user')
+        $staffByRole = Staff::with(['user', 'store', 'stores'])
             ->whereIn('role', ['cashier', 'manager'])
             ->where('status', 'active')
             ->get()
@@ -267,6 +326,11 @@ class RolesController extends Controller
                     'id' => $s->id,
                     'name' => $s->user->name,
                     'phone' => $s->user->phone,
+                    'store_id' => $s->store_id,
+                    'store' => $s->store->name ?? '—',
+                    'store_ids'   => $s->storeIds(),
+                    'store_names' => ($s->stores->isNotEmpty() ? $s->stores : collect([$s->store])->filter())
+                        ->pluck('name')->filter()->values()->all(),
                     'color' => self::AVATAR_COLORS[$i % count(self::AVATAR_COLORS)],
                 ])->all(),
             ];

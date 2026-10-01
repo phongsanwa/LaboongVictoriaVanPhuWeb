@@ -3,13 +3,14 @@
 <head>
 <meta charset="UTF-8" />
 @include('partials.favicon')
+@include('partials.pwa')
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <meta name="csrf-token" content="{{ csrf_token() }}" />
-<title>Laboong · Đăng ký tài khoản</title>
+@include('partials.seo', ['seoPage' => 'register', 'seoTitle' => 'Đăng ký thành viên · Laboong Victoria Văn Phú', 'seoDesc' => 'Tạo tài khoản Laboong Victoria Văn Phú miễn phí — nhận ưu đãi thành viên, tích điểm mỗi đơn và quà sinh nhật.', 'seoBusiness' => true])
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&family=Baloo+2:wght@600;700;800&display=swap" rel="stylesheet" />
-<link rel="stylesheet" href="{{ asset('css/register.css') }}" />
+<link rel="stylesheet" href="{{ asset('css/register.css') }}?v={{ filemtime(public_path('css/register.css')) }}" />
 </head>
 <body>
 <div id="root"></div>
@@ -18,8 +19,8 @@
 <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
 <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" crossorigin="anonymous"></script>
 
-<script type="text/babel" src="{{ asset('js/tweaks-panel.jsx') }}"></script>
-<script type="text/babel" src="{{ asset('js/components.jsx') }}"></script>
-<script type="text/babel" src="{{ asset('js/register.jsx') }}"></script>
+<script type="text/babel" src="{{ asset('js/tweaks-panel.jsx') }}?v={{ filemtime(public_path('js/tweaks-panel.jsx')) }}"></script>
+<script type="text/babel" src="{{ asset('js/components.jsx') }}?v={{ filemtime(public_path('js/components.jsx')) }}"></script>
+<script type="text/babel" src="{{ asset('js/register.jsx') }}?v={{ filemtime(public_path('js/register.jsx')) }}"></script>
 </body>
 </html>

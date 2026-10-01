@@ -60,7 +60,15 @@ class CustomersController extends Controller
             ->get()
             ->groupBy('customer_id');
 
-        $customerRows = $customers->map(function ($c) use ($tierMeta, $transactions, $redemptions, $now) {
+        // Lịch sử ĐƠN HÀNG khách đã đặt (web/app) — tách riêng với giao dịch điểm.
+        $orders = \App\Models\Order::with(['store:id,name', 'items.product:id,name', 'items.toppings'])
+            ->withCount('items')
+            ->whereIn('customer_id', $customerIds)
+            ->orderByDesc('created_at')
+            ->get()
+            ->groupBy('customer_id');
+
+        $customerRows = $customers->map(function ($c) use ($tierMeta, $transactions, $redemptions, $orders, $now) {
             $tx = collect();
 
             foreach ($transactions->get($c->id, collect()) as $t) {
@@ -90,6 +98,54 @@ class CustomersController extends Controller
                 'type' => $x['type'], 'title' => $x['title'], 'meta' => $x['meta'], 'amt' => $x['amt'],
             ])->values();
 
+            // Lịch sử đơn hàng của khách (tối đa 15 đơn gần nhất)
+            $orderHistory = $orders->get($c->id, collect())->take(15)->map(function ($o) use ($now) {
+                $statusLabel = match ($o->status) {
+                    'PENDING'   => 'Chờ xác nhận',
+                    'CONFIRMED' => 'Đã xác nhận',
+                    'PREPARING' => 'Đang pha chế',
+                    'READY'     => 'Sẵn sàng',
+                    'COMPLETED' => 'Hoàn tất',
+                    'CANCELLED' => 'Đã huỷ',
+                    default     => $o->status,
+                };
+
+                $lines = $o->items->map(function ($item) {
+                    $parts = [];
+                    if ($item->size_name) $parts[] = "Size {$item->size_name}";
+                    if ($item->sugar_level !== null && $item->sugar_level !== '100') $parts[] = "Đường {$item->sugar_level}%";
+                    if ($item->ice_level !== null && $item->ice_level !== '100') $parts[] = "Đá {$item->ice_level}%";
+                    foreach ($item->toppings as $t) {
+                        $q = max(1, (int) ($t->quantity ?? 1));
+                        $parts[] = $q > 1 ? "{$t->topping_name} x{$q}" : $t->topping_name;
+                    }
+
+                    return [
+                        'name' => $item->product?->name ?? "Sản phẩm #{$item->product_id}",
+                        'opt'  => implode(' · ', $parts),
+                        'qty'  => (int) $item->quantity,
+                        'unit' => (int) $item->unit_price,
+                    ];
+                })->values();
+
+                return [
+                    'code'     => 'LB-' . str_pad((string) $o->id, 4, '0', STR_PAD_LEFT),
+                    'status'   => $o->status,
+                    'statusLabel' => $statusLabel,
+                    'ship'     => !empty($o->delivery_address) || (int) $o->shipping_fee > 0,
+                    'items'    => $o->items_count,
+                    'total'    => (int) $o->total_amount,
+                    'meta'     => $this->daysAgo($o->created_at, $now) . ' · ' . ($o->store?->name ?? '—'),
+                    // Chi tiết để mở rộng khi bấm vào đơn
+                    'lines'    => $lines,
+                    'subtotal' => (int) $o->subtotal,
+                    'discount' => (int) $o->discount_amount,
+                    'shipFee'  => (int) $o->shipping_fee,
+                    'note'     => $o->note ?? '',
+                    'addr'     => $o->delivery_address,
+                ];
+            })->values();
+
             return [
                 'id' => 'KH' . (1000 + $c->id),
                 'customerId' => $c->id,
@@ -102,17 +158,22 @@ class CustomersController extends Controller
                 'date_of_birth' => $c->date_of_birth?->toDateString(),
                 'gender' => $c->gender,
                 'status' => $c->user->status === 'active' ? 'on' : 'off',
+                'is_test' => (bool) $c->is_test,
+                'online' => $c->user->isOnline(),
+                'lastSeen' => $this->lastSeenLabel($c->user->last_seen_at, $now),
                 'visits' => $c->transactions_count,
                 'tier' => $tierMeta[$c->tier_id]['key'] ?? 'bac',
                 'joined' => $c->created_at->toDateString(),
                 'spent' => (float) $c->total_spent,
                 'tx' => $tx,
+                'orders' => $orderHistory,
             ];
         })->values();
 
         $stats = [
             'total' => $customers->count(),
             'active' => $customers->filter(fn ($c) => $c->user->status === 'active')->count(),
+            'online' => $customers->filter(fn ($c) => $c->user->isOnline())->count(),
             'newThisMonth' => $customers->filter(fn ($c) => $c->created_at->isSameMonth($now))->count(),
             'points' => $customers->sum('total_points'),
         ];
@@ -173,6 +234,32 @@ class CustomersController extends Controller
         return response()->json(['customer' => $this->present($customer->fresh(['user', 'store', 'tier']))]);
     }
 
+    /** Bật/tắt cờ tài khoản thử nghiệm (loại khỏi báo cáo). */
+    public function toggleTest(Customer $customer)
+    {
+        $customer->update(['is_test' => !$customer->is_test]);
+
+        return response()->json(['customer' => $this->present($customer->fresh(['user', 'store', 'tier']))]);
+    }
+
+    /**
+     * Xoá vĩnh viễn khách hàng cùng toàn bộ dữ liệu liên quan.
+     * orders là restrictOnDelete và daily_checkins không có FK nên xoá tay;
+     * phần còn lại (customer, điểm, đổi quà, voucher, địa chỉ…) cascade từ users.
+     */
+    public function destroy(Customer $customer)
+    {
+        $name = $customer->user->name ?? ('KH' . (1000 + $customer->id));
+
+        \Illuminate\Support\Facades\DB::transaction(function () use ($customer) {
+            \App\Models\Order::where('customer_id', $customer->id)->delete();
+            \App\Models\DailyCheckin::where('customer_id', $customer->id)->delete();
+            $customer->user()->delete(); // cascade → customers → points/redemptions/vouchers/addresses…
+        });
+
+        return response()->json(['message' => "Đã xoá khách hàng {$name}"]);
+    }
+
     private function present(Customer $c): array
     {
         $tiers = CustomerTier::orderBy('level')->get();
@@ -192,12 +279,15 @@ class CustomersController extends Controller
             'store'      => $c->store->name ?? '—',
             'store_id'   => $c->store_id,
             'status'     => $c->user->status === 'active' ? 'on' : 'off',
+            'online'     => $c->user->isOnline(),
+            'lastSeen'   => $this->lastSeenLabel($c->user->last_seen_at, Carbon::now()),
             'visits'     => $c->transactions_count ?? 0,
             'tier'       => $tierMeta[$c->tier_id]['key'] ?? 'bac',
             'joined'     => $c->created_at->toDateString(),
             'spent'      => (float) $c->total_spent,
             'date_of_birth' => $c->date_of_birth?->toDateString(),
             'gender'     => $c->gender,
+            'is_test'    => (bool) $c->is_test,
             'tx'         => [],
         ];
     }
@@ -207,6 +297,24 @@ class CustomersController extends Controller
         $days = (int) floor($ts->diffInDays($now));
 
         return $days < 1 ? 'Hôm nay' : $days . ' ngày trước';
+    }
+
+    /** Nhãn "hoạt động gần nhất" cho hiển thị online/offline. */
+    private function lastSeenLabel(?Carbon $ts, Carbon $now): string
+    {
+        if (!$ts) return 'Chưa truy cập';
+
+        $mins = (int) floor($ts->diffInMinutes($now));
+        if ($mins < 5)    return 'Đang online';
+        if ($mins < 60)   return $mins . ' phút trước';
+
+        $hours = (int) floor($ts->diffInHours($now));
+        if ($hours < 24)  return $hours . ' giờ trước';
+
+        $days = (int) floor($ts->diffInDays($now));
+        if ($days < 30)   return $days . ' ngày trước';
+
+        return $ts->format('d/m/Y');
     }
 
     private function initials(string $name): string

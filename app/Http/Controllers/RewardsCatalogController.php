@@ -14,7 +14,7 @@ use Illuminate\Support\Str;
 
 class RewardsCatalogController extends Controller
 {
-    private const CATEGORIES = ['voucher', 'drink', 'upgrade', 'gift'];
+    private const CATEGORIES = ['voucher', 'drink', 'gift', 'topping', 'upsize', 'upgrade'];
 
     public function index()
     {
@@ -29,9 +29,18 @@ class RewardsCatalogController extends Controller
             ->orderBy('display_order')
             ->get();
 
+        // Số lần khách này đã đổi từng quà — để chặn quà đã đạt giới hạn mỗi khách.
+        $myCounts = $customer
+            ? Redemption::where('customer_id', $customer->id)
+                ->where('status', '!=', 'cancelled')
+                ->selectRaw('reward_id, COUNT(*) as c')
+                ->groupBy('reward_id')
+                ->pluck('c', 'reward_id')
+            : collect();
+
         return view('rewards-catalog', ['rewardsData' => [
             'balance' => $customer?->total_points ?? 0,
-            'gifts' => $rewards->map(fn (Reward $r) => $this->formatReward($r))->values()->all(),
+            'gifts' => $rewards->map(fn (Reward $r) => $this->formatReward($r, (int) ($myCounts[$r->id] ?? 0)))->values()->all(),
         ]]);
     }
 
@@ -70,6 +79,20 @@ class RewardsCatalogController extends Controller
             return response()->json(['message' => 'Phần quà này đã hết'], 422);
         }
 
+        // Giới hạn số lần đổi cho mỗi khách (null = không giới hạn).
+        if ($reward->per_customer_limit !== null) {
+            $timesRedeemed = Redemption::where('customer_id', $customer->id)
+                ->where('reward_id', $reward->id)
+                ->where('status', '!=', 'cancelled')
+                ->count();
+
+            if ($timesRedeemed >= $reward->per_customer_limit) {
+                return response()->json([
+                    'message' => "Bạn đã đổi phần quà này đủ {$reward->per_customer_limit} lần cho phép",
+                ], 422);
+            }
+        }
+
         DB::transaction(function () use ($customer, $reward) {
             $customer->decrement('total_points', $reward->points_required);
 
@@ -104,17 +127,118 @@ class RewardsCatalogController extends Controller
 
             if ($reward->reward_type === 'discount_voucher') {
                 Voucher::create([
-                    'voucher_code' => 'VOC' . now()->format('Ymd') . strtoupper(Str::random(6)),
-                    'customer_id' => $customer->id,
+                    'voucher_code'  => 'VOC' . now()->format('Ymd') . strtoupper(Str::random(6)),
+                    'customer_id'   => $customer->id,
                     'redemption_id' => $redemption->id,
+                    'applies_to'    => 'ORDER',
                     'discount_type' => 'fixed',
-                    'discount_value' => $reward->value ?? 0,
-                    'min_purchase' => $reward->min_purchase,
-                    'max_discount' => null,
-                    'valid_from' => now()->toDateString(),
-                    'valid_until' => now()->addMonths(3)->toDateString(),
-                    'usage_count' => 0,
-                    'status' => 'active',
+                    'discount_value'=> $reward->value ?? 0,
+                    'min_purchase'  => $reward->min_purchase,
+                    'max_discount'  => null,
+                    'valid_from'    => now()->toDateString(),
+                    'valid_until'   => now()->addMonths(3)->toDateString(),
+                    'usage_count'   => 0,
+                    'status'        => 'active',
+                ]);
+            } elseif ($reward->reward_type === 'free_item' && !$reward->product_id && $reward->category === 'drink') {
+                // Miễn phí món BẤT KỲ (mọi sản phẩm), có thể giới hạn size.
+                // Số tiền giảm tính lúc đặt đơn = giá món rẻ nhất đủ điều kiện.
+                Voucher::create([
+                    'voucher_code'          => 'FRA' . now()->format('Ymd') . strtoupper(Str::random(6)),
+                    'customer_id'           => $customer->id,
+                    'redemption_id'         => $redemption->id,
+                    'applies_to'            => 'ORDER',
+                    'discount_type'         => 'free_item',
+                    'discount_value'        => 0,
+                    'free_item_product_id'  => null,
+                    'free_item_scope'       => 'any',
+                    'free_item_size'        => $reward->free_item_size,
+                    'free_item_quantity'    => max(1, (int) ($reward->free_item_quantity ?? 1)),
+                    'min_purchase'          => null,
+                    'max_discount'          => null,
+                    'valid_from'            => now()->toDateString(),
+                    'valid_until'           => now()->addMonths(3)->toDateString(),
+                    'usage_count'           => 0,
+                    'status'                => 'active',
+                ]);
+            } elseif ($reward->reward_type === 'free_item' && $reward->product_id && in_array($reward->category, ['drink', 'gift'])) {
+                $product   = \App\Models\Product::find($reward->product_id);
+                $qty       = max(1, (int) ($reward->free_item_quantity ?? 1));
+                $unitPrice = $product ? (int) $product->base_price : 0;
+                Voucher::create([
+                    'voucher_code'          => 'FRE' . now()->format('Ymd') . strtoupper(Str::random(6)),
+                    'customer_id'           => $customer->id,
+                    'redemption_id'         => $redemption->id,
+                    'applies_to'            => 'ORDER',
+                    'discount_type'         => 'free_item',
+                    'discount_value'        => $unitPrice * $qty,
+                    'free_item_product_id'  => $reward->product_id,
+                    'free_item_quantity'    => $qty,
+                    'min_purchase'          => null,
+                    'max_discount'          => null,
+                    'valid_from'            => now()->toDateString(),
+                    'valid_until'           => now()->addMonths(3)->toDateString(),
+                    'usage_count'           => 0,
+                    'status'                => 'active',
+                ]);
+            } elseif ($reward->category === 'buyget') {
+                // Mua X tặng Y: giảm tiền Y món rẻ nhất khi giỏ có đủ X+Y món.
+                // X lưu ở reward->value, Y ở free_item_quantity; số tiền tính lúc đặt đơn.
+                Voucher::create([
+                    'voucher_code'          => 'BXG' . now()->format('Ymd') . strtoupper(Str::random(6)),
+                    'customer_id'           => $customer->id,
+                    'redemption_id'         => $redemption->id,
+                    'applies_to'            => 'ORDER',
+                    'discount_type'         => 'buy_get',
+                    'discount_value'        => 0,
+                    'free_item_product_id'  => null,
+                    'free_item_quantity'    => max(1, (int) ($reward->free_item_quantity ?? 1)),
+                    'buy_quantity'          => max(1, (int) ($reward->value ?? 2)),
+                    'min_purchase'          => null,
+                    'max_discount'          => null,
+                    'valid_from'            => now()->toDateString(),
+                    'valid_until'           => now()->addMonths(3)->toDateString(),
+                    'usage_count'           => 0,
+                    'status'                => 'active',
+                ]);
+            } elseif ($reward->category === 'gift') {
+                // Quà vật phẩm (gấu bông, kẹp tóc…): không trừ tiền đơn — chỉ gắn kèm
+                // đơn hàng để quán chuẩn bị quà, nên discount_value = 0
+                $qty = max(1, (int) ($reward->free_item_quantity ?? 1));
+                Voucher::create([
+                    'voucher_code'          => 'GIF' . now()->format('Ymd') . strtoupper(Str::random(6)),
+                    'customer_id'           => $customer->id,
+                    'redemption_id'         => $redemption->id,
+                    'applies_to'            => 'ORDER',
+                    'discount_type'         => 'gift_item',
+                    'discount_value'        => 0,
+                    'free_item_product_id'  => null,
+                    'free_item_quantity'    => $qty,
+                    'min_purchase'          => null,
+                    'max_discount'          => null,
+                    'valid_from'            => now()->toDateString(),
+                    'valid_until'           => now()->addMonths(3)->toDateString(),
+                    'usage_count'           => 0,
+                    'status'                => 'active',
+                ]);
+            } elseif (in_array($reward->category, ['topping', 'upsize', 'upgrade']) && (int) ($reward->value ?? 0) > 0) {
+                $qty       = max(1, (int) ($reward->free_item_quantity ?? 1));
+                $unitValue = (int) $reward->value;
+                Voucher::create([
+                    'voucher_code'          => 'TOP' . now()->format('Ymd') . strtoupper(Str::random(6)),
+                    'customer_id'           => $customer->id,
+                    'redemption_id'         => $redemption->id,
+                    'applies_to'            => 'ORDER',
+                    'discount_type'         => 'free_item',
+                    'discount_value'        => $unitValue * $qty,
+                    'free_item_product_id'  => null,
+                    'free_item_quantity'    => $qty,
+                    'min_purchase'          => null,
+                    'max_discount'          => null,
+                    'valid_from'            => now()->toDateString(),
+                    'valid_until'           => now()->addMonths(3)->toDateString(),
+                    'usage_count'           => 0,
+                    'status'                => 'active',
                 ]);
             }
         });
@@ -125,7 +249,7 @@ class RewardsCatalogController extends Controller
         ]);
     }
 
-    private function formatReward(Reward $r): array
+    private function formatReward(Reward $r, int $myCount = 0): array
     {
         $tags = [];
         if ($r->is_featured) {
@@ -139,12 +263,17 @@ class RewardsCatalogController extends Controller
         }
 
         return [
-            'id' => $r->id,
-            'name' => $r->name,
-            'cat' => in_array($r->category, self::CATEGORIES, true) ? $r->category : 'gift',
+            'id'     => $r->id,
+            'name'   => $r->name,
+            'cat'    => in_array($r->category, self::CATEGORIES, true) ? $r->category : 'gift',
             'points' => $r->points_required,
-            'stock' => $r->quantity_available,
-            'tags' => $tags,
+            'stock'  => $r->quantity_available,
+            'img'    => $r->image_url,
+            'grad'   => $r->gradient,
+            'tags'   => $tags,
+            // Giới hạn mỗi khách: null = không giới hạn
+            'perLimit'     => $r->per_customer_limit,
+            'limitReached' => $r->per_customer_limit !== null && $myCount >= $r->per_customer_limit,
         ];
     }
 

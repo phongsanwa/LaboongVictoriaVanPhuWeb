@@ -3,9 +3,10 @@
 <head>
 <meta charset="UTF-8" />
 @include('partials.favicon')
+@include('partials.pwa')
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <meta name="csrf-token" content="{{ csrf_token() }}" />
-<title>Laboong · Chi tiết cửa hàng</title>
+@include('partials.seo', ['seoPage' => 'store', 'seoTitle' => 'Cửa hàng · Laboong Victoria Văn Phú', 'seoDesc' => 'Địa chỉ, giờ mở cửa và bản đồ cửa hàng Laboong Victoria Văn Phú, Hà Đông, Hà Nội.'])
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&family=Baloo+2:wght@600;700;800&display=swap" rel="stylesheet" />
@@ -22,8 +23,8 @@
   window.STORE_DATA = @json($storeData);
 </script>
 
-<script type="text/babel" src="{{ asset('js/tweaks-panel.jsx') }}"></script>
-<script type="text/babel" src="{{ asset('js/components.jsx') }}"></script>
-<script type="text/babel" src="{{ asset('js/store.jsx') }}"></script>
+<script type="text/babel" src="{{ asset('js/tweaks-panel.jsx') }}?v={{ filemtime(public_path('js/tweaks-panel.jsx')) }}"></script>
+<script type="text/babel" src="{{ asset('js/components.jsx') }}?v={{ filemtime(public_path('js/components.jsx')) }}"></script>
+<script type="text/babel" src="{{ asset('js/store.jsx') }}?v={{ filemtime(public_path('js/store.jsx')) }}"></script>
 </body>
 </html>

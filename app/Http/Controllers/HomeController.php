@@ -2,8 +2,11 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Controllers\CheckinController;
+use App\Support\AdminAccess;
 use App\Models\Campaign;
 use App\Models\CustomerPoint;
+use App\Models\DailyCheckin;
 use App\Models\Reward;
 use App\Models\Store;
 use Illuminate\Support\Facades\Auth;
@@ -26,6 +29,15 @@ class HomeController extends Controller
                 'transactions' => [],
                 'store' => null,
                 'pointsThisWeek' => 0,
+                'checkin' => ['streak' => 0, 'last' => null, 'today' => false],
+                'checkinConfig' => CheckinController::checkinConfig(),
+                'checkinEnabled' => CheckinController::isEnabled(),
+                'news' => $this->buildNews(),
+                'adminAccess' => AdminAccess::canEnter($user),
+                'iosGuideHtml' => \App\Models\AppSetting::get('general', [])['ios_guide_html'] ?? null,
+                'banners' => $this->buildBanners(),
+                'stores' => $this->buildStores(),
+                'staffEntry' => $this->staffEntry($user),
             ]]);
         }
 
@@ -80,10 +92,22 @@ class HomeController extends Controller
                 'bg' => $this->campaignBg($c->campaign_type),
                 'title' => $c->name,
                 'sub' => $c->description,
+                'benefit' => $this->campaignBenefit($c),
+                'start' => $c->start_date?->format('d/m/Y'),
+                'end' => $c->end_date?->format('d/m/Y'),
             ];
         })->values()->all();
 
         $store = $customer->store ?: Store::where('status', 'active')->first();
+
+        $today = Carbon::today()->toDateString();
+        $lastCheckin = DailyCheckin::where('customer_id', $customer->id)->orderByDesc('checkin_date')->first();
+        $checkinState = [
+            'streak' => $lastCheckin ? $lastCheckin->streak : 0,
+            'last' => $lastCheckin ? $lastCheckin->checkin_date->toDateString() : null,
+            'today' => $lastCheckin && $lastCheckin->checkin_date->toDateString() === $today,
+        ];
+        $checkinConfig = CheckinController::checkinConfig();
 
         return view('welcome', ['homeData' => [
             'member' => $member,
@@ -94,7 +118,80 @@ class HomeController extends Controller
             'transactions' => $transactions,
             'store' => $store,
             'pointsThisWeek' => $pointsThisWeek,
+            'checkin' => $checkinState,
+            'checkinConfig' => $checkinConfig,
+            'checkinEnabled' => CheckinController::isEnabled(),
+            'news' => $this->buildNews(),
+            'adminAccess' => AdminAccess::canEnter($user),
+            'iosGuideHtml' => \App\Models\AppSetting::get('general', [])['ios_guide_html'] ?? null,
+            'banners' => $this->buildBanners(),
+            'stores' => $this->buildStores(),
+            'staffEntry' => $this->staffEntry($user),
         ]]);
+    }
+
+    /**
+     * Nút truy cập khu nội bộ hiển thị ở trang chủ theo vai trò:
+     * - admin / quản lý (manager): vào trang Quản trị (/admin)
+     * - thu ngân (cashier): vào thẳng màn hình Tích điểm (/pos/points)
+     * - khách thường: không có nút (null).
+     */
+    private function staffEntry(?\App\Models\User $user): ?array
+    {
+        if (!AdminAccess::canEnter($user)) {
+            return null;
+        }
+
+        $role = $user->staff->role ?? null;
+
+        if ($user->user_type !== 'admin' && $role === 'cashier') {
+            return ['url' => '/pos/points', 'label' => 'Bán hàng'];
+        }
+
+        return ['url' => '/admin', 'label' => 'Quản trị'];
+    }
+
+    /** Tất cả cửa hàng đang hoạt động, hiển thị dạng danh sách ở trang chủ. */
+    private function buildStores()
+    {
+        return Store::where('status', 'active')->orderBy('id')->get();
+    }
+
+    /** Banner đang bật cho trang chủ (mobile trống thì dùng desktop). */
+    private function buildBanners(): array
+    {
+        return \App\Models\Banner::where('status', 'active')
+            ->orderBy('sort_order')->orderByDesc('id')
+            ->get()
+            ->map(fn (\App\Models\Banner $b) => [
+                'desktop'  => $b->image_desktop,
+                'mobile'   => $b->image_mobile ?: $b->image_desktop,
+                'link'     => $b->link_url,
+                'title'    => $b->title,
+                'subtitle' => $b->subtitle,
+                'textPos'  => $b->text_position ?: 'none',
+                'textAlign' => $b->text_align ?: 'left',
+            ])->all();
+    }
+
+    /** Tin tức đang hiển thị cho trang chủ. */
+    private function buildNews(): array
+    {
+        return \App\Models\NewsArticle::where('status', 'active')
+            ->orderBy('sort_order')->orderByDesc('id')
+            ->limit(12)
+            ->get()
+            ->map(fn (\App\Models\NewsArticle $n) => [
+                'id'          => $n->id,
+                'title'       => $n->title,
+                'excerpt'     => $n->excerpt ?? '',
+                'body'        => $n->body ?? '',
+                'media_type'  => $n->media_type,
+                'image_url'   => $n->image_url,
+                'video_url'   => $n->video_url,
+                'youtube_id'  => \App\Models\NewsArticle::youtubeId($n->youtube_url),
+                'date'        => $n->published_at?->format('d/m/Y'),
+            ])->all();
     }
 
     private function formatTxDate(Carbon $date): string
@@ -110,6 +207,23 @@ class HomeController extends Controller
         }
 
         return $date->format('d/m') . " · {$time}";
+    }
+
+    private function campaignBenefit(Campaign $c): ?string
+    {
+        $fmt = fn ($n) => number_format((float) $n, 0, ',', '.');
+
+        return match ($c->campaign_type) {
+            'double_points' => 'Nhân ×' . ($c->multiplier ?: 2) . ' điểm tích luỹ cho mỗi đơn hàng',
+            'bonus_points' => $c->bonus_points
+                ? 'Tặng thêm ' . $fmt($c->bonus_points) . ' điểm thưởng'
+                : null,
+            'discount_promotion' => $c->discount_percent
+                ? 'Giảm ' . rtrim(rtrim(number_format((float) $c->discount_percent, 1, '.', ''), '0'), '.') . '%'
+                    . ($c->min_purchase ? ' cho đơn từ ' . $fmt($c->min_purchase) . 'đ' : '')
+                : null,
+            default => null,
+        };
     }
 
     private function campaignTag(string $type): string

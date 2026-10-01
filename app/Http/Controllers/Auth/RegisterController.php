@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
+use App\Models\AppSetting;
 use App\Models\Customer;
 use App\Models\CustomerTier;
 use App\Models\User;
@@ -34,13 +35,14 @@ class RegisterController extends Controller
         }
 
         $phone = $request->input('phone');
-        $welcomeBonus = 50;
+        // Điểm thưởng chào mừng lấy theo cài đặt admin (Cài đặt → Điểm · welcome)
+        $welcomeBonus = max(0, (int) (AppSetting::get('points', [])['welcome'] ?? 50));
 
         $user = DB::transaction(function () use ($request, $phone, $welcomeBonus) {
             $user = User::create([
                 'name' => $request->input('name'),
                 'phone' => $phone,
-                'email' => $request->input('email') ?: $phone . '@laboong.local',
+                'email' => $request->input('email'),
                 'phone_verified_at' => now(),
                 'password' => Hash::make($request->input('password')),
                 'user_type' => 'customer',
@@ -77,9 +79,17 @@ class RegisterController extends Controller
 
         Auth::login($user);
 
+        // Gửi email chào mừng (kèm mã QR + link website). Không để lỗi mail làm hỏng đăng ký.
+        try {
+            \Illuminate\Support\Facades\Mail::to($user->email)->send(new \App\Mail\WelcomeRegistered($user));
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::error('Welcome email failed', ['user_id' => $user->id, 'error' => $e->getMessage()]);
+        }
+
         return response()->json([
             'message' => 'Đăng ký thành công',
             'redirect' => route('home'),
+            'welcome_points' => $welcomeBonus,
         ]);
     }
 
@@ -89,8 +99,8 @@ class RegisterController extends Controller
             'phone' => ['required', 'regex:/^0(3|5|7|8|9)\d{8}$/', Rule::unique('users', 'phone')],
             'name' => ['required', 'string', 'min:2'],
             'password' => ['required', 'string', 'min:6', 'confirmed'],
-            'email' => ['nullable', 'email'],
-            'dob' => ['nullable', 'date'],
+            'email' => ['required', 'email', Rule::unique('users', 'email')],
+            'dob' => ['nullable', 'date', 'before:today'],
         ], [
             'phone.regex' => 'Số điện thoại không hợp lệ',
             'phone.unique' => 'Số điện thoại này đã được đăng ký',
@@ -98,6 +108,11 @@ class RegisterController extends Controller
             'password.required' => 'Vui lòng nhập mật khẩu',
             'password.min' => 'Mật khẩu phải có ít nhất 6 ký tự',
             'password.confirmed' => 'Mật khẩu xác nhận không khớp',
+            'email.required' => 'Vui lòng nhập email',
+            'email.email' => 'Email không hợp lệ',
+            'email.unique' => 'Email này đã được đăng ký',
+            'dob.date' => 'Ngày sinh không hợp lệ',
+            'dob.before' => 'Ngày sinh không hợp lệ',
         ]);
     }
 }

@@ -117,10 +117,69 @@ function EditCustomerModal({ c, onClose, onSaved }) {
   );
 }
 
+/* ---- Xác nhận xoá khách hàng ---- */
+function ConfirmDeleteCustomer({ c, onClose, onDeleted }) {
+  const [deleting, setDeleting] = React.useState(false);
+  const [err, setErr] = React.useState("");
+
+  React.useEffect(() => {
+    const h = e => { if (e.key === "Escape") onClose(); };
+    window.addEventListener("keydown", h);
+    return () => window.removeEventListener("keydown", h);
+  }, [onClose]);
+
+  const doDelete = async () => {
+    if (deleting) return;
+    setDeleting(true); setErr("");
+    try {
+      const res = await fetch(`/admin/customers/${c.customerId}`, {
+        method: "DELETE",
+        headers: {
+          "Accept": "application/json",
+          "X-CSRF-TOKEN": document.querySelector('meta[name="csrf-token"]')?.content || "",
+        },
+      });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) { setErr(body.message || "Không xoá được, vui lòng thử lại"); setDeleting(false); return; }
+      onDeleted();
+    } catch (e) {
+      setErr("Lỗi kết nối, vui lòng thử lại");
+      setDeleting(false);
+    }
+  };
+
+  return (
+    <div className="scrim" style={{ zIndex: 110, display: "flex", alignItems: "center", justifyContent: "center" }} onClick={onClose}>
+      <div className="modal confirm" style={{ background: "var(--card, #fff)", borderRadius: 16, padding: 24, maxWidth: 400, width: "92%", textAlign: "center" }} onClick={e => e.stopPropagation()}>
+        <div style={{ width: 52, height: 52, borderRadius: "50%", background: "rgba(220,60,60,.12)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 12px" }}>
+          <Icon name="trash" size={26} color="var(--danger, #D4584B)" />
+        </div>
+        <h3 style={{ margin: "0 0 8px" }}>Xoá khách hàng?</h3>
+        <p style={{ margin: "0 0 6px", fontSize: 13.5, color: "var(--ink-2)" }}>
+          Bạn sắp xoá vĩnh viễn <b>{c.name}</b> ({c.id}).
+        </p>
+        <p style={{ margin: "0 0 16px", fontSize: 12.5, color: "var(--danger, #D4584B)" }}>
+          Toàn bộ dữ liệu — đơn hàng, điểm tích luỹ, lịch sử đổi quà, voucher, địa chỉ —
+          sẽ bị xoá và <b>không thể khôi phục</b>.
+        </p>
+        {err && <div style={{ fontSize: 12.5, color: "var(--danger, #D4584B)", marginBottom: 10 }}>{err}</div>}
+        <div style={{ display: "flex", gap: 10 }}>
+          <button className="btn ghost" style={{ flex: 1 }} onClick={onClose} disabled={deleting}>Huỷ</button>
+          <button className="btn primary" style={{ flex: 1, background: "var(--danger, #D4584B)" }} disabled={deleting} onClick={doDelete}>
+            <Icon name="trash" size={15} color="#fff" /> {deleting ? "Đang xoá…" : "Xoá vĩnh viễn"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /* ---- Drawer ---- */
-function Drawer({ c, onClose, onCustomerUpdated }) {
+function Drawer({ c, onClose, onCustomerUpdated, onCustomerDeleted }) {
   const [editing, setEditing] = React.useState(false);
+  const [confirmDel, setConfirmDel] = React.useState(false);
   const [customer, setCustomer] = React.useState(c);
+  const [openOrder, setOpenOrder] = React.useState(null); // index đơn đang mở chi tiết
 
   React.useEffect(() => { setCustomer(c); }, [c]);
 
@@ -136,10 +195,30 @@ function Drawer({ c, onClose, onCustomerUpdated }) {
   const toNext = next ? Math.max(0, next.min - customer.points) : 0;
 
   const handleSaved = (updated) => {
-    const merged = { ...customer, ...updated, tx: customer.tx };
+    const merged = { ...customer, ...updated, tx: customer.tx, orders: customer.orders };
     setCustomer(merged);
     setEditing(false);
     if (onCustomerUpdated) onCustomerUpdated(merged);
+  };
+
+  const [savingTest, setSavingTest] = React.useState(false);
+  const toggleTest = async () => {
+    if (savingTest) return;
+    setSavingTest(true);
+    try {
+      const res = await fetch(`/admin/customers/${customer.customerId}/test`, {
+        method: "POST",
+        headers: { "X-CSRF-TOKEN": document.querySelector('meta[name="csrf-token"]')?.content || "", "Accept": "application/json" },
+      });
+      const data = await res.json();
+      if (res.ok) {
+        const merged = { ...customer, is_test: data.customer.is_test };
+        setCustomer(merged);
+        if (onCustomerUpdated) onCustomerUpdated(merged);
+      }
+    } catch (e) { /* ignore */ } finally {
+      setSavingTest(false);
+    }
   };
 
   return (
@@ -151,7 +230,10 @@ function Drawer({ c, onClose, onCustomerUpdated }) {
           <div className="dr-prof">
             <div className="dr-av" style={{ background: avColor(customer.name) }}>{initials(customer.name)}</div>
             <div style={{ minWidth: 0 }}>
-              <div className="nm">{customer.name}</div>
+              <div className="nm" style={{ display: "flex", alignItems: "center", gap: 7 }}>
+                <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{customer.name}</span>
+                {customer.is_test && <span className="test-badge">TEST</span>}
+              </div>
               <div className="meta">
                 <span>{customer.id}</span><span>·</span>
                 <span>{customer.status === "on" ? "Đang hoạt động" : "Ngừng hoạt động"}</span>
@@ -179,7 +261,22 @@ function Drawer({ c, onClose, onCustomerUpdated }) {
             <div className="ir"><div className="ic"><Icon name="pin" size={16} /></div><span className="ik">Cửa hàng thường đến</span><span className="iv">{customer.store}</span></div>
             <div className="ir"><div className="ic"><Icon name="cal" size={16} /></div><span className="ik">Ngày tham gia</span><span className="iv">{fmtDate(customer.joined)}</span></div>
             <div className="ir"><div className="ic"><Icon name="users" size={16} /></div><span className="ik">Trạng thái</span><span className="iv"><span className={"status " + customer.status}>{customer.status === "on" ? "Active" : "Inactive"}</span></span></div>
+            <div className="ir"><div className="ic"><Icon name="clock" size={16} /></div><span className="ik">Truy cập</span><span className="iv" style={customer.online ? { color: "#16A34A", fontWeight: 700 } : {}}>{customer.online ? "● Đang online" : ("○ " + (customer.lastSeen || "Chưa truy cập"))}</span></div>
           </div>
+
+          <div className="dr-sec-t">Tuỳ chọn báo cáo</div>
+          <div className="switch-row" onClick={toggleTest} style={{ cursor: "pointer", opacity: savingTest ? 0.6 : 1 }}>
+            <div>
+              <div className="sl">Tài khoản thử nghiệm</div>
+              <div className="sd">Loại khách này khỏi tất cả báo cáo (dùng cho tài khoản đăng ký để test)</div>
+            </div>
+            <div className={"switch" + (customer.is_test ? " on" : "")} />
+          </div>
+          {customer.is_test && (
+            <div style={{ fontSize: 12, color: "var(--hot, #D4584B)", fontWeight: 600, margin: "6px 2px 0" }}>
+              <Icon name="alert" size={12} color="currentColor" /> Khách này đang bị loại khỏi báo cáo.
+            </div>
+          )}
 
           <div className="dr-sec-t">Lịch sử giao dịch ({customer.tx.length})</div>
           <div className="dr-tx">
@@ -194,10 +291,62 @@ function Drawer({ c, onClose, onCustomerUpdated }) {
               </div>
             ))}
           </div>
+
+          <div className="dr-sec-t" style={{ marginTop: 18 }}>Lịch sử đơn hàng ({(customer.orders || []).length})</div>
+          <div className="dr-tx">
+            {(customer.orders || []).length === 0 && (
+              <div style={{ padding: "10px 2px", color: "var(--ink-3)", fontSize: 13 }}>Khách chưa có đơn hàng nào.</div>
+            )}
+            {(customer.orders || []).map((o, i) => (
+              <div key={i}>
+                <div className="tx" style={{ cursor: "pointer" }} onClick={() => setOpenOrder(openOrder === i ? null : i)}>
+                  <div className="txic earn"><Icon name={o.ship ? "truck" : "bag"} size={18} /></div>
+                  <div style={{ minWidth: 0, flex: 1 }}>
+                    <div className="tt">{o.code} · {o.items} món
+                      <span style={{
+                        marginLeft: 7, fontSize: 11, fontWeight: 700, padding: "1px 7px", borderRadius: 999,
+                        background: o.status === "CANCELLED" ? "rgba(212,88,75,.12)" : o.status === "COMPLETED" ? "rgba(22,163,74,.12)" : "rgba(0,0,0,.06)",
+                        color: o.status === "CANCELLED" ? "#D4584B" : o.status === "COMPLETED" ? "#16A34A" : "var(--ink-2)",
+                      }}>{o.statusLabel}</span>
+                    </div>
+                    <div className="tm">{o.meta}</div>
+                  </div>
+                  <div style={{ fontWeight: 800, fontSize: 13.5, whiteSpace: "nowrap", color: o.status === "CANCELLED" ? "var(--ink-3)" : "var(--ink)", textDecoration: o.status === "CANCELLED" ? "line-through" : "none" }}>{fmt(o.total)}đ</div>
+                  <span style={{ marginLeft: 6, color: "var(--ink-3)", transform: openOrder === i ? "rotate(180deg)" : "none", transition: ".15s" }}><Icon name="chevdown" size={16} /></span>
+                </div>
+
+                {openOrder === i && (
+                  <div style={{ margin: "2px 0 10px", padding: "10px 12px", background: "var(--bg-2, rgba(0,0,0,.03))", borderRadius: 10 }}>
+                    {(o.lines || []).map((l, li) => (
+                      <div key={li} style={{ display: "flex", gap: 8, padding: "5px 0", borderBottom: li < o.lines.length - 1 ? "1px solid var(--line, rgba(0,0,0,.06))" : "none" }}>
+                        <span style={{ fontWeight: 700, color: "var(--brand)", flexShrink: 0 }}>{l.qty}×</span>
+                        <div style={{ minWidth: 0, flex: 1 }}>
+                          <div style={{ fontWeight: 600, fontSize: 13.5 }}>{l.name}</div>
+                          {l.opt && <div style={{ fontSize: 12, color: "var(--ink-3)" }}>{l.opt}</div>}
+                        </div>
+                        <span style={{ whiteSpace: "nowrap", fontSize: 13, color: "var(--ink-2)" }}>{fmt(l.unit * l.qty)}đ</span>
+                      </div>
+                    ))}
+                    {o.addr && <div style={{ fontSize: 12, color: "var(--ink-3)", marginTop: 8 }}><Icon name="pin" size={12} /> {o.addr}</div>}
+                    {o.note && <div style={{ fontSize: 12, color: "var(--ink-3)", marginTop: 4 }}>Ghi chú: {o.note}</div>}
+                    <div style={{ marginTop: 8, paddingTop: 8, borderTop: "1px solid var(--line, rgba(0,0,0,.08))", fontSize: 12.5 }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", color: "var(--ink-2)" }}><span>Tạm tính</span><span>{fmt(o.subtotal)}đ</span></div>
+                      {o.discount > 0 && <div style={{ display: "flex", justifyContent: "space-between", color: "var(--pink, #D4548B)" }}><span>Giảm giá</span><span>−{fmt(o.discount)}đ</span></div>}
+                      {o.shipFee > 0 && <div style={{ display: "flex", justifyContent: "space-between", color: "var(--ink-2)" }}><span>Phí ship</span><span>{fmt(o.shipFee)}đ</span></div>}
+                      <div style={{ display: "flex", justifyContent: "space-between", fontWeight: 800, marginTop: 3 }}><span>Tổng</span><span>{fmt(o.total)}đ</span></div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
         </div>
 
         <div className="dr-foot">
           <button className="btn ghost" style={{ flex: "none" }} onClick={onClose}>Đóng</button>
+          <button className="btn ghost" style={{ flex: "none", color: "var(--danger, #D4584B)" }} title="Xoá khách hàng" onClick={() => setConfirmDel(true)}>
+            <Icon name="trash" size={16} color="var(--danger, #D4584B)" /> Xoá
+          </button>
           <button className="btn ghost"><Icon name="gift" size={16} /> Gửi ưu đãi</button>
           <button className="btn primary" onClick={() => setEditing(true)}><Icon name="edit" size={16} color="#fff" /> Chỉnh sửa</button>
         </div>
@@ -208,6 +357,18 @@ function Drawer({ c, onClose, onCustomerUpdated }) {
           c={customer}
           onClose={() => setEditing(false)}
           onSaved={handleSaved}
+        />
+      )}
+
+      {confirmDel && (
+        <ConfirmDeleteCustomer
+          c={customer}
+          onClose={() => setConfirmDel(false)}
+          onDeleted={() => {
+            setConfirmDel(false);
+            if (onCustomerDeleted) onCustomerDeleted(customer);
+            onClose();
+          }}
         />
       )}
     </>

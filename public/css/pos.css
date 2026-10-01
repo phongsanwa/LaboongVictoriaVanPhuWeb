@@ -45,13 +45,20 @@ input { font-family: inherit; }
 .topbar { background: var(--card); border-bottom: 1px solid var(--line); padding: 12px 20px; display: flex; align-items: center; gap: 13px; position: sticky; top: 0; z-index: 30; }
 .tb-mark { width: 40px; height: 40px; border-radius: 12px; background: linear-gradient(150deg, var(--brand), var(--brand-deep)); display: grid; place-items: center; flex: none; box-shadow: var(--shadow-brand); position: relative; }
 .tb-mark span { font-family: var(--display); font-weight: 800; font-size: 20px; color: #fff; }
+.brand-logo-img { width: 100%; height: 100%; object-fit: cover; border-radius: inherit; display: block; }
 .tb-mark::after { content:""; position:absolute; width:11px; height:11px; border-radius:50%; background:var(--yellow); right:5px; bottom:5px; }
-.tb-title { font-family: var(--display); font-weight: 800; font-size: 17px; letter-spacing: -.01em; white-space: nowrap; }
+.tb-title { font-family: var(--display); font-weight: 800; font-size: 17px; letter-spacing: -.01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .tb-sub { font-size: 12px; color: var(--ink-2); font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .tb-staff { margin-left: auto; flex: none; display: flex; align-items: center; gap: 10px; background: var(--bg-2); border-radius: 999px; padding: 5px 14px 5px 6px; }
 .tb-av { width: 32px; height: 32px; border-radius: 50%; background: linear-gradient(140deg,var(--teal),#4FC3D9); color: #fff; font-weight: 700; font-size: 13px; display: grid; place-items: center; flex: none; }
-.tb-staff .sn { font-size: 13px; font-weight: 700; line-height: 1; white-space: nowrap; }
+.tb-staff .sn { font-size: 13px; font-weight: 700; line-height: 1; white-space: nowrap; max-width: 140px; overflow: hidden; text-overflow: ellipsis; }
 .tb-staff .sr { font-size: 11px; color: var(--ink-2); font-weight: 600; margin-top: 2px; }
+a.tb-mark { text-decoration: none; }
+/* Màn hình hẹp: ẩn tên/chức vụ trong pill nhân viên để không đè lên tiêu đề (chỉ còn avatar) */
+@media (max-width: 560px) {
+  .tb-staff-tx { display: none; }
+  .tb-staff { padding: 5px; gap: 0; }
+}
 
 /* ---------- stage ---------- */
 .stage { max-width: 520px; margin: 0 auto; padding: 22px 18px 40px; }
@@ -105,6 +112,8 @@ input { font-family: inherit; }
 .method.scan .mi { background: linear-gradient(150deg, var(--brand), var(--brand-deep)); }
 .method.show .mi { background: linear-gradient(150deg, var(--teal), #4FC3D9); }
 .method.redeem .mi { background: linear-gradient(150deg, var(--peach), var(--pink)); }
+.method.orders .mi { background: linear-gradient(150deg, #2B6CB0, #4A90D9); }
+a.method { text-decoration: none; color: inherit; }
 .method .mt { font-family: var(--display); font-weight: 800; font-size: 16px; }
 .method .md { font-size: 13px; color: var(--ink-2); margin-top: 3px; line-height: 1.4; font-weight: 500; }
 .method .mgo { margin-left: auto; color: var(--ink-3); flex: none; }
@@ -197,3 +206,6 @@ input { font-family: inherit; }
   .card-pad { padding: 20px 18px; }
   .key { height: 54px; font-size: 22px; }
 }
+
+.tb-mark:has(.brand-logo-img) { background: #fff; }
+.tb-mark:has(.brand-logo-img)::after { display: none; }

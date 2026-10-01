@@ -35,4 +35,34 @@ return [
         ],
     ],
 
+    'google_maps' => [
+        'key' => env('GOOGLE_MAPS_KEY', ''),
+    ],
+
+    // SerpApi (serpapi.com) — dùng làm dự phòng khi Google Maps JS lỗi.
+    // Key có thể đặt ở .env hoặc trong Admin → Cài đặt (AppSetting 'maps').
+    'serpapi' => [
+        'key' => env('SERPAPI_KEY', ''),
+    ],
+
+    // Apify (apify.com) — chạy actor để lấy toạ độ/địa chỉ & khoảng cách.
+    // Token + slug actor có thể đặt ở .env hoặc trong Admin → Cài đặt.
+    'apify' => [
+        'token'            => env('APIFY_TOKEN', ''),
+        'place_actor'      => env('APIFY_PLACE_ACTOR', 'compass~crawler-google-places'),
+        'directions_actor' => env('APIFY_DIRECTIONS_ACTOR', 'zen-studio~google-maps-directions-api'),
+    ],
+
+    // Goong (goong.io) — dịch vụ bản đồ Việt Nam, API REST giống Google Maps.
+    // Key REST đặt ở .env hoặc trong Admin → Cài đặt (AppSetting 'maps').
+    'goong' => [
+        'key' => env('GOONG_API_KEY', ''),
+    ],
+
+    // Zalo Mini App — xác thực người dùng qua Zalo OpenAPI (graph.zalo.me).
+    'zalo' => [
+        'app_id'     => env('ZALO_APP_ID', ''),
+        'app_secret' => env('ZALO_APP_SECRET', ''),
+    ],
+
 ];

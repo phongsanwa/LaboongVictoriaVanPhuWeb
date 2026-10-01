@@ -11,9 +11,17 @@ class Voucher extends Model
         'voucher_code',
         'customer_id',
         'redemption_id',
+        'source_type',
+        'source_id',
+        'applies_to',
         'qr_code',
         'discount_type',
         'discount_value',
+        'free_item_product_id',
+        'free_item_quantity',
+        'free_item_scope',
+        'free_item_size',
+        'buy_quantity',
         'min_purchase',
         'max_discount',
         'valid_from',
@@ -42,5 +50,10 @@ class Voucher extends Model
     public function redemption(): BelongsTo
     {
         return $this->belongsTo(Redemption::class);
+    }
+
+    public function freeItemProduct(): BelongsTo
+    {
+        return $this->belongsTo(\App\Models\Product::class, 'free_item_product_id');
     }
 }

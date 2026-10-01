@@ -58,6 +58,7 @@ function App() {
   const [saved, setSaved] = useState(INITIAL);
   const [toast, setToast] = useState(null);
   const [addrModal, setAddrModal] = useState(null); // {edit?, label, name, text, def}
+  const [pwModal, setPwModal] = useState(false);
   const [avatarUploading, setAvatarUploading] = useState(false);
   const fileRef = useRef(null);
 
@@ -142,9 +143,10 @@ function App() {
   };
 
   const saveAddr = async (form) => {
+    const payload = { label: form.label, name: form.name, text: form.text, def: form.def, lat: form.lat || null, lng: form.lng || null };
     const { ok, data: res } = form.id
-      ? await apiCall("PUT", `/profile/addresses/${form.id}`, { label: form.label, name: form.name, text: form.text, def: form.def })
-      : await apiCall("POST", "/profile/addresses", { label: form.label, name: form.name, text: form.text, def: form.def });
+      ? await apiCall("PUT", `/profile/addresses/${form.id}`, payload)
+      : await apiCall("POST", "/profile/addresses", payload);
 
     if (!ok) { flash(res.message || "Có lỗi xảy ra, vui lòng thử lại."); return; }
 
@@ -189,6 +191,7 @@ function App() {
           <a className="acct-link" href={NAV_URLS.history}><span className="ali"><Icon name="receipt" size={19} color="currentColor" /></span><span className="alt">Lịch sử giao dịch</span><span className="alc"><Icon name="chev" size={18} /></span></a>
           <a className="acct-link" href={NAV_URLS.wallet}><span className="ali"><Icon name="gift" size={19} color="currentColor" /></span><span className="alt">Đổi quà &amp; Voucher của tôi</span><span className="alc"><Icon name="chev" size={18} /></span></a>
           <a className="acct-link" href={NAV_URLS.store}><span className="ali"><Icon name="pin" size={19} color="currentColor" /></span><span className="alt">Cửa hàng Laboong</span><span className="alc"><Icon name="chev" size={18} /></span></a>
+          <button className="acct-link" onClick={() => setPwModal(true)} style={{ width: "100%", textAlign: "left", background: "none", border: "none", cursor: "pointer", font: "inherit" }}><span className="ali"><Icon name="lock" size={19} color="currentColor" /></span><span className="alt">Đổi mật khẩu</span><span className="alc"><Icon name="chev" size={18} /></span></button>
           <a className="acct-link danger" href={NAV_URLS.login} onClick={logout}><span className="ali"><Icon name="logout" size={19} color="currentColor" /></span><span className="alt">Đăng xuất</span><span className="alc"><Icon name="chev" size={18} /></span></a>
         </nav>
 
@@ -233,7 +236,7 @@ function App() {
         <section className="sec">
           <div className="sec-h">
             <span className="sic"><Icon name="pin" size={17} color="currentColor" /></span><h2>Địa chỉ giao hàng</h2>
-            <button className="add" onClick={() => setAddrModal({ label: "Nhà", name: "", text: "", def: data.addresses.length === 0 })}><Icon name="plus2" size={15} color="var(--brand)" /> Thêm</button>
+            <button className="add" onClick={() => setAddrModal({ label: "Nhà", name: [data.name.trim(), MEMBER.phone].filter(Boolean).join(' · '), text: "", def: data.addresses.length === 0 })}><Icon name="plus2" size={15} color="var(--brand)" /> Thêm</button>
           </div>
           <div className="panel">
             {data.addresses.length === 0 && <div className="addr-empty">Chưa có địa chỉ giao hàng nào. Thêm địa chỉ để đặt giao hàng nhanh hơn.</div>}
@@ -300,6 +303,9 @@ function App() {
       {/* address modal */}
       {addrModal && <AddrModal init={addrModal} onClose={() => setAddrModal(null)} onSave={saveAddr} />}
 
+      {/* change password modal */}
+      {pwModal && <PasswordModal onClose={() => setPwModal(false)} onDone={(m) => { setPwModal(false); flash(m); }} />}
+
       {toast && <div className="toast"><span className="tc"><Icon name="check" size={15} color="#fff" /></span>{toast}</div>}
 
       <TweaksPanel>
@@ -313,34 +319,294 @@ function App() {
   );
 }
 
+function gmaps() { return window.google?.maps; }
+
+function onGmapsReady(fn) {
+  if (window.__gmapsReady || window.google?.maps) { fn(); return; }
+  if (window.__gmapsCallbacks) { window.__gmapsCallbacks.push(fn); }
+  else { fn(); }
+}
+
+/* Dự phòng qua server (SerpApi/Apify) khi không có Google Maps JS (admin chọn
+   nhà cung cấp khác). Server tự chọn dịch vụ theo cài đặt. */
+async function serverGeocode(text) {
+  try {
+    const r = await fetch('/api/maps/geocode?q=' + encodeURIComponent(text), { headers: { Accept: 'application/json' } });
+    if (!r.ok) return null;
+    const j = await r.json();
+    return (j && j.ok && typeof j.lat === 'number' && typeof j.lng === 'number') ? { lat: j.lat, lng: j.lng } : null;
+  } catch (e) { return null; }
+}
+async function serverAutocomplete(text) {
+  try {
+    const r = await fetch('/api/maps/autocomplete?q=' + encodeURIComponent(text), { headers: { Accept: 'application/json' } });
+    if (!r.ok) return [];
+    const j = await r.json();
+    return Array.isArray(j.results)
+      ? j.results.filter(x => typeof x.lat === 'number' && typeof x.lng === 'number').map(x => ({ text: x.text, lat: x.lat, lng: x.lng }))
+      : [];
+  } catch (e) { return []; }
+}
+
+async function reverseGeocode(lat, lng) {
+  const maps = gmaps();
+  if (!maps) return null;
+  return new Promise(resolve => {
+    new maps.Geocoder().geocode({ location: { lat, lng } }, (results, status) => {
+      if (status === 'OK' && results?.length) {
+        resolve(results[0].formatted_address.replace(/,?\s*Việt Nam$/i, "").trim());
+      } else resolve(null);
+    });
+  });
+}
+
+/* Hiện gợi ý ngay từ predictions (không geocode trước) — đầy đủ và nhanh hơn.
+   Toạ độ chỉ lấy khi người dùng chọn một gợi ý (geocodePlaceId). */
+async function smartNominatimSearch(text) {
+  const maps = gmaps();
+  if (maps?.places?.AutocompleteService) {
+    return new Promise(resolve => {
+      new maps.places.AutocompleteService().getPlacePredictions(
+        { input: text, componentRestrictions: { country: 'vn' } },
+        (predictions) => {
+          if (!predictions?.length) { resolve([]); return; }
+          resolve(predictions.slice(0, 6).map(p => ({
+            text: p.description.replace(/,?\s*Việt Nam$/i, "").trim(),
+            placeId: p.place_id,
+          })));
+        }
+      );
+    });
+  }
+  // Không có Google (admin chọn SerpApi/Apify) → gợi ý qua server, kèm sẵn toạ độ.
+  return await serverAutocomplete(text);
+}
+
+async function geocodePlaceId(placeId) {
+  const maps = gmaps();
+  if (!maps) return null;
+  return new Promise(resolve => {
+    new maps.Geocoder().geocode({ placeId }, (results, status) => {
+      if (status === 'OK' && results?.length) {
+        const loc = results[0].geometry.location;
+        resolve({ lat: loc.lat(), lng: loc.lng() });
+      } else resolve(null);
+    });
+  });
+}
+
+async function cascadeGeocode(text) {
+  const maps = gmaps();
+  if (!maps) return await serverGeocode(text); // Google không có → server (SerpApi/Apify)
+  const geocoder = new maps.Geocoder();
+  const parts = text.split(",").map(p => p.trim()).filter(Boolean);
+  const queries = [text];
+  for (let i = 1; i < parts.length; i++) queries.push(parts.slice(i).join(", "));
+  for (const q of queries) {
+    if (q.trim().length < 3) continue;
+    const result = await new Promise(resolve => {
+      geocoder.geocode({ address: q + ', Việt Nam', region: 'VN' }, (results, status) => {
+        if (status === 'OK' && results?.length) {
+          const loc = results[0].geometry.location;
+          resolve({ lat: loc.lat(), lng: loc.lng() });
+        } else resolve(null);
+      });
+    });
+    if (result) return result;
+  }
+  return null;
+}
+
 function AddrModal({ init, onClose, onSave }) {
-  const [f, setF] = useState({ id: init.id, label: init.label || "Nhà", name: init.name || "", text: init.text || "", def: !!init.def });
+  const [f, setF] = useState({
+    id: init.id, label: init.label || "Nhà", name: init.name || "",
+    def: !!init.def,
+    lat: init.lat || null, lng: init.lng || null,
+  });
+
+  const [addrText,   setAddrText]   = useState(init.text || '');
+  const [pickedFull, setPickedFull] = useState(init.text || '');
+  const [sugg,       setSugg]       = useState([]);
+  const [searching,  setSearching]  = useState(false);
+  const [suggRect,   setSuggRect]   = useState(null);
+  const debRef   = useRef(null);
+  const inputRef = useRef(null);
+
+  const [geocoding, setGeocoding] = useState(false);
+  const mapDivRef = useRef(null);
+  const mapRef    = useRef(null);
+  const markerRef = useRef(null);
+
+  const fullText = addrText.trim();
+
+  /* ---- autocomplete ---- */
+  const onAddrChange = (val) => {
+    setAddrText(val);
+    setPickedFull('');
+    setF(prev => ({ ...prev, lat: null, lng: null }));
+    clearTimeout(debRef.current);
+    if (val.trim().length < 3) { setSugg([]); setSearching(false); return; }
+    setSearching(true);
+    debRef.current = setTimeout(async () => {
+      const results = await smartNominatimSearch(val.trim());
+      setSugg(results);
+      setSearching(false);
+      if (results.length > 0 && inputRef.current) {
+        const r = inputRef.current.getBoundingClientRect();
+        setSuggRect({ top: r.bottom + 4, left: r.left, width: r.width });
+      }
+    }, 400);
+  };
+
+  const pickSugg = async (s) => {
+    setAddrText(s.text);
+    setPickedFull(s.text);
+    setSugg([]);
+    setGeocoding(true);
+    // Gợi ý từ server đã kèm toạ độ; gợi ý Google cần tra placeId; thiếu thì geocode theo chữ.
+    let loc = (typeof s.lat === 'number' && typeof s.lng === 'number') ? { lat: s.lat, lng: s.lng } : null;
+    if (!loc && s.placeId) loc = await geocodePlaceId(s.placeId);
+    if (!loc) loc = await cascadeGeocode(s.text);
+    if (loc) setF(prev => ({ ...prev, lat: loc.lat, lng: loc.lng }));
+    setGeocoding(false);
+  };
+
+  /* ---- fallback geocode on blur ---- */
+  const onAddrBlur = async () => {
+    if (f.lat || !fullText) return;
+    setGeocoding(true);
+    const loc = await cascadeGeocode(fullText);
+    if (loc) setF(prev => ({ ...prev, lat: loc.lat, lng: loc.lng }));
+    setGeocoding(false);
+  };
+
+  /* ---- Escape key ---- */
   useEffect(() => {
-    const h = e => { if (e.key === "Escape") onClose(); };
-    window.addEventListener("keydown", h); return () => window.removeEventListener("keydown", h);
-  }, [onClose]);
-  const valid = f.text.trim().length >= 6 && f.name.trim().length >= 2;
+    const h = e => { if (e.key === "Escape") { if (sugg.length) { setSugg([]); } else { onClose(); } } };
+    window.addEventListener("keydown", h);
+    return () => window.removeEventListener("keydown", h);
+  }, [onClose, sugg.length]);
+
+  /* ---- Google Maps ---- */
+  useEffect(() => {
+    let destroyed = false;
+    onGmapsReady(() => {
+      if (destroyed || !mapDivRef.current || mapRef.current) return;
+      const maps = gmaps();
+      if (!maps) return;
+      const center = (f.lat && f.lng) ? { lat: f.lat, lng: f.lng } : { lat: 20.9833, lng: 105.8412 };
+      const map = new maps.Map(mapDivRef.current, {
+        center, zoom: f.lat ? 16 : 11,
+        mapTypeControl: false, streetViewControl: false, fullscreenControl: false,
+      });
+      const addMarker = (lat, lng) => {
+        markerRef.current = new maps.Marker({
+          position: { lat, lng }, map, draggable: true,
+          icon: { path: maps.SymbolPath.CIRCLE, scale: 9, fillColor: '#0F623F', fillOpacity: 1, strokeColor: '#fff', strokeWeight: 2 },
+        });
+        markerRef.current.addListener('dragend', e => {
+          const la = e.latLng.lat(), lo = e.latLng.lng();
+          setF(prev => ({ ...prev, lat: la, lng: lo }));
+          reverseGeocode(la, lo).then(addr => { if (addr) { setAddrText(addr); setPickedFull(addr); } });
+        });
+      };
+      if (f.lat && f.lng) addMarker(f.lat, f.lng);
+      map.addListener('click', e => {
+        const lat = e.latLng.lat(), lng = e.latLng.lng();
+        setF(prev => ({ ...prev, lat, lng }));
+        if (markerRef.current) markerRef.current.setPosition({ lat, lng });
+        else addMarker(lat, lng);
+        reverseGeocode(lat, lng).then(addr => { if (addr) { setAddrText(addr); setPickedFull(addr); } });
+      });
+      mapRef.current = map;
+    });
+    return () => { destroyed = true; mapRef.current = null; markerRef.current = null; };
+  }, []); // eslint-disable-line
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || f.lat == null || f.lng == null) return;
+    const pos = { lat: f.lat, lng: f.lng };
+    if (markerRef.current) {
+      markerRef.current.setPosition(pos);
+    } else {
+      const maps = gmaps();
+      if (!maps) return;
+      markerRef.current = new maps.Marker({
+        position: pos, map, draggable: true,
+        icon: { path: maps.SymbolPath.CIRCLE, scale: 9, fillColor: '#0F623F', fillOpacity: 1, strokeColor: '#fff', strokeWeight: 2 },
+      });
+    }
+    map.panTo(pos);
+  }, [f.lat, f.lng]); // eslint-disable-line
+
+  const valid = addrText.trim().length >= 4 && f.name.trim().length >= 2;
+
   return (
     <div className="scrim" onClick={onClose}>
-      <div className="modal" onClick={e => e.stopPropagation()}>
-        <div className="modal-h"><h3>{init.id ? "Sửa địa chỉ" : "Thêm địa chỉ"}</h3><button className="x" onClick={onClose}><Icon name="close" size={18} /></button></div>
-        <div className="modal-b">
+      <div className="modal" onClick={e => e.stopPropagation()} style={{ maxHeight: "90vh", display: "flex", flexDirection: "column" }}>
+        <div className="modal-h">
+          <h3>{init.id ? "Sửa địa chỉ" : "Thêm địa chỉ"}</h3>
+          <button className="x" onClick={onClose}><Icon name="close" size={18} /></button>
+        </div>
+        <div className="modal-b" style={{ overflowY: "auto", flex: 1 }}>
+
+          {/* Loại địa chỉ */}
           <div className="fld">
             <label>Loại địa chỉ</label>
             <div className="label-pick">
               {[["Nhà", "home"], ["Công ty", "building"], ["Khác", "pin"]].map(([l, ic]) => (
-                <button key={l} className={f.label === l ? "on" : ""} onClick={() => setF({ ...f, label: l })}><Icon name={ic} size={15} color="currentColor" /> {l}</button>
+                <button key={l} className={f.label === l ? "on" : ""} onClick={() => setF({ ...f, label: l })}>
+                  <Icon name={ic} size={15} color="currentColor" /> {l}
+                </button>
               ))}
             </div>
           </div>
+
+          {/* Người nhận */}
           <div className="fld">
-            <label>Người nhận & SĐT</label>
+            <label>Người nhận &amp; SĐT</label>
             <input className="inp2" placeholder="VD: Minh Anh · 0912 845 207" value={f.name} onChange={e => setF({ ...f, name: e.target.value })} />
           </div>
-          <div className="fld">
-            <label>Địa chỉ chi tiết</label>
-            <input className="inp2" placeholder="Số nhà, đường, phường/xã, quận/huyện, tỉnh/TP" value={f.text} onChange={e => setF({ ...f, text: e.target.value })} />
+
+          {/* Địa chỉ — free text + autocomplete */}
+          <div className="fld search-places">
+            <label style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+              <span>Địa chỉ</span>
+              {searching && <span style={{ fontWeight: 400, color: "var(--ink-3)", fontSize: 12 }}>Đang tìm…</span>}
+              {!searching && pickedFull && <span style={{ fontWeight: 600, color: "var(--brand)", fontSize: 12 }}>✓ Đã chọn</span>}
+            </label>
+            <input ref={inputRef} className="inp2" autoComplete="off"
+              placeholder="Nhập số nhà, tên đường, phường, quận…"
+              value={addrText}
+              onChange={e => onAddrChange(e.target.value)}
+              onBlur={onAddrBlur}
+            />
+            {sugg.length > 0 && suggRect && (
+              <div className="suggest-address" style={{ position: "fixed", top: suggRect.top, left: suggRect.left, width: suggRect.width }}>
+                {sugg.map((s, i) => (
+                  <button key={i} onMouseDown={() => pickSugg(s)}>
+                    <span style={{ flexShrink: 0, marginTop: 2 }}><Icon name="pin" size={13} color="var(--brand)" /></span>
+                    <span>{s.text}</span>
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
+
+          {/* Bản đồ */}
+          <div className="fld">
+            <label style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+              <span>Vị trí trên bản đồ</span>
+              {geocoding
+                ? <span style={{ fontWeight: 400, color: "var(--ink-3)", fontSize: 12 }}>Đang xác định…</span>
+                : f.lat && f.lng
+                  ? <span style={{ fontWeight: 600, color: "var(--brand)", fontSize: 12 }}>✓ Đã xác định</span>
+                  : <span style={{ fontWeight: 400, color: "var(--ink-3)", fontSize: 12 }}>Nhấp bản đồ để chỉnh vị trí</span>}
+            </label>
+            <div ref={mapDivRef} style={{ height: 190, borderRadius: "var(--r-sm)", overflow: "hidden", border: "1.5px solid var(--line)", isolation: "isolate" }} />
+          </div>
+
           <div className="fld">
             <button className="label-pick" style={{ width: "100%" }} onClick={() => setF({ ...f, def: !f.def })}>
               <span className={f.def ? "on" : ""} style={{ flex: 1, padding: 11, borderRadius: "var(--r-sm)", border: "1.5px solid var(--line)", display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 7, fontWeight: 700, fontSize: 13.5 }}>
@@ -351,7 +617,79 @@ function AddrModal({ init, onClose, onSave }) {
         </div>
         <div className="modal-f">
           <button className="btn ghost" onClick={onClose}>Huỷ</button>
-          <button className="btn primary" disabled={!valid} onClick={() => onSave(f)} style={!valid ? { opacity: .5 } : {}}>Lưu địa chỉ</button>
+          <button className="btn primary" disabled={!valid} onClick={() => onSave({ ...f, text: fullText })} style={!valid ? { opacity: .5 } : {}}>Lưu địa chỉ</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function PasswordModal({ onClose, onDone }) {
+  const [cur, setCur] = useState("");
+  const [pw, setPw] = useState("");
+  const [pw2, setPw2] = useState("");
+  const [show, setShow] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState("");
+
+  useEffect(() => {
+    const h = (e) => { if (e.key === "Escape") onClose(); };
+    window.addEventListener("keydown", h);
+    return () => window.removeEventListener("keydown", h);
+  }, [onClose]);
+
+  const submit = async () => {
+    setErr("");
+    if (!cur) { setErr("Vui lòng nhập mật khẩu hiện tại"); return; }
+    if (pw.length < 6) { setErr("Mật khẩu mới tối thiểu 6 ký tự"); return; }
+    if (pw !== pw2) { setErr("Xác nhận mật khẩu không khớp"); return; }
+    if (pw === cur) { setErr("Mật khẩu mới phải khác mật khẩu hiện tại"); return; }
+    setBusy(true);
+    const { ok, data: res } = await apiCall("POST", "/profile/password", {
+      current_password: cur, password: pw, password_confirmation: pw2,
+    });
+    setBusy(false);
+    if (!ok) { setErr(res.message || "Có lỗi xảy ra, vui lòng thử lại"); return; }
+    onDone(res.message || "Đã đổi mật khẩu thành công");
+  };
+
+  const pwType = show ? "text" : "password";
+
+  return (
+    <div className="scrim" onClick={onClose}>
+      <div className="modal" onClick={e => e.stopPropagation()}>
+        <div className="modal-h">
+          <h3>Đổi mật khẩu</h3>
+          <button className="x" onClick={onClose}><Icon name="close" size={18} /></button>
+        </div>
+        <div className="modal-b">
+          <div className="fld">
+            <label>Mật khẩu hiện tại</label>
+            <input className="inp2" type={pwType} value={cur} placeholder="Nhập mật khẩu đang dùng" autoComplete="current-password"
+              onChange={e => { setCur(e.target.value); setErr(""); }} onKeyDown={e => { if (e.key === "Enter") submit(); }} />
+          </div>
+          <div className="fld">
+            <label>Mật khẩu mới</label>
+            <input className="inp2" type={pwType} value={pw} placeholder="Tối thiểu 6 ký tự" autoComplete="new-password"
+              onChange={e => { setPw(e.target.value); setErr(""); }} onKeyDown={e => { if (e.key === "Enter") submit(); }} />
+          </div>
+          <div className="fld">
+            <label>Nhập lại mật khẩu mới</label>
+            <input className="inp2" type={pwType} value={pw2} placeholder="Nhập lại mật khẩu mới" autoComplete="new-password"
+              onChange={e => { setPw2(e.target.value); setErr(""); }} onKeyDown={e => { if (e.key === "Enter") submit(); }} />
+          </div>
+          <button className="acct-link" onClick={() => setShow(s => !s)}
+            style={{ width: "100%", background: "none", border: "none", cursor: "pointer", font: "inherit", padding: "4px 0", color: "var(--ink-2)", fontSize: 13 }}>
+            <span className="ali"><Icon name={show ? "eyeoff" : "eye"} size={17} color="currentColor" /></span>
+            <span className="alt">{show ? "Ẩn mật khẩu" : "Hiện mật khẩu"}</span>
+          </button>
+          {err && <div className="err" style={{ marginTop: 6 }}><Icon name="info" size={13} color="var(--danger)" /> {err}</div>}
+        </div>
+        <div className="modal-f">
+          <button className="btn ghost" onClick={onClose}>Huỷ</button>
+          <button className="btn primary" disabled={busy} onClick={submit}>
+            <Icon name="check" size={16} color="#fff" /> {busy ? "Đang lưu…" : "Đổi mật khẩu"}
+          </button>
         </div>
       </div>
     </div>

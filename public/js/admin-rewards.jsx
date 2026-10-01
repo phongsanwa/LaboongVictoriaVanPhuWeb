@@ -30,8 +30,11 @@ async function apiCall(method, url, body) {
 
 function fmtExpiry(iso) { const [y, m, d] = iso.split("-"); return `${d}/${m}/${y}`; }
 
+// 'upgrade' is the legacy category — map it to 'topping' for display
+function resolvedCat(r) { return REWARD_CATS[r.cat] ? r.cat : 'topping'; }
+
 function RewardCard({ r, onEdit, onToggle, onDup, onDelete }) {
-  const cat = REWARD_CATS[r.cat];
+  const cat = REWARD_CATS[resolvedCat(r)];
   const remaining = Math.max(0, r.qty - r.redeemed);
   const usedPct = Math.round((r.used / r.qty) * 100);
   const pendingPct = Math.round(((r.redeemed - r.used) / r.qty) * 100);
@@ -111,7 +114,8 @@ function RewardsApp() {
   }, [items]);
 
   const filtered = useMemo(() => items.filter(i => {
-    if (cat !== "all" && i.cat !== cat) return false;
+    const rc = resolvedCat(i);
+    if (cat !== "all" && rc !== cat) return false;
     if (status !== "all" && i.status !== status) return false;
     if (q.trim() && !i.name.toLowerCase().includes(q.toLowerCase())) return false;
     return true;
@@ -121,15 +125,23 @@ function RewardsApp() {
     const payload = {
       name: data.name, cat: data.cat, points: data.points, qty: data.qty,
       expiry: data.expiry, status: data.status, grad: data.grad, img: data.img,
+      per_customer_limit: data.per_customer_limit ?? null,
+      product_id:         data.product_id ?? null,
+      free_item_size:     data.free_item_size ?? null,
+      free_item_quantity: data.free_item_quantity ?? 1,
+      value:              data.value ?? null,
     };
+    const errMsg = (res) => res.errors
+      ? Object.values(res.errors).flat().join(' · ')
+      : (res.message || "Có lỗi xảy ra, vui lòng thử lại");
     if (data.dbId) {
       const { ok, data: res } = await apiCall("PUT", `/admin/rewards/${data.dbId}`, payload);
-      if (!ok) { flash(res.message || "Có lỗi xảy ra, vui lòng thử lại"); return; }
+      if (!ok) { flash(errMsg(res)); return; }
       setItems(list => list.map(i => i.dbId === data.dbId ? res.reward : i));
       flash(`Đã cập nhật "${data.name}"`);
     } else {
       const { ok, data: res } = await apiCall("POST", "/admin/rewards", payload);
-      if (!ok) { flash(res.message || "Có lỗi xảy ra, vui lòng thử lại"); return; }
+      if (!ok) { flash(errMsg(res)); return; }
       setItems(list => [res.reward, ...list]);
       flash(`Đã tạo phần thưởng "${data.name}"`);
     }
@@ -161,44 +173,9 @@ function RewardsApp() {
     location.href = NAV_URLS.login;
   };
 
-  const NAV = [
-    { ic: "chart", label: "Tổng quan" },
-    { ic: "users", label: "Khách hàng" },
-    { ic: "receipt", label: "Điểm & giao dịch" },
-    { ic: "gift", label: "Đổi quà", on: true, badge: String(items.length) },
-    { ic: "mega", label: "Chiến dịch" },
-    { ic: "pin", label: "Cửa hàng" },
-    { ic: "shield", label: "Phân quyền" },
-  ];
-
   return (
     <div className="shell">
-      {sideOpen && <div className="scrim" style={{ zIndex: 55 }} onClick={() => setSideOpen(false)} />}
-      <aside className={"side" + (sideOpen ? " open" : "")}>
-        <div className="side-brand">
-          <div className="side-mark"><span>L</span></div>
-          <div><div className="nm">Laboong</div><div className="sb">Bảng quản trị</div></div>
-        </div>
-        <div className="side-sec">Quản lý</div>
-        <nav className="side-nav">
-          {NAV.map(n => (
-            <a key={n.label} className={"side-link" + (n.on ? " on" : "")} href={adminHref(n.label)}>
-              <Icon name={n.ic} size={19} /> {n.label}{n.badge && <span className="badge">{n.badge}</span>}
-            </a>
-          ))}
-        </nav>
-        <div className="side-sec">Hệ thống</div>
-        <nav className="side-nav">
-          <a className="side-link" href={NAV_URLS.adminSettings}><Icon name="gear" size={19} /> Cài đặt</a>
-        </nav>
-        <div className="side-foot">
-          <div className="side-user">
-            <div className="side-av">{ADMIN_REWARDS_DATA.admin.initials}</div>
-            <div style={{ minWidth: 0 }}><div className="un">{ADMIN_REWARDS_DATA.admin.name}</div><div className="ur">{ADMIN_REWARDS_DATA.admin.email}</div></div>
-            <button className="icon-btn" style={{ width: 32, height: 32, marginLeft: "auto" }} onClick={logout} title="Đăng xuất"><Icon name="logout" size={16} /></button>
-          </div>
-        </div>
-      </aside>
+      <AdminSidebar activeLabel="Đổi quà" badges={{ "Đổi quà": String(items.length) }} admin={ADMIN_REWARDS_DATA.admin} sideOpen={sideOpen} onClose={() => setSideOpen(false)} />
 
       <div className="main">
         <header className="topbar">
@@ -227,19 +204,29 @@ function RewardsApp() {
               <div><div className="lbl">Còn lại trong kho</div><div className="val tnum">{fmt(stats.remaining)}</div><div className="chg up">Sẵn sàng phát hành</div></div></div>
           </div>
 
-          {/* filters */}
+          {/* category tabs */}
+          <div className="rw-tabs-bar">
+            <button className={"rw-tab" + (cat === "all" ? " on" : "")} onClick={() => setCat("all")}>
+              <Icon name="grid" size={14} /> Tất cả <span className="rw-tab-ct">{items.length}</span>
+            </button>
+            {Object.entries(REWARD_CATS).map(([k, m]) => {
+              const cnt = items.filter(i => resolvedCat(i) === k).length;
+              return (
+                <button key={k} className={"rw-tab" + (cat === k ? " on" : "")} onClick={() => setCat(k)}>
+                  <Icon name={m.ic} size={14} /> {m.label} <span className="rw-tab-ct">{cnt}</span>
+                </button>
+              );
+            })}
+          </div>
+
+          {/* status filter */}
           <div className="panel" style={{ marginBottom: 20 }}>
             <div className="toolbar" style={{ borderBottom: "none" }}>
-              <div className="ttl">Danh mục phần thưởng <span className="ct">{filtered.length}</span></div>
-              <div className="tb-spacer" />
-              <div className="field">
-                <span className="flbl">Loại</span>
-                <select className="select" value={cat} onChange={e => setCat(e.target.value)}>
-                  <option value="all">Tất cả loại</option>
-                  {Object.entries(REWARD_CATS).map(([k, m]) => <option key={k} value={k}>{m.label}</option>)}
-                </select>
-                <span className="chev"><Icon name="chevdown" size={16} /></span>
+              <div className="ttl">
+                {cat === "all" ? "Tất cả phần thưởng" : REWARD_CATS[cat]?.label ?? cat}
+                <span className="ct">{filtered.length}</span>
               </div>
+              <div className="tb-spacer" />
               <div className="seg">
                 <button className={status === "all" ? "on" : ""} onClick={() => setStatus("all")}>Tất cả</button>
                 <button className={status === "on" ? "on ok" : ""} onClick={() => setStatus("on")}>Active</button>
