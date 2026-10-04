@@ -1,8 +1,12 @@
-/* global React, ReactDOM, Icon, fmt, useTweaks, TweaksPanel, TweakSection, TweakColor, TweakToggle */
+/* global React, ReactDOM, OPS_C, OpsHeader, useNarrowScreen */
 // Tổng quan hoạt động kinh doanh
-const { useState, useEffect, useMemo } = React;
+const { useState, useMemo } = React;
 
-const OV_DEFAULTS = { brand: ["#0F623F", "#07432A"], dark: false };
+const WEEKDAYS = ["Chủ Nhật", "Thứ Hai", "Thứ Ba", "Thứ Tư", "Thứ Năm", "Thứ Sáu", "Thứ Bảy"];
+function longDate(iso) {
+  const [y, m, d] = iso.split("-").map(Number);
+  return `${WEEKDAYS[new Date(y, m - 1, d).getDay()]}, ${d} tháng ${m}, ${y}`;
+}
 const OVDATA = window.ADMIN_OVERVIEW_DATA || { admin: {}, stores: [], today: "", kpis: {}, chart7d: [], store_compare: [] };
 
 function fmtVnd(n) { return Math.round(n || 0).toLocaleString("vi-VN") + "đ"; }
@@ -27,8 +31,7 @@ function MiniBarChart({ days }) {
 }
 
 function OverviewApp() {
-  const [tw, setTweak] = useTweaks(OV_DEFAULTS);
-  const [sideOpen, setSideOpen] = useState(false);
+  const narrow = useNarrowScreen(640);
   const [activeStore, setActiveStore] = useState("all");
 
   const stores = OVDATA.stores || [];
@@ -38,12 +41,6 @@ function OverviewApp() {
   const admin = OVDATA.admin || {};
   const today = OVDATA.today || new Date().toISOString().slice(0, 10);
 
-  useEffect(() => {
-    const r = document.documentElement;
-    const [b, d] = Array.isArray(tw.brand) ? tw.brand : [tw.brand, tw.brand];
-    r.style.setProperty("--brand", b); r.style.setProperty("--brand-deep", d);
-    r.setAttribute("data-theme", tw.dark ? "dark" : "light");
-  }, [tw.brand, tw.dark]);
 
   const storeTabs = [{ key: "all", label: "Toàn hệ thống" }, ...stores.map(s => ({ key: String(s.id), label: s.name }))];
 
@@ -64,7 +61,7 @@ function OverviewApp() {
     { label: "Doanh thu hôm nay", value: fmtVnd(activeKpis.revenue_today), delta: `${(activeKpis.cups_today || 0)} ly đã bán`, deltaColor: "var(--ok)" },
     { label: "Lợi nhuận ròng", value: fmtVnd(activeKpis.net_profit_today), delta: `Biên ${Math.round(activeKpis.gross_margin_pct || 0)}%`, deltaColor: (activeKpis.gross_margin_pct || 0) >= 30 ? "var(--ok)" : "var(--danger)" },
     { label: "Biên lợi nhuận gộp", value: `${Math.round(activeKpis.gross_margin_pct || 0)}%`, delta: "Hôm nay", deltaColor: "var(--ink-3)" },
-    { label: "Điểm hòa vốn", value: `${kpis.breakeven_cups || "—"} ly/ngày`, delta: `Đang bán ${activeKpis.cups_today || 0} ly`, deltaColor: (activeKpis.cups_today || 0) >= (kpis.breakeven_cups || 0) ? "var(--ok)" : "var(--danger)" },
+    { label: "Điểm hòa vốn", value: `${kpis.breakeven_cups ? Math.ceil(kpis.breakeven_cups) : "—"} ly/ngày`, delta: `Đang bán ${activeKpis.cups_today || 0} ly`, deltaColor: (activeKpis.cups_today || 0) >= (kpis.breakeven_cups || 0) ? "var(--ok)" : "var(--danger)" },
   ];
 
   const todayDate = new Date(today);
@@ -72,38 +69,23 @@ function OverviewApp() {
   const todayLabel = dayNames[todayDate.getDay()];
 
   return (
-    <div className="app-wrap">
-      <aside className={`sidebar ${sideOpen ? "open" : ""}`}>
-        <div className="sidebar-logo"><span className="sidebar-brand">Admin</span></div>
-        <nav className="sidebar-nav">
-          {Object.entries(window.ADMIN_NAV_HREF || {}).map(([label, href]) => (
-            <a key={label} href={href} className={`sidebar-link ${href === "/admin/overview" ? "active" : ""}`}><span>{label}</span></a>
-          ))}
-        </nav>
-      </aside>
-      {sideOpen && <div className="sidebar-backdrop" onClick={() => setSideOpen(false)} />}
-
-      <div className="main-col">
-        <div className="topbar">
-          <button className="icon-btn menu-toggle" onClick={() => setSideOpen(true)}><Icon name="grid" size={19} /></button>
-          <div style={{ flex: 1 }}>
-            <div className="page-title">Tổng quan hoạt động</div>
-            <div className="page-sub">{today} · {stores.length} cửa hàng đang hoạt động</div>
+    <div style={{ minHeight: "100vh", paddingBottom: 64, background: OPS_C.bg, color: OPS_C.ink }}>
+      <OpsHeader admin={admin} links={[{ href: "/admin", label: "← Trang quản trị" }]}
+        center={
+          <div style={{ display: "flex", gap: 6, background: "rgba(255,255,255,0.12)", padding: 4, borderRadius: 12, flexWrap: "wrap" }}>
+            {storeTabs.map(t => (
+              <div key={t.key} onClick={() => setActiveStore(t.key)} style={{ padding: "8px 14px", borderRadius: 9, fontSize: 13, fontWeight: 700, cursor: "pointer", whiteSpace: "nowrap", background: activeStore === t.key ? "#fff" : "transparent", color: activeStore === t.key ? OPS_C.brand : "rgba(255,255,255,0.85)" }}>{t.label}</div>
+            ))}
           </div>
-          <div className="topbar-user">
-            <div className="avatar-chip">{admin.initials}</div>
-          </div>
-        </div>
+        } />
 
-        <div className="page-body">
-          {/* store tabs */}
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20, flexWrap: "wrap", gap: 12 }}>
-            <div className="miniseg">
-              {storeTabs.map(t => (
-                <button key={t.key} className={activeStore === t.key ? "on" : ""} onClick={() => setActiveStore(t.key)}>{t.label}</button>
-              ))}
+      <div style={{ maxWidth: 1180, margin: "0 auto", padding: narrow ? "24px 16px 0" : "36px 24px 0" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", flexWrap: "wrap", gap: 12, marginBottom: 26 }}>
+            <div>
+              <div style={{ fontSize: 26, fontWeight: 800, letterSpacing: "-0.4px" }}>{activeStore === "all" ? "Tổng quan hoạt động" : (stores.find(s => String(s.id) === activeStore) || {}).name}</div>
+              <div style={{ fontSize: 14.5, color: OPS_C.ink2, marginTop: 4 }}>{longDate(today)} · {stores.length} cửa hàng đang hoạt động</div>
             </div>
-            <a href="/admin/reports" style={{ fontSize: 13, fontWeight: 700, color: "var(--brand)", textDecoration: "none", background: "var(--brand-soft, #EAF3EE)", padding: "8px 14px", borderRadius: 10 }}>
+            <a href="/admin/reports" style={{ fontSize: 13, fontWeight: 700, color: OPS_C.brand, textDecoration: "none", background: OPS_C.okBg, padding: "8px 14px", borderRadius: 10 }}>
               Xem báo cáo chi tiết →
             </a>
           </div>
@@ -196,7 +178,6 @@ function OverviewApp() {
               </a>
             ))}
           </div>
-        </div>
       </div>
     </div>
   );

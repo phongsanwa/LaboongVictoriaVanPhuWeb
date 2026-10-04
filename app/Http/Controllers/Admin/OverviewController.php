@@ -20,11 +20,14 @@ class OverviewController extends Controller
 
         $todayEntries = DailyEntry::with(['sales.recipe', 'expenses'])
             ->whereDate('entry_date', today())
+            ->where('is_saved', true)
             ->get()
             ->keyBy('store_id');
 
         $last7Entries = DailyEntry::with(['sales.recipe', 'expenses'])
-            ->whereBetween('entry_date', [today()->subDays(6)->toDateString(), today()->toDateString()])
+            ->whereDate('entry_date', '>=', today()->subDays(6))
+            ->whereDate('entry_date', '<=', today())
+            ->where('is_saved', true)
             ->get()
             ->groupBy(fn($e) => $e->entry_date->toDateString());
 
@@ -71,6 +74,7 @@ class OverviewController extends Controller
         $totalCogs = 0;
         $totalDailyFixed = 0;
         $totalCups = 0;
+        $totalExpenses = 0;
 
         foreach ($stores as $store) {
             $entry = $todayEntries->get($store->id);
@@ -84,6 +88,7 @@ class OverviewController extends Controller
                 $totalRevenue += $metrics['revenue'];
                 $totalCogs += $metrics['cogs'];
                 $totalCups += $metrics['cups'];
+                $totalExpenses += $metrics['expenses'];
             }
 
             $dailyFixed = $getDailyFixed($store->id);
@@ -100,7 +105,7 @@ class OverviewController extends Controller
 
         // KPIs
         $grossProfit = $totalRevenue - $totalCogs;
-        $netProfitToday = $grossProfit - $totalDailyFixed;
+        $netProfitToday = $grossProfit - $totalDailyFixed - $totalExpenses;
         $grossMarginPct = $totalRevenue > 0 ? ($grossProfit / $totalRevenue * 100) : 0;
 
         // Average margin per cup from recipes
@@ -126,16 +131,18 @@ class OverviewController extends Controller
             $dayRevenue = 0;
             $dayCogs = 0;
             $dayFixed = 0;
+            $dayExpenses = 0;
 
             $dayEntries = $last7Entries->get($date, collect());
             foreach ($dayEntries as $entry) {
                 $metrics = $computeEntry($entry);
                 $dayRevenue += $metrics['revenue'];
                 $dayCogs += $metrics['cogs'];
+                $dayExpenses += $metrics['expenses'];
                 $dayFixed += $getDailyFixed($entry->store_id);
             }
 
-            $dayProfit = $dayRevenue - $dayCogs - $dayFixed;
+            $dayProfit = $dayRevenue - $dayCogs - $dayFixed - $dayExpenses;
             $label = $dayLabels[Carbon::parse($date)->dayOfWeek];
 
             $chart7d[] = [
@@ -149,13 +156,13 @@ class OverviewController extends Controller
         $storeCompare = [];
         foreach ($stores as $store) {
             $entry = $todayEntries->get($store->id);
-            $rev = 0; $cogs = 0; $exp = 0;
+            $rev = 0; $cogs = 0; $exp = 0; $cups = 0;
             if ($entry) {
                 $m = $computeEntry($entry);
-                $rev = $m['revenue']; $cogs = $m['cogs']; $exp = $m['expenses'];
+                $rev = $m['revenue']; $cogs = $m['cogs']; $exp = $m['expenses']; $cups = $m['cups'];
             }
             $dailyFixed = $getDailyFixed($store->id);
-            $net = $rev - $cogs - $dailyFixed;
+            $net = $rev - $cogs - $dailyFixed - $exp;
             $margin = $rev > 0 ? (($rev - $cogs) / $rev * 100) : 0;
             $storeCompare[] = [
                 'id' => $store->id,
@@ -163,12 +170,13 @@ class OverviewController extends Controller
                 'revenue_today' => $rev,
                 'net_profit_today' => $net,
                 'margin_pct' => round($margin, 1),
+                'cups_today' => $cups,
             ];
         }
 
         return view('admin.overview', ['overviewData' => [
             'admin' => [
-                'name' => $admin->name,
+                'name' => $admin->name ?? $admin->phone,
                 'initials' => $this->initials($admin->name),
             ],
             'stores' => $storeCards,
