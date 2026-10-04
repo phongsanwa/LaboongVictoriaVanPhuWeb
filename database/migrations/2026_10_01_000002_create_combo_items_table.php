@@ -9,6 +9,8 @@ return new class extends Migration
     public function up(): void
     {
         if (Schema::hasTable('combo_items')) {
+            // Only replace the legacy product-combo table; keep an existing combos-based one.
+            if (!Schema::hasColumn('combo_items', 'item_product_id')) return;
             Schema::drop('combo_items');
         }
         Schema::create('combo_items', function (Blueprint $table) {

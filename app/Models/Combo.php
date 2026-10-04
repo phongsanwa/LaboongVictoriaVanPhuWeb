@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Str;
 
 class Combo extends Model
 {
@@ -23,6 +24,19 @@ class Combo extends Model
             'max_per_day'   => 'integer',
             'sort_order'    => 'integer',
         ];
+    }
+
+    protected static function booted(): void
+    {
+        static::creating(function (Combo $combo) {
+            if ($combo->slug) return;
+            $base = Str::limit(Str::slug($combo->name) ?: 'combo', 90, '');
+            $slug = $base;
+            for ($i = 2; static::where('slug', $slug)->exists(); $i++) {
+                $slug = "{$base}-{$i}";
+            }
+            $combo->slug = $slug;
+        });
     }
 
     public function items(): HasMany
