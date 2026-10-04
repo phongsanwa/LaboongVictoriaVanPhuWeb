@@ -8,12 +8,17 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class ComboItem extends Model
 {
     protected $fillable = [
-        'combo_id',
-        'product_id',
-        'quantity',
-        'default_size_variant_id',
-        'sort_order',
+        'combo_id', 'product_id', 'quantity',
+        'default_size_variant_id', 'sort_order',
     ];
+
+    protected function casts(): array
+    {
+        return [
+            'quantity'   => 'integer',
+            'sort_order' => 'integer',
+        ];
+    }
 
     public function combo(): BelongsTo
     {

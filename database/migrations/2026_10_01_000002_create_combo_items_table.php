@@ -8,23 +8,24 @@ return new class extends Migration
 {
     public function up(): void
     {
-        if (!Schema::hasTable('combo_items')) {
-            Schema::create('combo_items', function (Blueprint $table) {
+        if (Schema::hasTable('combo_items')) {
+            Schema::drop('combo_items');
+        }
+        Schema::create('combo_items', function (Blueprint $table) {
             $table->id();
             $table->foreignId('combo_id')->constrained('combos')->cascadeOnDelete();
             $table->foreignId('product_id')->constrained('products')->restrictOnDelete();
             $table->unsignedTinyInteger('quantity')->default(1);
-            // size mặc định khi thêm vào đơn (nullable = để khách tự chọn)
+            // Size mặc định khi thêm vào giỏ (null = để khách tự chọn)
             $table->foreignId('default_size_variant_id')
                   ->nullable()
                   ->constrained('product_variants')
                   ->nullOnDelete();
-            $table->integer('sort_order')->default(0);
+            $table->unsignedSmallInteger('sort_order')->default(0);
             $table->timestamps();
 
             $table->unique(['combo_id', 'product_id']);
         });
-        }
     }
 
     public function down(): void

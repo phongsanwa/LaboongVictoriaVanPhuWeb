@@ -107,6 +107,7 @@ Route::middleware(['auth', 'admin.perm'])->prefix('admin')->name('admin.')->grou
     Route::post('/shipping/promos', [ShippingController::class, 'storePromo'])->name('shipping.promos.store');
     Route::put('/shipping/promos/{promo}', [ShippingController::class, 'updatePromo'])->name('shipping.promos.update');
     Route::delete('/shipping/promos/{promo}', [ShippingController::class, 'destroyPromo'])->name('shipping.promos.destroy');
+    Route::post('/shipping/promos/{promo}/toggle', [ShippingController::class, 'togglePromo'])->name('shipping.promos.toggle');
 
     // SEO
     Route::get('/seo', [SeoController::class, 'index'])->name('seo.index');
