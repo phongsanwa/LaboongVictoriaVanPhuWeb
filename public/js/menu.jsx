@@ -1274,7 +1274,7 @@ function App() {
                     {cartVouchers.redemptions.length === 0 ? (
                       <div className="cp-empty">
                         Bạn chưa có quà tích điểm. Đổi điểm tại{" "}
-                        <a href="/profile#rewards" style={{ color: "var(--brand)", fontWeight: 600 }}>Đổi quà</a>!
+                        <a href={NAV_URLS.catalog} style={{ color: "var(--brand)", fontWeight: 600 }}>Đổi quà</a>!
                       </div>
                     ) : (
                       <div className="vlist">
