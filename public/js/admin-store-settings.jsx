@@ -6,7 +6,7 @@ const BASE_KEYS = ["rent", "salary", "utility", "depreciation"];
 const BASE_LABELS = { rent: "Thuê mặt bằng", salary: "Lương nhân viên", utility: "Điện nước", depreciation: "Khấu hao máy móc" };
 
 const C = { brand: "#0F623F", brand2: "#3D8B63", gold: "#F2C744", ink: "#1A2420", ink2: "#6B756F", ink3: "#8A9189", line: "#EAE6DC", field: "#E5E1D6", bg: "#F7F5F0", danger: "#C0552B" };
-const inputStyle = { borderWidth: 1.5, borderStyle: "solid", borderColor: C.field, borderRadius: 12, padding: "12px 14px", fontSize: 14, width: "100%", background: C.bg, font: "inherit", color: C.ink, outline: "none" };
+const inputStyle = { borderWidth: 1.5, borderStyle: "solid", borderColor: C.field, borderRadius: 12, padding: "12px 14px", fontSize: 14, width: "100%", background: C.bg, fontFamily: "inherit", color: C.ink, outline: "none" };
 const card = { background: "#fff", borderRadius: 20, border: `1px solid ${C.line}`, padding: 28 };
 
 const fmt = n => Math.round(n || 0).toLocaleString("vi-VN") + "đ";
@@ -262,7 +262,7 @@ function StoreSettingsApp() {
                   <div>
                     {isCustom ? (
                       <input value={costs[key]?.label || ""} onChange={e => updateCustomLabel(key, e.target.value)} placeholder="Tên khoản chi phí"
-                        style={{ border: "none", borderBottom: `1.5px dashed ${C.field}`, background: "transparent", fontSize: 13.5, fontWeight: 600, color: C.ink, padding: "2px 0", width: "100%", font: "inherit", outline: "none" }} />
+                        style={{ border: "none", borderBottom: `1.5px dashed ${C.field}`, background: "transparent", fontSize: 13.5, fontWeight: 600, color: C.ink, padding: "2px 0", width: "100%", fontFamily: "inherit", outline: "none" }} />
                     ) : (
                       <div style={{ fontSize: 13.5, fontWeight: 600 }}>{BASE_LABELS[key]}</div>
                     )}
