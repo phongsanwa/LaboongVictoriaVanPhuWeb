@@ -166,9 +166,13 @@ Route::middleware(['auth', 'admin.perm'])->prefix('admin')->name('admin.')->grou
     Route::put('/emails/templates/{template}', [EmailController::class, 'updateTemplate'])->name('emails.templates.update');
     Route::delete('/emails/templates/{template}', [EmailController::class, 'destroyTemplate'])->name('emails.templates.destroy');
     Route::post('/emails/blasts', [EmailController::class, 'createBlast'])->name('emails.blasts.create');
+    Route::post('/emails/blasts', [EmailController::class, 'createBlast'])->name('emails.blasts.store');
     Route::post('/emails/blasts/{blast}/send-chunk', [EmailController::class, 'sendChunk'])->name('emails.blasts.send-chunk');
+    Route::post('/emails/blasts/{blast}/send', [EmailController::class, 'sendChunk'])->name('emails.blasts.send');
     Route::get('/emails/blasts/{blast}/status', [EmailController::class, 'blastStatus'])->name('emails.blasts.status');
     Route::delete('/emails/blasts/{blast}', [EmailController::class, 'destroyBlast'])->name('emails.blasts.destroy');
+    Route::post('/emails/test', [EmailController::class, 'test'])->name('emails.test');
+    Route::post('/emails/upload', [EmailController::class, 'uploadImage'])->name('emails.upload');
 
     // Check-in
     Route::get('/checkin', [CheckinController::class, 'index'])->name('checkin.index');
