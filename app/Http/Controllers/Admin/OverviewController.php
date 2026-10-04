@@ -186,7 +186,7 @@ class OverviewController extends Controller
         ]]);
     }
 
-    private function initials(string $name): string
+    private function initials(?string $name): string
     {
         $parts = array_values(array_filter(preg_split('/\s+/', trim($name))));
         if (count($parts) === 0) return '?';

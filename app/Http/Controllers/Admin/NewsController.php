@@ -192,9 +192,9 @@ class NewsController extends Controller
         }
     }
 
-    private function initials(string $name): string
+    private function initials(?string $name): string
     {
-        $parts = preg_split('/\s+/', trim($name));
+        $name ??= "A"; $parts = preg_split("/\\s+/", trim($name));
         $last = array_pop($parts);
         $first = $parts[0] ?? '';
         return mb_strtoupper(mb_substr($first, 0, 1) . mb_substr($last, 0, 1));

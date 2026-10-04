@@ -301,9 +301,9 @@ class OrdersController extends Controller
         ];
     }
 
-    private function initials(string $name): string
+    private function initials(?string $name): string
     {
-        $parts = preg_split('/\s+/', trim($name));
+        $name ??= "A"; $parts = preg_split("/\\s+/", trim($name));
         return strtoupper(($parts[0][0] ?? '') . ($parts[count($parts) - 1][0] ?? ''));
     }
 }

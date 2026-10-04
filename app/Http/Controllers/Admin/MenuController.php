@@ -490,9 +490,9 @@ class MenuController extends Controller
         return $slug;
     }
 
-    private function initials(string $name): string
+    private function initials(?string $name): string
     {
-        $parts = preg_split('/\s+/', trim($name));
+        $name ??= "A"; $parts = preg_split("/\\s+/", trim($name));
         $last  = array_pop($parts);
         $first = $parts[0] ?? '';
 
