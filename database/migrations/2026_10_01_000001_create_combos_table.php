@@ -12,6 +12,7 @@ return new class extends Migration
         Schema::create('combos', function (Blueprint $table) {
             $table->id();
             $table->string('name', 100);
+            $table->string('slug', 100)->unique();
             $table->string('description', 500)->nullable();
             $table->string('image_url')->nullable();
             $table->unsignedInteger('combo_price');           // Giá combo (đã giảm)

@@ -59,10 +59,4 @@ class Product extends Model
     {
         return $this->hasMany(OrderItem::class);
     }
-
-    /** Các món con thuộc combo này (chỉ dùng khi is_combo = true). */
-    public function comboItems(): HasMany
-    {
-        return $this->hasMany(ComboItem::class, 'combo_id')->orderBy('sort_order');
-    }
 }

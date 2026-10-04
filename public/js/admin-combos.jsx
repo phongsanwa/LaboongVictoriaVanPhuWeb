@@ -1,4 +1,4 @@
-/* global React, ReactDOM */
+/* global React, ReactDOM, Icon, AdminSidebar */
 const { useState, useMemo } = React;
 const { combos: INITIAL_COMBOS, products: ALL_PRODUCTS, variants: ALL_VARIANTS } = window.ADMIN_COMBOS_DATA;
 
@@ -185,14 +185,14 @@ function ComboEditor({ combo, onClose }) {
             ))}
           </select>
           <button onClick={addItem}
-            style={{ padding:'8px 16px', background:'#4f46e5', color:'#fff', border:'none', borderRadius:8, cursor:'pointer', fontSize:14 }}>
+            style={{ padding:'8px 16px', background:'var(--brand)', color:'#fff', border:'none', borderRadius:8, cursor:'pointer', fontSize:14 }}>
             + Thêm
           </button>
         </div>
 
         <div style={{ display:'flex', gap:12, marginTop:28 }}>
           <button onClick={submit} disabled={saving}
-            style={{ flex:1, padding:'12px 0', background:'#4f46e5', color:'#fff', border:'none', borderRadius:10, fontWeight:700, fontSize:15, cursor:'pointer' }}>
+            style={{ flex:1, padding:'12px 0', background:'var(--brand)', color:'#fff', border:'none', borderRadius:10, fontWeight:700, fontSize:15, cursor:'pointer' }}>
             {saving ? 'Đang lưu…' : (isNew ? 'Tạo combo' : 'Lưu thay đổi')}
           </button>
           <button onClick={onClose}
@@ -244,8 +244,8 @@ function ComboCard({ combo, onEdit }) {
         </div>
         {combo.description && <p style={{ fontSize:13, color:'#6b7280', margin:'0 0 8px' }}>{combo.description}</p>}
         <div style={{ display:'flex', gap:10, alignItems:'baseline', marginBottom:8 }}>
-          <span style={{ fontSize:18, fontWeight:700, color:'#4f46e5' }}>{fmt(combo.combo_price)}</span>
-          {combo.original_price > 0 && <span style={{ fontSize:13, color:'#9ca3af', textDecoration:'line-through' }}>{fmt(combo.original_price)}</span>}
+          <span style={{ fontSize:18, fontWeight:700, color:'var(--brand)' }}>{fmt(combo.combo_price)}</span>
+          {combo.original_price > combo.combo_price && <span style={{ fontSize:13, color:'#9ca3af', textDecoration:'line-through' }}>{fmt(combo.original_price)}</span>}
           {saving_pct > 0 && <span style={{ fontSize:12, background:'#dcfce7', color:'#16a34a', padding:'2px 6px', borderRadius:6, fontWeight:600 }}>-{saving_pct}%</span>}
         </div>
         <div style={{ fontSize:12, color:'#9ca3af', marginBottom:10 }}>
@@ -279,41 +279,47 @@ function CombosApp() {
     [combos, search]
   );
 
-  const NavBar = window.AdminSidebarLayout ? window.AdminSidebarLayout : ({ children }) => <div>{children}</div>;
+  const [sideOpen, setSideOpen] = useState(false);
 
   return (
-    <NavBar activeKey="combos">
-      <div style={{ padding:'28px 32px', maxWidth:1100, margin:'0 auto' }}>
-        <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:24 }}>
+    <div className="shell">
+      <AdminSidebar activeLabel="Combo" badges={{ "Combo": String(combos.length) }} admin={window.ADMIN_COMBOS_DATA.admin} sideOpen={sideOpen} onClose={() => setSideOpen(false)} />
+
+      <div className="main">
+        <header className="topbar">
+          <button className="icon-btn menu-toggle" onClick={() => setSideOpen(true)}><Icon name="grid" size={19} /></button>
           <div>
-            <h1 style={{ margin:0, fontSize:24, fontWeight:800 }}>Combo & Bundle</h1>
-            <p style={{ margin:'4px 0 0', color:'#6b7280', fontSize:14 }}>{combos.length} combo</p>
+            <div className="crumb">Quản lý · Combo</div>
+            <h1>Combo & Bundle</h1>
           </div>
-          <button onClick={() => setEditing(false)}
-            style={{ padding:'10px 20px', background:'#4f46e5', color:'#fff', border:'none', borderRadius:10, fontWeight:700, fontSize:14, cursor:'pointer' }}>
-            + Tạo combo
+          <div className="topbar-spacer" />
+          <div className="searchbox">
+            <Icon name="search" size={17} />
+            <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Tìm combo…" />
+          </div>
+          <button className="btn primary" onClick={() => setEditing(false)}>
+            <Icon name="plus" size={16} color="#fff" /> Tạo combo
           </button>
+        </header>
+
+        <div className="content">
+          {filtered.length === 0
+            ? <div style={{ textAlign:'center', padding:'60px 0', color:'var(--ink-3)', fontSize:15 }}>Chưa có combo nào.</div>
+            : (
+              <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(280px,1fr))', gap:16 }}>
+                {filtered.map(c => (
+                  <ComboCard key={c.id} combo={c} onEdit={() => setEditing(c)} />
+                ))}
+              </div>
+            )
+          }
         </div>
-
-        <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Tìm combo…"
-          style={{ width:280, border:'1px solid #e5e7eb', borderRadius:10, padding:'10px 14px', fontSize:14, marginBottom:20 }} />
-
-        {filtered.length === 0
-          ? <div style={{ textAlign:'center', padding:'60px 0', color:'#9ca3af', fontSize:15 }}>Chưa có combo nào.</div>
-          : (
-            <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(280px,1fr))', gap:16 }}>
-              {filtered.map(c => (
-                <ComboCard key={c.id} combo={c} onEdit={() => setEditing(c)} />
-              ))}
-            </div>
-          )
-        }
       </div>
 
       {editing !== null && (
         <ComboEditor combo={editing === false ? null : editing} onClose={() => setEditing(null)} />
       )}
-    </NavBar>
+    </div>
   );
 }
 

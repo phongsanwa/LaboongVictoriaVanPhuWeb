@@ -152,7 +152,7 @@ function App() {
           <div className="wallet-empty">
             <div className="ei"><Icon name="ticket" size={26} /></div>
             Bạn chưa có voucher nào.
-            <div><a className="gobtn" href="/profile#rewards"><Icon name="gift" size={16} color="#fff" /> Đổi quà ngay</a></div>
+            <div><a className="gobtn" href={NAV_URLS.catalog}><Icon name="gift" size={16} color="#fff" /> Đổi quà ngay</a></div>
           </div>
         ) : (
           <div className="wallet">

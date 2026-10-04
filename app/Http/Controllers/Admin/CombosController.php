@@ -14,6 +14,7 @@ class CombosController extends Controller
 {
     public function index()
     {
+        $admin = auth()->user();
         $combos = Combo::with(['items.product', 'items.defaultSizeVariant'])
             ->orderBy('sort_order')
             ->orderBy('id')
@@ -29,6 +30,11 @@ class CombosController extends Controller
 
         return view('admin.combos', [
             'combosData' => [
+                'admin'    => [
+                    'name'     => $admin->name ?? $admin->phone,
+                    'email'    => $admin->email ?? '',
+                    'initials' => mb_strtoupper(mb_substr($admin->name ?? 'A', 0, 1)),
+                ],
                 'combos'   => $combos,
                 'products' => $products,
                 'variants' => $variants,
