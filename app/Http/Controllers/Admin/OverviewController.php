@@ -32,7 +32,7 @@ class OverviewController extends Controller
 
         // Monthly costs keyed by store_id
         $currentYearMonth = Carbon::now()->format('Y-m');
-        $monthlyCosts = StoreMonthlyCost::where('year_month', $currentYearMonth)->get()->keyBy('store_id');
+        $monthlyCosts = $stores->mapWithKeys(fn ($s) => [$s->id => StoreMonthlyCost::effectiveFor($s->id, $currentYearMonth)]);
 
         // Helper: compute entry metrics
         $computeEntry = function (DailyEntry $entry) use ($recipes) {
@@ -62,9 +62,7 @@ class OverviewController extends Controller
         // Per-store daily fixed cost
         $getDailyFixed = function (int $storeId) use ($monthlyCosts) {
             $mc = $monthlyCosts->get($storeId);
-            if (!$mc || empty($mc->costs)) return 0;
-            $total = array_sum(array_column($mc->costs, 'amount'));
-            return $total / 30;
+            return $mc ? $mc->total() / 30 : 0;
         };
 
         // Build store cards

@@ -96,7 +96,7 @@ class StoresController extends Controller
         $rows = $store->monthlyCosts()->get()->keyBy('year_month');
 
         return response()->json([
-            'costs' => $rows->map(fn ($r) => $r->costs)->toArray(),
+            'costs' => $rows->map(fn ($r) => StoreMonthlyCost::normalize($r->costs))->toArray(),
         ]);
     }
 
@@ -107,30 +107,12 @@ class StoresController extends Controller
             'costs'      => ['required', 'array'],
         ]);
 
-        $yearMonth = $request->input('year_month');
-        $costs     = $request->input('costs');
-
-        // Sanitise: keep only numeric amounts and string labels for custom items
-        $clean = [];
-        foreach ($costs as $key => $value) {
-            if (is_numeric($value)) {
-                $clean[$key] = (float) $value;
-            } elseif (is_array($value) && isset($value['label'], $value['amount'])) {
-                $clean[$key] = ['label' => (string) $value['label'], 'amount' => (float) $value['amount']];
-            }
-        }
-
         StoreMonthlyCost::updateOrCreate(
-            ['store_id' => $store->id, 'year_month' => $yearMonth],
-            ['costs' => $clean]
+            ['store_id' => $store->id, 'year_month' => $request->input('year_month')],
+            ['costs' => StoreMonthlyCost::normalize($request->input('costs'))]
         );
 
-        // Return full cost map for this store
-        $rows = $store->monthlyCosts()->get()->keyBy('year_month');
-
-        return response()->json([
-            'costs' => $rows->map(fn ($r) => $r->costs)->toArray(),
-        ]);
+        return $this->getCosts($store);
     }
 
     public function deletePhoto(Request $request, Store $store)

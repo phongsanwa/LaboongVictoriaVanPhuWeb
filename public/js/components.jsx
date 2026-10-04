@@ -221,6 +221,7 @@ const ADMIN_NAV_HREF = {
   "Công thức": NAV_URLS.adminRecipes,
   "Nhập liệu": NAV_URLS.adminDailyEntries,
   "Tổng quan OPS": NAV_URLS.adminOverview,
+  "Cài đặt cửa hàng": "/admin/store-settings",
   "Báo cáo": NAV_URLS.adminReports,
   "Phân quyền": NAV_URLS.adminRoles,
   "Cài đặt": NAV_URLS.adminSettings,
