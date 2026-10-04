@@ -85,8 +85,8 @@ function OnboardingApp() {
     <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", alignItems: "center", padding: "40px 20px", background: "#F7F5F0", fontFamily: "'Manrope','Segoe UI',sans-serif" }}>
       {/* Logo */}
       <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 28 }}>
-        <div style={{ width: 34, height: 34, borderRadius: 9, background: "#0F623F", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, color: "#F2C744", fontSize: 16 }}>T</div>
-        <div style={{ fontWeight: 800, fontSize: 17, color: "#1A2420" }}>TràSữa Lãi</div>
+        <div style={{ width: 34, height: 34, borderRadius: 9, background: "#0F623F", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, color: "#F2C744", fontSize: 16 }}>L</div>
+        <div style={{ fontWeight: 800, fontSize: 17, color: "#1A2420" }}>Laboong</div>
       </div>
 
       {/* Progress */}
@@ -123,7 +123,7 @@ function OnboardingApp() {
             <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
               <div>
                 <div style={{ fontSize: 12.5, fontWeight: 700, color: "#1A2420", marginBottom: 6 }}>Tên quán</div>
-                <input value={store.name} onChange={e => updateStore("name", e.target.value)} placeholder="VD: TràSữa Nguyễn Trãi" style={inp} />
+                <input value={store.name} onChange={e => updateStore("name", e.target.value)} placeholder="VD: Laboong Victoria Văn Phú" style={inp} />
               </div>
               <div>
                 <div style={{ fontSize: 12.5, fontWeight: 700, color: "#1A2420", marginBottom: 6 }}>Quy mô quán</div>

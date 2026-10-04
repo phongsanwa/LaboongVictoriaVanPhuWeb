@@ -16,7 +16,7 @@ class OverviewController extends Controller
     {
         $admin = Auth::user();
 
-        $stores = Store::where('is_active', true)->get();
+        $stores = Store::where('status', 'active')->get();
 
         $todayEntries = DailyEntry::with(['sales.recipe', 'expenses'])
             ->whereDate('entry_date', today())
@@ -160,6 +160,7 @@ class OverviewController extends Controller
             $net = $rev - $cogs - $dailyFixed;
             $margin = $rev > 0 ? (($rev - $cogs) / $rev * 100) : 0;
             $storeCompare[] = [
+                'id' => $store->id,
                 'name' => $store->name,
                 'revenue_today' => $rev,
                 'net_profit_today' => $net,

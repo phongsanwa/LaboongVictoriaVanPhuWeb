@@ -24,9 +24,11 @@ class CombosController extends Controller
             ->orderBy('name')
             ->get(['id', 'name', 'base_price', 'image_url']);
 
-        $variants = ProductVariant::where('is_active', true)
-            ->orderBy('label')
-            ->get(['id', 'product_id', 'label', 'price_modifier']);
+        $variants = ProductVariant::where('variant_type', 'SIZE')
+            ->where('is_available', true)
+            ->orderBy('product_id')
+            ->orderBy('sort_order')
+            ->get(['id', 'product_id', 'name']);
 
         return view('admin.combos', [
             'combosData' => [
