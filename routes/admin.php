@@ -159,6 +159,9 @@ Route::middleware(['auth', 'admin.perm'])->prefix('admin')->name('admin.')->grou
     Route::put('/variants/options', [VariantsController::class, 'updateOption'])->name('variants.options.update');
     Route::delete('/variants/options', [VariantsController::class, 'destroyOption'])->name('variants.options.destroy');
     Route::post('/variants/options/toggle', [VariantsController::class, 'toggleOption'])->name('variants.options.toggle');
+    Route::post('/variants/options/toggle-all', [VariantsController::class, 'toggleAllOptions'])->name('variants.options.toggle-all');
+    Route::post('/variants/groups/reorder', [VariantsController::class, 'reorderGroups'])->name('variants.groups.reorder');
+    Route::post('/variants/groups/{group}/set-default', [VariantsController::class, 'setDefault'])->name('variants.groups.setDefault');
 
     // Email / blast
     Route::get('/emails', [EmailController::class, 'index'])->name('emails.index');
