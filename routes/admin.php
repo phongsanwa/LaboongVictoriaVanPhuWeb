@@ -248,5 +248,6 @@ Route::middleware(['auth', 'admin.perm'])->prefix('admin')->name('admin.')->grou
     Route::delete('/recipes/{recipe}', [RecipesController::class, 'destroy'])->name('recipes.destroy');
     Route::post('/recipes/{recipe}/snapshot', [RecipesController::class, 'saveSnapshot'])->name('recipes.snapshot');
     Route::get('/daily-entries', [DailyEntriesController::class, 'index'])->name('daily-entries.index');
+    Route::post('/daily-entries/import', [DailyEntriesController::class, 'import'])->name('daily-entries.import');
     Route::post('/daily-entries/{store}/{date}', [DailyEntriesController::class, 'save'])->name('daily-entries.save');
 });

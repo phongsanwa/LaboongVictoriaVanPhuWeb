@@ -22,8 +22,7 @@
   window.ADMIN_DAILY_DATA = @json($dailyData);
 </script>
 
-<script type="text/babel" src="{{ asset('js/tweaks-panel.jsx') }}"></script>
-<script type="text/babel" src="{{ asset('js/components.jsx') }}"></script>
-<script type="text/babel" src="{{ asset('js/admin-daily-entries.jsx') }}"></script>
+<script type="text/babel" src="{{ asset('js/admin-ops-ui.jsx') }}?v={{ filemtime(public_path('js/admin-ops-ui.jsx')) }}"></script>
+<script type="text/babel" src="{{ asset('js/admin-daily-entries.jsx') }}?v={{ filemtime(public_path('js/admin-daily-entries.jsx')) }}"></script>
 </body>
 </html>

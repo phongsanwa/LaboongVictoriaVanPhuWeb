@@ -8,6 +8,9 @@ use App\Models\DailyEntryExpense;
 use App\Models\DailyEntrySale;
 use App\Models\Recipe;
 use App\Models\Store;
+use App\Support\PosSalesImport;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -21,7 +24,7 @@ class DailyEntriesController extends Controller
         return view('admin.daily-entries', [
             'dailyData' => [
                 'admin' => [
-                    'name'     => $admin->name,
+                    'name'     => $admin->name ?? $admin->phone,
                     'email'    => $admin->email,
                     'initials' => $this->initials($admin->name),
                 ],
@@ -40,6 +43,10 @@ class DailyEntriesController extends Controller
                     ])
                     ->values(),
                 'today'   => now()->toDateString(),
+                'urls'    => [
+                    'save'   => route('admin.daily-entries.save', ['store' => '__STORE__', 'date' => '__DATE__']),
+                    'import' => route('admin.daily-entries.import'),
+                ],
                 'entries' => $this->todayEntries(),
             ],
         ]);
@@ -60,8 +67,9 @@ class DailyEntriesController extends Controller
         ]);
 
         $entry = DB::transaction(function () use ($store, $data) {
+            // A Carbon date binds as "Y-m-d 00:00:00", matching what the date cast stores.
             $entry = DailyEntry::updateOrCreate(
-                ['store_id' => $store->id, 'entry_date' => $data['date']],
+                ['store_id' => $store->id, 'entry_date' => Carbon::parse($data['date'])->startOfDay()],
                 ['is_saved' => $data['is_saved'] ?? false]
             );
 
@@ -88,6 +96,27 @@ class DailyEntriesController extends Controller
         });
 
         return response()->json(['entry' => $this->presentEntry($entry)]);
+    }
+
+    public function import(Request $request): JsonResponse
+    {
+        $request->validate([
+            'file' => ['required', 'file', 'max:5120', 'mimes:csv,txt,xlsx'],
+        ], [
+            'file.mimes' => 'Chỉ hỗ trợ file .csv hoặc .xlsx.',
+            'file.max'   => 'File tối đa 5MB.',
+        ]);
+
+        $file = $request->file('file');
+        $recipes = Recipe::get(['id', 'name'])->map(fn ($r) => ['id' => $r->id, 'name' => $r->name])->all();
+
+        try {
+            $result = (new PosSalesImport($recipes))->import($file->getRealPath(), $file->getClientOriginalExtension());
+        } catch (\RuntimeException $e) {
+            return response()->json(['message' => $e->getMessage()], 422);
+        }
+
+        return response()->json($result + ['file' => $file->getClientOriginalName()]);
     }
 
     // ─── private helpers ──────────────────────────────────────────────────────
