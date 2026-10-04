@@ -7,6 +7,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class RecipeCostHistory extends Model
 {
+    protected $table = 'recipe_cost_history';
+
     protected $fillable = [
         'recipe_id',
         'cogs_l',

@@ -20,7 +20,7 @@ class RecipesController extends Controller
         return view('admin.recipes', [
             'recipesData' => [
                 'admin' => [
-                    'name'     => $admin->name,
+                    'name'     => $admin->name ?? $admin->phone,
                     'email'    => $admin->email,
                     'initials' => $this->initials($admin->name),
                 ],

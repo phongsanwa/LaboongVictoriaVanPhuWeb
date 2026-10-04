@@ -1,256 +1,193 @@
-/* global React, ReactDOM, Icon, fmt, useTweaks, TweaksPanel, TweakSection, TweakColor, TweakToggle, NAV_URLS, adminHref */
-// Quản lý nguyên liệu — admin-ingredients.jsx
-const { useState, useEffect, useMemo, useRef } = React;
+/* global React, ReactDOM, OPS_C, opsFmt, opsApi, OpsHeader */
+const { useState, useRef, useEffect } = React;
 
-const IG_DEFAULTS = { brand: ["#0F623F", "#07432A"], dark: false };
-const IGDATA = window.ADMIN_INGREDIENTS_DATA || { admin: null, ingredients: [], stores: [] };
+const D = window.ADMIN_INGREDIENTS_DATA;
+const C = OPS_C;
+const GRID = "1.6fr 1fr 1.1fr 0.9fr 0.8fr 1.2fr 1.3fr 28px";
+const cell = { border: `1px solid ${C.field}`, borderRadius: 8, padding: "7px 9px", fontSize: 13, width: "100%", background: "#fff", fontFamily: "inherit", color: C.ink, outline: "none" };
+const SAVE_DELAY = 700;
 
-function csrf() { return document.querySelector('meta[name="csrf-token"]')?.content || ""; }
-async function api(method, url, body) {
-  const r = await fetch(url, {
-    method, headers: { "Content-Type": "application/json", Accept: "application/json", "X-CSRF-TOKEN": csrf() },
-    body: body !== undefined ? JSON.stringify(body) : undefined,
-  });
-  let d = {}; try { d = await r.json(); } catch {}
-  return { ok: r.ok, data: d };
-}
+const usePrice = ing => (Number(ing.conversion) > 0 ? (Number(ing.buy_price) || 0) / Number(ing.conversion) : 0);
+const canPersist = ing => ing.name.trim() && ing.buy_unit.trim() && ing.use_unit.trim() && Number(ing.conversion) >= 0.001 && Number(ing.buy_price) >= 0;
+const missingCost = ing => !ing.name.trim() || !Number(ing.buy_price) || !Number(ing.conversion);
 
-function fmtInt(n) { return Math.round(n || 0).toLocaleString("vi-VN"); }
+let tempSeq = 0;
+const fromServer = i => ({ ...i, key: "s" + i.id, overrides: Array.isArray(i.overrides) ? {} : (i.overrides || {}) });
 
-// ─── IngredientRow ────────────────────────────────────────────────────────────
-function IngredientRow({ row, stores, activeStore, onUpdate, onRemove, onSetOverride, onClearOverride, onOverrideChange }) {
-  const usePrice = row.conversion > 0 ? row.buy_price / row.conversion : 0;
-  const isStoreView = activeStore !== "chung";
-  const override = isStoreView ? (row.overrides?.[activeStore] ?? null) : null;
-  const hasOverride = override !== null;
-  const displayPrice = hasOverride ? override : usePrice;
-  const missing = !row.name || !row.buy_price || !row.conversion;
-
-  return (
-    <div style={{ borderTop: "1px solid var(--line-2)" }}>
-      <div style={{ display: "grid", gridTemplateColumns: "1.6fr 1fr 1.1fr 0.9fr 0.8fr 1.2fr 1.3fr 28px", gap: 8, padding: "10px 18px", alignItems: "center" }}>
-        <input value={row.name} onChange={e => onUpdate("name", e.target.value)} placeholder="Tên nguyên liệu" className="inp" />
-        <input value={row.buy_unit} onChange={e => onUpdate("buy_unit", e.target.value)} placeholder="kg, lon..." className="inp" />
-        <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
-          <input type="number" value={row.buy_price} onChange={e => onUpdate("buy_price", parseFloat(e.target.value) || 0)} className="inp" style={{ textAlign: "right" }} />
-          <span style={{ fontSize: 12, color: "var(--ink-3)" }}>đ</span>
-        </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
-          <span style={{ fontSize: 11.5, color: "var(--ink-3)" }}>1 =</span>
-          <input type="number" value={row.conversion} onChange={e => onUpdate("conversion", parseFloat(e.target.value) || 1)} className="inp" style={{ textAlign: "center" }} />
-        </div>
-        <input value={row.use_unit} onChange={e => onUpdate("use_unit", e.target.value)} placeholder="g, ml..." className="inp" style={{ textAlign: "center" }} />
-        <div style={{ textAlign: "right" }}>
-          <div style={{ fontWeight: 800, fontSize: 13.5, color: "var(--brand)" }}>{fmtInt(displayPrice)}đ</div>
-          <div style={{ fontSize: 11, color: "var(--ink-3)" }}>/{row.use_unit || "?"}</div>
-        </div>
-        {/* override column */}
-        <div>
-          {isStoreView ? (
-            hasOverride ? (
-              <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
-                <input type="number" value={override} onChange={e => onOverrideChange(parseFloat(e.target.value) || 0)}
-                  style={{ border: "1.5px solid var(--brand)", borderRadius: 8, padding: "6px 8px", fontSize: 12.5, width: 72, background: "var(--brand-soft)" }} />
-                <span onClick={onClearOverride} style={{ fontSize: 11, color: "var(--danger)", fontWeight: 700, cursor: "pointer", whiteSpace: "nowrap" }}>Bỏ</span>
-              </div>
-            ) : (
-              <button onClick={onSetOverride} className="pill-btn" style={{ fontSize: 11.5 }}>Ghi đè giá</button>
-            )
-          ) : (
-            <span style={{ fontSize: 11.5, fontWeight: 700, color: "var(--ink-3)" }}>Giá chung</span>
-          )}
-        </div>
-        <button onClick={onRemove} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--danger)", fontWeight: 700, fontSize: 15 }}>×</button>
-      </div>
-      {missing && (
-        <div style={{ padding: "0 18px 10px 18px", fontSize: 11.5, color: "var(--danger)", fontWeight: 600 }}>⚠ Thiếu giá hoặc quy đổi — công thức dùng nguyên liệu này sẽ tính sai giá vốn.</div>
-      )}
-    </div>
-  );
-}
-
-// ─── IngredientsApp ───────────────────────────────────────────────────────────
 function IngredientsApp() {
-  const [tw, setTweak] = useTweaks(IG_DEFAULTS);
-  const [rows, setRows] = useState(() => (IGDATA.ingredients || []).map(i => ({ ...i })));
-  const [activeStore, setActiveStore] = useState("chung");
-  const [saving, setSaving] = useState(false);
-  const [toast, setToast] = useState(null);
-  const [sideOpen, setSideOpen] = useState(false);
-  const stores = IGDATA.stores || [];
-  const admin = IGDATA.admin || {};
+  const [rows, setRows] = useState(() => D.ingredients.map(fromServer));
+  const [store, setStore] = useState("chung");
+  const [status, setStatus] = useState({}); // key -> 'saving' | 'saved' | error text
+  const [banner, setBanner] = useState(null);
+  const timers = useRef({});
+  const rowsRef = useRef(rows);
+  rowsRef.current = rows;
 
-  useEffect(() => {
-    const r = document.documentElement;
-    const [b, d] = Array.isArray(tw.brand) ? tw.brand : [tw.brand, tw.brand];
-    r.style.setProperty("--brand", b); r.style.setProperty("--brand-deep", d);
-    r.setAttribute("data-theme", tw.dark ? "dark" : "light");
-  }, [tw.brand, tw.dark]);
+  const storeObj = D.stores.find(s => String(s.id) === store);
+  const isStoreView = store !== "chung";
 
-  const flash = msg => { setToast(msg); setTimeout(() => setToast(null), 3000); };
+  const setRowStatus = (key, v) => setStatus(s => ({ ...s, [key]: v }));
+  const patchRow = (key, patch) => setRows(rs => rs.map(r => (r.key === key ? { ...r, ...patch } : r)));
+
+  const creating = useRef(new Set());
+  const persist = async (key) => {
+    const ing = rowsRef.current.find(r => r.key === key);
+    if (!ing || !canPersist(ing)) return;
+    // A create is still in flight: retry once it has an id instead of POSTing a duplicate.
+    if (!ing.id && creating.current.has(key)) { schedule(key); return; }
+    if (!ing.id) creating.current.add(key);
+    const body = { name: ing.name.trim(), buy_unit: ing.buy_unit.trim(), buy_price: Number(ing.buy_price) || 0, conversion: Number(ing.conversion), use_unit: ing.use_unit.trim(), sort_order: ing.sort_order ?? 0 };
+    setRowStatus(key, "saving");
+    try {
+      const { ingredient } = ing.id
+        ? await opsApi("PUT", `/admin/ingredients/${ing.id}`, body)
+        : await opsApi("POST", "/admin/ingredients", body);
+      if (!ing.id) { rowsRef.current = rowsRef.current.map(r => (r.key === key ? { ...r, id: ingredient.id } : r)); patchRow(key, { id: ingredient.id }); }
+      setRowStatus(key, "saved");
+    } catch (e) {
+      setRowStatus(key, e.message);
+    } finally {
+      creating.current.delete(key);
+    }
+  };
+
+  const schedule = (key) => {
+    clearTimeout(timers.current[key]);
+    timers.current[key] = setTimeout(() => persist(key), SAVE_DELAY);
+  };
+  useEffect(() => () => Object.values(timers.current).forEach(clearTimeout), []);
+
+  const update = (key, field, value) => { patchRow(key, { [field]: value }); schedule(key); };
 
   const addRow = () => {
-    setRows(prev => [...prev, { id: null, name: "", buy_unit: "kg", buy_price: 0, conversion: 1000, use_unit: "g", overrides: {}, _dirty: true }]);
+    const key = "t" + (++tempSeq);
+    setRows(rs => [...rs, { key, id: null, name: "", buy_unit: "", buy_price: 0, conversion: 1, use_unit: "", sort_order: rs.length, overrides: {} }]);
   };
 
-  const updateRow = (idx, field, value) => {
-    setRows(prev => prev.map((r, i) => i === idx ? { ...r, [field]: value, _dirty: true } : r));
-  };
-
-  const removeRow = async (idx) => {
-    const row = rows[idx];
-    if (row.id) {
-      const { ok, data } = await api("DELETE", `/admin/ingredients/${row.id}`);
-      if (!ok) { flash(data.message || "Không thể xóa"); return; }
+  const removeRow = async (ing) => {
+    if (ing.id && !window.confirm(`Xoá nguyên liệu "${ing.name}"?`)) return;
+    clearTimeout(timers.current[ing.key]);
+    if (ing.id) {
+      try { await opsApi("DELETE", `/admin/ingredients/${ing.id}`); }
+      catch (e) { setBanner(e.message); return; }
     }
-    setRows(prev => prev.filter((_, i) => i !== idx));
-    flash("Đã xóa nguyên liệu");
+    setRows(rs => rs.filter(r => r.key !== ing.key));
   };
 
-  const setOverride = (idx) => {
-    const row = rows[idx];
-    const usePrice = row.conversion > 0 ? row.buy_price / row.conversion : 0;
-    setRows(prev => prev.map((r, i) => i === idx ? { ...r, overrides: { ...r.overrides, [activeStore]: Math.round(usePrice * 10000) / 10000 }, _dirty: true } : r));
+  const overrideCall = async (ing, method, usePriceValue) => {
+    if (!ing.id) { setBanner("Lưu nguyên liệu (điền đủ thông tin) trước khi đặt giá riêng."); return; }
+    setRowStatus(ing.key, "saving");
+    try {
+      const { ingredient } = await opsApi(method, `/admin/ingredients/${ing.id}/overrides/${store}`, method === "POST" ? { use_price: usePriceValue } : undefined);
+      patchRow(ing.key, { overrides: Array.isArray(ingredient.overrides) ? {} : ingredient.overrides });
+      setRowStatus(ing.key, "saved");
+    } catch (e) { setRowStatus(ing.key, e.message); }
   };
 
-  const clearOverride = (idx) => {
-    setRows(prev => prev.map((r, i) => {
-      if (i !== idx) return r;
-      const ov = { ...r.overrides }; delete ov[activeStore];
-      return { ...r, overrides: ov, _dirty: true };
-    }));
+  const overrideTimers = useRef({});
+  const editOverride = (ing, value) => {
+    const v = value === "" ? 0 : Math.max(0, Number(value));
+    patchRow(ing.key, { overrides: { ...ing.overrides, [store]: { ...(ing.overrides[store] || {}), store_id: Number(store), use_price: v } } });
+    clearTimeout(overrideTimers.current[ing.key]);
+    overrideTimers.current[ing.key] = setTimeout(() => overrideCall(ing, "POST", v), SAVE_DELAY);
   };
 
-  const changeOverride = (idx, value) => {
-    setRows(prev => prev.map((r, i) => i === idx ? { ...r, overrides: { ...r.overrides, [activeStore]: value }, _dirty: true } : r));
-  };
-
-  const saveAll = async () => {
-    setSaving(true);
-    let saved = 0;
-    const next = [...rows];
-    for (let i = 0; i < next.length; i++) {
-      const r = next[i];
-      if (!r._dirty) continue;
-      const payload = { name: r.name, buy_unit: r.buy_unit, buy_price: r.buy_price, conversion: r.conversion, use_unit: r.use_unit };
-      let res;
-      if (r.id) res = await api("PUT", `/admin/ingredients/${r.id}`, payload);
-      else res = await api("POST", "/admin/ingredients", payload);
-      if (res.ok) {
-        next[i] = { ...res.data.ingredient, overrides: r.overrides || {}, _dirty: false };
-        saved++;
-        // sync overrides
-        for (const [storeKey, price] of Object.entries(r.overrides || {})) {
-          const storeId = stores.find(s => `store${s.id}` === storeKey || String(s.id) === storeKey)?.id;
-          if (storeId) await api("POST", `/admin/ingredients/${next[i].id}/overrides/${storeId}`, { use_price: price });
-        }
-      }
-    }
-    setRows(next);
-    setSaving(false);
-    flash(`Đã lưu ${saved} nguyên liệu`);
-  };
-
-  const storeTabs = [{ key: "chung", label: "Giá chung" }, ...stores.map(s => ({ key: String(s.id), label: s.name }))];
-  const isStoreView = activeStore !== "chung";
-  const dirty = rows.some(r => r._dirty);
+  const tabs = [{ key: "chung", label: "Giá chung" }, ...D.stores.map(s => ({ key: String(s.id), label: s.name }))];
 
   return (
-    <div className="app-wrap">
-      {/* sidebar */}
-      <aside className={`sidebar ${sideOpen ? "open" : ""}`}>
-        <div className="sidebar-logo"><span className="sidebar-brand">Admin</span></div>
-        <nav className="sidebar-nav">
-          {Object.entries(window.ADMIN_NAV_HREF || {}).map(([label, href]) => (
-            <a key={label} href={href} className={`sidebar-link ${href === "/admin/ingredients" ? "active" : ""}`}>
-              <span>{label}</span>
-            </a>
-          ))}
-        </nav>
-      </aside>
-      {sideOpen && <div className="sidebar-backdrop" onClick={() => setSideOpen(false)} />}
+    <div style={{ minHeight: "100vh", paddingBottom: 64, background: C.bg, color: C.ink }}>
+      <OpsHeader admin={D.admin} links={[{ href: "/admin/overview", label: "← Trang chủ" }, { href: "/admin/recipes", label: "Công thức món →" }]} />
 
-      <div className="main-col">
-        {/* header */}
-        <div className="topbar">
-          <button className="icon-btn menu-toggle" onClick={() => setSideOpen(true)}><Icon name="grid" size={19} /></button>
-          <div style={{ flex: 1 }}>
-            <div className="page-title">Quản lý nguyên liệu</div>
-            <div className="page-sub">Nguồn dữ liệu gốc cho công thức món — cập nhật đúng đơn giá và quy đổi</div>
+      <div style={{ maxWidth: 1180, margin: "0 auto", padding: "36px 24px 0" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 16, marginBottom: 22 }}>
+          <div>
+            <div style={{ fontSize: 26, fontWeight: 800, letterSpacing: "-0.4px" }}>Quản lý nguyên liệu</div>
+            <div style={{ fontSize: 14.5, color: C.ink2, marginTop: 4, maxWidth: 560 }}>Nguồn dữ liệu gốc cho công thức món — cập nhật đúng đơn giá và quy đổi đơn vị, vì sai ở đây thì mọi giá vốn phía sau đều sai.</div>
           </div>
-          <div className="topbar-user">
-            <div className="avatar-chip">{admin.initials}</div>
-            <div className="user-info"><div className="user-name">{admin.name}</div></div>
+          <div style={{ display: "flex", gap: 6, background: "#EFEBDF", padding: 4, borderRadius: 11, flexWrap: "wrap" }}>
+            {tabs.map(t => (
+              <div key={t.key} onClick={() => setStore(t.key)} style={{ padding: "8px 16px", borderRadius: 8, fontSize: 13, fontWeight: 700, cursor: "pointer", whiteSpace: "nowrap", background: store === t.key ? "#fff" : "transparent", color: store === t.key ? C.brand : C.ink2 }}>{t.label}</div>
+            ))}
           </div>
         </div>
 
-        <div className="page-body">
-          {/* store tabs + add button */}
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12, marginBottom: 18 }}>
-            <div className="miniseg">
-              {storeTabs.map(s => (
-                <button key={s.key} className={activeStore === s.key ? "on" : ""} onClick={() => setActiveStore(s.key)}>{s.label}</button>
-              ))}
-            </div>
-            {isStoreView && (
-              <div style={{ fontSize: 12.5, color: "var(--ink-2)", background: "var(--hover)", borderRadius: 10, padding: "8px 14px", border: "1px solid var(--line)" }}>
-                Đang xem giá của <strong>{storeTabs.find(s => s.key === activeStore)?.label}</strong>. Mặc định dùng giá chung — bấm "Ghi đè" để đặt giá riêng.
-              </div>
-            )}
+        {isStoreView && (
+          <div style={{ fontSize: 12.5, lineHeight: 1.5, color: C.warnInk, background: C.warnBg, borderRadius: 12, padding: "12px 16px", marginBottom: 18 }}>
+            Đang xem giá của <b>{storeObj?.name}</b>. Mặc định dùng giá chung — bấm "Ghi đè" ở dòng nào để đặt giá riêng cho cửa hàng này (ví dụ nhà cung cấp khác).
           </div>
+        )}
+        {banner && (
+          <div onClick={() => setBanner(null)} style={{ fontSize: 13, fontWeight: 600, color: C.danger, background: "#FBEAE3", borderRadius: 12, padding: "12px 16px", marginBottom: 14, cursor: "pointer" }}>{banner} <span style={{ opacity: 0.6 }}>(bấm để ẩn)</span></div>
+        )}
 
-          {/* add row */}
-          <button onClick={addRow} className="cb-empty-items" style={{ marginBottom: 12, width: "100%", cursor: "pointer", textAlign: "center", fontSize: 13.5, fontWeight: 700 }}>
-            + Thêm nguyên liệu
-          </button>
+        <div onClick={addRow} style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, padding: 13, borderRadius: 14, border: "1.5px dashed #C9C2AE", color: C.ink2, fontSize: 13.5, fontWeight: 700, cursor: "pointer", marginBottom: 14 }}>+ Thêm nguyên liệu</div>
 
-          {/* table */}
-          <div className="card" style={{ overflow: "hidden", overflowX: "auto" }}>
-            <div style={{ minWidth: 920 }}>
-              {/* header */}
-              <div style={{ display: "grid", gridTemplateColumns: "1.6fr 1fr 1.1fr 0.9fr 0.8fr 1.2fr 1.3fr 28px", gap: 8, padding: "13px 18px", background: "var(--hover)", fontSize: 11, fontWeight: 800, color: "var(--ink-3)", textTransform: "uppercase", letterSpacing: ".3px" }}>
-                <div>Nguyên liệu</div><div>Đơn vị mua</div><div>Giá mua</div><div>Quy đổi</div><div>ĐV dùng</div>
-                <div style={{ textAlign: "right" }}>Giá dùng (tính)</div>
-                <div>{isStoreView ? "Giá riêng cửa hàng" : "Trạng thái"}</div><div></div>
-              </div>
-              {rows.length === 0 && (
-                <div style={{ textAlign: "center", padding: "40px 20px", color: "var(--ink-3)", fontSize: 14 }}>Chưa có nguyên liệu nào — bấm "+ Thêm" bên trên</div>
-              )}
-              {rows.map((row, idx) => (
-                <IngredientRow key={idx} row={row} stores={stores} activeStore={activeStore}
-                  onUpdate={(f, v) => updateRow(idx, f, v)}
-                  onRemove={() => removeRow(idx)}
-                  onSetOverride={() => setOverride(idx)}
-                  onClearOverride={() => clearOverride(idx)}
-                  onOverrideChange={v => changeOverride(idx, v)}
-                />
-              ))}
+        <div style={{ background: "#fff", borderRadius: 18, border: `1px solid ${C.line}`, overflowX: "auto" }}>
+          <div style={{ minWidth: 920 }}>
+            <div style={{ display: "grid", gridTemplateColumns: GRID, gap: 8, padding: "13px 18px", background: C.bg, fontSize: 11, fontWeight: 800, color: C.ink3, textTransform: "uppercase", letterSpacing: "0.3px" }}>
+              <div>Nguyên liệu</div><div>Đơn vị mua</div><div>Giá mua</div><div>Quy đổi</div><div>Đơn vị dùng</div><div style={{ textAlign: "right" }}>Giá dùng (tính)</div><div>{isStoreView ? "Giá riêng cửa hàng" : "Trạng thái"}</div><div></div>
             </div>
+            {rows.length === 0 && <div style={{ padding: 28, textAlign: "center", color: C.ink3, fontSize: 13.5 }}>Chưa có nguyên liệu nào — bấm "+ Thêm nguyên liệu" để bắt đầu.</div>}
+            {rows.map(ing => {
+              const base = usePrice(ing);
+              const ov = isStoreView ? ing.overrides[store] : undefined;
+              const st = status[ing.key];
+              return (
+                <div key={ing.key} style={{ borderTop: `1px solid ${C.line2}` }}>
+                  <div style={{ display: "grid", gridTemplateColumns: GRID, gap: 8, padding: "10px 18px", alignItems: "center" }}>
+                    <input value={ing.name} onChange={e => update(ing.key, "name", e.target.value)} placeholder="Tên nguyên liệu" style={cell} />
+                    <input value={ing.buy_unit} onChange={e => update(ing.key, "buy_unit", e.target.value)} placeholder="kg, lon..." style={cell} />
+                    <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                      <input type="number" min="0" value={ing.buy_price} onChange={e => update(ing.key, "buy_price", e.target.value)} style={cell} />
+                      <span style={{ fontSize: 12, color: C.ink3 }}>đ</span>
+                    </div>
+                    <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                      <span style={{ fontSize: 11.5, color: C.ink3, whiteSpace: "nowrap" }}>1 =</span>
+                      <input type="number" min="0" value={ing.conversion} onChange={e => update(ing.key, "conversion", e.target.value)} style={{ ...cell, padding: "7px 6px" }} />
+                    </div>
+                    <input value={ing.use_unit} onChange={e => update(ing.key, "use_unit", e.target.value)} placeholder="g, ml..." style={{ ...cell, padding: "7px 6px", textAlign: "center" }} />
+                    <div style={{ textAlign: "right" }}>
+                      <div style={{ fontWeight: 800, fontSize: 13.5, color: C.brand }}>{opsFmt(ov ? ov.use_price : base)}</div>
+                      <div style={{ fontSize: 11, color: C.ink3 }}>/{ing.use_unit || "?"}</div>
+                    </div>
+                    <div>
+                      {isStoreView ? (
+                        ov ? (
+                          <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                            <input type="number" min="0" value={ov.use_price} onChange={e => editOverride(ing, e.target.value)} style={{ border: `1.5px solid ${C.brand}`, borderRadius: 8, padding: "6px 8px", fontSize: 12.5, width: 72, background: "#F0F7F3", fontFamily: "inherit", outline: "none" }} />
+                            <span onClick={() => overrideCall(ing, "DELETE")} style={{ fontSize: 11, color: C.danger, fontWeight: 700, cursor: "pointer", whiteSpace: "nowrap" }}>Bỏ ghi đè</span>
+                          </div>
+                        ) : (
+                          <div onClick={() => overrideCall(ing, "POST", Math.round(base))} style={{ fontSize: 12, fontWeight: 700, color: C.brand, cursor: "pointer", background: C.okBg, padding: "6px 10px", borderRadius: 8, display: "inline-block" }}>Ghi đè giá</div>
+                        )
+                      ) : (
+                        <div style={{ fontSize: 11.5, fontWeight: 700, color: C.ink3 }}>
+                          {!ing.id ? "Chưa lưu" : Object.keys(ing.overrides).length ? `Giá chung · ${Object.keys(ing.overrides).length} quán giá riêng` : "Giá chung"}
+                        </div>
+                      )}
+                    </div>
+                    <div onClick={() => removeRow(ing)} title="Xoá nguyên liệu" style={{ cursor: "pointer", textAlign: "center", color: C.danger, fontWeight: 700, fontSize: 15 }}>×</div>
+                  </div>
+                  {(missingCost(ing) || !canPersist(ing) || (st && st !== "saving" && st !== "saved")) && (
+                    <div style={{ padding: "0 18px 10px 18px", fontSize: 11.5, color: C.danger, fontWeight: 600 }}>
+                      {st && st !== "saving" && st !== "saved"
+                        ? `⚠ Chưa lưu được: ${st}`
+                        : !canPersist(ing)
+                          ? "⚠ Điền tên, đơn vị mua, quy đổi và đơn vị dùng để lưu nguyên liệu này."
+                          : "⚠ Thiếu giá hoặc quy đổi — công thức dùng nguyên liệu này sẽ tính sai giá vốn."}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
           </div>
-
-          {/* save bar */}
-          {dirty && (
-            <div className="savebar" style={{ marginTop: 16 }}>
-              <div className="si" />
-              <span className="stxt">Có thay đổi chưa lưu</span>
-              <div className="sbtns">
-                <button onClick={() => setRows(IGDATA.ingredients.map(i => ({ ...i })))} className="btn-ghost">Huỷ</button>
-                <button onClick={saveAll} disabled={saving} className="btn-primary">{saving ? "Đang lưu…" : "Lưu tất cả"}</button>
-              </div>
-            </div>
-          )}
+        </div>
+        <div style={{ fontSize: 12, color: C.ink3, marginTop: 10 }}>
+          {Object.values(status).includes("saving") ? "Đang lưu…" : "Mọi thay đổi được lưu tự động."}
         </div>
       </div>
-
-      {toast && <div className="toast">{toast}</div>}
-      <TweaksPanel open={false} onClose={() => {}} tw={tw} setTweak={setTweak}>
-        <TweakSection label="Màu sắc"><TweakColor label="Thương hiệu" value={tw.brand} onChange={v => setTweak("brand", v)} /></TweakSection>
-        <TweakSection label="Giao diện"><TweakToggle label="Chế độ tối" value={tw.dark} onChange={v => setTweak("dark", v)} /></TweakSection>
-      </TweaksPanel>
-
-      <div id="react-root-ready" />
     </div>
   );
 }
 
-ReactDOM.createRoot(document.getElementById("root")).render(React.createElement(IngredientsApp));
+ReactDOM.createRoot(document.getElementById("root")).render(<IngredientsApp />);
