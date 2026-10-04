@@ -10,6 +10,7 @@ class Store extends Model
     protected $fillable = [
         'name',
         'address',
+        'size',
         'city',
         'phone',
         'email',

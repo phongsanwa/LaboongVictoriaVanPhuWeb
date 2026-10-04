@@ -47,12 +47,12 @@ class ReportsController extends Controller
         for ($i = 2; $i >= 0; $i--) {
             $months[] = Carbon::now()->subMonthsNoOverflow($i)->format('Y-m');
         }
-        $monthlyCostRows = StoreMonthlyCost::whereIn('year_month', $months)->get();
-
         $monthlyCosts = [];
-        foreach ($monthlyCostRows as $mc) {
-            $total = is_array($mc->costs) ? array_sum(array_column($mc->costs, 'amount')) : 0;
-            $monthlyCosts[$mc->store_id][$mc->year_month] = $total / 30;
+        foreach ($stores as $store) {
+            foreach ($months as $ym) {
+                $mc = StoreMonthlyCost::effectiveFor($store->id, $ym);
+                if ($mc) $monthlyCosts[$store->id][$ym] = $mc->total() / 30;
+            }
         }
 
         // Build entries keyed by store_id

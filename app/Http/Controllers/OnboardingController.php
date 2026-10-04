@@ -29,6 +29,7 @@ class OnboardingController extends Controller
             'password' => ['required', 'min:6'],
             'stores' => ['required', 'array', 'min:1'],
             'stores.*.name' => ['required', 'string'],
+            'stores.*.size' => ['nullable', 'string', 'max:50'],
             'stores.*.costs' => ['nullable', 'array'],
         ]);
 
@@ -43,12 +44,6 @@ class OnboardingController extends Controller
                 'user_type' => 'admin',
             ]);
 
-            $costLabels = [
-                'rent' => 'Tiền thuê mặt bằng',
-                'salary' => 'Lương nhân viên',
-                'utility' => 'Điện nước',
-                'depreciation' => 'Khấu hao',
-            ];
             $currentYearMonth = Carbon::now()->format('Y-m');
 
             foreach ($request->stores as $storeData) {
@@ -56,6 +51,7 @@ class OnboardingController extends Controller
                 $store = Store::create([
                     'name'           => $storeData['name'],
                     'address'        => '',
+                    'size'           => $storeData['size'] ?? null,
                     'city'           => '',
                     'phone'          => '',
                     'opening_time'   => '07:00:00',
@@ -65,16 +61,10 @@ class OnboardingController extends Controller
                 ]);
 
                 if (!empty($storeData['costs'])) {
-                    $costsArray = [];
-                    foreach ($costLabels as $key => $label) {
-                        $amount = isset($storeData['costs'][$key]) ? (float) $storeData['costs'][$key] : 0;
-                        $costsArray[] = ['label' => $label, 'amount' => $amount];
-                    }
-
                     StoreMonthlyCost::create([
-                        'store_id' => $store->id,
+                        'store_id'   => $store->id,
                         'year_month' => $currentYearMonth,
-                        'costs' => $costsArray,
+                        'costs'      => StoreMonthlyCost::normalize($storeData['costs']),
                     ]);
                 }
             }

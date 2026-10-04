@@ -22,6 +22,7 @@ use App\Http\Controllers\Admin\DailyEntriesController;
 use App\Http\Controllers\Admin\IngredientsController;
 use App\Http\Controllers\Admin\OverviewController;
 use App\Http\Controllers\Admin\RecipesController;
+use App\Http\Controllers\Admin\StoreSettingsController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -221,6 +222,8 @@ Route::middleware(['auth', 'admin.perm'])->prefix('admin')->name('admin.')->grou
     Route::middleware('admin.perm:store_edit')->group(function () {
         Route::get('/stores/{store}/costs', [StoresController::class, 'getCosts'])->name('stores.costs.get');
         Route::post('/stores/{store}/costs', [StoresController::class, 'saveCosts'])->name('stores.costs.save');
+        Route::get('/store-settings', [StoreSettingsController::class, 'index'])->name('store-settings.index');
+        Route::post('/store-settings', [StoreSettingsController::class, 'save'])->name('store-settings.save');
     });
 
     // Combo
