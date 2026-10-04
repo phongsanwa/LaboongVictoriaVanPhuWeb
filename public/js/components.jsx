@@ -171,7 +171,7 @@ const NAV_URLS = {
   menu: "/menu",
   orderHistory: "/orders/history",
   points: "/points",
-  catalog: "/rewards",
+  catalog: "/profile#rewards",
   wallet: "/rewards/wallet",
   history: "/points",
   profile: "/profile",
