@@ -22,8 +22,7 @@
   window.ADMIN_OVERVIEW_DATA = @json($overviewData);
 </script>
 
-<script type="text/babel" src="{{ asset('js/tweaks-panel.jsx') }}"></script>
-<script type="text/babel" src="{{ asset('js/components.jsx') }}"></script>
-<script type="text/babel" src="{{ asset('js/admin-overview.jsx') }}"></script>
+<script type="text/babel" src="{{ asset('js/admin-ops-ui.jsx') }}?v={{ filemtime(public_path('js/admin-ops-ui.jsx')) }}"></script>
+<script type="text/babel" src="{{ asset('js/admin-overview.jsx') }}?v={{ filemtime(public_path('js/admin-overview.jsx')) }}"></script>
 </body>
 </html>

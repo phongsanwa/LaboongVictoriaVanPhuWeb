@@ -29,6 +29,7 @@ class ReportsController extends Controller
 
         $entries = DailyEntry::with(['sales.recipe', 'expenses'])
             ->where('entry_date', '>=', today()->subDays(89))
+            ->where('is_saved', true)
             ->orderBy('entry_date')
             ->get();
 
