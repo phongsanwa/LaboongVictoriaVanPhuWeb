@@ -25,7 +25,7 @@ class ReportsController extends Controller
     {
         $admin = Auth::user();
 
-        $stores = Store::where('is_active', true)->get();
+        $stores = Store::where('status', 'active')->get();
 
         $entries = DailyEntry::with(['sales.recipe', 'expenses'])
             ->where('entry_date', '>=', today()->subDays(89))

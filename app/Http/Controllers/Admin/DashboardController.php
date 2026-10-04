@@ -390,7 +390,7 @@ class DashboardController extends Controller
             'Đơn hàng'         => $pendingOrders > 0 ? (string) $pendingOrders : null,
             'Chiến dịch'       => (string) Campaign::where('status', 'active')->count(),
             'Đổi quà'          => (string) Reward::where('status', 'active')->count(),
-            'Thực đơn'         => (string) Product::where('is_active', true)->count(),
+            'Thực đơn'         => (string) Product::where('is_available', true)->count(),
             'Khách hàng'       => (string) Customer::count(),
             'Phí ship'         => (string) ShippingTier::count(),
             'Cửa hàng'         => (string) Store::where('status', 'active')->count(),

@@ -21,7 +21,7 @@ function ComboItemRow({ item, onChange, onRemove, variants }) {
           style={{ border:'1px solid #e5e7eb', borderRadius:6, padding:'4px 6px', fontSize:13 }}>
           <option value="">-- Kích cỡ --</option>
           {productVariants.map(v => (
-            <option key={v.id} value={v.id}>{v.label}</option>
+            <option key={v.id} value={v.id}>{v.name}</option>
           ))}
         </select>
       )}
@@ -39,6 +39,8 @@ function ComboEditor({ combo, onClose }) {
     items: [],
   } : {
     ...combo,
+    description: combo.description ?? '',
+    image_url: combo.image_url ?? '',
     combo_price: combo.combo_price ?? '',
     max_per_day: combo.max_per_day ?? '',
     available_from: combo.available_from ?? '',

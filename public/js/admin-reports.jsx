@@ -191,8 +191,8 @@ function ReportsApp() {
       {/* topbar */}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 14, padding: "18px 24px", background: "var(--brand)", color: "#fff" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
-          <a href="/admin" style={{ width: 38, height: 38, borderRadius: 10, background: "#F2C744", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, color: "var(--brand)", fontSize: 18, textDecoration: "none" }}>T</a>
-          <div style={{ fontWeight: 800, fontSize: 19, letterSpacing: "-0.2px" }}>TràSữa Lãi</div>
+          <a href="/admin" style={{ width: 38, height: 38, borderRadius: 10, background: "#F2C744", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, color: "var(--brand)", fontSize: 18, textDecoration: "none" }}>L</a>
+          <div style={{ fontWeight: 800, fontSize: 19, letterSpacing: "-0.2px" }}>Laboong</div>
           <a href="/admin/overview" style={{ marginLeft: 14, fontSize: 13, fontWeight: 700, color: "rgba(255,255,255,0.8)", textDecoration: "none", padding: "7px 12px", borderRadius: 9, background: "rgba(255,255,255,0.1)" }}>← Tổng quan</a>
         </div>
         <div style={{ display: "flex", gap: 6, background: "rgba(255,255,255,0.12)", padding: 4, borderRadius: 12, flexShrink: 0 }}>
