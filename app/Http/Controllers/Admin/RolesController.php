@@ -351,9 +351,9 @@ class RolesController extends Controller
         return 'NV' . str_pad((string) (($max ?? 0) + 1), 3, '0', STR_PAD_LEFT);
     }
 
-    private function initials(string $name): string
+    private function initials(?string $name): string
     {
-        $parts = preg_split('/\s+/', trim($name));
+        $name ??= "A"; $parts = preg_split("/\\s+/", trim($name));
         $last = array_pop($parts);
         $first = $parts[0] ?? '';
 

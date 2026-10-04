@@ -369,7 +369,7 @@ class DashboardController extends Controller
         return number_format((float) $n, 0, ',', '.');
     }
 
-    private function initials(string $name): string
+    private function initials(?string $name): string
     {
         $parts = array_values(array_filter(preg_split('/\s+/', trim($name))));
 

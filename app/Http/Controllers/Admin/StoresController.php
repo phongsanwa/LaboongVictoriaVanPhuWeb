@@ -19,9 +19,9 @@ class StoresController extends Controller
         return view('admin.stores', [
             'storesData' => [
                 'admin' => [
-                    'name' => $admin->name,
-                    'email' => $admin->email,
-                    'initials' => $this->initials($admin->name),
+                    'name' => $admin->name ?? $admin->email ?? $admin->phone,
+                    'email' => $admin->email ?? '',
+                    'initials' => $this->initials($admin->name ?? $admin->email ?? $admin->phone ?? 'A'),
                 ],
                 'stores' => $this->storesList(),
             ],
@@ -221,9 +221,9 @@ class StoresController extends Controller
         ];
     }
 
-    private function initials(string $name): string
+    private function initials(?string $name): string
     {
-        $parts = preg_split('/\s+/', trim($name));
+        $name ??= "A"; $parts = preg_split("/\\s+/", trim($name));
         $last = array_pop($parts);
         $first = $parts[0] ?? '';
 
