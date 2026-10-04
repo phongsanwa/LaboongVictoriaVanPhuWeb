@@ -1077,9 +1077,16 @@ textarea.sinp { resize: vertical; min-height: 70px; line-height: 1.5; }
 .od-pay-badge.unpaid { background: color-mix(in srgb,var(--danger) 12%,var(--panel)); color: var(--danger); }
 .od-foot { padding: 14px 20px; border-top: 1px solid var(--line-2); display: flex; gap: 10px; flex-shrink: 0; }
 
-.sc { display: flex; align-items: center; gap: 0; }
-.sl { height: 3px; flex: 1; background: var(--line); position: relative; }
-.sl.done { background: var(--brand); }
+/* od-steps progress bar */
+.od-steps { display: flex; align-items: center; gap: 0; }
+.od-step { display: flex; flex-direction: column; align-items: center; gap: 4px; min-width: 0; }
+.od-step .sc { width: 28px; height: 28px; border-radius: 50%; border: 2px solid var(--line); background: var(--panel); display: grid; place-items: center; color: var(--ink-3); flex: none; transition: .14s; }
+.od-step.done .sc { border-color: var(--brand); background: var(--brand); color: #fff; }
+.od-step.cur .sc  { border-color: var(--brand); color: var(--brand); }
+.od-step .sl { font-size: 10.5px; font-weight: 600; color: var(--ink-3); white-space: nowrap; text-align: center; }
+.od-step.done .sl, .od-step.cur .sl { color: var(--brand); }
+.od-step-bar { flex: 1; height: 2px; background: var(--line); margin: 0 4px; margin-bottom: 14px; transition: .14s; }
+.od-step-bar.done { background: var(--brand); }
 
 @media (max-width: 720px) {
   .ord-grid { grid-template-columns: 1fr; }
