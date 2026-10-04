@@ -147,6 +147,8 @@ Route::middleware(['auth', 'admin.perm'])->prefix('admin')->name('admin.')->grou
     Route::post('/menu/products/reorder', [MenuController::class, 'reorderProducts'])->name('menu.products.reorder');
     Route::put('/menu/products/{product}/variants', [MenuController::class, 'updateVariants'])->name('menu.products.variants');
     Route::post('/menu/categories', [MenuController::class, 'storeCategory'])->name('menu.categories.store');
+    Route::put('/menu/categories/{category}', [MenuController::class, 'updateCategory'])->name('menu.categories.update');
+    Route::delete('/menu/categories/{category}', [MenuController::class, 'destroyCategory'])->name('menu.categories.destroy');
 
     // Variants
     Route::get('/variants', [VariantsController::class, 'index'])->name('variants.index');
