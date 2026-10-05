@@ -14,12 +14,13 @@ const catalogById = Object.fromEntries(CATALOG.map(i => [i.id, i]));
 
 const fmtUnit = n => (Number(n) || 0).toLocaleString("vi-VN", { maximumFractionDigits: 2 }) + "đ";
 const fmtDate = iso => { const [y, m, d] = iso.split("-"); return `${d}/${m}/${y}`; };
-const scaleOf = size => (size === "L" ? 1 : SCALE_M);
+// Size M uses its own quantity when set, else 75% of size L.
+const qtyOf = (r, size) => (size === "L" ? Number(r.qty_l) || 0 : r.qty_m != null && r.qty_m !== "" ? Number(r.qty_m) || 0 : (Number(r.qty_l) || 0) * SCALE_M);
 const marginColor = p => (p >= 50 ? C.brand2 : p >= 35 ? "#B4762A" : C.danger);
 const marginBg = p => (p >= 50 ? "#E7F2EC" : p >= 35 ? C.warnBg : "#FBEAE3");
 
 let seq = 0;
-const newRow = () => ({ key: "r" + (++seq), mode: "", ingredient_id: null, qty_l: 0, custom_name: "", custom_unit: "g", custom_unit_price: 0 });
+const newRow = () => ({ key: "r" + (++seq), mode: "", ingredient_id: null, qty_l: 0, qty_m: null, custom_name: "", custom_unit: "g", custom_unit_price: 0 });
 
 function fromServer(r) {
   return {
@@ -30,6 +31,7 @@ function fromServer(r) {
       mode: i.ingredient_id ? "catalog" : (i.custom_unit != null || i.custom_name ? "manual" : ""),
       ingredient_id: i.ingredient_id,
       qty_l: i.qty_l,
+      qty_m: i.qty_m ?? null,
       custom_name: i.custom_name || "",
       custom_unit: i.custom_unit || "g",
       custom_unit_price: i.custom_unit_price || 0,
@@ -54,8 +56,7 @@ function compute(dish, size) {
     const cogs = Number(dish["direct_cogs_" + sk]) || 0;
     return { variable: 0, wastage: 0, packaging: 0, cogs, price, gross: price - cogs, pct: price ? ((price - cogs) / price) * 100 : 0 };
   }
-  const s = scaleOf(size);
-  const variable = dish.rows.reduce((sum, r) => sum + (Number(r.qty_l) || 0) * s * resolve(r).unitPrice, 0);
+  const variable = dish.rows.reduce((sum, r) => sum + qtyOf(r, size) * resolve(r).unitPrice, 0);
   const wastage = variable * ((Number(dish.wastage_pct) || 0) / 100);
   const packaging = Number(dish["packaging_" + sk]) || 0;
   const cogs = variable + wastage + packaging;
@@ -72,6 +73,7 @@ function payloadOf(d) {
     ingredients: d.rows.map((r, i) => ({
       ingredient_id: r.mode === "catalog" ? r.ingredient_id : null,
       qty_l: Number(r.qty_l) || 0,
+      qty_m: r.qty_m != null && r.qty_m !== "" ? Number(r.qty_m) || 0 : null,
       custom_name: r.mode === "manual" ? r.custom_name : null,
       custom_unit: r.mode === "manual" ? (r.custom_unit || "g") : null,
       custom_unit_price: r.mode === "manual" ? Number(r.custom_unit_price) || 0 : null,
@@ -187,7 +189,6 @@ function RecipesApp() {
   }
 
   const sk = size.toLowerCase();
-  const s = scaleOf(size);
   const calc = compute(dish, size);
   const accent = marginColor(calc.pct);
   const note = calc.pct >= 50 ? "Biên lợi nhuận tốt" : calc.pct >= 35 ? "Biên lợi nhuận ở mức trung bình" : "Biên lợi nhuận thấp — cân nhắc tăng giá bán hoặc giảm topping";
@@ -270,7 +271,7 @@ function RecipesApp() {
                   </div>
                   {dish.rows.map(r => {
                     const res = resolve(r);
-                    const qty = Math.round((Number(r.qty_l) || 0) * s * 100) / 100;
+                    const qty = Math.round(qtyOf(r, size) * 100) / 100;
                     return (
                       <div key={r.key} style={{ display: "grid", gridTemplateColumns: GRID, gap: 8, padding: "9px 16px", borderTop: `1px solid ${C.line2}`, alignItems: "start" }}>
                         <div>
@@ -286,7 +287,7 @@ function RecipesApp() {
                           </select>
                           {r.mode === "manual" && <input value={r.custom_name} onChange={e => setRow(r.key, { custom_name: e.target.value })} placeholder="Tên nguyên liệu" style={{ ...cell, marginTop: 6, fontSize: 12.5 }} />}
                         </div>
-                        <input type="number" min="0" value={qty} onChange={e => setRow(r.key, { qty_l: (Number(e.target.value) || 0) / s })} style={cell} />
+                        <input type="number" min="0" value={qty} onChange={e => setRow(r.key, size === "L" ? { qty_l: Number(e.target.value) || 0 } : { qty_m: Number(e.target.value) || 0 })} style={cell} />
                         <div>
                           {r.mode === "manual"
                             ? <input value={r.custom_unit} onChange={e => setRow(r.key, { custom_unit: e.target.value })} style={{ ...cell, padding: "7px 6px", textAlign: "center" }} />
@@ -297,7 +298,7 @@ function RecipesApp() {
                             ? <input type="number" min="0" value={r.custom_unit_price} onChange={e => setRow(r.key, { custom_unit_price: e.target.value })} style={cell} />
                             : <div style={{ textAlign: "right", fontSize: 12.5, color: C.ink2, padding: "7px 0" }}>{res.unitPrice ? fmtUnit(res.unitPrice) + (res.unit ? "/" + res.unit : "") : "—"}</div>}
                         </div>
-                        <div style={{ textAlign: "right", fontWeight: 700, fontSize: 13.5, padding: "7px 0" }}>{opsFmt((Number(r.qty_l) || 0) * s * res.unitPrice)}</div>
+                        <div style={{ textAlign: "right", fontWeight: 700, fontSize: 13.5, padding: "7px 0" }}>{opsFmt(qtyOf(r, size) * res.unitPrice)}</div>
                         <div onClick={() => patchDish(d => ({ ...d, rows: d.rows.filter(x => x.key !== r.key) }))} title="Bỏ nguyên liệu" style={{ cursor: "pointer", textAlign: "center", color: C.danger, fontWeight: 700, fontSize: 15, padding: "7px 0" }}>×</div>
                       </div>
                     );
