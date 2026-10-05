@@ -3,6 +3,7 @@ const { useState, useEffect } = React;
 
 const SIDEBAR_NAV = [
   { ic: 'chart',   label: 'Tổng quan',          href: '/admin' },
+  { ic: 'grid',    label: 'Tổng quan OPS',       href: '/admin/overview' },
   { ic: 'users',   label: 'Khách hàng',          href: '/admin/customers' },
   { ic: 'receipt', label: 'Điểm & giao dịch',   href: '/admin/points' },
   { ic: 'bag',     label: 'Đơn hàng',            href: '/admin/orders' },
