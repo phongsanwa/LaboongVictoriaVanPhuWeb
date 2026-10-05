@@ -8,6 +8,17 @@ const CHANNELS = Object.entries(D.channels); // [key, label]
 const WEEKDAYS = ["Chủ Nhật", "Thứ Hai", "Thứ Ba", "Thứ Tư", "Thứ Năm", "Thứ Sáu", "Thứ Bảy"];
 const inp = { borderWidth: 1, borderStyle: "solid", borderColor: C.field, borderRadius: 8, padding: "8px 10px", fontSize: 13, width: "100%", background: "#fff", fontFamily: "inherit", color: C.ink, outline: "none" };
 
+const DAY = D.date;
+const IS_TODAY = DAY === D.today;
+const DAY_WORD = IS_TODAY ? "hôm nay" : "ngày này";
+function shiftDay(iso, n) {
+  const [y, m, d] = iso.split("-").map(Number);
+  const t = new Date(Date.UTC(y, m - 1, d + n));
+  return t.toISOString().slice(0, 10);
+}
+const goDay = iso => { window.location.search = iso === D.today ? "" : "?date=" + iso; };
+const fmtDay = iso => iso.split("-").reverse().join("/");
+
 function longDate(iso) {
   const [y, m, d] = iso.split("-").map(Number);
   return `${WEEKDAYS[new Date(y, m - 1, d).getDay()]}, ${d} tháng ${m}, ${y}`;
@@ -110,8 +121,8 @@ function DailyEntriesApp() {
     if (saving || (entry.saved && !entry.dirty)) return;
     setSaving(true); setError(null);
     try {
-      const data = await opsApi("POST", D.urls.save.replace("__STORE__", active).replace("__DATE__", D.today), {
-        date: D.today,
+      const data = await opsApi("POST", D.urls.save.replace("__STORE__", active).replace("__DATE__", DAY), {
+        date: DAY,
         is_saved: true,
         sales: RECIPES.map(r => ({ recipe_id: r.id, qty_m: entry.sales[r.id].M, qty_l: entry.sales[r.id].L })),
         expenses: entry.expenses.filter(x => x.description.trim() || x.amount > 0).map(x => ({ description: x.description.trim(), amount: x.amount })),
@@ -150,7 +161,13 @@ function DailyEntriesApp() {
       <div style={{ maxWidth: 820, margin: "0 auto", padding: narrow ? "24px 16px 0" : "36px 24px 0" }}>
         <div style={{ marginBottom: 22 }}>
           <div style={{ fontSize: 26, fontWeight: 800, letterSpacing: "-0.4px" }}>Nhập liệu cuối ngày</div>
-          <div style={{ fontSize: 14.5, color: C.ink2, marginTop: 4 }}>{longDate(D.today)} · chọn quán rồi nhập số ly bán — chỉ mất chưa đến 2 phút</div>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", marginTop: 10 }}>
+            <div onClick={() => goDay(shiftDay(DAY, -1))} title="Ngày trước" style={{ cursor: "pointer", padding: "6px 12px", borderRadius: 10, background: "#fff", border: `1px solid ${C.line}`, fontWeight: 800 }}>‹</div>
+            <input type="date" value={DAY} max={D.today} onChange={e => e.target.value && goDay(e.target.value)} style={{ ...inp, width: "auto", fontSize: 14, fontWeight: 700 }} />
+            <div onClick={() => !IS_TODAY && goDay(shiftDay(DAY, 1))} title="Ngày sau" style={{ cursor: IS_TODAY ? "default" : "pointer", opacity: IS_TODAY ? 0.35 : 1, padding: "6px 12px", borderRadius: 10, background: "#fff", border: `1px solid ${C.line}`, fontWeight: 800 }}>›</div>
+            {!IS_TODAY && <div onClick={() => goDay(D.today)} style={{ cursor: "pointer", fontSize: 12.5, fontWeight: 700, color: C.brand, background: C.okBg, padding: "6px 12px", borderRadius: 20 }}>Về hôm nay</div>}
+          </div>
+          <div style={{ fontSize: 14.5, color: C.ink2, marginTop: 8 }}>{longDate(DAY)}{IS_TODAY ? "" : " — đang nhập bù ngày cũ"} · chọn quán rồi nhập số liệu</div>
         </div>
 
         <div style={{ display: "flex", gap: 14, flexWrap: "wrap", marginBottom: 26 }}>
@@ -164,7 +181,7 @@ function DailyEntriesApp() {
                   <div style={{ width: 34, height: 34, borderRadius: "50%", background: ok ? C.brand2 : "#E0983F", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontWeight: 800, fontSize: 15 }}>{ok ? "✓" : "!"}</div>
                   <div>
                     <div style={{ fontSize: 14.5, fontWeight: 700 }}>{s.name}</div>
-                    <div style={{ fontSize: 12.5, color: ok ? C.brand2 : "#B4762A", fontWeight: 600 }}>{ok ? "Đã nhập hôm nay" : e.dirty ? "Có thay đổi chưa lưu" : "Chưa nhập hôm nay"}</div>
+                    <div style={{ fontSize: 12.5, color: ok ? C.brand2 : "#B4762A", fontWeight: 600 }}>{ok ? `Đã nhập ${DAY_WORD}` : e.dirty ? "Có thay đổi chưa lưu" : `Chưa nhập ${DAY_WORD}`}</div>
                   </div>
                 </div>
                 {on && <div style={{ fontSize: 11, fontWeight: 800, color: "#fff", background: C.brand, padding: "5px 11px", borderRadius: 20, whiteSpace: "nowrap", flexShrink: 0, marginLeft: 8 }}>Đang nhập</div>}
@@ -219,6 +236,12 @@ function DailyEntriesApp() {
                       ⚠ Không khớp được {imp.unmatched.map(n => `"${n}"`).join(", ")} trong file với món trong hệ thống — vui lòng kiểm tra lại tên món hoặc nhập tay dòng này.
                     </div>
                   )}
+                  {imp.report_date && imp.report_date !== DAY && (
+                    <div style={{ marginTop: 10, fontSize: 12.5, color: C.danger, background: "#FBEAE3", borderRadius: 10, padding: "10px 14px", fontWeight: 600 }}>
+                      ⚠ Báo cáo này là của ngày {fmtDay(imp.report_date)}, nhưng bạn đang nhập ngày {fmtDay(DAY)}.{" "}
+                      <span onClick={() => goDay(imp.report_date)} style={{ textDecoration: "underline", cursor: "pointer" }}>Chuyển sang ngày {fmtDay(imp.report_date)}</span> rồi import lại.
+                    </div>
+                  )}
                   {imp.type === "general" && (
                     <div style={{ marginTop: 8, fontSize: 12, color: "#B4762A", lineHeight: 1.5 }}>Báo cáo tổng quan chỉ có doanh thu từng món, không có số ly — số ly được <b>ước tính</b> = doanh thu ÷ giá niêm yết (ô tô vàng). Sửa lại nếu khác thực tế để giá vốn đúng.</div>
                   )}
@@ -237,7 +260,7 @@ function DailyEntriesApp() {
               <div key={k} style={{ display: "grid", gridTemplateColumns: "1.1fr 1.3fr 0.7fr", gap: 8, alignItems: "end", padding: "10px 12px", background: C.bg, borderRadius: 12 }}>
                 <div style={{ fontSize: 13, fontWeight: 700, paddingBottom: 9 }}>
                   {name}
-                  {entry.channels[k].suggested && <div style={{ fontSize: 10.5, color: C.brand2, fontWeight: 600 }}>từ đơn web hôm nay</div>}
+                  {entry.channels[k].suggested && <div style={{ fontSize: 10.5, color: C.brand2, fontWeight: 600 }}>từ đơn web {DAY_WORD}</div>}
                 </div>
                 <div><div style={label}>Thực nhận (đ)</div><input type="number" min="0" step="1000" value={entry.channels[k].net} onChange={e => setChannel(k, "net", e.target.value)} style={inp} /></div>
                 <div><div style={label}>Số đơn</div><input type="number" min="0" value={entry.channels[k].orders} onChange={e => setChannel(k, "orders", e.target.value)} style={{ ...inp, textAlign: "center" }} /></div>
@@ -314,7 +337,7 @@ function DailyEntriesApp() {
           {error && <div style={{ marginTop: 18, padding: "12px 16px", borderRadius: 12, background: "#FBEAE3", color: C.danger, fontSize: 13.5, fontWeight: 600 }}>{error}</div>}
 
           <div onClick={save} style={{ marginTop: 22, textAlign: "center", padding: 15, borderRadius: 14, background: isSaved ? C.brand2 : C.brand, color: "#fff", fontWeight: 800, fontSize: 15, cursor: isSaved || saving ? "default" : "pointer", opacity: saving ? 0.7 : 1 }}>
-            {saving ? "Đang lưu…" : isSaved ? "✓ Đã lưu số liệu hôm nay" : "Lưu số liệu hôm nay"}
+            {saving ? "Đang lưu…" : isSaved ? `✓ Đã lưu số liệu ${IS_TODAY ? "hôm nay" : fmtDay(DAY)}` : `Lưu số liệu ${IS_TODAY ? "hôm nay" : fmtDay(DAY)}`}
           </div>
         </div>
       </div>
