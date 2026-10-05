@@ -11,6 +11,7 @@ class RecipeIngredient extends Model
         'recipe_id',
         'ingredient_id',
         'qty_l',
+        'qty_m',
         'custom_name',
         'custom_unit',
         'custom_unit_price',
@@ -19,6 +20,7 @@ class RecipeIngredient extends Model
 
     protected $casts = [
         'qty_l'             => 'float',
+        'qty_m'             => 'float',
         'custom_unit_price' => 'float',
     ];
 
