@@ -20,8 +20,15 @@ use Illuminate\Support\Facades\DB;
 
 class DailyEntriesController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
+        // ?date=YYYY-MM-DD to enter or correct a past day; never a future one.
+        $date = Carbon::today();
+        if ($request->filled('date')) {
+            try { $date = Carbon::createFromFormat('Y-m-d', $request->query('date'))->startOfDay(); } catch (\Throwable) {}
+            if ($date->isFuture()) $date = Carbon::today();
+        }
+
         $admin = Auth::user();
 
         return view('admin.daily-entries', [
@@ -46,10 +53,11 @@ class DailyEntriesController extends Controller
                     ])
                     ->values(),
                 'today'   => now()->toDateString(),
+                'date'    => $date->toDateString(),
                 'channels' => DailyEntryChannel::CHANNELS,
-                // Completed website orders today, to prefill the "Website" channel.
+                // Completed website orders that day, to prefill the "Website" channel.
                 'web_orders' => Order::where('status', 'COMPLETED')
-                    ->whereDate('created_at', today())
+                    ->whereDate('created_at', $date)
                     ->selectRaw('store_id, SUM(total_amount) as total, COUNT(*) as cnt')
                     ->groupBy('store_id')->get()
                     ->mapWithKeys(fn ($o) => [$o->store_id => ['total' => (float) $o->total, 'orders' => (int) $o->cnt]]),
@@ -57,7 +65,7 @@ class DailyEntriesController extends Controller
                     'save'   => route('admin.daily-entries.save', ['store' => '__STORE__', 'date' => '__DATE__']),
                     'import' => route('admin.daily-entries.import'),
                 ],
-                'entries' => $this->todayEntries(),
+                'entries' => $this->entriesFor($date),
             ],
         ]);
     }
@@ -65,7 +73,7 @@ class DailyEntriesController extends Controller
     public function save(Request $request, Store $store)
     {
         $data = $request->validate([
-            'date'                    => ['required', 'date'],
+            'date'                    => ['required', 'date_format:Y-m-d', 'before_or_equal:today'],
             'is_saved'                => ['boolean'],
             'sales'                   => ['nullable', 'array'],
             'sales.*.recipe_id'       => ['required', 'integer', 'exists:recipes,id'],
@@ -159,11 +167,11 @@ class DailyEntriesController extends Controller
 
     // ─── private helpers ──────────────────────────────────────────────────────
 
-    private function todayEntries(): array
+    private function entriesFor(Carbon $date): array
     {
         return DailyEntry::with(['sales', 'expenses', 'channels'])
             ->whereIn('store_id', Store::where('status', 'active')->pluck('id'))
-            ->where('entry_date', today())
+            ->whereDate('entry_date', $date)
             ->get()
             ->map(fn ($e) => $this->presentEntry($e))
             ->keyBy('store_id')

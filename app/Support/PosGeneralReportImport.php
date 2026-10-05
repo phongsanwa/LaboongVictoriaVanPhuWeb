@@ -83,8 +83,19 @@ class PosGeneralReportImport
             $byRecipe[$recipe['id']][$size === 'L' ? 'qty_l' : 'qty_m'] += $cups;
         }
 
+        $reportDate = null;
+        foreach (array_slice($rows, 0, 3) as $row) {
+            foreach ($row as $cell) {
+                if (preg_match('/(\d{2})\/(\d{2})\/(\d{4})\D+(\d{2})\/(\d{2})\/(\d{4})/', (string) $cell, $m)
+                    && "$m[1]$m[2]$m[3]" === "$m[4]$m[5]$m[6]") {
+                    $reportDate = "$m[3]-$m[2]-$m[1]";
+                }
+            }
+        }
+
         return [
             'type'      => 'general',
+            'report_date' => $reportDate,
             'totals'    => $totals,
             'channels'  => collect($channels)->map(fn ($v, $k) => ['channel' => $k, 'net_revenue' => $v])->values()->all(),
             'matched'   => array_values($byRecipe),
