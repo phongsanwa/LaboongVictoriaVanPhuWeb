@@ -8,6 +8,9 @@ use App\Models\DailyEntryExpense;
 use App\Models\DailyEntrySale;
 use App\Models\Recipe;
 use App\Models\Store;
+use App\Models\DailyEntryChannel;
+use App\Models\Order;
+use App\Support\PosGeneralReportImport;
 use App\Support\PosSalesImport;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Carbon;
@@ -43,6 +46,13 @@ class DailyEntriesController extends Controller
                     ])
                     ->values(),
                 'today'   => now()->toDateString(),
+                'channels' => DailyEntryChannel::CHANNELS,
+                // Completed website orders today, to prefill the "Website" channel.
+                'web_orders' => Order::where('status', 'COMPLETED')
+                    ->whereDate('created_at', today())
+                    ->selectRaw('store_id, SUM(total_amount) as total, COUNT(*) as cnt')
+                    ->groupBy('store_id')->get()
+                    ->mapWithKeys(fn ($o) => [$o->store_id => ['total' => (float) $o->total, 'orders' => (int) $o->cnt]]),
                 'urls'    => [
                     'save'   => route('admin.daily-entries.save', ['store' => '__STORE__', 'date' => '__DATE__']),
                     'import' => route('admin.daily-entries.import'),
@@ -64,14 +74,36 @@ class DailyEntriesController extends Controller
             'expenses'                => ['nullable', 'array'],
             'expenses.*.description'  => ['nullable', 'string'],
             'expenses.*.amount'       => ['required', 'numeric', 'min:0'],
+            'channels'                => ['nullable', 'array'],
+            'channels.*.channel'      => ['required', 'string', 'in:' . implode(',', array_keys(DailyEntryChannel::CHANNELS))],
+            'channels.*.net_revenue'  => ['required', 'numeric'],
+            'channels.*.orders'       => ['nullable', 'integer', 'min:0'],
+            'gross_revenue'           => ['nullable', 'numeric', 'min:0'],
+            'discount_total'          => ['nullable', 'numeric', 'min:0'],
+            'commission_total'        => ['nullable', 'numeric', 'min:0'],
         ]);
 
         $entry = DB::transaction(function () use ($store, $data) {
             // A Carbon date binds as "Y-m-d 00:00:00", matching what the date cast stores.
             $entry = DailyEntry::updateOrCreate(
                 ['store_id' => $store->id, 'entry_date' => Carbon::parse($data['date'])->startOfDay()],
-                ['is_saved' => $data['is_saved'] ?? false]
+                [
+                    'is_saved'         => $data['is_saved'] ?? false,
+                    'gross_revenue'    => $data['gross_revenue'] ?? 0,
+                    'discount_total'   => $data['discount_total'] ?? 0,
+                    'commission_total' => $data['commission_total'] ?? 0,
+                ]
             );
+
+            $entry->channels()->delete();
+            foreach ($data['channels'] ?? [] as $ch) {
+                if ((float) $ch['net_revenue'] == 0 && empty($ch['orders'])) continue;
+                $entry->channels()->create([
+                    'channel'     => $ch['channel'],
+                    'net_revenue' => $ch['net_revenue'],
+                    'orders'      => $ch['orders'] ?? null,
+                ]);
+            }
 
             $entry->sales()->delete();
             foreach ($data['sales'] ?? [] as $sale) {
@@ -92,7 +124,7 @@ class DailyEntriesController extends Controller
                 ]);
             }
 
-            return $entry->load('sales', 'expenses');
+            return $entry->load('sales', 'expenses', 'channels');
         });
 
         return response()->json(['entry' => $this->presentEntry($entry)]);
@@ -108,10 +140,16 @@ class DailyEntriesController extends Controller
         ]);
 
         $file = $request->file('file');
-        $recipes = Recipe::get(['id', 'name'])->map(fn ($r) => ['id' => $r->id, 'name' => $r->name])->all();
+        $recipes = Recipe::get(['id', 'name', 'price_m', 'price_l'])
+            ->map(fn ($r) => ['id' => $r->id, 'name' => $r->name, 'price_m' => (float) $r->price_m, 'price_l' => (float) $r->price_l])->all();
 
         try {
-            $result = (new PosSalesImport($recipes))->import($file->getRealPath(), $file->getClientOriginalExtension());
+            $reader = new PosSalesImport($recipes);
+            $ext = strtolower($file->getClientOriginalExtension());
+            $rows = $ext === 'xlsx' ? $reader->readXlsx($file->getRealPath()) : $reader->readCsv($file->getRealPath());
+            $result = PosGeneralReportImport::looksLikeGeneralReport($rows)
+                ? (new PosGeneralReportImport($recipes))->import($rows)
+                : ['type' => 'items'] + $reader->import($file->getRealPath(), $ext);
         } catch (\RuntimeException $e) {
             return response()->json(['message' => $e->getMessage()], 422);
         }
@@ -123,7 +161,7 @@ class DailyEntriesController extends Controller
 
     private function todayEntries(): array
     {
-        return DailyEntry::with(['sales', 'expenses'])
+        return DailyEntry::with(['sales', 'expenses', 'channels'])
             ->whereIn('store_id', Store::where('status', 'active')->pluck('id'))
             ->where('entry_date', today())
             ->get()
@@ -139,6 +177,10 @@ class DailyEntriesController extends Controller
             'store_id'   => $e->store_id,
             'entry_date' => $e->entry_date->toDateString(),
             'is_saved'   => (bool) $e->is_saved,
+            'gross_revenue'    => (float) $e->gross_revenue,
+            'discount_total'   => (float) $e->discount_total,
+            'commission_total' => (float) $e->commission_total,
+            'channels'   => $e->channels->map(fn ($c) => ['channel' => $c->channel, 'net_revenue' => (float) $c->net_revenue, 'orders' => $c->orders])->values(),
             'sales'      => $e->sales->map(fn ($s) => [
                 'id'        => $s->id,
                 'recipe_id' => $s->recipe_id,

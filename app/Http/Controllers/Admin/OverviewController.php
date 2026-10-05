@@ -18,13 +18,13 @@ class OverviewController extends Controller
 
         $stores = Store::where('status', 'active')->get();
 
-        $todayEntries = DailyEntry::with(['sales.recipe', 'expenses'])
+        $todayEntries = DailyEntry::with(['sales.recipe', 'expenses', 'channels'])
             ->whereDate('entry_date', today())
             ->where('is_saved', true)
             ->get()
             ->keyBy('store_id');
 
-        $last7Entries = DailyEntry::with(['sales.recipe', 'expenses'])
+        $last7Entries = DailyEntry::with(['sales.recipe', 'expenses', 'channels'])
             ->whereDate('entry_date', '>=', today()->subDays(6))
             ->whereDate('entry_date', '<=', today())
             ->where('is_saved', true)
@@ -57,6 +57,7 @@ class OverviewController extends Controller
                 $cogs += $sale->qty_m * $cogsM + $sale->qty_l * $cogsL;
             }
 
+            $revenue = $entry->revenue($revenue);
             $expenses = $entry->expenses->sum('amount');
 
             return compact('revenue', 'cogs', 'expenses', 'cups');
