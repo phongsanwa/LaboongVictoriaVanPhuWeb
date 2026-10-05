@@ -27,7 +27,7 @@ class ReportsController extends Controller
 
         $stores = Store::where('status', 'active')->get();
 
-        $entries = DailyEntry::with(['sales.recipe', 'expenses'])
+        $entries = DailyEntry::with(['sales.recipe', 'expenses', 'channels'])
             ->where('entry_date', '>=', today()->subDays(89))
             ->where('is_saved', true)
             ->orderBy('entry_date')
@@ -84,6 +84,7 @@ class ReportsController extends Controller
                 ];
             }
 
+            $revenue = $entry->revenue($revenue);
             $expensesTotal = $entry->expenses->sum('amount');
 
             $entriesByStore[$entry->store_id][] = [

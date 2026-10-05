@@ -71,7 +71,8 @@ class PosSalesImport
     public static function normalize(string $s): string
     {
         $s = Str::lower(Str::ascii($s));
-        return trim(preg_replace('/\s+/', ' ', preg_replace('/[^a-z0-9]+/', ' ', $s)));
+        $s = trim(preg_replace('/\s+/', ' ', preg_replace('/[^a-z0-9]+/', ' ', $s)));
+        return preg_replace('/\bolong\b/', 'o long', $s);
     }
 
     private function match(string $base): ?int
@@ -135,7 +136,7 @@ class PosSalesImport
         return [0, 1, null, 0];
     }
 
-    private function readCsv(string $path): array
+    public function readCsv(string $path): array
     {
         $raw = file_get_contents($path);
         if (str_starts_with($raw, "\xFF\xFE")) $raw = mb_convert_encoding(substr($raw, 2), 'UTF-8', 'UTF-16LE');
@@ -156,7 +157,7 @@ class PosSalesImport
         return $rows;
     }
 
-    private function readXlsx(string $path): array
+    public function readXlsx(string $path): array
     {
         if (!class_exists(ZipArchive::class)) {
             throw new RuntimeException('Máy chủ chưa hỗ trợ đọc .xlsx — hãy xuất file .csv từ máy POS.');

@@ -12,11 +12,17 @@ class DailyEntry extends Model
         'store_id',
         'entry_date',
         'is_saved',
+        'gross_revenue',
+        'discount_total',
+        'commission_total',
     ];
 
     protected $casts = [
         'entry_date' => 'date',
         'is_saved'   => 'boolean',
+        'gross_revenue'    => 'float',
+        'discount_total'   => 'float',
+        'commission_total' => 'float',
     ];
 
     public function store(): BelongsTo
@@ -32,5 +38,16 @@ class DailyEntry extends Model
     public function expenses(): HasMany
     {
         return $this->hasMany(DailyEntryExpense::class);
+    }
+
+    public function channels(): HasMany
+    {
+        return $this->hasMany(DailyEntryChannel::class);
+    }
+
+    /** Money actually received: channel totals when entered, else cups × list price. */
+    public function revenue(float $listPriceRevenue): float
+    {
+        return $this->channels->isNotEmpty() ? (float) $this->channels->sum('net_revenue') : $listPriceRevenue;
     }
 }
