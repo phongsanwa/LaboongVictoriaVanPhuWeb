@@ -321,6 +321,11 @@ function DailyEntriesApp() {
               <div style={{ fontSize: 19, fontWeight: 800, color: C.brand, marginTop: 4 }}>{opsFmt(realRevenue)}</div>
               <div style={{ fontSize: 11, color: C.ink3, marginTop: 2 }}>{channelTotal > 0 ? `Theo giá niêm yết: ${opsFmt(revenue)}` : "Tạm tính theo số ly × giá"}</div>
             </div>
+            <div>
+              <div style={{ fontSize: 11.5, fontWeight: 700, color: C.ink3, textTransform: "uppercase" }}>Phí thương hiệu {store.royalty_pct}%</div>
+              <div style={{ fontSize: 19, fontWeight: 800, color: "#B4762A", marginTop: 4 }}>{opsFmt(realRevenue * (store.royalty_pct || 0) / 100)}</div>
+              <div style={{ fontSize: 11, color: C.ink3, marginTop: 2 }}>Tự tính, trừ vào lợi nhuận</div>
+            </div>
             {entry.commission > 0 && (
               <div>
                 <div style={{ fontSize: 11.5, fontWeight: 700, color: C.ink3, textTransform: "uppercase" }}>Hoa hồng app</div>
