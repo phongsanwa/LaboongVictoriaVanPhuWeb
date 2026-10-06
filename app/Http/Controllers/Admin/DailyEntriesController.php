@@ -64,8 +64,14 @@ class DailyEntriesController extends Controller
                 'date'    => $date->toDateString(),
                 'channels' => DailyEntryChannel::CHANNELS,
                 'shift_presets' => self::SHIFT_PRESETS,
-                'workers' => Worker::where('active', true)->orderBy('name')->get()
-                    ->map(fn ($w) => ['id' => $w->id, 'name' => $w->name, 'store_id' => $w->store_id, 'official' => $w->isOfficialOn($date)])->values(),
+                'workers' => (function () use ($date) {
+                    $stores = Store::where('status', 'active')->get();
+                    return Worker::where('active', true)->orderBy('name')->get()->map(fn ($w) => [
+                        'id' => $w->id, 'name' => $w->name, 'store_id' => $w->store_id, 'official' => $w->isOfficialOn($date),
+                        // Rate that day at each store (seniority raises included).
+                        'rates' => $stores->mapWithKeys(fn ($s) => [$s->id => $w->rateOn($date, $s)]),
+                    ])->values();
+                })(),
                 // Completed website orders that day, to prefill the "Website" channel.
                 'web_orders' => Order::where('status', 'COMPLETED')
                     ->whereDate('created_at', $date)

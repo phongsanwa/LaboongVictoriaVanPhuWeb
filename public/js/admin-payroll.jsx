@@ -14,7 +14,7 @@ function shiftMonth(ym, n) {
   return t.toISOString().slice(0, 7);
 }
 const goMonth = ym => { window.location.search = "?month=" + ym; };
-const blankWorker = () => ({ id: null, name: "", phone: "", store_id: D.stores[0]?.id ?? null, type: "probation", official_from: "", active: true });
+const blankWorker = () => ({ id: null, name: "", phone: "", store_id: D.stores[0]?.id ?? null, type: "probation", official_from: "", rate_adjust: 0, active: true });
 
 function WorkerRow({ w, onSaved }) {
   const [f, setF] = useState(w);
@@ -33,7 +33,7 @@ function WorkerRow({ w, onSaved }) {
   };
   return (
     <div style={{ borderTop: `1px solid ${C.line2}`, padding: "10px 0", opacity: f.active ? 1 : 0.55 }}>
-      <div style={{ display: "grid", gridTemplateColumns: "1.4fr 1fr 1.2fr 1fr 1.1fr auto auto", gap: 8, alignItems: "center", minWidth: 760 }}>
+      <div style={{ display: "grid", gridTemplateColumns: "1.3fr 0.9fr 1.1fr 0.9fr 1.1fr 0.8fr 1fr auto auto", gap: 8, alignItems: "center", minWidth: 980 }}>
         <input value={f.name} onChange={e => set("name", e.target.value)} placeholder="Tên nhân viên" style={inp} />
         <input value={f.phone || ""} onChange={e => set("phone", e.target.value)} placeholder="SĐT" style={inp} />
         <select value={f.store_id ?? ""} onChange={e => set("store_id", e.target.value ? Number(e.target.value) : null)} style={inp}>
@@ -42,8 +42,14 @@ function WorkerRow({ w, onSaved }) {
         <select value={f.type} onChange={e => set("type", e.target.value)} style={inp}>
           {Object.entries(TYPES).map(([k, l]) => <option key={k} value={k}>{l}</option>)}
         </select>
-        <div title="Ngày lên chính thức (tự đổi mức lương từ ngày này)">
-          <input type="date" value={f.official_from || ""} onChange={e => set("official_from", e.target.value)} disabled={f.type === "official"} style={{ ...inp, opacity: f.type === "official" ? 0.4 : 1 }} />
+        <div title="Ngày lên chính thức — tính lương chính thức và thâm niên tăng lương từ ngày này">
+          <input type="date" value={f.official_from || ""} onChange={e => set("official_from", e.target.value)} style={inp} />
+        </div>
+        <div title="Cộng/trừ riêng cho người này (đ/giờ)">
+          <input type="number" step="500" value={f.rate_adjust ?? 0} onChange={e => set("rate_adjust", Number(e.target.value) || 0)} style={inp} />
+        </div>
+        <div style={{ fontSize: 12, lineHeight: 1.35 }}>
+          {f.id && w.rate_today != null ? <><b style={{ color: C.brand }}>{opsFmt(w.rate_today)}/h</b><div style={{ color: C.ink3 }}>{w.official_months ? `${w.official_months} tháng chính thức` : f.type === "official" && !f.official_from ? "thiếu ngày chính thức" : "hôm nay"}</div></> : <span style={{ color: C.ink3 }}>—</span>}
         </div>
         <label style={{ fontSize: 12, display: "flex", gap: 4, alignItems: "center", whiteSpace: "nowrap" }}>
           <input type="checkbox" checked={f.active} onChange={e => set("active", e.target.checked)} /> Đang làm
@@ -62,13 +68,13 @@ function PayrollApp() {
   const narrow = useNarrowScreen(700);
   const [workers, setWorkers] = useState(D.workers);
   const [open, setOpen] = useState({});
-  const [rates, setRates] = useState(Object.fromEntries(D.stores.map(s => [s.id, { p: s.wage_probation, o: s.wage_official, saved: true }])));
+  const [rates, setRates] = useState(Object.fromEntries(D.stores.map(s => [s.id, { p: s.wage_probation, o: s.wage_official, ra: s.raise_amount, rm: s.raise_every_months, saved: true }])));
   const total = D.rows.reduce((a, r) => ({ hours: a.hours + r.hours, base: a.base + r.base, kpi: a.kpi + r.kpi, allowance: a.allowance + r.allowance, total: a.total + r.total }), { hours: 0, base: 0, kpi: 0, allowance: 0, total: 0 });
   const [y, m] = D.month.split("-");
 
   const saveRates = async (sid) => {
     const r = rates[sid];
-    await opsApi("POST", `/admin/payroll/rates/${sid}`, { wage_probation: Number(r.p) || 0, wage_official: Number(r.o) || 0 });
+    await opsApi("POST", `/admin/payroll/rates/${sid}`, { wage_probation: Number(r.p) || 0, wage_official: Number(r.o) || 0, raise_amount: Number(r.ra) || 0, raise_every_months: Math.max(1, Number(r.rm) || 6) });
     setRates(x => ({ ...x, [sid]: { ...x[sid], saved: true } }));
   };
 
@@ -139,11 +145,11 @@ function PayrollApp() {
 
         <div style={card}>
           <div style={{ fontSize: 15.5, fontWeight: 800, marginBottom: 4 }}>Lương theo giờ</div>
-          <div style={{ fontSize: 12, color: C.ink3, marginBottom: 12 }}>Áp dụng cho ca chấm từ nay; ca đã lưu giữ nguyên mức lương lúc đó.</div>
+          <div style={{ fontSize: 12, color: C.ink3, marginBottom: 12 }}>Chính thức = khởi điểm + (số lần đủ kỳ thâm niên × mức tăng) + điều chỉnh riêng. Ví dụ 20.000đ, +1.000đ mỗi 6 tháng: sau 1 năm là 22.000đ/giờ. Áp dụng cho ca chấm từ nay; ca đã lưu giữ nguyên.</div>
           {D.stores.map(s => (
             <div key={s.id} style={{ display: "flex", gap: 10, alignItems: "end", flexWrap: "wrap", padding: "8px 0", borderTop: `1px solid ${C.line2}` }}>
               <div style={{ fontWeight: 700, minWidth: 200, paddingBottom: 8 }}>{s.name}</div>
-              {[["p", "Thử việc (đ/giờ)"], ["o", "Chính thức (đ/giờ)"]].map(([k, l]) => (
+              {[["p", "Thử việc (đ/giờ)"], ["o", "Chính thức khởi điểm"], ["ra", "Tăng mỗi lần (đ/giờ)"], ["rm", "Cứ mỗi (tháng)"]].map(([k, l]) => (
                 <div key={k} style={{ width: 160 }}><div style={{ ...th, marginBottom: 4 }}>{l}</div>
                   <input type="number" min="0" step="1000" value={rates[s.id][k]} onChange={e => setRates(x => ({ ...x, [s.id]: { ...x[s.id], [k]: e.target.value, saved: false } }))} style={inp} />
                 </div>
@@ -155,7 +161,7 @@ function PayrollApp() {
 
         <div style={card}>
           <div style={{ fontSize: 15.5, fontWeight: 800, marginBottom: 4 }}>Nhân viên</div>
-          <div style={{ fontSize: 12, color: C.ink3, marginBottom: 8 }}>Thử việc có "ngày lên chính thức" sẽ tự tính lương chính thức từ ngày đó. Bỏ tick "Đang làm" khi nghỉ việc — lịch sử lương vẫn giữ.</div>
+          <div style={{ fontSize: 12, color: C.ink3, marginBottom: 8 }}>Cột: tên · SĐT · quán · loại · <b>ngày lên chính thức</b> (từ ngày này tính lương chính thức và thâm niên tăng lương) · <b>điều chỉnh riêng đ/giờ</b> · lương giờ hôm nay. Bỏ tick "Đang làm" khi nghỉ việc — lịch sử lương vẫn giữ.</div>
           <div style={{ overflowX: "auto" }}>
             {workers.map(w => <WorkerRow key={w.id} w={w} onSaved={nw => setWorkers(ws => ws.map(x => (x.id === nw.id ? nw : x)))} />)}
             <WorkerRow key={"new-" + workers.length} w={blankWorker()} onSaved={nw => setWorkers(ws => [...ws, nw])} />
