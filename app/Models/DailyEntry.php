@@ -56,4 +56,14 @@ class DailyEntry extends Model
     {
         return $revenue * (float) ($this->store?->royalty_pct ?? 3) / 100;
     }
+
+    public function shifts(): HasMany
+    {
+        return $this->hasMany(DailyEntryShift::class);
+    }
+
+    public function laborCost(): float
+    {
+        return (float) $this->shifts->sum('wage_total');
+    }
 }

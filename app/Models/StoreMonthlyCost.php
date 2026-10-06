@@ -82,4 +82,19 @@ class StoreMonthlyCost extends Model
     {
         return self::totalOf($this->costs);
     }
+
+    /** Fixed costs without the monthly salary line (used once wages come from shift timesheets). */
+    public function totalWithoutSalary(): float
+    {
+        return $this->total() - (float) (self::normalize($this->costs)['salary'] ?? 0);
+    }
+
+    /** Store ids that logged shifts in the given month. */
+    public static function storesWithShifts(string $yearMonth): array
+    {
+        $start = \Illuminate\Support\Carbon::createFromFormat('Y-m-d', "$yearMonth-01")->startOfDay();
+        return DailyEntry::whereHas('shifts')
+            ->whereDate('entry_date', '>=', $start)->whereDate('entry_date', '<=', $start->copy()->endOfMonth())
+            ->distinct()->pluck('store_id')->all();
+    }
 }

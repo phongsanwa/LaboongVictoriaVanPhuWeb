@@ -5,6 +5,17 @@ const D = window.ADMIN_DAILY_DATA;
 const C = OPS_C;
 const RECIPES = D.recipes;
 const CHANNELS = Object.entries(D.channels); // [key, label]
+const WORKERS = D.workers;
+let shiftSeq = 0;
+// Same rule as the server: a time-out before time-in runs past midnight.
+function hoursBetween(a, b) {
+  if (!/^\d\d:\d\d$/.test(a || "") || !/^\d\d:\d\d$/.test(b || "")) return 0;
+  const [h1, m1] = a.split(":").map(Number), [h2, m2] = b.split(":").map(Number);
+  let mins = h2 * 60 + m2 - (h1 * 60 + m1);
+  if (mins < 0) mins += 1440;
+  return Math.round(mins / 60 * 100) / 100;
+}
+const newShift = () => ({ key: "s" + (++shiftSeq), worker_id: "", time_in: "", time_out: "", kpi_bonus: 0, allowance: 0, note: "" });
 const WEEKDAYS = ["Chủ Nhật", "Thứ Hai", "Thứ Ba", "Thứ Tư", "Thứ Năm", "Thứ Sáu", "Thứ Bảy"];
 const inp = { borderWidth: 1, borderStyle: "solid", borderColor: C.field, borderRadius: 8, padding: "8px 10px", fontSize: 13, width: "100%", background: "#fff", fontFamily: "inherit", color: C.ink, outline: "none" };
 
@@ -36,6 +47,7 @@ function toLocal(entry, storeId) {
     sales, channels,
     gross: entry?.gross_revenue || 0, discount: entry?.discount_total || 0, commission: entry?.commission_total || 0,
     estimated: {},
+    shifts: (entry?.shifts || []).map(x => ({ key: "s" + (++shiftSeq), worker_id: x.worker_id, time_in: x.time_in, time_out: x.time_out, kpi_bonus: x.kpi_bonus, allowance: x.allowance, note: x.note || "" })),
     expenses: (entry?.expenses || []).map(e => ({ description: e.description || "", amount: e.amount })),
     saved: !!entry?.is_saved, dirty: false,
   };
@@ -84,6 +96,7 @@ function DailyEntriesApp() {
   const setQty = (rid, size, v) => patch(e => ({ ...e, estimated: { ...e.estimated, [rid]: false }, sales: { ...e.sales, [rid]: { ...e.sales[rid], [size]: Math.max(0, Math.floor(Number(v) || 0)) } } }));
   const setChannel = (k, field, v) => patch(e => ({ ...e, channels: { ...e.channels, [k]: { ...e.channels[k], suggested: false, [field]: field === "orders" ? (v === "" ? "" : Math.max(0, Math.floor(Number(v) || 0))) : Number(v) || 0 } } }));
   const setNum = (field, v) => patch(e => ({ ...e, [field]: Math.max(0, Number(v) || 0) }));
+  const setShift = (key, upd) => patch(e => ({ ...e, shifts: e.shifts.map(x => (x.key === key ? { ...x, ...upd } : x)) }));
   const setExpense = (i, field, v) => patch(e => ({ ...e, expenses: e.expenses.map((x, j) => (j === i ? { ...x, [field]: field === "amount" ? Math.max(0, Number(v) || 0) : v } : x)) }));
 
   const switchStore = id => { setActive(id); setImp({ status: "empty" }); setError(null); };
@@ -126,6 +139,7 @@ function DailyEntriesApp() {
         is_saved: true,
         sales: RECIPES.map(r => ({ recipe_id: r.id, qty_m: entry.sales[r.id].M, qty_l: entry.sales[r.id].L })),
         expenses: entry.expenses.filter(x => x.description.trim() || x.amount > 0).map(x => ({ description: x.description.trim(), amount: x.amount })),
+        shifts: entry.shifts.filter(x => x.worker_id && x.time_in && x.time_out).map(x => ({ worker_id: Number(x.worker_id), time_in: x.time_in, time_out: x.time_out, kpi_bonus: Number(x.kpi_bonus) || 0, allowance: Number(x.allowance) || 0, note: x.note || null })),
         channels: CHANNELS.map(([k]) => ({ channel: k, net_revenue: entry.channels[k].net || 0, orders: entry.channels[k].orders === "" ? null : entry.channels[k].orders })),
         gross_revenue: entry.gross, discount_total: entry.discount, commission_total: entry.commission,
       });
@@ -147,6 +161,11 @@ function DailyEntriesApp() {
   const expenseTotal = entry.expenses.reduce((s, x) => s + (Number(x.amount) || 0), 0);
   const channelTotal = CHANNELS.reduce((s, [k]) => s + (Number(entry.channels[k].net) || 0), 0);
   const realRevenue = channelTotal > 0 ? channelTotal : revenue;
+  const rateOf = wid => { const w = WORKERS.find(x => x.id === Number(wid)); return w ? (w.official ? store.wage_official : store.wage_probation) : 0; };
+  const wageOf = x => Math.round(hoursBetween(x.time_in, x.time_out) * rateOf(x.worker_id)) + (Number(x.kpi_bonus) || 0) + (Number(x.allowance) || 0);
+  const laborTotal = entry.shifts.reduce((a, x) => a + (x.worker_id ? wageOf(x) : 0), 0);
+  const incompleteShift = entry.shifts.some(x => (x.worker_id || x.time_in || x.time_out) && !(x.worker_id && x.time_in && x.time_out));
+  const storeWorkers = [...WORKERS.filter(w => w.store_id === active), ...WORKERS.filter(w => w.store_id !== active)];
   const anyEstimated = Object.values(entry.estimated).some(Boolean);
   const label = { fontSize: 11, color: C.ink3, marginBottom: 4, fontWeight: 700 };
   const sectionTitle = { fontSize: 13.5, fontWeight: 800, margin: "22px 0 4px" };
@@ -295,6 +314,48 @@ function DailyEntriesApp() {
             ))}
           </div>
 
+          <div style={{ ...sectionTitle, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <span>Nhân viên trong ngày</span>
+            <a href="/admin/payroll" style={{ fontSize: 12, fontWeight: 700, color: C.brand }}>Quản lý nhân viên & bảng lương →</a>
+          </div>
+          <div style={{ fontSize: 12, color: C.ink3, marginBottom: 10 }}>Chọn ca để điền nhanh giờ vào/ra rồi sửa theo giờ thực tế. Lương = giờ × lương giờ (thử việc {opsFmt(store.wage_probation)}, chính thức {opsFmt(store.wage_official)}) + thưởng KPI + phụ cấp.</div>
+          {WORKERS.length === 0 && <div style={{ fontSize: 12.5, color: "#B4762A", marginBottom: 8 }}>Chưa có nhân viên — thêm ở <a href="/admin/payroll" style={{ color: "#B4762A", fontWeight: 700 }}>Bảng lương</a>.</div>}
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            {entry.shifts.map(x => {
+              const hrs = hoursBetween(x.time_in, x.time_out);
+              return (
+                <div key={x.key} style={{ background: C.bg, borderRadius: 12, padding: "10px 12px" }}>
+                  <div style={{ display: "grid", gridTemplateColumns: narrow ? "1fr 1fr" : "1.5fr 0.8fr 0.8fr 0.9fr 0.9fr 1fr 28px", gap: 8, alignItems: "end" }}>
+                    <div style={{ gridColumn: narrow ? "1 / -1" : "auto" }}><div style={label}>Nhân viên</div>
+                      <select value={x.worker_id} onChange={e => setShift(x.key, { worker_id: e.target.value })} style={inp}>
+                        <option value="">-- Chọn --</option>
+                        {storeWorkers.map(w => <option key={w.id} value={w.id}>{w.name} · {w.official ? "chính thức" : "thử việc"}{w.store_id !== active ? " (quán khác)" : ""}</option>)}
+                      </select>
+                    </div>
+                    <div><div style={label}>Vào</div><input type="time" value={x.time_in} onChange={e => setShift(x.key, { time_in: e.target.value })} style={inp} /></div>
+                    <div><div style={label}>Ra</div><input type="time" value={x.time_out} onChange={e => setShift(x.key, { time_out: e.target.value })} style={inp} /></div>
+                    <div><div style={label}>Thưởng KPI</div><input type="number" min="0" step="5000" value={x.kpi_bonus} onChange={e => setShift(x.key, { kpi_bonus: Math.max(0, Number(e.target.value) || 0) })} style={inp} /></div>
+                    <div><div style={label}>Phụ cấp</div><input type="number" min="0" step="5000" value={x.allowance} onChange={e => setShift(x.key, { allowance: Math.max(0, Number(e.target.value) || 0) })} style={inp} /></div>
+                    <div style={{ textAlign: "right", paddingBottom: 8 }}>
+                      <div style={{ fontSize: 11, color: C.ink3 }}>{hrs ? `${hrs} giờ × ${opsFmt(rateOf(x.worker_id))}` : "—"}</div>
+                      <div style={{ fontWeight: 800, color: C.brand }}>{x.worker_id ? opsFmt(wageOf(x)) : "—"}</div>
+                    </div>
+                    <div onClick={() => patch(e => ({ ...e, shifts: e.shifts.filter(y => y.key !== x.key) }))} title="Bỏ ca này" style={{ cursor: "pointer", textAlign: "center", color: C.danger, fontWeight: 700, fontSize: 15, paddingBottom: 8 }}>×</div>
+                  </div>
+                  <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 8, alignItems: "center" }}>
+                    {D.shift_presets.map(p => {
+                      const on = x.time_in === p.in && x.time_out === p.out;
+                      return <div key={p.label} onClick={() => setShift(x.key, { time_in: p.in, time_out: p.out })} style={{ fontSize: 11.5, fontWeight: 700, cursor: "pointer", padding: "4px 10px", borderRadius: 20, background: on ? C.brand : "#fff", color: on ? "#fff" : C.ink2, border: `1px solid ${on ? C.brand : C.line}` }}>{p.label} {p.in.slice(0, 2)}h–{p.out.slice(0, 2)}h</div>;
+                    })}
+                    <input value={x.note} onChange={e => setShift(x.key, { note: e.target.value })} placeholder="Ghi chú (lý do thưởng/phụ cấp...)" style={{ ...inp, flex: 1, minWidth: 160, padding: "5px 9px", fontSize: 12 }} />
+                  </div>
+                </div>
+              );
+            })}
+            <div onClick={() => patch(e => ({ ...e, shifts: [...e.shifts, newShift()] }))} style={{ fontSize: 13, fontWeight: 700, color: C.brand, cursor: "pointer", padding: "6px 0", display: "inline-block" }}>+ Thêm ca làm</div>
+          </div>
+          {incompleteShift && <div style={{ fontSize: 12, color: "#B4762A", marginTop: 4 }}>Ca chưa đủ nhân viên/giờ vào/giờ ra sẽ không được lưu.</div>}
+
           <div style={{ display: "flex", alignItems: "center", gap: 10, margin: "22px 0 10px", fontSize: 13.5, fontWeight: 800 }}>Chi phí phát sinh trong ngày</div>
           <div style={{ fontSize: 12, color: C.ink3, marginBottom: 12 }}>Đá thêm, sửa máy, đồ dùng vặt... — không phải chi phí cố định hằng tháng</div>
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
@@ -325,6 +386,11 @@ function DailyEntriesApp() {
               <div style={{ fontSize: 11.5, fontWeight: 700, color: C.ink3, textTransform: "uppercase" }}>Phí thương hiệu {store.royalty_pct}%</div>
               <div style={{ fontSize: 19, fontWeight: 800, color: "#B4762A", marginTop: 4 }}>{opsFmt(realRevenue * (store.royalty_pct || 0) / 100)}</div>
               <div style={{ fontSize: 11, color: C.ink3, marginTop: 2 }}>Tự tính, trừ vào lợi nhuận</div>
+            </div>
+            <div>
+              <div style={{ fontSize: 11.5, fontWeight: 700, color: C.ink3, textTransform: "uppercase" }}>Lương nhân viên</div>
+              <div style={{ fontSize: 19, fontWeight: 800, color: "#B4762A", marginTop: 4 }}>{opsFmt(laborTotal)}</div>
+              <div style={{ fontSize: 11, color: C.ink3, marginTop: 2 }}>{entry.shifts.filter(x => x.worker_id).length} ca</div>
             </div>
             {entry.commission > 0 && (
               <div>
