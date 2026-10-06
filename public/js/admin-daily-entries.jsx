@@ -47,7 +47,8 @@ function toLocal(entry, storeId) {
     sales, channels,
     gross: entry?.gross_revenue || 0, discount: entry?.discount_total || 0, commission: entry?.commission_total || 0,
     estimated: {},
-    shifts: (entry?.shifts || []).map(x => ({ key: "s" + (++shiftSeq), worker_id: x.worker_id, time_in: x.time_in, time_out: x.time_out, kpi_bonus: x.kpi_bonus, allowance: x.allowance, note: x.note || "" })),
+    openShifts: (entry?.shifts || []).filter(x => !x.time_out),
+    shifts: (entry?.shifts || []).filter(x => x.time_out).map(x => ({ key: "s" + (++shiftSeq), worker_id: x.worker_id, time_in: x.time_in, time_out: x.time_out, kpi_bonus: x.kpi_bonus, allowance: x.allowance, note: x.note || "" })),
     expenses: (entry?.expenses || []).map(e => ({ description: e.description || "", amount: e.amount })),
     saved: !!entry?.is_saved, dirty: false,
   };
@@ -319,6 +320,11 @@ function DailyEntriesApp() {
             <a href="/admin/payroll" style={{ fontSize: 12, fontWeight: 700, color: C.brand }}>Quản lý nhân viên & bảng lương →</a>
           </div>
           <div style={{ fontSize: 12, color: C.ink3, marginBottom: 10 }}>Chọn ca để điền nhanh giờ vào/ra rồi sửa theo giờ thực tế. Lương = giờ × lương giờ (thử việc {opsFmt(store.wage_probation)}, chính thức từ {opsFmt(store.wage_official)}, tăng theo thâm niên) + thưởng KPI + phụ cấp.</div>
+          {entry.openShifts.map((x, i) => (
+            <div key={"open" + i} style={{ fontSize: 12.5, background: C.okBg, color: C.brand, borderRadius: 10, padding: "8px 12px", marginBottom: 8, fontWeight: 600 }}>
+              ● {WORKERS.find(w => w.id === x.worker_id)?.name || "Nhân viên"} đang trong ca từ {x.time_in} (chấm tại quầy) — sẽ tự ghi khi bấm Ra ca
+            </div>
+          ))}
           {WORKERS.length === 0 && <div style={{ fontSize: 12.5, color: "#B4762A", marginBottom: 8 }}>Chưa có nhân viên — thêm ở <a href="/admin/payroll" style={{ color: "#B4762A", fontWeight: 700 }}>Bảng lương</a>.</div>}
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
             {entry.shifts.map(x => {

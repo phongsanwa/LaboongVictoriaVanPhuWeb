@@ -14,6 +14,7 @@ use App\Models\Worker;
 use App\Models\Order;
 use App\Support\PosGeneralReportImport;
 use App\Support\PosSalesImport;
+use App\Support\ShopTime;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Carbon;
 use Illuminate\Http\Request;
@@ -31,10 +32,10 @@ class DailyEntriesController extends Controller
     public function index(Request $request)
     {
         // ?date=YYYY-MM-DD to enter or correct a past day; never a future one.
-        $date = Carbon::today();
+        $date = ShopTime::today();
         if ($request->filled('date')) {
             try { $date = Carbon::createFromFormat('Y-m-d', $request->query('date'))->startOfDay(); } catch (\Throwable) {}
-            if ($date->isFuture()) $date = Carbon::today();
+            if ($date->gt(ShopTime::today())) $date = ShopTime::today();
         }
 
         $admin = Auth::user();
@@ -60,7 +61,7 @@ class DailyEntriesController extends Controller
                         'price_l' => (float) $r->price_l,
                     ])
                     ->values(),
-                'today'   => now()->toDateString(),
+                'today'   => ShopTime::today()->toDateString(),
                 'date'    => $date->toDateString(),
                 'channels' => DailyEntryChannel::CHANNELS,
                 'shift_presets' => self::SHIFT_PRESETS,
@@ -90,7 +91,7 @@ class DailyEntriesController extends Controller
     public function save(Request $request, Store $store)
     {
         $data = $request->validate([
-            'date'                    => ['required', 'date_format:Y-m-d', 'before_or_equal:today'],
+            'date'                    => ['required', 'date_format:Y-m-d', 'before_or_equal:' . ShopTime::today()->toDateString()],
             'is_saved'                => ['boolean'],
             'sales'                   => ['nullable', 'array'],
             'sales.*.recipe_id'       => ['required', 'integer', 'exists:recipes,id'],
@@ -127,7 +128,8 @@ class DailyEntriesController extends Controller
                 ]
             );
 
-            $entry->shifts()->delete();
+            // Shifts still open from the POS clock stay; closed ones are replaced by the form.
+            $entry->shifts()->whereNotNull('time_out')->delete();
             $day = Carbon::parse($data['date']);
             foreach ($data['shifts'] ?? [] as $sh) {
                 $worker = Worker::findOrFail($sh['worker_id']);
@@ -228,7 +230,7 @@ class DailyEntriesController extends Controller
             'discount_total'   => (float) $e->discount_total,
             'commission_total' => (float) $e->commission_total,
             'shifts'     => $e->shifts->map(fn ($x) => [
-                'worker_id' => $x->worker_id, 'time_in' => substr($x->time_in, 0, 5), 'time_out' => substr($x->time_out, 0, 5),
+                'worker_id' => $x->worker_id, 'time_in' => substr($x->time_in, 0, 5), 'time_out' => $x->time_out ? substr($x->time_out, 0, 5) : null,
                 'hours' => $x->hours, 'rate' => $x->rate, 'kpi_bonus' => $x->kpi_bonus, 'allowance' => $x->allowance,
                 'note' => $x->note, 'wage_total' => $x->wage_total,
             ])->values(),

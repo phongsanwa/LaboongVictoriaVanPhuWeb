@@ -134,6 +134,59 @@ function MemberLookup({ code, setCode, onLookup, found, error, busy }) {
   );
 }
 
+/* Chấm công: nhân viên bấm Vào ca / Ra ca, giờ lấy theo đồng hồ máy chủ. */
+function Attendance({ storeId, onBack }) {
+  const [list, setList] = useState(null);
+  const [busy, setBusy] = useState(null);
+  const [msg, setMsg] = useState(null);
+  const [now, setNow] = useState(new Date());
+  useEffect(() => { const t = setInterval(() => setNow(new Date()), 15000); return () => clearInterval(t); }, []);
+  const load = async () => {
+    const { ok, data } = await apiCall("GET", "/pos/attendance?store_id=" + (storeId || ""));
+    if (ok) setList(data.workers); else setMsg({ err: true, text: data.message || "Không tải được danh sách." });
+  };
+  useEffect(() => { load(); }, [storeId]);
+  const act = async (w, dir) => {
+    if (dir === "out" && !confirm(`${w.name} ra ca bây giờ?`)) return;
+    setBusy(w.id); setMsg(null);
+    const { ok, data } = await apiCall("POST", `/pos/attendance/${w.id}/${dir}`, { store_id: storeId });
+    setBusy(null);
+    setMsg({ err: !ok, text: data.message || (ok ? "Đã ghi." : "Có lỗi, thử lại.") });
+    if (ok) setList(data.workers);
+  };
+  return (
+    <div className="card">
+      <div className="card-pad">
+        <button className="linkback" onClick={onBack}>← Trang chủ</button>
+        <div className="step-title">Chấm công nhân viên</div>
+        <div className="step-desc">Bấm <b>Vào ca</b> khi bắt đầu làm và <b>Ra ca</b> khi về · Bây giờ {now.toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit", timeZone: "Asia/Ho_Chi_Minh" })}</div>
+        {msg && <div style={{ margin: "10px 0", padding: "10px 14px", borderRadius: 12, fontWeight: 600, fontSize: 14, background: msg.err ? "#FBEAE3" : "#EAF3EE", color: msg.err ? "#C0552B" : "var(--brand)" }}>{msg.text}</div>}
+        {list === null ? <div style={{ padding: 20, textAlign: "center", color: "var(--ink-3)" }}>Đang tải…</div>
+          : list.length === 0 ? <div style={{ padding: 20, textAlign: "center", color: "var(--ink-3)" }}>Chưa có nhân viên của quán này — quản lý thêm ở trang Bảng lương.</div>
+          : (
+            <div style={{ display: "flex", flexDirection: "column", gap: 10, marginTop: 12 }}>
+              {list.map(w => (
+                <div key={w.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, padding: "12px 14px", borderRadius: 14, border: "1px solid var(--line)", background: w.on_shift ? "#F0F7F3" : "#fff" }}>
+                  <div style={{ minWidth: 0 }}>
+                    <div style={{ fontWeight: 800, fontSize: 15 }}>{w.name}</div>
+                    <div style={{ fontSize: 12.5, color: w.on_shift ? "var(--brand)" : "var(--ink-3)", fontWeight: 600 }}>
+                      {w.on_shift ? `● Đang trong ca từ ${w.since}` : w.today.length ? `Hôm nay: ${w.today.join(", ")} · ${w.hours_today} giờ` : "Chưa vào ca hôm nay"}
+                    </div>
+                  </div>
+                  <button disabled={busy === w.id} onClick={() => act(w, w.on_shift ? "out" : "in")}
+                    style={{ minWidth: 96, flexShrink: 0, padding: "11px 16px", borderRadius: 12, fontWeight: 800, fontSize: 14, cursor: "pointer", fontFamily: "inherit",
+                      border: w.on_shift ? "1.5px solid #C0552B" : "none", background: w.on_shift ? "#fff" : "var(--brand, #0F623F)", color: w.on_shift ? "#C0552B" : "#fff", opacity: busy === w.id ? 0.6 : 1 }}>
+                    {busy === w.id ? "…" : w.on_shift ? "Ra ca" : "Vào ca"}
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+      </div>
+    </div>
+  );
+}
+
 function App() {
   const [tw, setTweak] = useTweaks(TW_DEFAULTS);
   // Cửa hàng đang bán — nhân viên nhiều cửa hàng phải chọn trước khi thao tác
@@ -284,6 +337,7 @@ function App() {
             <div className="tb-sub">{currentStoreName || STAFF.store}</div>
           )}
         </div>
+        <button className="icon-btn" style={{ width: "auto", height: 34, padding: "0 12px", marginRight: 8, gap: 6, display: "inline-flex", alignItems: "center", fontWeight: 700, fontSize: 13 }} onClick={() => setMode("attendance")} title="Chấm công nhân viên"><Icon name="clock" size={16} />{window.innerWidth >= 480 && " Chấm công"}</button>
         <div className="tb-staff">
           <div className="tb-av">{initials(STAFF.name)}</div>
           <div className="tb-staff-tx"><div className="sn">{STAFF.name}</div><div className="sr">{STAFF.role}</div></div>
@@ -341,6 +395,14 @@ function App() {
                   </div>
                   <span className="mgo"><Icon name="chev" size={18} /></span>
                 </button>
+                <button className="method" onClick={() => setMode("attendance")}>
+                  <div className="mi" style={{ background: "linear-gradient(150deg,#B4762A,#E0983F)" }}><Icon name="clock" size={26} color="#fff" /></div>
+                  <div>
+                    <div className="mt">Chấm công nhân viên</div>
+                    <div className="md">Bấm vào ca / ra ca — giờ làm tự ghi vào bảng lương</div>
+                  </div>
+                  <span className="mgo"><Icon name="chev" size={18} /></span>
+                </button>
                 {CAN_ORDERS && (
                   <a className="method orders" href={ORDERS_URL} style={{ textDecoration: "none", color: "inherit" }}>
                     <div className="mi" style={{ background: "linear-gradient(150deg,#2B6CB0,#4A90D9)" }}><Icon name="bag" size={26} color="#fff" /></div>
@@ -355,6 +417,8 @@ function App() {
             </div>
           </div>
         )}
+
+        {!needStorePick && mode === "attendance" && <Attendance storeId={storeId} onBack={goHome} />}
 
         {!needStorePick && mode === "points" && <div className="flow-steps">
           {[0, 1, 2, 3].map(i => <span key={i} className={"fdot" + (i === dotIndex ? " on" : i < dotIndex ? " done" : "")} />)}
