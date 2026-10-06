@@ -73,7 +73,7 @@ class FlashSalesController extends Controller
 
     private function validated(Request $request): array
     {
-        return $request->validate([
+        $data = $request->validate([
             'name'           => ['required', 'string', 'max:100'],
             'repeat'         => ['required', Rule::in(['once', 'weekly'])],
             'start_date'     => ['required', 'date_format:Y-m-d'],
@@ -94,6 +94,18 @@ class FlashSalesController extends Controller
             'weekdays.required_if' => 'Chọn ít nhất 1 ngày trong tuần để lặp lại.',
             'items.*.product_id.distinct' => 'Mỗi món chỉ thêm một lần.',
         ]);
+
+        $prices = \App\Models\Product::whereIn('id', array_column($data['items'], 'product_id'))->pluck('base_price', 'id');
+        foreach ($data['items'] as $i => $it) {
+            $base = (float) ($prices[$it['product_id']] ?? 0);
+            if ($it['flash_price'] >= $base) {
+                throw \Illuminate\Validation\ValidationException::withMessages([
+                    "items.$i.flash_price" => 'Giá flash phải thấp hơn giá gốc ' . number_format($base, 0, ',', '.') . 'đ.',
+                ]);
+            }
+        }
+
+        return $data;
     }
 
     private function present(FlashSale $s): array

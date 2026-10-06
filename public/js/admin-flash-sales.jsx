@@ -37,6 +37,7 @@ function Editor({ sale, onClose, onSaved }) {
   const [guard, setGuard] = useState({});
   const [consent, setConsent] = useState(false);
   const hasLoss = f.items.some(it => guard[it.product_id] === "loss");
+  const tooHigh = f.items.some(it => Number(it.flash_price) >= it.price);
   const set = (k, v) => setF(x => ({ ...x, [k]: v }));
   const setItem = (i, k, v) => setF(x => ({ ...x, items: x.items.map((it, j) => (j === i ? { ...it, [k]: v } : it)) }));
   const addItem = () => {
@@ -92,7 +93,7 @@ function Editor({ sale, onClose, onSaved }) {
         <div style={{ fontSize: 12, color: "#8A9189", marginBottom: 8 }}>Giá flash sale thay cho giá gốc (size/topping vẫn cộng thêm). Số suất tính riêng cho mỗi phiên; đơn huỷ được hoàn suất.</div>
         {f.items.map((it, i) => (
           <div key={it.product_id} style={{ display: "grid", gridTemplateColumns: "1.6fr 1fr 0.8fr 0.8fr 24px", gap: 8, alignItems: "end", padding: "10px 0", borderTop: "1px solid #F2EFE6" }}>
-            <div><div style={{ fontWeight: 700, fontSize: 13.5 }}>{it.name}</div><div style={{ fontSize: 12, color: "#8A9189" }}>Giá gốc {fmt(it.price)}{it.price ? ` · -${Math.round((1 - it.flash_price / it.price) * 100)}%` : ""}</div></div>
+            <div><div style={{ fontWeight: 700, fontSize: 13.5 }}>{it.name}</div><div style={{ fontSize: 12, color: "#8A9189" }}>Giá gốc {fmt(it.price)}{it.price && Number(it.flash_price) < it.price ? ` · -${Math.round((1 - it.flash_price / it.price) * 100)}%` : ""}</div>{Number(it.flash_price) >= it.price && <div style={{ fontSize: 11.5, color: "#C0392B", fontWeight: 700 }}>Giá flash phải thấp hơn giá gốc</div>}</div>
             <div><label style={{ ...lbl, fontSize: 11 }}>Giá flash</label><input type="number" min="0" step="1000" value={it.flash_price} onChange={e => setItem(i, "flash_price", e.target.value)} style={inp} /></div>
             <div><label style={{ ...lbl, fontSize: 11 }}>Số suất</label><input type="number" min="1" placeholder="∞" value={it.quota ?? ""} onChange={e => setItem(i, "quota", e.target.value)} style={inp} /></div>
             <div><label style={{ ...lbl, fontSize: 11 }}>Tối đa/khách</label><input type="number" min="1" placeholder="∞" value={it.per_customer ?? ""} onChange={e => setItem(i, "per_customer", e.target.value)} style={inp} /></div>
@@ -111,7 +112,7 @@ function Editor({ sale, onClose, onSaved }) {
         <LossConsent show={hasLoss} checked={consent} onChange={setConsent} />
         {err && <div style={{ marginTop: 14, padding: "10px 14px", background: "#FBEAE3", color: "#C0552B", borderRadius: 10, fontWeight: 600, fontSize: 13.5 }}>{err}</div>}
         <div style={{ display: "flex", gap: 10, marginTop: 22 }}>
-          <button className="btn primary" disabled={busy || (hasLoss && !consent)} onClick={save} style={{ flex: 1 }}>{busy ? "Đang lưu…" : sale ? "Lưu thay đổi" : "Tạo đợt flash sale"}</button>
+          <button className="btn primary" disabled={busy || tooHigh || (hasLoss && !consent)} onClick={save} style={{ flex: 1 }}>{busy ? "Đang lưu…" : sale ? "Lưu thay đổi" : "Tạo đợt flash sale"}</button>
           <button className="btn ghost" onClick={onClose}>Huỷ</button>
         </div>
       </div>
