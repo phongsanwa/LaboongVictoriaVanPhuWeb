@@ -62,7 +62,8 @@ function Calculator({ settings }) {
     if (!p || !p.m.known) return null;
     const qty = Math.max(1, Number(f.qty) || 1);
     const cogs = (f.size === "L" ? p.l.cogs : p.m.cogs) * qty;
-    const unit = f.flash !== "" ? Number(f.flash) || 0 : p.price;
+    const flashOn = f.flash !== "" && Number(f.flash) < p.price;
+    const unit = flashOn ? Number(f.flash) || 0 : p.price;
     const gross = unit * qty;
     const voucher = f.voucherType === "pct" ? gross * (Number(f.voucher) || 0) / 100 : Number(f.voucher) || 0;
     const points = (Number(f.points) || 0);
@@ -74,8 +75,8 @@ function Calculator({ settings }) {
     const before = paid - fees - cogs - ship;
     const profit = before - fixed;
     const margin = paid > 0 ? profit / paid * 100 : -100;
-    const min = f.flash !== "" ? settings.flash_min_margin_pct : settings.min_margin_pct;
-    return { qty, list: p.price * qty, gross, voucher, points, paid, fees, feesPct, cogs, ship, fixed, before, profit, margin, min,
+    const min = flashOn ? settings.flash_min_margin_pct : settings.min_margin_pct;
+    return { flashTooHigh: f.flash !== "" && !flashOn, qty, list: p.price * qty, gross, voucher, points, paid, fees, feesPct, cogs, ship, fixed, before, profit, margin, min,
       status: before < 0 ? "loss" : margin < min ? "thin" : "ok" };
   }, [f, p, settings]);
   const line = (l, v, neg, bold) => (
@@ -93,7 +94,8 @@ function Calculator({ settings }) {
         <div><label style={lbl}>Size</label><select value={f.size} onChange={e => set("size", e.target.value)} style={inp}><option>M</option><option>L</option></select></div>
         <div><label style={lbl}>Số ly</label><input type="number" min="1" value={f.qty} onChange={e => set("qty", e.target.value)} style={inp} /></div>
         <div><label style={lbl}>Kênh bán</label><select value={f.channel} onChange={e => set("channel", e.target.value)} style={inp}>{Object.entries(D.channels).map(([k, v]) => <option key={k} value={k}>{v} ({settings.commission[k] || 0}%)</option>)}</select></div>
-        <div><label style={lbl}>Giá flash / ly (trống = giá gốc)</label><input type="number" step="1000" value={f.flash} onChange={e => set("flash", e.target.value)} style={inp} /></div>
+        <div><label style={lbl}>Giá flash / ly (trống = giá gốc)</label><input type="number" step="1000" value={f.flash} onChange={e => set("flash", e.target.value)} style={inp} />
+          {r && r.flashTooHigh && <div style={{ fontSize: 11.5, color: "#C0392B", marginTop: 4, fontWeight: 600 }}>Giá flash phải thấp hơn giá gốc {fmt(p.price)}. Đang tính theo giá gốc.</div>}</div>
         <div><label style={lbl}>Voucher</label>
           <div style={{ display: "flex", gap: 6 }}>
             <input type="number" min="0" value={f.voucher} onChange={e => set("voucher", e.target.value)} style={inp} />
