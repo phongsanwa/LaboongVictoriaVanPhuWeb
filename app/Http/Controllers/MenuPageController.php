@@ -77,7 +77,8 @@ class MenuPageController extends Controller
         $variantsByProduct = $allVariantRows->groupBy('product_id');
 
         // --- Menu items ---
-        $menu = $products->map(function (Product $p) use ($allScopePromo, $specificPromoMap, $variantsByProduct) {
+        [$flashItems] = \App\Models\FlashSale::liveItems();
+        $menu = $products->map(function (Product $p) use ($allScopePromo, $specificPromoMap, $variantsByProduct, $flashItems) {
             $catSlug = $p->category?->slug ?? '';
             $grad    = $p->color ?? (self::GRAD_FALLBACKS[$catSlug] ?? self::DEFAULT_GRAD);
 
@@ -89,6 +90,11 @@ class MenuPageController extends Controller
             $basePrice = (int) $p->base_price;
             $promo     = $specificPromoMap[$p->id] ?? $allScopePromo;
             $salePrice = $promo ? $promo->calcSalePrice($basePrice) : null;
+            $flash     = $flashItems[$p->id] ?? null;
+            if ($flash && $flash->flash_price < ($salePrice ?? $basePrice)) {
+                $salePrice = $flash->flash_price;
+                $promo = null;
+            }
 
             // Build per-product variant map: {TYPE: {name: {extra, available}}}
             $variants = [];
@@ -106,7 +112,7 @@ class MenuPageController extends Controller
                 'desc'       => $p->description ?? '',
                 'price'      => $basePrice,
                 'salePrice'  => $salePrice,
-                'promoLabel' => $promo ? $promo->badgeLabel() : null,
+                'promoLabel' => $flash && $salePrice === $flash->flash_price ? '⚡ Flash sale' : ($promo ? $promo->badgeLabel() : null),
                 'grad'       => $grad,
                 'img'        => $p->image_url ?: null,
                 'tags'       => $tags,

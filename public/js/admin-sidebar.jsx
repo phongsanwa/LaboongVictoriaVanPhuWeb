@@ -20,6 +20,7 @@ const SIDEBAR_NAV = [
   { ic: 'cup',     label: 'Thực đơn',            href: '/admin/menu' },
   { ic: 'gift',    label: 'Combo',               href: '/admin/combos' },
   { ic: 'percent', label: 'Khuyến mãi',          href: '/admin/promotions' },
+  { ic: 'flame',   label: 'Flash Sale',          href: '/admin/flash-sales' },
   { ic: 'plus',    label: 'Variant / Tuỳ chọn', href: '/admin/variants' },
   { ic: 'pin',     label: 'Cửa hàng',            href: '/admin/stores' },
   { ic: 'shield',  label: 'Phân quyền',          href: '/admin/roles' },
