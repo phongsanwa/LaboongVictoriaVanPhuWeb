@@ -14,6 +14,8 @@ class Store extends Model
         'royalty_pct',
         'wage_probation',
         'wage_official',
+        'raise_amount',
+        'raise_every_months',
         'city',
         'phone',
         'email',

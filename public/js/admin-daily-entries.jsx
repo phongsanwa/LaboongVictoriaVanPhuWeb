@@ -161,7 +161,7 @@ function DailyEntriesApp() {
   const expenseTotal = entry.expenses.reduce((s, x) => s + (Number(x.amount) || 0), 0);
   const channelTotal = CHANNELS.reduce((s, [k]) => s + (Number(entry.channels[k].net) || 0), 0);
   const realRevenue = channelTotal > 0 ? channelTotal : revenue;
-  const rateOf = wid => { const w = WORKERS.find(x => x.id === Number(wid)); return w ? (w.official ? store.wage_official : store.wage_probation) : 0; };
+  const rateOf = wid => { const w = WORKERS.find(x => x.id === Number(wid)); return w ? (w.rates?.[active] ?? (w.official ? store.wage_official : store.wage_probation)) : 0; };
   const wageOf = x => Math.round(hoursBetween(x.time_in, x.time_out) * rateOf(x.worker_id)) + (Number(x.kpi_bonus) || 0) + (Number(x.allowance) || 0);
   const laborTotal = entry.shifts.reduce((a, x) => a + (x.worker_id ? wageOf(x) : 0), 0);
   const incompleteShift = entry.shifts.some(x => (x.worker_id || x.time_in || x.time_out) && !(x.worker_id && x.time_in && x.time_out));
@@ -318,7 +318,7 @@ function DailyEntriesApp() {
             <span>Nhân viên trong ngày</span>
             <a href="/admin/payroll" style={{ fontSize: 12, fontWeight: 700, color: C.brand }}>Quản lý nhân viên & bảng lương →</a>
           </div>
-          <div style={{ fontSize: 12, color: C.ink3, marginBottom: 10 }}>Chọn ca để điền nhanh giờ vào/ra rồi sửa theo giờ thực tế. Lương = giờ × lương giờ (thử việc {opsFmt(store.wage_probation)}, chính thức {opsFmt(store.wage_official)}) + thưởng KPI + phụ cấp.</div>
+          <div style={{ fontSize: 12, color: C.ink3, marginBottom: 10 }}>Chọn ca để điền nhanh giờ vào/ra rồi sửa theo giờ thực tế. Lương = giờ × lương giờ (thử việc {opsFmt(store.wage_probation)}, chính thức từ {opsFmt(store.wage_official)}, tăng theo thâm niên) + thưởng KPI + phụ cấp.</div>
           {WORKERS.length === 0 && <div style={{ fontSize: 12.5, color: "#B4762A", marginBottom: 8 }}>Chưa có nhân viên — thêm ở <a href="/admin/payroll" style={{ color: "#B4762A", fontWeight: 700 }}>Bảng lương</a>.</div>}
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
             {entry.shifts.map(x => {
@@ -329,7 +329,7 @@ function DailyEntriesApp() {
                     <div style={{ gridColumn: narrow ? "1 / -1" : "auto" }}><div style={label}>Nhân viên</div>
                       <select value={x.worker_id} onChange={e => setShift(x.key, { worker_id: e.target.value })} style={inp}>
                         <option value="">-- Chọn --</option>
-                        {storeWorkers.map(w => <option key={w.id} value={w.id}>{w.name} · {w.official ? "chính thức" : "thử việc"}{w.store_id !== active ? " (quán khác)" : ""}</option>)}
+                        {storeWorkers.map(w => <option key={w.id} value={w.id}>{w.name} · {w.official ? "chính thức" : "thử việc"} · {opsFmt(w.rates?.[active] ?? 0)}/h{w.store_id !== active ? " (quán khác)" : ""}</option>)}
                       </select>
                     </div>
                     <div><div style={label}>Vào</div><input type="time" value={x.time_in} onChange={e => setShift(x.key, { time_in: e.target.value })} style={inp} /></div>

@@ -24,6 +24,7 @@ class PayrollController extends Controller
             'month'   => $month->format('Y-m'),
             'stores'  => Store::orderBy('id')->get()->map(fn ($s) => [
                 'id' => $s->id, 'name' => $s->name, 'wage_probation' => (int) $s->wage_probation, 'wage_official' => (int) $s->wage_official,
+                'raise_amount' => (int) $s->raise_amount, 'raise_every_months' => (int) $s->raise_every_months,
             ])->values(),
             'workers' => Worker::orderByDesc('active')->orderBy('name')->get()->map(fn ($w) => $this->presentWorker($w))->values(),
             'rows'    => $this->summary($month),
@@ -47,6 +48,8 @@ class PayrollController extends Controller
         $data = $request->validate([
             'wage_probation' => ['required', 'integer', 'min:0', 'max:1000000'],
             'wage_official'  => ['required', 'integer', 'min:0', 'max:1000000'],
+            'raise_amount'   => ['required', 'integer', 'min:0', 'max:1000000'],
+            'raise_every_months' => ['required', 'integer', 'min:1', 'max:120'],
         ]);
         $store->update($data);
         return response()->json(['ok' => true]);
@@ -123,6 +126,7 @@ class PayrollController extends Controller
             'store_id'      => ['nullable', 'integer', 'exists:stores,id'],
             'type'          => ['required', Rule::in(array_keys(Worker::TYPES))],
             'official_from' => ['nullable', 'date_format:Y-m-d'],
+            'rate_adjust'   => ['nullable', 'integer', 'min:-1000000', 'max:1000000'],
             'active'        => ['boolean'],
         ], ['name.required' => 'Nhập tên nhân viên.']);
     }
@@ -132,6 +136,9 @@ class PayrollController extends Controller
         return [
             'id' => $w->id, 'name' => $w->name, 'phone' => $w->phone, 'store_id' => $w->store_id,
             'type' => $w->type, 'official_from' => $w->official_from?->toDateString(), 'active' => $w->active,
+            'rate_adjust' => $w->rate_adjust,
+            'rate_today' => $w->store ? $w->rateOn(now()->startOfDay(), $w->store) : null,
+            'official_months' => $w->officialMonthsOn(now()->startOfDay()),
         ];
     }
 }
