@@ -18,13 +18,13 @@ class OverviewController extends Controller
 
         $stores = Store::where('status', 'active')->get();
 
-        $todayEntries = DailyEntry::with(['sales.recipe', 'expenses', 'channels'])
+        $todayEntries = DailyEntry::with(['sales.recipe', 'expenses', 'channels', 'store'])
             ->whereDate('entry_date', today())
             ->where('is_saved', true)
             ->get()
             ->keyBy('store_id');
 
-        $last7Entries = DailyEntry::with(['sales.recipe', 'expenses', 'channels'])
+        $last7Entries = DailyEntry::with(['sales.recipe', 'expenses', 'channels', 'store'])
             ->whereDate('entry_date', '>=', today()->subDays(6))
             ->whereDate('entry_date', '<=', today())
             ->where('is_saved', true)
@@ -58,7 +58,9 @@ class OverviewController extends Controller
             }
 
             $revenue = $entry->revenue($revenue);
-            $expenses = $entry->expenses->sum('amount');
+            $royalty = $entry->royalty($revenue);
+            // Brand fee counts with the day's expenses so every net-profit figure includes it.
+            $expenses = $entry->expenses->sum('amount') + $royalty;
 
             return compact('revenue', 'cogs', 'expenses', 'cups');
         };
@@ -118,7 +120,9 @@ class OverviewController extends Controller
                     ->orderByDesc('recorded_on')
                     ->value('cogs_l') ?? 0;
                 $cogsM = $cogsL * 0.75;
-                $margins[] = ($recipe->price_m - $cogsM + $recipe->price_l - $cogsL) / 2;
+                // The brand fee takes a share of every cup's price.
+                $keep = 1 - ($stores->avg('royalty_pct') ?? 3) / 100;
+                $margins[] = ($recipe->price_m * $keep - $cogsM + $recipe->price_l * $keep - $cogsL) / 2;
             }
             $avgMarginPerCup = count($margins) > 0 ? array_sum($margins) / count($margins) : 0;
         }

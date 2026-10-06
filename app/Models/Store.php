@@ -11,6 +11,7 @@ class Store extends Model
         'name',
         'address',
         'size',
+        'royalty_pct',
         'city',
         'phone',
         'email',

@@ -41,7 +41,7 @@ class DailyEntriesController extends Controller
                 'stores' => Store::where('status', 'active')
                     ->orderBy('id')
                     ->get()
-                    ->map(fn ($s) => ['id' => $s->id, 'name' => $s->name])
+                    ->map(fn ($s) => ['id' => $s->id, 'name' => $s->name, 'royalty_pct' => (float) $s->royalty_pct])
                     ->values(),
                 'recipes' => Recipe::orderBy('sort_order')
                     ->get()
