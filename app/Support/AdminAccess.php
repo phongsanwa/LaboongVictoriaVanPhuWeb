@@ -30,6 +30,8 @@ class AdminAccess
         'Điểm danh'           => 'checkin_edit',
         'Thực đơn'            => 'menu_edit',
         'Khuyến mãi'          => 'promo_edit',
+        'Flash Sale'          => 'promo_edit',
+        'Cân giá & lãi'       => 'promo_edit',
         'Variant / Tuỳ chọn'  => 'variant_edit',
         'Cửa hàng'            => 'store_edit',
         'Phân quyền'          => 'staff',

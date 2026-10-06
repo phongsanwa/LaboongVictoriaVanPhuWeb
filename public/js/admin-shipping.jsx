@@ -144,7 +144,22 @@ function PromoDrawer({ promo, urls, onSave, onClose }) {
 
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
 
+  // Worst case for the profit check: the most expensive tier within the promo radius.
+  const shipFee = useMemo(() => {
+    const km = form.max_km !== '' ? parseFloat(form.max_km) : null;
+    const fees = (DATA.tiers || []).filter(t => t.is_active !== false && (km === null || +t.min_km < km)).map(t => +t.fee || 0);
+    return fees.length ? Math.max(...fees) : 0;
+  }, [form.max_km]);
+  const subsidy = form.discount_type === 'free' ? shipFee
+    : form.discount_type === 'percent' ? shipFee * (parseFloat(form.discount_value) || 0) / 100
+    : Math.min(shipFee, parseFloat(form.discount_value) || 0);
+  const guardParams = subsidy > 0 ? { type: 'order', subtotal: parseInt(form.min_order_amount) || 50000, discount: 0, ship: Math.round(subsidy) } : null;
+  const [guardStatus, setGuardStatus] = useState(null);
+  const [lossOk, setLossOk] = useState(false);
+  const blockedByLoss = guardParams && guardStatus === 'loss' && !lossOk;
+
   const save = async () => {
+    if (blockedByLoss) return;
     if (!form.name.trim()) { setErr('Vui lòng nhập tên khuyến mãi'); return; }
     if (form.min_order_amount !== '' && (isNaN(+form.min_order_amount) || +form.min_order_amount < 0)) { setErr('Giá trị đơn hàng không hợp lệ'); return; }
     if (form.discount_type !== 'free' && (form.discount_value === '' || isNaN(+form.discount_value))) {
@@ -214,11 +229,16 @@ function PromoDrawer({ promo, urls, onSave, onClose }) {
             </>
           )}
 
+          {guardParams && <div style={{ marginTop: 14 }}>
+            <PriceGuardBadge params={guardParams} onStatus={setGuardStatus} />
+            <div style={{ fontSize: 11.5, color: 'var(--ink-3)', marginTop: 3 }}>Tính với đơn {fmt(guardParams.subtotal)}đ, quán bù ship tối đa {fmt(guardParams.ship)}đ.</div>
+            <LossConsent show={guardStatus === 'loss'} checked={lossOk} onChange={setLossOk} />
+          </div>}
           {err && <div className="cp-err" style={{ marginTop: 14 }}><Icon name="alert" size={14} color="var(--hot)" /> {err}</div>}
         </div>
         <div className="dr-f">
           <button className="btn secondary" onClick={onClose}>Hủy</button>
-          <button className="btn primary" disabled={saving} onClick={save}>
+          <button className="btn primary" disabled={saving || blockedByLoss} onClick={save}>
             {saving ? 'Đang lưu…' : (promo ? 'Lưu thay đổi' : 'Thêm khuyến mãi')}
           </button>
         </div>

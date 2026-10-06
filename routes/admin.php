@@ -151,6 +151,9 @@ Route::middleware(['auth', 'admin.perm'])->prefix('admin')->name('admin.')->grou
         Route::put('/flash-sales/{flashSale}', [FlashSalesController::class, 'update'])->name('flash-sales.update');
         Route::post('/flash-sales/{flashSale}/toggle', [FlashSalesController::class, 'toggle'])->name('flash-sales.toggle');
         Route::delete('/flash-sales/{flashSale}', [FlashSalesController::class, 'destroy'])->name('flash-sales.destroy');
+        Route::get('/price-guard', [\App\Http\Controllers\Admin\PriceGuardController::class, 'index'])->name('price-guard.index');
+        Route::post('/price-guard/check', [\App\Http\Controllers\Admin\PriceGuardController::class, 'check'])->name('price-guard.check');
+        Route::post('/price-guard/settings', [\App\Http\Controllers\Admin\PriceGuardController::class, 'saveSettings'])->name('price-guard.settings');
     });
 
     Route::get('/promotions', [PromotionsController::class, 'index'])->middleware('admin.perm:promo_edit')->name('promotions.index');

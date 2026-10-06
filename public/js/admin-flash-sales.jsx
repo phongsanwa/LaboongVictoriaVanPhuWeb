@@ -1,4 +1,4 @@
-/* global React, ReactDOM, Icon, AdminSidebar */
+/* global React, ReactDOM, Icon, AdminSidebar, PriceGuardBadge, LossConsent */
 const { useState } = React;
 
 const D = window.ADMIN_FLASH_DATA;
@@ -34,6 +34,9 @@ function Editor({ sale, onClose, onSaved }) {
   const [add, setAdd] = useState("");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState(null);
+  const [guard, setGuard] = useState({});
+  const [consent, setConsent] = useState(false);
+  const hasLoss = f.items.some(it => guard[it.product_id] === "loss");
   const set = (k, v) => setF(x => ({ ...x, [k]: v }));
   const setItem = (i, k, v) => setF(x => ({ ...x, items: x.items.map((it, j) => (j === i ? { ...it, [k]: v } : it)) }));
   const addItem = () => {
@@ -94,6 +97,7 @@ function Editor({ sale, onClose, onSaved }) {
             <div><label style={{ ...lbl, fontSize: 11 }}>Số suất</label><input type="number" min="1" placeholder="∞" value={it.quota ?? ""} onChange={e => setItem(i, "quota", e.target.value)} style={inp} /></div>
             <div><label style={{ ...lbl, fontSize: 11 }}>Tối đa/khách</label><input type="number" min="1" placeholder="∞" value={it.per_customer ?? ""} onChange={e => setItem(i, "per_customer", e.target.value)} style={inp} /></div>
             <div onClick={() => set("items", f.items.filter((_, j) => j !== i))} style={{ color: "#C0552B", fontWeight: 800, cursor: "pointer", paddingBottom: 10 }}>×</div>
+            <div style={{ gridColumn: "1 / -1", marginTop: -4 }}><PriceGuardBadge params={{ type: "item", product_id: it.product_id, price: Number(it.flash_price) || 0, kind: "flash" }} onStatus={st => setGuard(g => ({ ...g, [it.product_id]: st }))} /></div>
           </div>
         ))}
         <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
@@ -104,9 +108,10 @@ function Editor({ sale, onClose, onSaved }) {
           <button onClick={addItem} className="btn primary" style={{ whiteSpace: "nowrap" }}>+ Thêm</button>
         </div>
 
+        <LossConsent show={hasLoss} checked={consent} onChange={setConsent} />
         {err && <div style={{ marginTop: 14, padding: "10px 14px", background: "#FBEAE3", color: "#C0552B", borderRadius: 10, fontWeight: 600, fontSize: 13.5 }}>{err}</div>}
         <div style={{ display: "flex", gap: 10, marginTop: 22 }}>
-          <button className="btn primary" disabled={busy} onClick={save} style={{ flex: 1 }}>{busy ? "Đang lưu…" : sale ? "Lưu thay đổi" : "Tạo đợt flash sale"}</button>
+          <button className="btn primary" disabled={busy || (hasLoss && !consent)} onClick={save} style={{ flex: 1 }}>{busy ? "Đang lưu…" : sale ? "Lưu thay đổi" : "Tạo đợt flash sale"}</button>
           <button className="btn ghost" onClick={onClose}>Huỷ</button>
         </div>
       </div>
