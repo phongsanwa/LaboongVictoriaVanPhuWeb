@@ -27,7 +27,7 @@ class ReportsController extends Controller
 
         $stores = Store::where('status', 'active')->get();
 
-        $entries = DailyEntry::with(['sales.recipe', 'expenses', 'channels', 'store'])
+        $entries = DailyEntry::with(['sales.recipe', 'expenses', 'channels', 'store', 'shifts'])
             ->where('entry_date', '>=', today()->subDays(89))
             ->where('is_saved', true)
             ->orderBy('entry_date')
@@ -49,10 +49,14 @@ class ReportsController extends Controller
             $months[] = Carbon::now()->subMonthsNoOverflow($i)->format('Y-m');
         }
         $monthlyCosts = [];
+        $timesheet = collect($months)->mapWithKeys(fn ($ym) => [$ym => StoreMonthlyCost::storesWithShifts($ym)]);
         foreach ($stores as $store) {
             foreach ($months as $ym) {
                 $mc = StoreMonthlyCost::effectiveFor($store->id, $ym);
-                if ($mc) $monthlyCosts[$store->id][$ym] = $mc->total() / 30;
+                if (!$mc) continue;
+                // Wages come from timesheets that month → drop the salary line to avoid counting it twice.
+                $fixed = in_array($store->id, $timesheet[$ym]) ? $mc->totalWithoutSalary() : $mc->total();
+                $monthlyCosts[$store->id][$ym] = $fixed / 30;
             }
         }
 
@@ -86,7 +90,8 @@ class ReportsController extends Controller
 
             $revenue = $entry->revenue($revenue);
             $royalty = $entry->royalty($revenue);
-            $expensesTotal = $entry->expenses->sum('amount') + $royalty;
+            $labor = $entry->laborCost();
+            $expensesTotal = $entry->expenses->sum('amount') + $royalty + $labor;
 
             $entriesByStore[$entry->store_id][] = [
                 'date' => $entry->entry_date->toDateString(),
@@ -94,6 +99,7 @@ class ReportsController extends Controller
                 'cogs' => $cogs,
                 'expenses_total' => $expensesTotal,
                 'royalty' => $royalty,
+                'labor' => $labor,
                 'cups' => $cups,
                 'sales' => $salesData,
             ];

@@ -12,6 +12,8 @@ class Store extends Model
         'address',
         'size',
         'royalty_pct',
+        'wage_probation',
+        'wage_official',
         'city',
         'phone',
         'email',
