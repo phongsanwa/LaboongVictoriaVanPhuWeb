@@ -5,8 +5,7 @@
 @include('partials.favicon')
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <meta name="csrf-token" content="{{ csrf_token() }}" />
-<title>Laboong Admin · Voucher & quà tặng</title>
-<meta name="robots" content="noindex, nofollow" />
+<title>Laboong Admin · Flash Sale</title>
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&family=Baloo+2:wght@600;700;800&display=swap" rel="stylesheet" />
@@ -20,15 +19,13 @@
 <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" crossorigin="anonymous"></script>
 
 <script>
-  window.ADMIN_REWARDS_DATA = @json($rewardsData);
+  window.ADMIN_FLASH_DATA = @json($flashData);
 </script>
 
 <script type="text/babel" src="{{ asset('js/tweaks-panel.jsx') }}?v={{ filemtime(public_path('js/tweaks-panel.jsx')) }}"></script>
 <script type="text/babel" src="{{ asset('js/components.jsx') }}?v={{ filemtime(public_path('js/components.jsx')) }}"></script>
 <script type="text/babel" src="{{ asset('js/price-guard-badge.jsx') }}?v={{ filemtime(public_path('js/price-guard-badge.jsx')) }}"></script>
 <script type="text/babel" src="{{ asset('js/admin-sidebar.jsx') }}?v={{ filemtime(public_path('js/admin-sidebar.jsx')) }}"></script>
-<script type="text/babel" src="{{ asset('js/admin-rewards-data.jsx') }}?v={{ filemtime(public_path('js/admin-rewards-data.jsx')) }}"></script>
-<script type="text/babel" src="{{ asset('js/admin-reward-editor.jsx') }}?v={{ filemtime(public_path('js/admin-reward-editor.jsx')) }}"></script>
-<script type="text/babel" src="{{ asset('js/admin-rewards.jsx') }}?v={{ filemtime(public_path('js/admin-rewards.jsx')) }}"></script>
+<script type="text/babel" src="{{ asset('js/admin-flash-sales.jsx') }}?v={{ filemtime(public_path('js/admin-flash-sales.jsx')) }}"></script>
 </body>
 </html>

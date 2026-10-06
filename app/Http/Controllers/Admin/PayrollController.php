@@ -81,7 +81,7 @@ class PayrollController extends Controller
 
     private function summary(Carbon $month): array
     {
-        $shifts = DailyEntryShift::with(['worker', 'entry.store'])
+        $shifts = DailyEntryShift::with(['worker', 'entry.store'])->whereNotNull('time_out')
             ->whereHas('entry', fn ($q) => $q->whereDate('entry_date', '>=', $month->copy()->startOfMonth())
                 ->whereDate('entry_date', '<=', $month->copy()->endOfMonth()))
             ->get()

@@ -19,6 +19,7 @@ use App\Http\Controllers\Admin\ReportsController;
 use App\Http\Controllers\Admin\VariantsController;
 use App\Http\Controllers\Admin\CombosController;
 use App\Http\Controllers\Admin\DailyEntriesController;
+use App\Http\Controllers\Admin\FlashSalesController;
 use App\Http\Controllers\Admin\IngredientsController;
 use App\Http\Controllers\Admin\OverviewController;
 use App\Http\Controllers\Admin\PayrollController;
@@ -144,6 +145,17 @@ Route::middleware(['auth', 'admin.perm'])->prefix('admin')->name('admin.')->grou
     Route::delete('/stores/{store}/photos', [StoresController::class, 'deletePhoto'])->middleware('admin.perm:store_edit')->name('stores.photos.delete');
 
     // Khuyến mãi
+    Route::middleware('admin.perm:promo_edit')->group(function () {
+        Route::get('/flash-sales', [FlashSalesController::class, 'index'])->name('flash-sales.index');
+        Route::post('/flash-sales', [FlashSalesController::class, 'store'])->name('flash-sales.store');
+        Route::put('/flash-sales/{flashSale}', [FlashSalesController::class, 'update'])->name('flash-sales.update');
+        Route::post('/flash-sales/{flashSale}/toggle', [FlashSalesController::class, 'toggle'])->name('flash-sales.toggle');
+        Route::delete('/flash-sales/{flashSale}', [FlashSalesController::class, 'destroy'])->name('flash-sales.destroy');
+        Route::get('/price-guard', [\App\Http\Controllers\Admin\PriceGuardController::class, 'index'])->name('price-guard.index');
+        Route::post('/price-guard/check', [\App\Http\Controllers\Admin\PriceGuardController::class, 'check'])->name('price-guard.check');
+        Route::post('/price-guard/settings', [\App\Http\Controllers\Admin\PriceGuardController::class, 'saveSettings'])->name('price-guard.settings');
+    });
+
     Route::get('/promotions', [PromotionsController::class, 'index'])->middleware('admin.perm:promo_edit')->name('promotions.index');
     Route::post('/promotions', [PromotionsController::class, 'store'])->middleware('admin.perm:promo_edit')->name('promotions.store');
     Route::post('/promotions/{promotion}', [PromotionsController::class, 'update'])->middleware('admin.perm:promo_edit')->name('promotions.update');
