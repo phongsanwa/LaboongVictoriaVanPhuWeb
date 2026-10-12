@@ -296,7 +296,7 @@ function Recipes({ onBack }) {
           <div style={{ position: "relative" }}>
             <span style={{ position: "absolute", left: 14, top: "50%", transform: "translateY(-50%)", display: "flex" }}><Icon name="search" size={18} color="var(--ink-3)" /></span>
             <input value={q} onChange={e => setQ(e.target.value)} placeholder={SpeechRec ? "Tìm món, nguyên liệu… hoặc bấm micro để nói" : "Tìm món hoặc nguyên liệu… (gõ không dấu được)"} autoFocus
-              style={{ width: "100%", boxSizing: "border-box", padding: `13px ${SpeechRec ? 84 : 40}px 13px 42px`, borderRadius: 14, borderWidth: 1.5, borderStyle: "solid", borderColor: "var(--line)", fontSize: 15, fontFamily: "inherit", outline: "none", background: "#fff" }} />
+              style={{ width: "100%", boxSizing: "border-box", padding: `13px ${SpeechRec ? 84 : 40}px 13px 42px`, borderRadius: 14, borderWidth: 1.5, borderStyle: "solid", borderColor: "var(--line)", fontSize: 16, fontFamily: "inherit", outline: "none", background: "#fff" }} />
             {q && <button onClick={() => setQ("")} title="Xoá" style={{ position: "absolute", right: SpeechRec ? 48 : 8, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", fontSize: 20, color: "var(--ink-3)", cursor: "pointer", padding: 6 }}>×</button>}
             <VoiceButton onText={t => { setQ(t); setOpen(null); }} onHint={setVoiceHint} />
           </div>
