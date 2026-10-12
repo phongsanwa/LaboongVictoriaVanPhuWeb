@@ -188,7 +188,61 @@ function Attendance({ storeId, onBack }) {
 }
 
 /* Công thức pha chế: định lượng theo size + cách pha, tìm không dấu. Không hiện giá vốn. */
-const noAccent = t => (t || "").normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/đ/g, "d").replace(/Đ/g, "D").toLowerCase();
+const noAccent = t => (t || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/đ/g, "d").replace(/Đ/g, "D").toLowerCase();
+// Từ nhận dạng giọng nói hay viết khác tên món.
+const VOICE_ALIASES = [[/\bmat cha\b/g, "matcha"], [/\btop ping\b/g, "topping"], [/\bolong\b/g, "o long"], [/\bbac xiu\b/g, "bac siu"]];
+const searchWords = q => {
+  let t = noAccent(q).replace(/[.,!?;:]/g, " ");
+  VOICE_ALIASES.forEach(([re, to]) => { t = t.replace(re, to); });
+  return t.split(/\s+/).filter(Boolean);
+};
+const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+/* Nút micro: nói tên món → điền vào ô tìm kiếm (Chrome, Safari; cần HTTPS). */
+function VoiceButton({ onText, onHint }) {
+  const [listening, setListening] = useState(false);
+  const [err, setErr] = useState(null);
+  const recRef = useRef(null);
+  useEffect(() => () => recRef.current && recRef.current.abort(), []);
+  useEffect(() => {
+    onHint(err ? { err: true, text: err } : listening ? { text: "Đang nghe… hãy nói tên món, ví dụ \"bồng bềnh lạnh\"" } : null);
+    if (!err) return;
+    const t = setTimeout(() => setErr(null), 6000);
+    return () => clearTimeout(t);
+  }, [listening, err]);
+  if (!SpeechRec) return null;
+  const start = () => {
+    if (listening) { recRef.current && recRef.current.stop(); return; }
+    setErr(null);
+    const rec = new SpeechRec();
+    rec.lang = "vi-VN";
+    rec.interimResults = true;
+    rec.maxAlternatives = 1;
+    rec.onresult = e => {
+      const text = Array.from(e.results).map(r => r[0].transcript).join(" ").replace(/[.!?]+$/, "").trim();
+      if (text) onText(text);
+    };
+    rec.onerror = e => {
+      setErr(e.error === "not-allowed" || e.error === "service-not-allowed" ? "Chưa cho phép dùng micro — bấm biểu tượng ổ khoá trên thanh địa chỉ để bật."
+        : e.error === "no-speech" ? "Không nghe thấy gì, bấm micro và nói lại tên món."
+        : e.error === "network" ? "Nhận dạng giọng nói cần mạng internet."
+        : e.error === "aborted" ? null : "Không nhận dạng được, thử lại.");
+    };
+    rec.onend = () => setListening(false);
+    recRef.current = rec;
+    try { rec.start(); setListening(true); } catch (_) { setListening(false); }
+  };
+  return (
+    <button onClick={start} title={listening ? "Dừng nghe" : "Tìm bằng giọng nói"} aria-label="Tìm bằng giọng nói"
+      className={listening ? "voice-on" : ""}
+      style={{ position: "absolute", right: 6, top: "50%", transform: "translateY(-50%)", width: 38, height: 38, borderRadius: 12, border: "none", cursor: "pointer", display: "grid", placeItems: "center",
+        background: listening ? "#E4402F" : "var(--brand-soft, #EAF3EE)", color: listening ? "#fff" : "var(--brand, #0F623F)" }}>
+      <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <rect x="9" y="3" width="6" height="11" rx="3" /><path d="M5 11a7 7 0 0 0 14 0" /><path d="M12 18v3" />
+      </svg>
+    </button>
+  );
+}
 const fmtQty = q => Number(q).toLocaleString("vi-VN", { maximumFractionDigits: 2 });
 const RECIPE_TABS = [["all", "Tất cả"], ["cold", "Lạnh"], ["hot", "Nóng"], ["topping", "Topping"]];
 
@@ -199,20 +253,35 @@ function Recipes({ onBack }) {
   const [tab, setTab] = useState("all");
   const [size, setSize] = useState("M");
   const [open, setOpen] = useState(null);
+  const [voiceHint, setVoiceHint] = useState(null);
   useEffect(() => {
     apiCall("GET", "/pos/recipes").then(({ ok, data }) => (ok ? setList(data.recipes) : setErr(data.message || "Không tải được công thức.")));
   }, []);
 
-  const words = noAccent(q).split(/\s+/).filter(Boolean);
-  const shown = (list || []).filter(r => {
+  const words = searchWords(q);
+  const inTab = (list || []).filter(r => {
     const n = noAccent(r.name);
     if (tab === "hot" && !/\bnong\b/.test(n)) return false;
     if (tab === "topping" && !/^topping/.test(n)) return false;
     if (tab === "cold" && (/\bnong\b/.test(n) || /^topping/.test(n))) return false;
-    if (!words.length) return true;
-    const hay = n + " " + r.ingredients.map(i => noAccent(i.name)).join(" ");
-    return words.every(w => hay.includes(w));
+    return true;
   });
+  const scored = inTab.map(r => {
+    const n = noAccent(r.name);
+    const hay = n + " " + r.ingredients.map(i => noAccent(i.name)).join(" ");
+    return { r, hit: words.filter(w => hay.includes(w)).length, nameHit: words.filter(w => n.includes(w)).length };
+  });
+  // Tên trùng đúng câu tìm lên đầu, rồi tên bắt đầu bằng / chứa nguyên cụm, rồi các món còn lại.
+  const phrase = words.join(" ");
+  const rank = r => { const n = noAccent(r.name); return n === phrase ? 0 : n.startsWith(phrase) ? 1 : n.includes(phrase) ? 2 : 3; };
+  let shown = words.length ? scored.filter(x => x.hit === words.length).map(x => x.r).sort((a, b) => rank(a) - rank(b)) : inTab;
+  // Nói thừa chữ ("công thức bồng bềnh") → không món nào khớp hết; hiện món khớp nhiều chữ nhất.
+  let fuzzy = false;
+  if (words.length > 1 && shown.length === 0) {
+    const need = Math.ceil(words.length / 2);
+    shown = scored.filter(x => x.hit >= need).sort((a, b) => b.hit - a.hit || b.nameHit - a.nameHit).map(x => x.r);
+    fuzzy = shown.length > 0;
+  }
   const autoOpen = shown.length <= 2;
 
   const qtyOf = i => (size === "M" ? i.m : i.l);
@@ -226,10 +295,14 @@ function Recipes({ onBack }) {
         <div style={{ position: "sticky", top: 0, zIndex: 2, background: "var(--card, #fff)", padding: "8px 0 10px" }}>
           <div style={{ position: "relative" }}>
             <span style={{ position: "absolute", left: 14, top: "50%", transform: "translateY(-50%)", display: "flex" }}><Icon name="search" size={18} color="var(--ink-3)" /></span>
-            <input value={q} onChange={e => setQ(e.target.value)} placeholder="Tìm món hoặc nguyên liệu… (gõ không dấu được)" autoFocus
-              style={{ width: "100%", boxSizing: "border-box", padding: "13px 40px 13px 42px", borderRadius: 14, borderWidth: 1.5, borderStyle: "solid", borderColor: "var(--line)", fontSize: 15, fontFamily: "inherit", outline: "none", background: "#fff" }} />
-            {q && <button onClick={() => setQ("")} title="Xoá" style={{ position: "absolute", right: 8, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", fontSize: 20, color: "var(--ink-3)", cursor: "pointer", padding: 6 }}>×</button>}
+            <input value={q} onChange={e => setQ(e.target.value)} placeholder={SpeechRec ? "Tìm món, nguyên liệu… hoặc bấm micro để nói" : "Tìm món hoặc nguyên liệu… (gõ không dấu được)"} autoFocus
+              style={{ width: "100%", boxSizing: "border-box", padding: `13px ${SpeechRec ? 84 : 40}px 13px 42px`, borderRadius: 14, borderWidth: 1.5, borderStyle: "solid", borderColor: "var(--line)", fontSize: 15, fontFamily: "inherit", outline: "none", background: "#fff" }} />
+            {q && <button onClick={() => setQ("")} title="Xoá" style={{ position: "absolute", right: SpeechRec ? 48 : 8, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", fontSize: 20, color: "var(--ink-3)", cursor: "pointer", padding: 6 }}>×</button>}
+            <VoiceButton onText={t => { setQ(t); setOpen(null); }} onHint={setVoiceHint} />
           </div>
+          {voiceHint && (
+            <div style={{ marginTop: 8, padding: "8px 12px", borderRadius: 10, fontSize: 13, fontWeight: 600, background: voiceHint.err ? "#FBEAE3" : "#FFF3F1", color: voiceHint.err ? "#C0552B" : "#E4402F" }}>{voiceHint.text}</div>
+          )}
           <div style={{ display: "flex", justifyContent: "space-between", gap: 8, marginTop: 10, flexWrap: "wrap" }}>
             <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
               {RECIPE_TABS.map(([k, l]) => (
@@ -249,7 +322,7 @@ function Recipes({ onBack }) {
           : shown.length === 0 ? <div style={{ padding: 20, textAlign: "center", color: "var(--ink-3)" }}>Không tìm thấy công thức nào{q ? ` cho "${q}"` : ""}.</div>
           : (
             <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-              <div style={{ fontSize: 12.5, color: "var(--ink-3)" }}>{shown.length} công thức · định lượng size {size}</div>
+              <div style={{ fontSize: 12.5, color: "var(--ink-3)" }}>{fuzzy ? `Không có món khớp hết "${q}" — ${shown.length} món gần đúng` : `${shown.length} công thức`} · định lượng size {size}</div>
               {shown.map(r => {
                 const isOpen = autoOpen || open === r.id;
                 const rows = rowsFor(r);

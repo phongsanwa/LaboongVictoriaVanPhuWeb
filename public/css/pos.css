@@ -209,3 +209,7 @@ a.method { text-decoration: none; color: inherit; }
 
 .tb-mark:has(.brand-logo-img) { background: #fff; }
 .tb-mark:has(.brand-logo-img)::after { display: none; }
+
+/* Nút tìm bằng giọng nói đang nghe */
+.voice-on { animation: voicepulse 1.2s ease-in-out infinite; }
+@keyframes voicepulse { 0%,100% { box-shadow: 0 0 0 0 rgba(228,64,47,.45); } 50% { box-shadow: 0 0 0 8px rgba(228,64,47,0); } }
