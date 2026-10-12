@@ -187,6 +187,115 @@ function Attendance({ storeId, onBack }) {
   );
 }
 
+/* Công thức pha chế: định lượng theo size + cách pha, tìm không dấu. Không hiện giá vốn. */
+const noAccent = t => (t || "").normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/đ/g, "d").replace(/Đ/g, "D").toLowerCase();
+const fmtQty = q => Number(q).toLocaleString("vi-VN", { maximumFractionDigits: 2 });
+const RECIPE_TABS = [["all", "Tất cả"], ["cold", "Lạnh"], ["hot", "Nóng"], ["topping", "Topping"]];
+
+function Recipes({ onBack }) {
+  const [list, setList] = useState(null);
+  const [err, setErr] = useState(null);
+  const [q, setQ] = useState("");
+  const [tab, setTab] = useState("all");
+  const [size, setSize] = useState("M");
+  const [open, setOpen] = useState(null);
+  useEffect(() => {
+    apiCall("GET", "/pos/recipes").then(({ ok, data }) => (ok ? setList(data.recipes) : setErr(data.message || "Không tải được công thức.")));
+  }, []);
+
+  const words = noAccent(q).split(/\s+/).filter(Boolean);
+  const shown = (list || []).filter(r => {
+    const n = noAccent(r.name);
+    if (tab === "hot" && !/\bnong\b/.test(n)) return false;
+    if (tab === "topping" && !/^topping/.test(n)) return false;
+    if (tab === "cold" && (/\bnong\b/.test(n) || /^topping/.test(n))) return false;
+    if (!words.length) return true;
+    const hay = n + " " + r.ingredients.map(i => noAccent(i.name)).join(" ");
+    return words.every(w => hay.includes(w));
+  });
+  const autoOpen = shown.length <= 2;
+
+  const qtyOf = i => (size === "M" ? i.m : i.l);
+  const rowsFor = r => r.ingredients.filter(i => qtyOf(i) === null || Number(qtyOf(i)) > 0);
+
+  return (
+    <div className="card">
+      <div className="card-pad">
+        <button className="linkback" onClick={onBack}>← Trang chủ</button>
+        <div className="step-title">Công thức pha chế</div>
+        <div style={{ position: "sticky", top: 0, zIndex: 2, background: "var(--card, #fff)", padding: "8px 0 10px" }}>
+          <div style={{ position: "relative" }}>
+            <span style={{ position: "absolute", left: 14, top: "50%", transform: "translateY(-50%)", display: "flex" }}><Icon name="search" size={18} color="var(--ink-3)" /></span>
+            <input value={q} onChange={e => setQ(e.target.value)} placeholder="Tìm món hoặc nguyên liệu… (gõ không dấu được)" autoFocus
+              style={{ width: "100%", boxSizing: "border-box", padding: "13px 40px 13px 42px", borderRadius: 14, borderWidth: 1.5, borderStyle: "solid", borderColor: "var(--line)", fontSize: 15, fontFamily: "inherit", outline: "none", background: "#fff" }} />
+            {q && <button onClick={() => setQ("")} title="Xoá" style={{ position: "absolute", right: 8, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", fontSize: 20, color: "var(--ink-3)", cursor: "pointer", padding: 6 }}>×</button>}
+          </div>
+          <div style={{ display: "flex", justifyContent: "space-between", gap: 8, marginTop: 10, flexWrap: "wrap" }}>
+            <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+              {RECIPE_TABS.map(([k, l]) => (
+                <button key={k} onClick={() => setTab(k)} style={{ padding: "7px 12px", borderRadius: 999, fontWeight: 700, fontSize: 13, cursor: "pointer", fontFamily: "inherit", borderWidth: 1.5, borderStyle: "solid", borderColor: tab === k ? "var(--brand)" : "var(--line)", background: tab === k ? "var(--brand-soft, #EAF3EE)" : "#fff", color: tab === k ? "var(--brand)" : "var(--ink-2)" }}>{l}</button>
+              ))}
+            </div>
+            <div style={{ display: "flex", gap: 4, background: "#F1EFE7", padding: 3, borderRadius: 10 }}>
+              {["M", "L"].map(z => (
+                <button key={z} onClick={() => setSize(z)} style={{ padding: "6px 14px", borderRadius: 8, border: "none", fontWeight: 800, fontSize: 13, cursor: "pointer", fontFamily: "inherit", background: size === z ? "var(--brand, #0F623F)" : "transparent", color: size === z ? "#fff" : "var(--ink-2)" }}>Size {z}</button>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {err ? <div style={{ padding: 14, borderRadius: 12, background: "#FBEAE3", color: "#C0552B", fontWeight: 600 }}>{err}</div>
+          : list === null ? <div style={{ padding: 20, textAlign: "center", color: "var(--ink-3)" }}>Đang tải…</div>
+          : shown.length === 0 ? <div style={{ padding: 20, textAlign: "center", color: "var(--ink-3)" }}>Không tìm thấy công thức nào{q ? ` cho "${q}"` : ""}.</div>
+          : (
+            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+              <div style={{ fontSize: 12.5, color: "var(--ink-3)" }}>{shown.length} công thức · định lượng size {size}</div>
+              {shown.map(r => {
+                const isOpen = autoOpen || open === r.id;
+                const rows = rowsFor(r);
+                const drink = rows.filter(i => !i.packaging);
+                const pack = rows.filter(i => i.packaging);
+                const steps = (r.instructions || "").split(/\r?\n/).map(t => t.trim()).filter(Boolean);
+                return (
+                  <div key={r.id} style={{ borderRadius: 14, borderWidth: 1, borderStyle: "solid", borderColor: isOpen ? "var(--brand)" : "var(--line)", background: "#fff", overflow: "hidden" }}>
+                    <button onClick={() => setOpen(isOpen && !autoOpen ? null : r.id)} style={{ width: "100%", display: "flex", alignItems: "center", gap: 10, padding: "12px 14px", background: "none", border: "none", cursor: "pointer", textAlign: "left", fontFamily: "inherit" }}>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontWeight: 800, fontSize: 15, color: "var(--ink)" }}>{r.name}</div>
+                        {!isOpen && <div style={{ fontSize: 12.5, color: "var(--ink-3)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{drink.map(i => i.name).join(" · ")}</div>}
+                      </div>
+                      <Icon name={isOpen ? "chevdown" : "chev"} size={18} />
+                    </button>
+                    {isOpen && (
+                      <div style={{ padding: "0 14px 14px" }}>
+                        {drink.map((i, k) => (
+                          <div key={k} style={{ display: "flex", justifyContent: "space-between", gap: 12, padding: "8px 0", borderTop: "1px solid #F2EFE6", fontSize: 14 }}>
+                            <span>{i.name}</span>
+                            <b style={{ whiteSpace: "nowrap", color: "var(--brand)" }}>{qtyOf(i) === null ? <span style={{ color: "var(--ink-3)", fontWeight: 600 }}>chưa nhập</span> : `${fmtQty(qtyOf(i))} ${i.unit}`}</b>
+                          </div>
+                        ))}
+                        {pack.length > 0 && (
+                          <div style={{ marginTop: 6, padding: "8px 10px", borderRadius: 10, background: "#F7F5F0", fontSize: 12.5, color: "var(--ink-2)" }}>
+                            <b>Ly & nắp:</b> {pack.map(i => `${i.name}${Number(qtyOf(i)) > 1 ? ` ×${fmtQty(qtyOf(i))}` : ""}`).join(" · ")}
+                          </div>
+                        )}
+                        {steps.length > 0 ? (
+                          <div style={{ marginTop: 12 }}>
+                            <div style={{ fontWeight: 800, fontSize: 13.5, marginBottom: 6 }}>Cách pha</div>
+                            <ol style={{ margin: 0, paddingLeft: 20, fontSize: 14, lineHeight: 1.6 }}>{steps.map((t, k) => <li key={k}>{t}</li>)}</ol>
+                          </div>
+                        ) : <div style={{ marginTop: 10, fontSize: 12, color: "var(--ink-3)" }}>Chưa có hướng dẫn cách pha — quản lý thêm ở trang Công thức món.</div>}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+      </div>
+    </div>
+  );
+}
+
 function App() {
   const [tw, setTweak] = useTweaks(TW_DEFAULTS);
   // Cửa hàng đang bán — nhân viên nhiều cửa hàng phải chọn trước khi thao tác
@@ -338,6 +447,7 @@ function App() {
           )}
         </div>
         <button className="icon-btn" style={{ width: "auto", height: 34, padding: "0 12px", marginRight: 8, gap: 6, display: "inline-flex", alignItems: "center", fontWeight: 700, fontSize: 13 }} onClick={() => setMode("attendance")} title="Chấm công nhân viên"><Icon name="clock" size={16} />{window.innerWidth >= 480 && " Chấm công"}</button>
+        {window.innerWidth >= 480 && <button className="icon-btn" style={{ width: "auto", height: 34, padding: "0 12px", marginRight: 8, gap: 6, display: "inline-flex", alignItems: "center", fontWeight: 700, fontSize: 13 }} onClick={() => setMode("recipes")} title="Công thức pha chế"><Icon name="cup" size={16} /> Công thức</button>}
         <div className="tb-staff">
           <div className="tb-av">{initials(STAFF.name)}</div>
           <div className="tb-staff-tx"><div className="sn">{STAFF.name}</div><div className="sr">{STAFF.role}</div></div>
@@ -403,6 +513,14 @@ function App() {
                   </div>
                   <span className="mgo"><Icon name="chev" size={18} /></span>
                 </button>
+                <button className="method" onClick={() => setMode("recipes")}>
+                  <div className="mi" style={{ background: "linear-gradient(150deg,#7A4A28,#B87045)" }}><Icon name="cup" size={26} color="#fff" /></div>
+                  <div>
+                    <div className="mt">Công thức pha chế</div>
+                    <div className="md">Tra định lượng size M / L và cách pha từng món</div>
+                  </div>
+                  <span className="mgo"><Icon name="chev" size={18} /></span>
+                </button>
                 {CAN_ORDERS && (
                   <a className="method orders" href={ORDERS_URL} style={{ textDecoration: "none", color: "inherit" }}>
                     <div className="mi" style={{ background: "linear-gradient(150deg,#2B6CB0,#4A90D9)" }}><Icon name="bag" size={26} color="#fff" /></div>
@@ -419,6 +537,7 @@ function App() {
         )}
 
         {!needStorePick && mode === "attendance" && <Attendance storeId={storeId} onBack={goHome} />}
+        {!needStorePick && mode === "recipes" && <Recipes onBack={goHome} />}
 
         {!needStorePick && mode === "points" && <div className="flow-steps">
           {[0, 1, 2, 3].map(i => <span key={i} className={"fdot" + (i === dotIndex ? " on" : i < dotIndex ? " done" : "")} />)}

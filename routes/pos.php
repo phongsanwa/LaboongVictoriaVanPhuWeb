@@ -5,6 +5,7 @@ use Illuminate\Support\Facades\Route;
 
 Route::middleware(['auth', 'staff'])->prefix('pos')->name('pos.')->group(function () {
     Route::get('/points', [PosController::class, 'index'])->name('points');
+    Route::get('/recipes', [\App\Http\Controllers\PosRecipesController::class, 'index'])->name('recipes');
     Route::get('/attendance', [\App\Http\Controllers\PosAttendanceController::class, 'index'])->name('attendance');
     Route::post('/attendance/{worker}/in', [\App\Http\Controllers\PosAttendanceController::class, 'clockIn'])->name('attendance.in');
     Route::post('/attendance/{worker}/out', [\App\Http\Controllers\PosAttendanceController::class, 'clockOut'])->name('attendance.out');
