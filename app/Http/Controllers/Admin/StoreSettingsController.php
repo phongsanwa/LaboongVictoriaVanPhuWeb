@@ -41,6 +41,7 @@ class StoreSettingsController extends Controller
             'stores.*.name'    => ['required', 'string', 'max:255'],
             'stores.*.address' => ['nullable', 'string', 'max:1000'],
             'stores.*.size'    => ['nullable', 'string', Rule::in(self::SIZES)],
+            'stores.*.royalty_pct' => ['nullable', 'numeric', 'min:0', 'max:100'],
             'stores.*.costs'   => ['nullable', 'array'],
         ], [
             'stores.*.name.required' => 'Tên quán không được để trống.',
@@ -60,6 +61,7 @@ class StoreSettingsController extends Controller
                     'name'    => trim($s['name']),
                     'address' => trim($s['address'] ?? ''),
                     'size'    => $s['size'] ?? null,
+                    'royalty_pct' => $s['royalty_pct'] ?? 3,
                 ];
 
                 if (!empty($s['id'])) {
@@ -105,6 +107,7 @@ class StoreSettingsController extends Controller
                 'name'         => $s->name,
                 'address'      => $s->address,
                 'size'         => $s->size,
+                'royalty_pct'  => (float) $s->royalty_pct,
                 'costsByMonth' => $s->monthlyCosts
                     ->mapWithKeys(fn ($mc) => [$mc->year_month => (object) StoreMonthlyCost::normalize($mc->costs)])
                     ->all(),

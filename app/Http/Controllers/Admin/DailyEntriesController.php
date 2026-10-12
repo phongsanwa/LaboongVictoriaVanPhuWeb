@@ -9,9 +9,12 @@ use App\Models\DailyEntrySale;
 use App\Models\Recipe;
 use App\Models\Store;
 use App\Models\DailyEntryChannel;
+use App\Models\DailyEntryShift;
+use App\Models\Worker;
 use App\Models\Order;
 use App\Support\PosGeneralReportImport;
 use App\Support\PosSalesImport;
+use App\Support\ShopTime;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Carbon;
 use Illuminate\Http\Request;
@@ -20,13 +23,19 @@ use Illuminate\Support\Facades\DB;
 
 class DailyEntriesController extends Controller
 {
+    public const SHIFT_PRESETS = [
+        ['label' => 'Ca sáng', 'in' => '08:00', 'out' => '12:00'],
+        ['label' => 'Ca chiều', 'in' => '12:00', 'out' => '18:00'],
+        ['label' => 'Ca tối', 'in' => '18:00', 'out' => '23:00'],
+    ];
+
     public function index(Request $request)
     {
         // ?date=YYYY-MM-DD to enter or correct a past day; never a future one.
-        $date = Carbon::today();
+        $date = ShopTime::today();
         if ($request->filled('date')) {
             try { $date = Carbon::createFromFormat('Y-m-d', $request->query('date'))->startOfDay(); } catch (\Throwable) {}
-            if ($date->isFuture()) $date = Carbon::today();
+            if ($date->gt(ShopTime::today())) $date = ShopTime::today();
         }
 
         $admin = Auth::user();
@@ -41,7 +50,7 @@ class DailyEntriesController extends Controller
                 'stores' => Store::where('status', 'active')
                     ->orderBy('id')
                     ->get()
-                    ->map(fn ($s) => ['id' => $s->id, 'name' => $s->name])
+                    ->map(fn ($s) => ['id' => $s->id, 'name' => $s->name, 'royalty_pct' => (float) $s->royalty_pct, 'wage_probation' => (int) $s->wage_probation, 'wage_official' => (int) $s->wage_official])
                     ->values(),
                 'recipes' => Recipe::orderBy('sort_order')
                     ->get()
@@ -52,9 +61,18 @@ class DailyEntriesController extends Controller
                         'price_l' => (float) $r->price_l,
                     ])
                     ->values(),
-                'today'   => now()->toDateString(),
+                'today'   => ShopTime::today()->toDateString(),
                 'date'    => $date->toDateString(),
                 'channels' => DailyEntryChannel::CHANNELS,
+                'shift_presets' => self::SHIFT_PRESETS,
+                'workers' => (function () use ($date) {
+                    $stores = Store::where('status', 'active')->get();
+                    return Worker::where('active', true)->orderBy('name')->get()->map(fn ($w) => [
+                        'id' => $w->id, 'name' => $w->name, 'store_id' => $w->store_id, 'official' => $w->isOfficialOn($date),
+                        // Rate that day at each store (seniority raises included).
+                        'rates' => $stores->mapWithKeys(fn ($s) => [$s->id => $w->rateOn($date, $s)]),
+                    ])->values();
+                })(),
                 // Completed website orders that day, to prefill the "Website" channel.
                 'web_orders' => Order::where('status', 'COMPLETED')
                     ->whereDate('created_at', $date)
@@ -73,7 +91,7 @@ class DailyEntriesController extends Controller
     public function save(Request $request, Store $store)
     {
         $data = $request->validate([
-            'date'                    => ['required', 'date_format:Y-m-d', 'before_or_equal:today'],
+            'date'                    => ['required', 'date_format:Y-m-d', 'before_or_equal:' . ShopTime::today()->toDateString()],
             'is_saved'                => ['boolean'],
             'sales'                   => ['nullable', 'array'],
             'sales.*.recipe_id'       => ['required', 'integer', 'exists:recipes,id'],
@@ -82,6 +100,13 @@ class DailyEntriesController extends Controller
             'expenses'                => ['nullable', 'array'],
             'expenses.*.description'  => ['nullable', 'string'],
             'expenses.*.amount'       => ['required', 'numeric', 'min:0'],
+            'shifts'                  => ['nullable', 'array'],
+            'shifts.*.worker_id'      => ['required', 'integer', 'exists:workers,id'],
+            'shifts.*.time_in'        => ['required', 'date_format:H:i'],
+            'shifts.*.time_out'       => ['required', 'date_format:H:i'],
+            'shifts.*.kpi_bonus'      => ['nullable', 'integer', 'min:0'],
+            'shifts.*.allowance'      => ['nullable', 'integer', 'min:0'],
+            'shifts.*.note'           => ['nullable', 'string', 'max:255'],
             'channels'                => ['nullable', 'array'],
             'channels.*.channel'      => ['required', 'string', 'in:' . implode(',', array_keys(DailyEntryChannel::CHANNELS))],
             'channels.*.net_revenue'  => ['required', 'numeric'],
@@ -102,6 +127,22 @@ class DailyEntriesController extends Controller
                     'commission_total' => $data['commission_total'] ?? 0,
                 ]
             );
+
+            // Shifts still open from the POS clock stay; closed ones are replaced by the form.
+            $entry->shifts()->whereNotNull('time_out')->delete();
+            $day = Carbon::parse($data['date']);
+            foreach ($data['shifts'] ?? [] as $sh) {
+                $worker = Worker::findOrFail($sh['worker_id']);
+                $hours = DailyEntryShift::hoursBetween($sh['time_in'], $sh['time_out']);
+                $rate = $worker->rateOn($day, $store);
+                $kpi = (int) ($sh['kpi_bonus'] ?? 0);
+                $allowance = (int) ($sh['allowance'] ?? 0);
+                $entry->shifts()->create([
+                    'worker_id' => $worker->id, 'time_in' => $sh['time_in'], 'time_out' => $sh['time_out'],
+                    'hours' => $hours, 'rate' => $rate, 'kpi_bonus' => $kpi, 'allowance' => $allowance,
+                    'note' => $sh['note'] ?? null, 'wage_total' => (int) round($hours * $rate) + $kpi + $allowance,
+                ]);
+            }
 
             $entry->channels()->delete();
             foreach ($data['channels'] ?? [] as $ch) {
@@ -132,7 +173,7 @@ class DailyEntriesController extends Controller
                 ]);
             }
 
-            return $entry->load('sales', 'expenses', 'channels');
+            return $entry->load('sales', 'expenses', 'channels', 'shifts');
         });
 
         return response()->json(['entry' => $this->presentEntry($entry)]);
@@ -169,7 +210,7 @@ class DailyEntriesController extends Controller
 
     private function entriesFor(Carbon $date): array
     {
-        return DailyEntry::with(['sales', 'expenses', 'channels'])
+        return DailyEntry::with(['sales', 'expenses', 'channels', 'shifts'])
             ->whereIn('store_id', Store::where('status', 'active')->pluck('id'))
             ->whereDate('entry_date', $date)
             ->get()
@@ -188,6 +229,11 @@ class DailyEntriesController extends Controller
             'gross_revenue'    => (float) $e->gross_revenue,
             'discount_total'   => (float) $e->discount_total,
             'commission_total' => (float) $e->commission_total,
+            'shifts'     => $e->shifts->map(fn ($x) => [
+                'worker_id' => $x->worker_id, 'time_in' => substr($x->time_in, 0, 5), 'time_out' => $x->time_out ? substr($x->time_out, 0, 5) : null,
+                'hours' => $x->hours, 'rate' => $x->rate, 'kpi_bonus' => $x->kpi_bonus, 'allowance' => $x->allowance,
+                'note' => $x->note, 'wage_total' => $x->wage_total,
+            ])->values(),
             'channels'   => $e->channels->map(fn ($c) => ['channel' => $c->channel, 'net_revenue' => (float) $c->net_revenue, 'orders' => $c->orders])->values(),
             'sales'      => $e->sales->map(fn ($s) => [
                 'id'        => $s->id,

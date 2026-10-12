@@ -65,7 +65,7 @@ function compute(dish, size) {
 
 function payloadOf(d) {
   return {
-    name: d.name.trim(), input_mode: d.input_mode, wastage_pct: Number(d.wastage_pct) || 0,
+    name: d.name.trim(), instructions: (d.instructions || "").trim() || null, input_mode: d.input_mode, wastage_pct: Number(d.wastage_pct) || 0,
     packaging_m: Number(d.packaging_m) || 0, packaging_l: Number(d.packaging_l) || 0,
     price_m: Number(d.price_m) || 0, price_l: Number(d.price_l) || 0,
     direct_cogs_m: Number(d.direct_cogs_m) || 0, direct_cogs_l: Number(d.direct_cogs_l) || 0,
@@ -354,6 +354,14 @@ function RecipesApp() {
                 <div style={{ fontSize: 12, color: accent, marginTop: 6, fontWeight: 600 }}>{calc.price ? note : "Nhập giá bán để xem biên lợi nhuận"}</div>
                 {suggest > 0 && calc.price > 0 && <div style={{ fontSize: 12, color: accent, marginTop: 4, fontWeight: 800 }}>Gợi ý: tăng giá bán lên {opsFmt(suggest)} để đạt biên 50%</div>}
               </div>
+            </div>
+
+            <div style={{ marginTop: 20, paddingTop: 20, borderTop: "1px solid #F0EDE5" }}>
+              <div style={{ fontSize: 13.5, fontWeight: 800 }}>Cách pha chế</div>
+              <div style={{ fontSize: 12, color: C.ink3, margin: "4px 0 8px" }}>Nhân viên xem ở mục "Công thức pha chế" trên màn hình thu ngân, cùng định lượng ở trên (không hiện giá vốn). Mỗi bước một dòng.</div>
+              <textarea value={dish.instructions || ""} onChange={e => setField("instructions", e.target.value)} rows={5}
+                placeholder={"VD:\nCho đường nước + cốt trà vào bình lắc\nThêm đá, lắc 10 lần\nĐổ ra ly, phủ kem trứng"}
+                style={{ width: "100%", borderWidth: 1.5, borderStyle: "solid", borderColor: C.line, borderRadius: 12, padding: "10px 12px", fontSize: 13.5, fontFamily: "inherit", lineHeight: 1.5, resize: "vertical", outline: "none", boxSizing: "border-box" }} />
             </div>
 
             <div style={{ marginTop: 20, paddingTop: 20, borderTop: "1px solid #F0EDE5" }}>

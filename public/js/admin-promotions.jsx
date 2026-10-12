@@ -53,6 +53,23 @@ function PromoEditor({ initial, kind, allProducts, onClose, onSave, saving }) {
   const baseOk  = name.trim().length > 0 && numVal >= 1 && numVal <= maxVal;
   const valid   = baseOk && (kind !== 'price' || scope !== 'specific' || selectedIds.size > 0);
 
+  const [guardStatus, setGuardStatus] = useState(null);
+  const [lossOk, setLossOk] = useState(false);
+  const guardParams = useMemo(() => {
+    if (numVal < 1) return null;
+    if (kind === 'price') {
+      const ps = scope === 'specific' ? allProducts.filter(p => selectedIds.has(p.id)) : allProducts;
+      if (!ps.length) return null;
+      const cut = p => Math.max(0, type === 'percent' ? p.price * (1 - numVal / 100) : type === 'fixed' ? numVal : p.price - numVal);
+      return { type: 'items', items: ps.map(p => ({ product_id: p.id, price: Math.round(cut(p)) })) };
+    }
+    const subtotal = parseFloat(minPurchase) || 50000;
+    let discount = type === 'percent' ? subtotal * numVal / 100 : numVal;
+    if (type === 'percent' && parseFloat(maxDiscount)) discount = Math.min(discount, parseFloat(maxDiscount));
+    return { type: 'order', subtotal, discount };
+  }, [kind, scope, selectedIds, allProducts, type, numVal, minPurchase, maxDiscount]);
+  const blockedByLoss = guardStatus === 'loss' && !lossOk;
+
   const toggleProduct = id => setSelectedIds(s => { const n = new Set(s); n.has(id) ? n.delete(id) : n.add(id); return n; });
 
   const filteredProducts = useMemo(() => {
@@ -335,9 +352,14 @@ function PromoEditor({ initial, kind, allProducts, onClose, onSave, saving }) {
           </>)}
         </div>
 
+        <div style={{ padding: '0 22px' }}>
+          {guardParams && <PriceGuardBadge params={guardParams} onStatus={setGuardStatus} />}
+          {kind === 'voucher' && guardParams && <div style={{ fontSize: 11.5, color: 'var(--ink-3)', marginTop: 3 }}>Tính trên đơn {fmt(guardParams.subtotal)}đ (đơn tối thiểu), giá vốn trung bình của menu.</div>}
+          <LossConsent show={guardStatus === 'loss'} checked={lossOk} onChange={setLossOk} />
+        </div>
         <div className="modal-f">
           <button className="btn ghost" onClick={onClose}>Huỷ</button>
-          <button className="btn primary" disabled={!valid || saving} onClick={submit}>
+          <button className="btn primary" disabled={!valid || saving || blockedByLoss} onClick={submit}>
             <Icon name="check" size={17} color="#fff" />
             {isEdit ? 'Lưu thay đổi' : (kind === 'price' ? 'Thêm gạch giá' : 'Thêm mã giảm')}
           </button>

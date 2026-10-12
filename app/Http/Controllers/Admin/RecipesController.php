@@ -99,6 +99,7 @@ class RecipesController extends Controller
     {
         $data = $request->validate([
             'name'                              => ['required', 'string', 'max:100'],
+            'instructions'                      => ['nullable', 'string', 'max:5000'],
             'input_mode'                        => ['required', 'in:detailed,direct'],
             'wastage_pct'                       => ['nullable', 'numeric', 'min:0', 'max:100'],
             'packaging_m'                       => ['nullable', 'numeric', 'min:0'],
@@ -121,6 +122,7 @@ class RecipesController extends Controller
         return [
             'recipe' => [
                 'name'           => $data['name'],
+                'instructions'   => $data['instructions'] ?? null,
                 'input_mode'     => $data['input_mode'],
                 'wastage_pct'    => $data['wastage_pct'] ?? 5.00,
                 'packaging_m'    => $data['packaging_m'] ?? 950,
@@ -158,6 +160,7 @@ class RecipesController extends Controller
         return [
             'id'             => $r->id,
             'name'           => $r->name,
+            'instructions'   => $r->instructions,
             'input_mode'     => $r->input_mode,
             'wastage_pct'    => (float) $r->wastage_pct,
             'packaging_m'    => (float) $r->packaging_m,

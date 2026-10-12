@@ -107,7 +107,7 @@ function StoreSettingsApp() {
 
   const addStore = () => {
     setStores(list => [...list, {
-      id: null, name: "Cửa hàng mới", address: "", size: null,
+      id: null, name: "Cửa hàng mới", address: "", size: null, royalty_pct: 3,
       costsByMonth: { [activeMonth]: zeroCosts() }, dirtyProfile: true, dirtyMonths: { [activeMonth]: true },
     }]);
     setActiveIdx(stores.length);
@@ -139,7 +139,7 @@ function StoreSettingsApp() {
     setSaving(true); setError(null); setNotice(null);
     const payload = {
       stores: stores.map(s => ({
-        id: s.id, name: s.name, address: s.address || "", size: s.size || null,
+        id: s.id, name: s.name, address: s.address || "", size: s.size || null, royalty_pct: Number(s.royalty_pct) || 0,
         costs: Object.fromEntries(Object.keys(s.dirtyMonths).map(m => [m, s.costsByMonth[m]])),
       })),
     };
@@ -221,6 +221,13 @@ function StoreSettingsApp() {
                   <div key={opt} onClick={() => updateField("size", on ? null : opt)} style={{ padding: "9px 14px", borderRadius: 20, fontSize: 12.5, fontWeight: 700, cursor: "pointer", border: `1.5px solid ${on ? C.brand : C.field}`, background: on ? "#EAF3EE" : "#fff", color: on ? C.brand : C.ink2 }}>{opt}</div>
                 );
               })}
+            </div>
+          </div>
+          <div style={{ marginTop: 16 }}>
+            <div style={{ fontSize: 12.5, fontWeight: 700, marginBottom: 6 }}>Phí thương hiệu (% doanh thu)</div>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <FocusInput type="number" min="0" max="100" step="0.1" value={store.royalty_pct ?? 3} onChange={e => updateField("royalty_pct", e.target.value === "" ? 0 : Number(e.target.value))} style={{ width: 110 }} />
+              <span style={{ fontSize: 13, color: C.ink3 }}>% doanh thu thực nhận mỗi ngày, trừ vào lợi nhuận</span>
             </div>
           </div>
           {store.id && (

@@ -21,6 +21,8 @@ class OrderItem extends Model
         'size_name',
         'size_extra_price',
         'note',
+        'flash_sale_item_id',
+        'flash_session',
     ];
 
     public function order(): BelongsTo

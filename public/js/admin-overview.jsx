@@ -169,6 +169,7 @@ function OverviewApp() {
               { title: "Công thức món", desc: "COGS và biên lợi nhuận", color: "#3D8B63", href: "/admin/recipes" },
               { title: "Nhập liệu hằng ngày", desc: "Ghi doanh thu & chi phí", color: "#F2C744", href: "/admin/daily-entries" },
               { title: "Báo cáo & hòa vốn", desc: "Lợi nhuận theo thời gian", color: "#E8845C", href: "/admin/reports" },
+              { title: "Bảng lương", desc: "Chấm công, thưởng KPI, lương tháng", color: "#4A7BB7", href: "/admin/payroll" },
               { title: "Cài đặt cửa hàng", desc: "Thông tin quán & chi phí cố định", color: "#6B756F", href: "/admin/store-settings" },
             ].map(q => (
               <a key={q.href} href={q.href} style={{ display: "block", textDecoration: "none", background: "var(--panel)", borderRadius: 16, padding: 20, border: "1px solid var(--line)" }}>

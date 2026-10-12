@@ -101,6 +101,10 @@ class OrderController extends Controller
         }
         $allScopePricePromo = $pricePromos->firstWhere('scope', 'all');
 
+        // Flash sale (website orders): live items override the base price, within quota.
+        [$flashItems, $flashSession] = \App\Models\FlashSale::liveItems();
+        $flashUsed = [];
+
         $itemData = [];
         foreach ($data['lines'] as $line) {
             $productId = $this->parseProductId($line['id']);
@@ -120,6 +124,29 @@ class OrderController extends Controller
                 ? $pricePromo->calcSalePrice((int) $product->base_price)
                 : (float) $product->base_price;
 
+            $flash = $flashItems[$productId] ?? null;
+            if ($flash && $flash->flash_price < $effectiveBase) {
+                $used = ($flashUsed[$flash->id] ?? 0) + $qty;
+                if ($flash->quota !== null) {
+                    $left = $flash->quota - $flash->soldIn($flashSession);
+                    if ($used > $left) {
+                        return response()->json(['message' => $left > 0
+                            ? "Flash sale \"{$product->name}\" chỉ còn {$left} suất — giảm số lượng rồi đặt lại."
+                            : "Flash sale \"{$product->name}\" đã hết suất."], 422);
+                    }
+                }
+                if ($flash->per_customer !== null) {
+                    $mine = $flash->soldIn($flashSession, $customer->id) + $used;
+                    if ($mine > $flash->per_customer) {
+                        return response()->json(['message' => "Mỗi khách chỉ được mua tối đa {$flash->per_customer} \"{$product->name}\" giá flash sale."], 422);
+                    }
+                }
+                $flashUsed[$flash->id] = $used;
+                $effectiveBase = (float) $flash->flash_price;
+            } else {
+                $flash = null;
+            }
+
             $addonTotal = array_sum(array_map(fn ($t) => (float) $t['extra'] * (int) ($t['quantity'] ?? 1), $addonTops));
             // Kiểu ShopeeFood: đơn lưu GIÁ GỐC; phần gạch giá tách thành dòng
             // "Khuyến mãi gạch giá" riêng. sale_* chỉ dùng để tính khuyến mãi.
@@ -138,6 +165,8 @@ class OrderController extends Controller
                 'size_name'        => $sizeName,
                 'size_extra_price' => $sizeExtra,
                 'toppings'         => $addonTops,
+                'flash_sale_item_id' => $flash?->id,
+                'flash_session'    => $flash ? $flashSession->format('Y-m-d H:i:s') : null,
             ];
         }
 
@@ -330,7 +359,8 @@ class OrderController extends Controller
                     'discount_category' => 'PROMOTION_VOUCHER',
                     'voucher_id'        => null,
                     'discount_amount'   => $badgeDiscAmt,
-                    'description'       => 'Khuyến mãi gạch giá',
+                    'description'       => collect($itemData)->contains(fn ($it) => !empty($it['flash_sale_item_id']))
+                        ? 'Flash sale' : 'Khuyến mãi gạch giá',
                 ]);
             }
 

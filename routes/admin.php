@@ -19,8 +19,10 @@ use App\Http\Controllers\Admin\ReportsController;
 use App\Http\Controllers\Admin\VariantsController;
 use App\Http\Controllers\Admin\CombosController;
 use App\Http\Controllers\Admin\DailyEntriesController;
+use App\Http\Controllers\Admin\FlashSalesController;
 use App\Http\Controllers\Admin\IngredientsController;
 use App\Http\Controllers\Admin\OverviewController;
+use App\Http\Controllers\Admin\PayrollController;
 use App\Http\Controllers\Admin\RecipesController;
 use App\Http\Controllers\Admin\StoreSettingsController;
 use Illuminate\Support\Facades\Route;
@@ -143,6 +145,17 @@ Route::middleware(['auth', 'admin.perm'])->prefix('admin')->name('admin.')->grou
     Route::delete('/stores/{store}/photos', [StoresController::class, 'deletePhoto'])->middleware('admin.perm:store_edit')->name('stores.photos.delete');
 
     // Khuyến mãi
+    Route::middleware('admin.perm:promo_edit')->group(function () {
+        Route::get('/flash-sales', [FlashSalesController::class, 'index'])->name('flash-sales.index');
+        Route::post('/flash-sales', [FlashSalesController::class, 'store'])->name('flash-sales.store');
+        Route::put('/flash-sales/{flashSale}', [FlashSalesController::class, 'update'])->name('flash-sales.update');
+        Route::post('/flash-sales/{flashSale}/toggle', [FlashSalesController::class, 'toggle'])->name('flash-sales.toggle');
+        Route::delete('/flash-sales/{flashSale}', [FlashSalesController::class, 'destroy'])->name('flash-sales.destroy');
+        Route::get('/price-guard', [\App\Http\Controllers\Admin\PriceGuardController::class, 'index'])->name('price-guard.index');
+        Route::post('/price-guard/check', [\App\Http\Controllers\Admin\PriceGuardController::class, 'check'])->name('price-guard.check');
+        Route::post('/price-guard/settings', [\App\Http\Controllers\Admin\PriceGuardController::class, 'saveSettings'])->name('price-guard.settings');
+    });
+
     Route::get('/promotions', [PromotionsController::class, 'index'])->middleware('admin.perm:promo_edit')->name('promotions.index');
     Route::post('/promotions', [PromotionsController::class, 'store'])->middleware('admin.perm:promo_edit')->name('promotions.store');
     Route::post('/promotions/{promotion}', [PromotionsController::class, 'update'])->middleware('admin.perm:promo_edit')->name('promotions.update');
@@ -248,6 +261,11 @@ Route::middleware(['auth', 'admin.perm'])->prefix('admin')->name('admin.')->grou
     Route::delete('/recipes/{recipe}', [RecipesController::class, 'destroy'])->name('recipes.destroy');
     Route::post('/recipes/{recipe}/snapshot', [RecipesController::class, 'saveSnapshot'])->name('recipes.snapshot');
     Route::get('/daily-entries', [DailyEntriesController::class, 'index'])->name('daily-entries.index');
+    Route::get('/payroll', [PayrollController::class, 'index'])->name('payroll.index');
+    Route::get('/payroll/export', [PayrollController::class, 'export'])->name('payroll.export');
+    Route::post('/payroll/workers', [PayrollController::class, 'storeWorker'])->name('payroll.workers.store');
+    Route::put('/payroll/workers/{worker}', [PayrollController::class, 'updateWorker'])->name('payroll.workers.update');
+    Route::post('/payroll/rates/{store}', [PayrollController::class, 'updateRates'])->name('payroll.rates');
     Route::post('/daily-entries/import', [DailyEntriesController::class, 'import'])->name('daily-entries.import');
     Route::post('/daily-entries/{store}/{date}', [DailyEntriesController::class, 'save'])->name('daily-entries.save');
 });

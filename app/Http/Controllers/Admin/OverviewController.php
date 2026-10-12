@@ -18,13 +18,13 @@ class OverviewController extends Controller
 
         $stores = Store::where('status', 'active')->get();
 
-        $todayEntries = DailyEntry::with(['sales.recipe', 'expenses', 'channels'])
+        $todayEntries = DailyEntry::with(['sales.recipe', 'expenses', 'channels', 'store', 'shifts'])
             ->whereDate('entry_date', today())
             ->where('is_saved', true)
             ->get()
             ->keyBy('store_id');
 
-        $last7Entries = DailyEntry::with(['sales.recipe', 'expenses', 'channels'])
+        $last7Entries = DailyEntry::with(['sales.recipe', 'expenses', 'channels', 'store', 'shifts'])
             ->whereDate('entry_date', '>=', today()->subDays(6))
             ->whereDate('entry_date', '<=', today())
             ->where('is_saved', true)
@@ -58,15 +58,19 @@ class OverviewController extends Controller
             }
 
             $revenue = $entry->revenue($revenue);
-            $expenses = $entry->expenses->sum('amount');
+            $royalty = $entry->royalty($revenue);
+            // Brand fee counts with the day's expenses so every net-profit figure includes it.
+            $expenses = $entry->expenses->sum('amount') + $royalty + $entry->laborCost();
 
             return compact('revenue', 'cogs', 'expenses', 'cups');
         };
 
         // Per-store daily fixed cost
-        $getDailyFixed = function (int $storeId) use ($monthlyCosts) {
+        $timesheetStores = StoreMonthlyCost::storesWithShifts($currentYearMonth);
+        $getDailyFixed = function (int $storeId) use ($monthlyCosts, $timesheetStores) {
             $mc = $monthlyCosts->get($storeId);
-            return $mc ? $mc->total() / 30 : 0;
+            if (!$mc) return 0;
+            return (in_array($storeId, $timesheetStores) ? $mc->totalWithoutSalary() : $mc->total()) / 30;
         };
 
         // Build store cards
@@ -118,11 +122,15 @@ class OverviewController extends Controller
                     ->orderByDesc('recorded_on')
                     ->value('cogs_l') ?? 0;
                 $cogsM = $cogsL * 0.75;
-                $margins[] = ($recipe->price_m - $cogsM + $recipe->price_l - $cogsL) / 2;
+                // The brand fee takes a share of every cup's price.
+                $keep = 1 - ($stores->avg('royalty_pct') ?? 3) / 100;
+                $margins[] = ($recipe->price_m * $keep - $cogsM + $recipe->price_l * $keep - $cogsL) / 2;
             }
             $avgMarginPerCup = count($margins) > 0 ? array_sum($margins) / count($margins) : 0;
         }
-        $breakevenCups = ($avgMarginPerCup > 0) ? ($totalDailyFixed / $avgMarginPerCup) : 0;
+        // Wages logged on shift timesheets: average per day over the last 7 days.
+        $avgDailyLabor = $last7Entries->flatten()->sum(fn ($e) => $e->laborCost()) / 7;
+        $breakevenCups = ($avgMarginPerCup > 0) ? (($totalDailyFixed + $avgDailyLabor) / $avgMarginPerCup) : 0;
 
         // 7-day chart
         $dayLabels = ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'];

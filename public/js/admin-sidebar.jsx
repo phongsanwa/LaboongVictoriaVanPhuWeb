@@ -4,6 +4,7 @@ const { useState, useEffect } = React;
 const SIDEBAR_NAV = [
   { ic: 'chart',   label: 'Tổng quan',          href: '/admin' },
   { ic: 'grid',    label: 'Tổng quan OPS',       href: '/admin/overview' },
+  { ic: 'users',   label: 'Bảng lương',          href: '/admin/payroll' },
   { ic: 'users',   label: 'Khách hàng',          href: '/admin/customers' },
   { ic: 'receipt', label: 'Điểm & giao dịch',   href: '/admin/points' },
   { ic: 'bag',     label: 'Đơn hàng',            href: '/admin/orders' },
@@ -19,6 +20,8 @@ const SIDEBAR_NAV = [
   { ic: 'cup',     label: 'Thực đơn',            href: '/admin/menu' },
   { ic: 'gift',    label: 'Combo',               href: '/admin/combos' },
   { ic: 'percent', label: 'Khuyến mãi',          href: '/admin/promotions' },
+  { ic: 'flame',   label: 'Flash Sale',          href: '/admin/flash-sales' },
+  { ic: 'shield',  label: 'Cân giá & lãi',       href: '/admin/price-guard' },
   { ic: 'plus',    label: 'Variant / Tuỳ chọn', href: '/admin/variants' },
   { ic: 'pin',     label: 'Cửa hàng',            href: '/admin/stores' },
   { ic: 'shield',  label: 'Phân quyền',          href: '/admin/roles' },

@@ -169,6 +169,69 @@ function HomeBanners() {
   );
 }
 
+const FLASH = HOME.flashSale || null;
+
+function useCountdown(target) {
+  const [left, setLeft] = useState(() => Math.max(0, new Date(target) - Date.now()));
+  useEffect(() => {
+    const t = setInterval(() => setLeft(Math.max(0, new Date(target) - Date.now())), 1000);
+    return () => clearInterval(t);
+  }, [target]);
+  return left;
+}
+
+function FlashSaleStrip() {
+  const live = FLASH?.status === "live";
+  const left = useCountdown(FLASH ? (live ? FLASH.end : FLASH.start) : Date.now());
+  // Session starts or ends while the page is open → reload to show the new state and prices.
+  useEffect(() => { if (FLASH && left === 0) { const t = setTimeout(() => location.reload(), 1500); return () => clearTimeout(t); } }, [left]);
+  if (!FLASH) return null;
+  const h = Math.floor(left / 3600000), m = Math.floor(left / 60000) % 60, sec = Math.floor(left / 1000) % 60;
+  const box = v => <span style={{ background: "#1A2420", color: "#fff", borderRadius: 6, padding: "3px 6px", fontWeight: 800, fontVariantNumeric: "tabular-nums" }}>{String(v).padStart(2, "0")}</span>;
+  const startAt = new Date(FLASH.start).toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit", timeZone: "Asia/Ho_Chi_Minh" });
+  return (
+    <section style={{ margin: "14px 0", background: "linear-gradient(120deg,#FFF1E6,#FFE3E3)", borderRadius: 18, padding: "14px 0 14px 14px", border: "1px solid #FFD2C2" }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, paddingRight: 14, flexWrap: "wrap" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <span style={{ fontWeight: 900, fontSize: 18, color: "#E4402F", letterSpacing: "0.3px" }}>⚡ FLASH SALE</span>
+          {FLASH.name && <span style={{ fontSize: 12.5, color: "#8A4A3A", fontWeight: 600 }}>{FLASH.name}</span>}
+        </div>
+        <div style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 12.5, fontWeight: 700, color: "#8A4A3A" }}>
+          {live ? "Kết thúc sau" : `Bắt đầu lúc ${startAt} · còn`} {box(h)}:{box(m)}:{box(sec)}
+        </div>
+      </div>
+      <div style={{ display: "flex", gap: 10, overflowX: "auto", padding: "12px 14px 2px 0", scrollSnapType: "x mandatory" }}>
+        {FLASH.items.map(it => {
+          const pct = it.price > 0 ? Math.round((1 - it.flash_price / it.price) * 100) : 0;
+          const soldOut = live && it.quota != null && it.sold >= it.quota;
+          return (
+            <a key={it.id} href={NAV_URLS.menu} style={{ flex: "0 0 148px", scrollSnapAlign: "start", background: "#fff", borderRadius: 14, overflow: "hidden", textDecoration: "none", color: "inherit", boxShadow: "0 2px 8px rgba(228,64,47,.08)", opacity: soldOut ? 0.55 : 1 }}>
+              <div style={{ height: 104, background: it.img ? `center/cover url(${it.img})` : it.grad, position: "relative" }}>
+                {pct > 0 && <span style={{ position: "absolute", top: 6, left: 6, background: "#E4402F", color: "#fff", fontSize: 11, fontWeight: 800, padding: "2px 7px", borderRadius: 20 }}>-{pct}%</span>}
+              </div>
+              <div style={{ padding: "8px 10px 10px" }}>
+                <div style={{ fontSize: 13, fontWeight: 700, lineHeight: 1.25, height: 32, overflow: "hidden" }}>{it.name}</div>
+                <div style={{ display: "flex", alignItems: "baseline", gap: 5, marginTop: 4 }}>
+                  <span style={{ color: "#E4402F", fontWeight: 800, fontSize: 15 }}>{fmt(it.flash_price)}đ</span>
+                  <span style={{ color: "#9AA19C", fontSize: 11.5, textDecoration: "line-through" }}>{fmt(it.price)}đ</span>
+                </div>
+                {it.quota != null ? (
+                  <div style={{ marginTop: 6, height: 16, borderRadius: 10, background: "#FFE0D6", position: "relative", overflow: "hidden" }}>
+                    <div style={{ position: "absolute", inset: 0, width: `${Math.min(100, (it.sold / it.quota) * 100)}%`, background: "linear-gradient(90deg,#FF7A45,#E4402F)" }} />
+                    <div style={{ position: "relative", textAlign: "center", fontSize: 10.5, fontWeight: 800, color: it.sold / it.quota > 0.5 ? "#fff" : "#8A4A3A", lineHeight: "16px" }}>
+                      {!live ? `${it.quota} suất` : soldOut ? "Đã hết suất" : `Đã bán ${it.sold}/${it.quota}`}
+                    </div>
+                  </div>
+                ) : <div style={{ marginTop: 6, fontSize: 11, color: "#8A4A3A", fontWeight: 600 }}>{live ? "Không giới hạn" : "Sắp mở bán"}</div>}
+              </div>
+            </a>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
+
 function storeStatus(store) {
   if (!store || !store.opening_time || !store.closing_time) return "";
   const now = new Date();
@@ -342,6 +405,7 @@ function App() {
         </div>
 
         <HomeBanners />
+        <FlashSaleStrip />
 
         {showInstall && (
           <div style={{

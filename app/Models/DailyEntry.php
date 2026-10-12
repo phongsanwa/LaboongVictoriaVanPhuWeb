@@ -50,4 +50,20 @@ class DailyEntry extends Model
     {
         return $this->channels->isNotEmpty() ? (float) $this->channels->sum('net_revenue') : $listPriceRevenue;
     }
+
+    /** Brand fee owed to the franchisor for the day (store's % of revenue). */
+    public function royalty(float $revenue): float
+    {
+        return $revenue * (float) ($this->store?->royalty_pct ?? 3) / 100;
+    }
+
+    public function shifts(): HasMany
+    {
+        return $this->hasMany(DailyEntryShift::class);
+    }
+
+    public function laborCost(): float
+    {
+        return (float) $this->shifts->sum('wage_total');
+    }
 }

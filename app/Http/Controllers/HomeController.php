@@ -36,6 +36,7 @@ class HomeController extends Controller
                 'adminAccess' => AdminAccess::canEnter($user),
                 'iosGuideHtml' => \App\Models\AppSetting::get('general', [])['ios_guide_html'] ?? null,
                 'banners' => $this->buildBanners(),
+                'flashSale' => $this->buildFlashSale(),
                 'stores' => $this->buildStores(),
                 'staffEntry' => $this->staffEntry($user),
             ]]);
@@ -125,6 +126,7 @@ class HomeController extends Controller
             'adminAccess' => AdminAccess::canEnter($user),
             'iosGuideHtml' => \App\Models\AppSetting::get('general', [])['ios_guide_html'] ?? null,
             'banners' => $this->buildBanners(),
+                'flashSale' => $this->buildFlashSale(),
             'stores' => $this->buildStores(),
             'staffEntry' => $this->staffEntry($user),
         ]]);
@@ -155,6 +157,32 @@ class HomeController extends Controller
     private function buildStores()
     {
         return Store::where('status', 'active')->orderBy('id')->get();
+    }
+
+    /** Live or upcoming flash sale for the strip under the banners. */
+    private function buildFlashSale(): ?array
+    {
+        $cur = \App\Models\FlashSale::current();
+        if (!$cur) return null;
+        $items = $cur['sale']->items->filter(fn ($it) => $it->product && $it->product->is_available);
+        if ($items->isEmpty()) return null;
+
+        return [
+            'name'   => $cur['sale']->name,
+            'status' => $cur['status'],
+            'start'  => $cur['start']->toIso8601String(),
+            'end'    => $cur['end']->toIso8601String(),
+            'items'  => $items->map(fn ($it) => [
+                'id'          => 'p' . $it->product_id,
+                'name'        => $it->product->name,
+                'img'         => $it->product->image_url,
+                'grad'        => $it->product->color ?: 'linear-gradient(150deg,#6B4A2B,#9B7150)',
+                'price'       => (int) $it->product->base_price,
+                'flash_price' => $it->flash_price,
+                'quota'       => $it->quota,
+                'sold'        => $cur['status'] === 'live' ? $it->soldIn($cur['start']) : 0,
+            ])->values()->all(),
+        ];
     }
 
     /** Banner đang bật cho trang chủ (mobile trống thì dùng desktop). */

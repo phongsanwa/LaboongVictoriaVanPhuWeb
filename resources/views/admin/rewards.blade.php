@@ -25,6 +25,7 @@
 
 <script type="text/babel" src="{{ asset('js/tweaks-panel.jsx') }}?v={{ filemtime(public_path('js/tweaks-panel.jsx')) }}"></script>
 <script type="text/babel" src="{{ asset('js/components.jsx') }}?v={{ filemtime(public_path('js/components.jsx')) }}"></script>
+<script type="text/babel" src="{{ asset('js/price-guard-badge.jsx') }}?v={{ filemtime(public_path('js/price-guard-badge.jsx')) }}"></script>
 <script type="text/babel" src="{{ asset('js/admin-sidebar.jsx') }}?v={{ filemtime(public_path('js/admin-sidebar.jsx')) }}"></script>
 <script type="text/babel" src="{{ asset('js/admin-rewards-data.jsx') }}?v={{ filemtime(public_path('js/admin-rewards-data.jsx')) }}"></script>
 <script type="text/babel" src="{{ asset('js/admin-reward-editor.jsx') }}?v={{ filemtime(public_path('js/admin-reward-editor.jsx')) }}"></script>

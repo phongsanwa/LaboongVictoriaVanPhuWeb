@@ -103,8 +103,17 @@ function RewardEditor({ initial, onClose, onSave }) {
     && (!isFreeItem || productId !== null)
     && (!isUpgrade || (toppingValue > 0))
     && (!isBuyGet || (Number(buyQty) >= 1 && Number(freeQty) >= 1));
+  const [guardStatus, setGuardStatus] = useStateEd(null);
+  const [lossOk, setLossOk] = useStateEd(false);
+  const guardParams = Number(points) > 0 && (
+    isFreeItem && productId !== null ? (productId === "all"
+      ? { type: "reward", points: Number(points), reward_type: "free_item", value: 35000, qty: Number(freeQty) || 1 }
+      : { type: "reward", points: Number(points), product_id: productId, qty: Number(freeQty) || 1 })
+    : isUpgrade && toppingValue > 0 ? { type: "reward", points: Number(points), reward_type: "free_item", value: Number(toppingValue), qty: Number(freeQty) || 1 }
+    : null);
+  const blockedByLoss = guardParams && guardStatus === "loss" && !lossOk;
   const submit = () => {
-    if (!valid) return;
+    if (!valid || blockedByLoss) return;
     // Chốt chặn: không bao giờ lưu URL tạm blob: (chỉ sống trong phiên trình duyệt)
     const safeImg = img && !String(img).startsWith("blob:") ? img : null;
     onSave({
@@ -334,6 +343,11 @@ function RewardEditor({ initial, onClose, onSave }) {
                 </div>
               </div>
 
+              {guardParams && <div style={{ marginTop: -6, marginBottom: 10 }}>
+                <PriceGuardBadge params={guardParams} onStatus={setGuardStatus} />
+                <LossConsent show={guardStatus === "loss"} checked={lossOk} onChange={setLossOk} />
+              </div>}
+
               <div className="two-col">
                 <div className="fld">
                   <label>Hạn đổi</label>
@@ -365,7 +379,7 @@ function RewardEditor({ initial, onClose, onSave }) {
 
         <div className="modal-f">
           <button className="btn ghost" style={{ flex: ".6" }} onClick={onClose}>Huỷ</button>
-          <button className="btn primary" disabled={!valid} onClick={submit}>
+          <button className="btn primary" disabled={!valid || blockedByLoss} onClick={submit}>
             <Icon name="check" size={17} color="#fff" /> {isEdit ? "Lưu thay đổi" : "Tạo phần thưởng"}
           </button>
         </div>
