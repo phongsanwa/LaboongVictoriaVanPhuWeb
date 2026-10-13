@@ -1,0 +1,7 @@
+/* Phosphor icons — gộp 6 weight, dùng chung cho mọi zma-xxxx. */
+@import "./thin/style.css";
+@import "./light/style.css";
+@import "./regular/style.css";
+@import "./bold/style.css";
+@import "./fill/style.css";
+@import "./duotone/style.css";
