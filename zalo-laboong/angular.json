@@ -1,0 +1,833 @@
+{
+  "$schema": "./node_modules/@angular/cli/lib/config/schema.json",
+  "version": 1,
+  "newProjectRoot": "projects",
+  "projects": {
+    "zma-0001": {
+      "projectType": "application",
+      "schematics": {
+        "@schematics/angular:component": {
+          "style": "scss"
+        }
+      },
+      "root": "apps/zma-0001",
+      "sourceRoot": "apps/zma-0001/src",
+      "prefix": "app",
+      "architect": {
+        "build": {
+          "builder": "@angular-builders/custom-webpack:browser",
+          "options": {
+            "outputPath": "dist/zma-0001",
+            "index": "apps/zma-0001/src/index.html",
+            "main": "apps/zma-0001/src/main.ts",
+            "polyfills": [
+              "zone.js"
+            ],
+            "tsConfig": "apps/zma-0001/tsconfig.app.json",
+            "inlineStyleLanguage": "scss",
+            "assets": [
+              "apps/zma-0001/src/favicon.ico",
+              "apps/zma-0001/src/assets",
+              { "glob": "app-config.json", "input": "apps/zma-0001", "output": "/" }
+            ],
+            "styles": [
+              "node_modules/swiper/swiper-bundle.css",
+              "common/assets/css/all.min.css",
+              "common/assets/css/phosphor/phosphor.css",
+              "apps/zma-0001/src/styles.scss",
+              "apps/zma-0001/src/styles/my.style.scss"
+            ],
+            "scripts": [],
+            "allowedCommonJsDependencies": [
+              "moment",
+              "qrcode",
+              "jsbarcode"
+            ],
+            "customWebpackConfig": {
+              "path": "webpack.extra.js"
+            }
+          },
+          "configurations": {
+            "production": {
+              "budgets": [
+                {
+                  "type": "initial",
+                  "maximumWarning": "10mb",
+                  "maximumError": "10mb"
+                },
+                {
+                  "type": "anyComponentStyle",
+                  "maximumWarning": "2mb",
+                  "maximumError": "2mb"
+                }
+              ],
+              "outputHashing": "none",
+              "fileReplacements": [
+                {
+                  "replace": "apps/zma-0001/src/environments/environment.ts",
+                  "with": "apps/zma-0001/src/environments/environment.prod.ts"
+                }
+              ],
+              "index": "apps/zma-0001/src/index-pro.html"
+            },
+            "development": {
+              "optimization": false,
+              "extractLicenses": false,
+              "sourceMap": true
+            },
+            "demo": {
+              "budgets": [
+                {
+                  "type": "initial",
+                  "maximumWarning": "10mb",
+                  "maximumError": "10mb"
+                },
+                {
+                  "type": "anyComponentStyle",
+                  "maximumWarning": "2mb",
+                  "maximumError": "2mb"
+                }
+              ],
+              "outputHashing": "none",
+              "fileReplacements": [
+                {
+                  "replace": "apps/zma-0001/src/environments/environment.ts",
+                  "with": "apps/zma-0001/src/environments/environment.demo.ts"
+                }
+              ],
+              "index": "apps/zma-0001/src/index-pro.html"
+            }
+          },
+          "defaultConfiguration": "production"
+        },
+        "serve": {
+          "builder": "@angular-devkit/build-angular:dev-server",
+          "configurations": {
+            "production": {
+              "buildTarget": "zma-0001:build:production"
+            },
+            "development": {
+              "buildTarget": "zma-0001:build:development"
+            }
+          },
+          "defaultConfiguration": "development"
+        },
+        "extract-i18n": {
+          "builder": "@angular-devkit/build-angular:extract-i18n",
+          "options": {
+            "buildTarget": "zma-0001:build"
+          }
+        },
+        "test": {
+          "builder": "@angular-devkit/build-angular:karma",
+          "options": {
+            "polyfills": [
+              "zone.js",
+              "zone.js/testing"
+            ],
+            "tsConfig": "apps/zma-0001/tsconfig.spec.json",
+            "inlineStyleLanguage": "scss",
+            "assets": [
+              "apps/zma-0001/src/favicon.ico",
+              "apps/zma-0001/src/assets"
+            ],
+            "styles": [
+              "node_modules/swiper/swiper-bundle.css",
+              "apps/zma-0001/src/assets/css/all.min.css",
+              "apps/zma-0001/src/styles.scss"
+            ],
+            "scripts": []
+          }
+        }
+      }
+    },
+    "zma-0002": {
+      "projectType": "application",
+      "schematics": {
+        "@schematics/angular:component": {
+          "style": "scss"
+        }
+      },
+      "root": "apps/zma-0002",
+      "sourceRoot": "apps/zma-0002/src",
+      "prefix": "app",
+      "architect": {
+        "build": {
+          "builder": "@angular-builders/custom-webpack:browser",
+          "options": {
+            "outputPath": "dist/zma-0002",
+            "index": "apps/zma-0002/src/index.html",
+            "main": "apps/zma-0002/src/main.ts",
+            "polyfills": [
+              "zone.js"
+            ],
+            "tsConfig": "apps/zma-0002/tsconfig.app.json",
+            "inlineStyleLanguage": "scss",
+            "assets": [
+              "apps/zma-0002/src/favicon.ico",
+              "apps/zma-0002/src/assets",
+              { "glob": "app-config.json", "input": "apps/zma-0002", "output": "/" }
+            ],
+            "styles": [
+              "node_modules/swiper/swiper-bundle.css",
+              "common/assets/css/all.min.css",
+              "common/assets/css/phosphor/phosphor.css",
+              "apps/zma-0002/src/styles.scss",
+              "apps/zma-0002/src/styles/my.style.scss"
+            ],
+            "scripts": [],
+            "allowedCommonJsDependencies": [
+              "moment",
+              "qrcode",
+              "jsbarcode"
+            ],
+            "customWebpackConfig": {
+              "path": "webpack.extra.js"
+            }
+          },
+          "configurations": {
+            "production": {
+              "budgets": [
+                {
+                  "type": "initial",
+                  "maximumWarning": "9mb",
+                  "maximumError": "10mb"
+                },
+                {
+                  "type": "anyComponentStyle",
+                  "maximumWarning": "2mb",
+                  "maximumError": "2mb"
+                }
+              ],
+              "outputHashing": "none",
+              "fileReplacements": [
+                {
+                  "replace": "apps/zma-0002/src/environments/environment.ts",
+                  "with": "apps/zma-0002/src/environments/environment.prod.ts"
+                }
+              ],
+              "index": "apps/zma-0002/src/index-pro.html"
+            },
+            "development": {
+              "optimization": false,
+              "extractLicenses": false,
+              "sourceMap": true
+            },
+            "demo": {
+              "budgets": [
+                {
+                  "type": "initial",
+                  "maximumWarning": "9mb",
+                  "maximumError": "10mb"
+                },
+                {
+                  "type": "anyComponentStyle",
+                  "maximumWarning": "2mb",
+                  "maximumError": "2mb"
+                }
+              ],
+              "outputHashing": "none",
+              "fileReplacements": [
+                {
+                  "replace": "apps/zma-0002/src/environments/environment.ts",
+                  "with": "apps/zma-0002/src/environments/environment.demo.ts"
+                }
+              ],
+              "index": "apps/zma-0002/src/index-pro.html"
+            }
+          },
+          "defaultConfiguration": "production"
+        },
+        "serve": {
+          "builder": "@angular-devkit/build-angular:dev-server",
+          "configurations": {
+            "production": {
+              "buildTarget": "zma-0002:build:production"
+            },
+            "development": {
+              "buildTarget": "zma-0002:build:development"
+            }
+          },
+          "defaultConfiguration": "development"
+        },
+        "extract-i18n": {
+          "builder": "@angular-devkit/build-angular:extract-i18n",
+          "options": {
+            "buildTarget": "zma-0002:build"
+          }
+        },
+        "test": {
+          "builder": "@angular-devkit/build-angular:karma",
+          "options": {
+            "polyfills": [
+              "zone.js",
+              "zone.js/testing"
+            ],
+            "tsConfig": "apps/zma-0002/tsconfig.spec.json",
+            "inlineStyleLanguage": "scss",
+            "assets": [
+              "apps/zma-0002/src/favicon.ico",
+              "apps/zma-0002/src/assets"
+            ],
+            "styles": [
+              "node_modules/swiper/swiper-bundle.css",
+              "apps/zma-0002/src/assets/css/all.min.css",
+              "apps/zma-0002/src/styles.scss"
+            ],
+            "scripts": []
+          }
+        }
+      }
+    },
+    "zma-0003": {
+      "projectType": "application",
+      "schematics": {
+        "@schematics/angular:component": {
+          "style": "scss"
+        }
+      },
+      "root": "apps/zma-0003",
+      "sourceRoot": "apps/zma-0003/src",
+      "prefix": "app",
+      "architect": {
+        "build": {
+          "builder": "@angular-builders/custom-webpack:browser",
+          "options": {
+            "outputPath": "dist/zma-0003",
+            "index": "apps/zma-0003/src/index.html",
+            "main": "apps/zma-0003/src/main.ts",
+            "polyfills": [
+              "zone.js"
+            ],
+            "tsConfig": "apps/zma-0003/tsconfig.app.json",
+            "inlineStyleLanguage": "scss",
+            "assets": [
+              "apps/zma-0003/src/favicon.ico",
+              "apps/zma-0003/src/assets",
+              { "glob": "app-config.json", "input": "apps/zma-0003", "output": "/" }
+            ],
+            "styles": [
+              "node_modules/swiper/swiper-bundle.css",
+              "common/assets/css/all.min.css",
+              "common/assets/css/phosphor/phosphor.css",
+              "apps/zma-0003/src/styles.scss",
+              "apps/zma-0003/src/styles/my.style.scss"
+            ],
+            "scripts": [],
+            "allowedCommonJsDependencies": [
+              "moment",
+              "qrcode",
+              "jsbarcode"
+            ],
+            "customWebpackConfig": {
+              "path": "webpack.extra.js"
+            }
+          },
+          "configurations": {
+            "production": {
+              "budgets": [
+                {
+                  "type": "initial",
+                  "maximumWarning": "9mb",
+                  "maximumError": "10mb"
+                },
+                {
+                  "type": "anyComponentStyle",
+                  "maximumWarning": "2mb",
+                  "maximumError": "2mb"
+                }
+              ],
+              "outputHashing": "none",
+              "fileReplacements": [
+                {
+                  "replace": "apps/zma-0003/src/environments/environment.ts",
+                  "with": "apps/zma-0003/src/environments/environment.prod.ts"
+                }
+              ],
+              "index": "apps/zma-0003/src/index-pro.html"
+            },
+            "development": {
+              "optimization": false,
+              "extractLicenses": false,
+              "sourceMap": true
+            },
+            "demo": {
+              "budgets": [
+                {
+                  "type": "initial",
+                  "maximumWarning": "9mb",
+                  "maximumError": "10mb"
+                },
+                {
+                  "type": "anyComponentStyle",
+                  "maximumWarning": "2mb",
+                  "maximumError": "2mb"
+                }
+              ],
+              "outputHashing": "none",
+              "fileReplacements": [
+                {
+                  "replace": "apps/zma-0003/src/environments/environment.ts",
+                  "with": "apps/zma-0003/src/environments/environment.demo.ts"
+                }
+              ],
+              "index": "apps/zma-0003/src/index-pro.html"
+            }
+          },
+          "defaultConfiguration": "production"
+        },
+        "serve": {
+          "builder": "@angular-devkit/build-angular:dev-server",
+          "configurations": {
+            "production": {
+              "buildTarget": "zma-0003:build:production"
+            },
+            "development": {
+              "buildTarget": "zma-0003:build:development"
+            }
+          },
+          "defaultConfiguration": "development"
+        },
+        "extract-i18n": {
+          "builder": "@angular-devkit/build-angular:extract-i18n",
+          "options": {
+            "buildTarget": "zma-0003:build"
+          }
+        },
+        "test": {
+          "builder": "@angular-devkit/build-angular:karma",
+          "options": {
+            "polyfills": [
+              "zone.js",
+              "zone.js/testing"
+            ],
+            "tsConfig": "apps/zma-0003/tsconfig.spec.json",
+            "inlineStyleLanguage": "scss",
+            "assets": [
+              "apps/zma-0003/src/favicon.ico",
+              "apps/zma-0003/src/assets"
+            ],
+            "styles": [
+              "node_modules/swiper/swiper-bundle.css",
+              "apps/zma-0003/src/assets/css/all.min.css",
+              "apps/zma-0003/src/styles.scss"
+            ],
+            "scripts": []
+          }
+        }
+      }
+    },
+    "zma-0004": {
+      "projectType": "application",
+      "schematics": {
+        "@schematics/angular:component": {
+          "style": "scss"
+        }
+      },
+      "root": "apps/zma-0004",
+      "sourceRoot": "apps/zma-0004/src",
+      "prefix": "app",
+      "architect": {
+        "build": {
+          "builder": "@angular-builders/custom-webpack:browser",
+          "options": {
+            "outputPath": "dist/zma-0004",
+            "index": "apps/zma-0004/src/index.html",
+            "main": "apps/zma-0004/src/main.ts",
+            "polyfills": [
+              "zone.js"
+            ],
+            "tsConfig": "apps/zma-0004/tsconfig.app.json",
+            "inlineStyleLanguage": "scss",
+            "assets": [
+              "apps/zma-0004/src/favicon.ico",
+              "apps/zma-0004/src/assets",
+              { "glob": "app-config.json", "input": "apps/zma-0004", "output": "/" }
+            ],
+            "styles": [
+              "node_modules/swiper/swiper-bundle.css",
+              "common/assets/css/all.min.css",
+              "common/assets/css/phosphor/phosphor.css",
+              "apps/zma-0004/src/styles.scss",
+              "apps/zma-0004/src/styles/my.style.scss"
+            ],
+            "scripts": [],
+            "allowedCommonJsDependencies": [
+              "moment",
+              "qrcode",
+              "jsbarcode"
+            ],
+            "customWebpackConfig": {
+              "path": "webpack.extra.js"
+            }
+          },
+          "configurations": {
+            "production": {
+              "budgets": [
+                {
+                  "type": "initial",
+                  "maximumWarning": "9mb",
+                  "maximumError": "10mb"
+                },
+                {
+                  "type": "anyComponentStyle",
+                  "maximumWarning": "2mb",
+                  "maximumError": "2mb"
+                }
+              ],
+              "outputHashing": "none",
+              "fileReplacements": [
+                {
+                  "replace": "apps/zma-0004/src/environments/environment.ts",
+                  "with": "apps/zma-0004/src/environments/environment.prod.ts"
+                }
+              ],
+              "index": "apps/zma-0004/src/index-pro.html"
+            },
+            "development": {
+              "optimization": false,
+              "extractLicenses": false,
+              "sourceMap": true
+            },
+            "demo": {
+              "budgets": [
+                {
+                  "type": "initial",
+                  "maximumWarning": "9mb",
+                  "maximumError": "10mb"
+                },
+                {
+                  "type": "anyComponentStyle",
+                  "maximumWarning": "2mb",
+                  "maximumError": "2mb"
+                }
+              ],
+              "outputHashing": "none",
+              "fileReplacements": [
+                {
+                  "replace": "apps/zma-0004/src/environments/environment.ts",
+                  "with": "apps/zma-0004/src/environments/environment.demo.ts"
+                }
+              ],
+              "index": "apps/zma-0004/src/index-pro.html"
+            }
+          },
+          "defaultConfiguration": "production"
+        },
+        "serve": {
+          "builder": "@angular-devkit/build-angular:dev-server",
+          "configurations": {
+            "production": {
+              "buildTarget": "zma-0004:build:production"
+            },
+            "development": {
+              "buildTarget": "zma-0004:build:development"
+            }
+          },
+          "defaultConfiguration": "development"
+        },
+        "extract-i18n": {
+          "builder": "@angular-devkit/build-angular:extract-i18n",
+          "options": {
+            "buildTarget": "zma-0004:build"
+          }
+        },
+        "test": {
+          "builder": "@angular-devkit/build-angular:karma",
+          "options": {
+            "polyfills": [
+              "zone.js",
+              "zone.js/testing"
+            ],
+            "tsConfig": "apps/zma-0004/tsconfig.spec.json",
+            "inlineStyleLanguage": "scss",
+            "assets": [
+              "apps/zma-0004/src/favicon.ico",
+              "apps/zma-0004/src/assets"
+            ],
+            "styles": [
+              "node_modules/swiper/swiper-bundle.css",
+              "apps/zma-0004/src/assets/css/all.min.css",
+              "apps/zma-0004/src/styles.scss"
+            ],
+            "scripts": []
+          }
+        }
+      }
+    },
+    "zma-0005": {
+      "projectType": "application",
+      "schematics": {
+        "@schematics/angular:component": {
+          "style": "scss"
+        }
+      },
+      "root": "apps/zma-0005",
+      "sourceRoot": "apps/zma-0005/src",
+      "prefix": "app",
+      "architect": {
+        "build": {
+          "builder": "@angular-builders/custom-webpack:browser",
+          "options": {
+            "outputPath": "dist/zma-0005",
+            "index": "apps/zma-0005/src/index.html",
+            "main": "apps/zma-0005/src/main.ts",
+            "polyfills": [
+              "zone.js"
+            ],
+            "tsConfig": "apps/zma-0005/tsconfig.app.json",
+            "inlineStyleLanguage": "scss",
+            "assets": [
+              "apps/zma-0005/src/favicon.ico",
+              "apps/zma-0005/src/assets",
+              { "glob": "app-config.json", "input": "apps/zma-0005", "output": "/" }
+            ],
+            "styles": [
+              "node_modules/swiper/swiper-bundle.css",
+              "common/assets/css/all.min.css",
+              "common/assets/css/phosphor/phosphor.css",
+              "apps/zma-0005/src/styles.scss"
+            ],
+            "scripts": [],
+            "allowedCommonJsDependencies": [
+              "moment",
+              "qrcode",
+              "jsbarcode"
+            ],
+            "customWebpackConfig": {
+              "path": "webpack.extra.js"
+            }
+          },
+          "configurations": {
+            "production": {
+              "budgets": [
+                {
+                  "type": "initial",
+                  "maximumWarning": "9mb",
+                  "maximumError": "10mb"
+                },
+                {
+                  "type": "anyComponentStyle",
+                  "maximumWarning": "2mb",
+                  "maximumError": "2mb"
+                }
+              ],
+              "outputHashing": "none",
+              "fileReplacements": [
+                {
+                  "replace": "apps/zma-0005/src/environments/environment.ts",
+                  "with": "apps/zma-0005/src/environments/environment.prod.ts"
+                }
+              ],
+              "index": "apps/zma-0005/src/index-pro.html"
+            },
+            "development": {
+              "optimization": false,
+              "extractLicenses": false,
+              "sourceMap": true
+            },
+            "demo": {
+              "budgets": [
+                {
+                  "type": "initial",
+                  "maximumWarning": "9mb",
+                  "maximumError": "10mb"
+                },
+                {
+                  "type": "anyComponentStyle",
+                  "maximumWarning": "2mb",
+                  "maximumError": "2mb"
+                }
+              ],
+              "outputHashing": "none",
+              "fileReplacements": [
+                {
+                  "replace": "apps/zma-0005/src/environments/environment.ts",
+                  "with": "apps/zma-0005/src/environments/environment.demo.ts"
+                }
+              ],
+              "index": "apps/zma-0005/src/index-pro.html"
+            }
+          },
+          "defaultConfiguration": "production"
+        },
+        "serve": {
+          "builder": "@angular-devkit/build-angular:dev-server",
+          "configurations": {
+            "production": {
+              "buildTarget": "zma-0005:build:production"
+            },
+            "development": {
+              "buildTarget": "zma-0005:build:development"
+            }
+          },
+          "defaultConfiguration": "development"
+        },
+        "extract-i18n": {
+          "builder": "@angular-devkit/build-angular:extract-i18n",
+          "options": {
+            "buildTarget": "zma-0005:build"
+          }
+        },
+        "test": {
+          "builder": "@angular-devkit/build-angular:karma",
+          "options": {
+            "polyfills": [
+              "zone.js",
+              "zone.js/testing"
+            ],
+            "tsConfig": "apps/zma-0005/tsconfig.spec.json",
+            "inlineStyleLanguage": "scss",
+            "assets": [
+              "apps/zma-0005/src/favicon.ico",
+              "apps/zma-0005/src/assets"
+            ],
+            "styles": [
+              "node_modules/swiper/swiper-bundle.css",
+              "apps/zma-0005/src/assets/css/all.min.css",
+              "apps/zma-0005/src/styles.scss"
+            ],
+            "scripts": []
+          }
+        }
+      }
+    },
+    "zma-0006": {
+      "projectType": "application",
+      "schematics": {
+        "@schematics/angular:component": {
+          "style": "scss"
+        }
+      },
+      "root": "apps/zma-0006",
+      "sourceRoot": "apps/zma-0006/src",
+      "prefix": "app",
+      "architect": {
+        "build": {
+          "builder": "@angular-builders/custom-webpack:browser",
+          "options": {
+            "outputPath": "dist/zma-0006",
+            "index": "apps/zma-0006/src/index.html",
+            "main": "apps/zma-0006/src/main.ts",
+            "polyfills": [
+              "zone.js"
+            ],
+            "tsConfig": "apps/zma-0006/tsconfig.app.json",
+            "inlineStyleLanguage": "scss",
+            "assets": [
+              "apps/zma-0006/src/favicon.ico",
+              "apps/zma-0006/src/assets",
+              { "glob": "app-config.json", "input": "apps/zma-0006", "output": "/" }
+            ],
+            "styles": [
+              "node_modules/swiper/swiper-bundle.css",
+              "common/assets/css/all.min.css",
+              "common/assets/css/phosphor/phosphor.css"
+            ],
+            "scripts": [],
+            "allowedCommonJsDependencies": [
+              "moment",
+              "qrcode",
+              "jsbarcode"
+            ],
+            "customWebpackConfig": {
+              "path": "webpack.extra.js"
+            }
+          },
+          "configurations": {
+            "production": {
+              "budgets": [
+                {
+                  "type": "initial",
+                  "maximumWarning": "9mb",
+                  "maximumError": "10mb"
+                },
+                {
+                  "type": "anyComponentStyle",
+                  "maximumWarning": "2mb",
+                  "maximumError": "2mb"
+                }
+              ],
+              "outputHashing": "none",
+              "fileReplacements": [
+                {
+                  "replace": "apps/zma-0006/src/environments/environment.ts",
+                  "with": "apps/zma-0006/src/environments/environment.prod.ts"
+                }
+              ],
+              "index": "apps/zma-0006/src/index-pro.html"
+            },
+            "development": {
+              "optimization": false,
+              "extractLicenses": false,
+              "sourceMap": true
+            },
+            "demo": {
+              "budgets": [
+                {
+                  "type": "initial",
+                  "maximumWarning": "9mb",
+                  "maximumError": "10mb"
+                },
+                {
+                  "type": "anyComponentStyle",
+                  "maximumWarning": "2mb",
+                  "maximumError": "2mb"
+                }
+              ],
+              "outputHashing": "none",
+              "fileReplacements": [
+                {
+                  "replace": "apps/zma-0006/src/environments/environment.ts",
+                  "with": "apps/zma-0006/src/environments/environment.demo.ts"
+                }
+              ],
+              "index": "apps/zma-0006/src/index-pro.html"
+            }
+          },
+          "defaultConfiguration": "production"
+        },
+        "serve": {
+          "builder": "@angular-devkit/build-angular:dev-server",
+          "configurations": {
+            "production": {
+              "buildTarget": "zma-0006:build:production"
+            },
+            "development": {
+              "buildTarget": "zma-0006:build:development"
+            }
+          },
+          "defaultConfiguration": "development"
+        },
+        "extract-i18n": {
+          "builder": "@angular-devkit/build-angular:extract-i18n",
+          "options": {
+            "buildTarget": "zma-0006:build"
+          }
+        },
+        "test": {
+          "builder": "@angular-devkit/build-angular:karma",
+          "options": {
+            "polyfills": [
+              "zone.js",
+              "zone.js/testing"
+            ],
+            "tsConfig": "apps/zma-0006/tsconfig.spec.json",
+            "inlineStyleLanguage": "scss",
+            "assets": [
+              "apps/zma-0006/src/favicon.ico",
+              "apps/zma-0006/src/assets"
+            ],
+            "styles": [
+              "node_modules/swiper/swiper-bundle.css"
+            ],
+            "scripts": []
+          }
+        }
+      }
+    }
+  },
+  "cli": {
+    "analytics": false
+  }
+}
