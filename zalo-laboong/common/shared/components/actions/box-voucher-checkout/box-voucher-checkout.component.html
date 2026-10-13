@@ -1,0 +1,46 @@
+<div class="sheet safe-pb-16">
+  <div class="sheet__header" role="heading" aria-level="2">
+    <h3 class="sheet__title">Mã giảm giá</h3>
+    <button type="button" class="sheet__close btn-icon" aria-label="Đóng" (click)="close()">
+      <i class="ph ph-x"></i>
+    </button>
+  </div>
+
+  <div class="coupon-field mb-3">
+    <input
+      type="text"
+      placeholder="Nhập mã ưu đãi"
+      aria-label="Nhập mã ưu đãi"
+      [(ngModel)]="couponCode"
+    />
+    <button type="button" class="apply-btn">Áp dụng</button>
+  </div>
+
+  <div class="">
+    <h4 class="section-title mb-2">Ưu đãi đơn hàng</h4>
+
+    <div class="box-voucher mb-3">
+      @if (vouchers.length) {
+        @for (v of vouchers; track v.code) {
+          <app-voucher-card
+            [title]="v.title"
+            [expiry]="v.expire"
+            [description]="v.description"
+            [disabled]="v.disabled ?? false"
+            [cta]="'Chọn'"
+            [selected]="v.code === couponCode"
+            (apply)="onApplyVoucher(v)">
+          </app-voucher-card>
+        }
+      }
+    </div>
+
+    <div class="hint">Đã chọn {{ selectedCountCode }} mã ưu đãi</div>
+
+    <div class="actions safe-pb-16">
+      <button type="button" class="btn w-100" (click)="onConfirmCoupon()">
+        Xác nhận
+      </button>
+    </div>
+  </div>
+</div>

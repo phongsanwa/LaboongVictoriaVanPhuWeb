@@ -1,0 +1,42 @@
+<div class="sheet safe-pb-16">
+  <div class="sheet__header" role="heading" aria-level="2">
+    <h3 class="sheet__title">{{ title }}</h3>
+    <button type="button" class="sheet__close btn-icon" aria-label="Đóng" (click)="offcanvas.dismiss()">
+      <i class="ph ph-x"></i>
+    </button>
+  </div>
+
+  <div class="steps px-2">
+    <div class="steps-icons">
+      @for (s of steps; track s.label; let i = $last) {
+        <div class="step"><i [class]="s.icon"></i></div>
+        @if (!i) {
+          <i class="ph-light ph-caret-double-right"></i>
+        }
+      }
+    </div>
+
+    <div class="steps-labels">
+      @for (s of steps; track s.label; let i = $index) {
+        <div class="label">{{ s.label }}</div>
+      }
+    </div>
+  </div>
+
+  <div class="qr-wrap">
+    <app-render-codes [data]="'https://zalo.me/s/3128212657741737680'"></app-render-codes>
+  </div>
+
+  <button type="button" class="dl" (click)="downloadQR()" aria-label="Tải QR">
+    <i class="ph-light ph-download"></i>
+  </button>
+
+  <div class="actions">
+    <button class="btn zalo" type="button" (click)="shareZalo()">
+      <i class="ph-light ph-chat-circle-dots me-2"></i> Chia sẻ ngay
+    </button>
+    <button class="btn copy" type="button" (click)="copyLink()">
+      <i class="ph-light ph-link me-2"></i> Copy link
+    </button>
+  </div>
+</div>

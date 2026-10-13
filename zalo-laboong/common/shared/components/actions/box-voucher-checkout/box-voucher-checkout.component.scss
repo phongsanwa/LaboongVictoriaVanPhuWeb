@@ -1,0 +1,104 @@
+.coupon-field {
+  --h: 44px;
+  --radius: 14px;
+  --border: #e3e6ea;
+  --btn: var(--brand-color);
+  --shadow: 0 2px 6px rgba(0, 0, 0, .08);
+
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  height: var(--h);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  background: #fff;
+  box-shadow: var(--shadow);
+}
+
+.coupon-field input {
+  height: 100%;
+  padding: 0 14px;
+  border: 0;
+  outline: 0;
+  font-size: 15px;
+  color: #111827;
+}
+
+.coupon-field input::placeholder {
+  color: #6b7280;
+}
+
+.coupon-field .apply-btn {
+  height: 100%;
+  padding: 0 18px;
+  border: 0;
+  background: var(--btn);
+  color: #fff;
+  font-weight: 600;
+  font-size: 15px;
+  cursor: pointer;
+  transition: background .2s ease;
+}
+
+.coupon-field .apply-btn:disabled {
+  background: #b9cffd;
+  cursor: not-allowed;
+}
+
+.box-voucher {
+  --vh: 42vh;
+  max-height: clamp(220px, var(--vh), 520px);
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 8px;
+  border-radius: 12px;
+  scrollbar-width: thin;
+  scrollbar-color: #c1c7d0 transparent;
+
+  & > * + * {
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px dashed #ececec;
+  }
+
+
+  &::-webkit-scrollbar {
+    width: 8px;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: #c1c7d0;
+    border-radius: 999px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+}
+
+.empty {
+  padding: 16px;
+  color: #6c757d;
+  text-align: center;
+}
+
+.actions {
+  display: flex;
+  margin-top: 10px;
+  justify-content: flex-end;
+
+  .btn {
+    background: var(--brand-color);
+    color: #fff;
+    box-shadow: 0 2px 0 rgba(0, 0, 0, 0.08);
+    height: 48px;
+    border-radius: 12px;
+    font-weight: 700;
+    font-size: 16px;
+    border: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+}
