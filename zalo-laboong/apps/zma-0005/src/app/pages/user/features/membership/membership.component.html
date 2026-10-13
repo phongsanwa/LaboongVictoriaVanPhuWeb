@@ -1,0 +1,105 @@
+<div class="text-nowrap overflow-auto text-center member-tabs no-scrollbar" role="tablist">
+  @for (tab of memberTabs; track tab.id) {
+    <div class="nav-item p-0">
+      <button
+        class="nav-link member-pill"
+        [class.active]="selectedTab === tab.id"
+        (click)="selectTab(tab.id)"
+        type="button"
+      >
+        <div>{{ tab.label }}</div>
+        @if (selectedTab === tab.id) {
+          <div class="active-underline"></div>
+        }
+      </button>
+    </div>
+  }
+</div>
+
+<div class="tab-content py-2">
+  @if (selectedTab === 'new') {
+    <div class="d-flex justify-content-between align-items-center text-middle px-2">
+      <div>Hạng hiện tại</div>
+      <div class="d-flex align-items-center gap-1">
+        <i class="ph-bold ph-star"></i>
+        <b class="fw-semibold">0 điểm</b>
+      </div>
+    </div>
+  } @else if (selectedTab === 'silver') {
+    <div class="d-flex justify-content-between align-items-center text-middle px-2">
+      <div>Mở khóa hạng khi đạt đủ 100</div>
+      <div class="d-flex align-items-center gap-1">
+        <i class="ph-bold ph-star"></i>
+        <b class="fw-semibold">0 điểm</b>
+      </div>
+    </div>
+    <div class="list-policy">
+      <div class="d-flex align-items-center gap-2 py-2 px-2 border-bottom">
+        <i class="text-small ph-bold ph-lock text-white d-flex align-items-center justify-content-center opacity-25"></i>
+        <div class="text-policy">
+          <div class="lh-24 fw-semibold">Ưu tiên trải nghiệm các tính năng mới</div>
+          <div class="text-middle">Khách hàng khi đạt hạng sẽ được ưu tiên trải nghiệm các tính năng mới nhất của hệ thống</div>
+        </div>
+      </div>
+      <div class="d-flex align-items-center gap-2 py-2 px-2 border-bottom">
+        <i class="text-small ph-bold ph-lock text-white d-flex align-items-center justify-content-center opacity-25"></i>
+        <div class="text-policy">
+          <div class="lh-24 fw-semibold">Ưu tiên trải nghiệm các tính năng mới</div>
+          <div class="text-middle">Khách hàng khi đạt hạng sẽ được ưu tiên trải nghiệm các tính năng mới nhất của hệ thống</div>
+        </div>
+      </div>
+    </div>
+  } @else if (selectedTab === 'gold') {
+    <div class="d-flex justify-content-between align-items-center text-middle px-2">
+      <div>Mở khóa hạng khi đạt đủ 300</div>
+      <div class="d-flex align-items-center gap-1">
+        <i class="ph-bold ph-star"></i>
+        <b class="fw-semibold">0 điểm</b>
+      </div>
+    </div>
+    <div class="list-policy">
+      <div class="d-flex align-items-center gap-2 py-2 px-2 border-bottom">
+        <i class="text-small ph-bold ph-lock text-white d-flex align-items-center justify-content-center opacity-25"></i>
+        <div class="text-policy">
+          <div class="lh-24 fw-semibold">Ưu tiên trải nghiệm các tính năng mới</div>
+          <div class="text-middle">Khách hàng khi đạt hạng sẽ được ưu tiên trải nghiệm các tính năng mới nhất của hệ thống</div>
+        </div>
+      </div>
+      <div class="d-flex align-items-center gap-2 py-2 px-2 border-bottom">
+        <i class="text-small ph-bold ph-lock text-white d-flex align-items-center justify-content-center opacity-25"></i>
+        <div class="text-policy">
+          <div class="lh-24 fw-semibold">Ưu tiên trải nghiệm các tính năng mới</div>
+          <div class="text-middle">Khách hàng khi đạt hạng sẽ được ưu tiên trải nghiệm các tính năng mới nhất của hệ thống</div>
+        </div>
+      </div>
+    </div>
+  } @else if (selectedTab === 'ruby') {
+    <div class="d-flex justify-content-between align-items-center text-middle px-2">
+      <div>Mở khóa hạng khi đạt đủ 500</div>
+      <div class="d-flex align-items-center gap-1">
+        <i class="ph-bold ph-star"></i>
+        <b class="fw-semibold">0 điểm</b>
+      </div>
+    </div>
+    <div class="list-policy">
+      <div class="d-flex align-items-center gap-2 py-2 px-2 border-bottom">
+        <i class="text-small ph-bold ph-lock text-white d-flex align-items-center justify-content-center opacity-25"></i>
+        <div class="text-policy">
+          <div class="lh-24 fw-semibold">Ưu tiên trải nghiệm các tính năng mới</div>
+          <div class="text-middle">Khách hàng khi đạt hạng sẽ được ưu tiên trải nghiệm các tính năng mới nhất của hệ thống</div>
+        </div>
+      </div>
+      <div class="d-flex align-items-center gap-2 py-2 px-2 border-bottom">
+        <i class="text-small ph-bold ph-lock text-white d-flex align-items-center justify-content-center opacity-25"></i>
+        <div class="text-policy">
+          <div class="lh-24 fw-semibold">Ưu tiên trải nghiệm các tính năng mới</div>
+          <div class="text-middle">Khách hàng khi đạt hạng sẽ được ưu tiên trải nghiệm các tính năng mới nhất của hệ thống</div>
+        </div>
+      </div>
+    </div>
+  }
+  <div class="mt-3 px-2 d-flex align-items-center justify-content-between">
+    <div>Chương trình khách hàng thân thiết</div>
+    <i class="ph ph-arrow-right"></i>
+  </div>
+</div>

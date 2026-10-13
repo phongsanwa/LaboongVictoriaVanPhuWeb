@@ -1,0 +1,65 @@
+.cart-sheet {
+  .sheet-header {
+    padding: .75rem 1rem;
+    border-bottom: 1px solid rgba(0,0,0,.06);
+  }
+
+  .sheet-body {
+    max-height: 60vh;
+    overflow: auto;
+    padding: .5rem 1rem .5rem 1rem;
+  }
+
+  .sheet-footer {
+    position: sticky;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: #fff;
+    box-shadow: 0 -6px 12px rgba(0,0,0,.04);
+    padding-bottom: max(16px, env(safe-area-inset-bottom));
+    border-bottom-left-radius: 18px;
+    border-bottom-right-radius: 18px;
+  }
+
+  .btn-checkout {
+    border-radius: .75rem;
+    background-color: var(--brand-color);;
+    border-color: var(--brand-color);;
+  }
+
+  .cart-line {
+    padding: 1rem 0;
+    .thumb { width: 56px; height: 56px; object-fit: contain; }
+    .name  { line-height: 1.25; }
+    .text-truncate-2 {
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+    .qty-box {
+      .btn { min-width: 32px; }
+    }
+  }
+
+  .price-and-color_size {
+    flex-direction: column;
+  }
+
+  .divider {
+    height: 1px;
+    background: rgba(0,0,0,.06);
+  }
+}
+
+.inputQttSmaller {
+  height: 25px !important;
+}
+
+/* Bo tròn panel offcanvas đáy (class bạn đã dùng) */
+.offcanvas-bottom-sheet .offcanvas {
+  border-top-left-radius: 18px;
+  border-top-right-radius: 18px;
+  overflow: hidden;
+}

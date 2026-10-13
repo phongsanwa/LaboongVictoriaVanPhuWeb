@@ -1,0 +1,28 @@
+<div class="bg-light h-100">
+  <div class="h-fit-content">
+    <div class="d-flex bg-white align-items-center gap-1 p-2 mb-1">
+      <div class="text-middle">Số dư:</div>
+      <div class="fw-semibold text-brand-color">0 điểm</div>
+    </div>
+    <div class="text-nowrap overflow-auto member-tabs no-scrollbar" role="tablist">
+      @for (tab of pointTabs; track tab.id) {
+        <div class="nav-item p-0">
+          <button
+            class="nav-link member-pill"
+            [class.active]="selectedTab === tab.id"
+            (click)="selectTab(tab.id)"
+            type="button"
+          >
+            <div>{{ tab.label }}</div>
+            @if (selectedTab === tab.id) {
+              <div class="active-underline"></div>
+            }
+          </button>
+        </div>
+      }
+    </div>
+    <div class="tab-content bg-white py-2">
+      <div class="px-2">Tài khoản chưa có giao dịch</div>
+    </div>
+  </div>
+</div>

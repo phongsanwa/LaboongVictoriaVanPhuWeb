@@ -1,0 +1,122 @@
+.rounded-lg {
+  border-radius: 0.5rem;
+}
+
+.text-xl {
+  font-size: 18px;
+  line-height: 24px;
+}
+
+.bg-share {
+  --tw-bg-opacity: 1;
+  background-color: rgb(1 107 217 / 1);
+  border: none;
+}
+
+.right-5 {
+  right: 1.25rem;
+}
+
+.top-14 {
+  top: 14px
+}
+
+.p-1_r {
+  padding: 1rem;
+}
+
+.text-base {
+  font-size: 15px;
+  line-height: 20px;
+}
+
+.w-8 {
+  width: 2rem;
+}
+
+.h-8 {
+  height: 2rem;
+}
+
+.rounded-full {
+  border-radius: 9999px;
+}
+
+.price {
+  font-size: 15px;
+}
+
+.old-price {
+  font-size: 16px;
+  text-transform: uppercase;
+  color: #696969;
+}
+
+::ng-deep .detail-product-content img {
+  width: 100%;
+  height: auto;
+}
+
+.text-orange {
+  color: var(--brand-color);;
+}
+
+.image-wrapper img {
+  width: 100%;
+  object-fit: cover;
+  aspect-ratio: 1/1;
+  display: block;
+  border-radius: 7px;
+}
+.tour-card {
+  border: 1px solid #ddd;
+  border-radius: 7px;
+}
+.price {
+  color: var(--brand-color);;
+}
+.line-clamp-2 {
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  height: 42px;
+  max-height: 42px;
+}
+
+.text-orange {
+  color: var(--brand-color);;
+}
+
+.text-small {
+  font-size: 10px;
+}
+
+.float-in {
+  position: relative;
+  z-index: 9;
+}
+
+
+.bg-opacity-header {
+  background: rgba(0,0,0,.5);
+}
+
+.z-index {
+  z-index: 99;
+}
+
+.w-fit-content {
+  width: fit-content;
+}
+
+.detail-btn i {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  color: #fff;
+  font-size: 13px;
+}

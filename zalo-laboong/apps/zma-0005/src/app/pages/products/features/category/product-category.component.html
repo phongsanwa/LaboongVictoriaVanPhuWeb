@@ -1,0 +1,83 @@
+<div class="h-100 bg-light overflow-hidden no-scrollbar position-relative">
+    <div class="container pt-2 top-bar d-flex align-items-center gap-2">
+        <div class="top-bar-left d-flex flex-column gap-1 justify-content-center align-items-center">
+            <a [routerLink]="uriFeConst.home" class="logo d-block">
+                <img class="rounded-1"
+                     src="https://dummyimage.com/30x30/fff/000"
+                     alt="Logo"
+                />
+            </a>
+        </div>
+        <div class="d-flex flex-nowrap no-scrollbar gap-3 text-nowrap overflow-auto space-x-6 overflow-x-auto p-2">
+            @for (cate of category; track cate.id) {
+                <a class="d-flex h-100 flex-column align-items-center category-item cursor-pointer
+            {{ cate.id === selectedParentCategoryId ? 'rounded-1 color-active' : '' }}"
+                        (click)="selectCategory(cate.id)"
+                >
+                  <img class="d-block rounded-1 mb-2 {{ cate.id === selectedParentCategoryId ? 'shadow-sm' : '' }}" width="30" height="30" src="{{ cate.image }}" alt="{{ cate.name }}">
+                    <div class="text-center rounded-1 text-sm w-full text-subtitle text-normal py-1 px-2 {{ cate.id === selectedParentCategoryId ? 'shadow-sm' : '' }}">
+                        {{ cate.name }}
+                    </div>
+                </a>
+            }
+        </div>
+    </div>
+    <div class="container">
+      @if (products.length) {
+        <div class="row row-cols-2 g-2 pb-2 scrollable" (scroll)="onScroll($event)">
+          @for (prd of products; track prd.id) {
+            <div class="flex flex-col group h-100">
+              <div class="border border-1 rounded-3 cursor-pointer bg-white">
+                <a class="d-block w-full rounded-t-lg" [routerLink]="uriFeConst.product.detail"
+                   [queryParams]="{ id: prd.id }">
+                  <img [src]="prd.image || 'https://dummyimage.com/300x300/163645/fff'"
+                       class="w-full aspect-square object-cover rounded-t-lg"
+                       [alt]="prd.name"
+                  />
+                </a>
+                <div class="p-2 pb-3">
+                  <div class="text-3xs text-subtitle truncate">
+                    {{ prd.category?.name || '' }}
+                  </div>
+                  <div class="text-xs mb-2 fw-medium line-clamp-2 fw-semibold">
+                    {{ prd.name }}
+                  </div>
+
+                  <div class="product-price d-flex gap-1 position-relative">
+                    @if (prd.prices && (prd.prices.contactPrice || !prd.prices.price)) {
+                      <div class="mt-0.5 text-sm fw-semibold">Liên hệ</div>
+                    } @else if (prd.prices.priceAfterDiscount) {
+                      <div class="mt-0.5 text-sm fw-semibold">
+                        {{ prd.prices.priceAfterDiscount | i18nCurrencyAmount : {showSymbol: true} }}
+                      </div>
+                      <div class="mt-0.5 text-xs fw-medium line-through opacity-75">
+                        {{ prd.prices.price | i18nCurrencyAmount : {showSymbol: true} }}
+                      </div>
+                    } @else if (prd.prices) {
+                      <div class="mt-0.5 text-sm fw-semibold">
+                        {{ prd.prices.price | i18nCurrencyAmount : {showSymbol: true} }}
+                      </div>
+                      @if (prd.prices.priceOld) {
+                        <div class="mt-0.5 text-xs fw-medium line-through opacity-75">
+                          {{ prd.prices.priceOld | i18nCurrencyAmount : {showSymbol: true} }}
+                        </div>
+                      }
+                    } @else {
+                      <div class="mt-0.5 text-sm fw-semibold">Liên hệ</div>
+                    }
+
+                    <!-- nút add-to-cart -->
+                    <button class="add-to-cart position-absolute rounded-full
+                                    d-flex justify-content-center align-items-center bg-white"
+                    >
+                      <i class="ph ph-shopping-cart"></i>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          }
+        </div>
+      }
+    </div>
+</div>

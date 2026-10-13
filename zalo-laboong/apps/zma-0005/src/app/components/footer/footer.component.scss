@@ -1,0 +1,83 @@
+
+.f-6 {
+  font-size: 1rem;
+}
+
+.pb-0\.5 {
+  padding-bottom: 0.125rem;
+}
+
+.flex-col {
+  flex-direction: column;
+}
+
+.grid {
+  display: grid;
+}
+
+.footer-nav {
+  grid-template-columns: repeat(5, 1fr);
+}
+
+.footer-nav a.active i {
+  color: var(--primary) !important;
+}
+
+.add-to-cart {
+  background-color: #e9ecef;
+  color: #212529;
+  border: none;
+  border-radius: 0.75rem;
+}
+
+.buy-now {
+  background-color: var(--brand-color);;
+  color: #fff;
+  border: none;
+  border-radius: 0.75rem;
+}
+
+.btn {
+  font-size: 1rem;
+  font-weight: 500;
+}
+
+.zalo-chat_text {
+  font-size: 9px;
+}
+
+.logo-zalo-size {
+  width: 26px;
+}
+
+.chat_zalo {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.nav-item_nav {
+  width: 100%;
+  padding-left: 1rem;
+}
+
+.grid footer-nav .active span {
+  color: var(--primary) !important;
+}
+
+.text-2xs {
+  font-size: 0.675rem;
+}
+
+.translate-middle {
+  bottom: 28px;
+  right: 12px;
+}
+
+/* Active style chỉ áp cho tab KHÔNG có badge */
+.footer-nav .footer-tab.active:not(.no-active) i,
+.footer-nav .footer-tab.active:not(.no-active) span {
+  color: #aaa;
+}
+
+

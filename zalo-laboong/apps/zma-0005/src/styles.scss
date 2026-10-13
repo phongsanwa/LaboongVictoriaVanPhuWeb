@@ -1,0 +1,244 @@
+/* -------------------------------------------------------------------------------------------------
+ * 2) CSS Variables: Safe Area (default + auto-detect khi hỗ trợ env())
+ * ------------------------------------------------------------------------------------------------*/
+:root {
+  /* Fallback mặc định (web/desktop không full-screen) */
+  --zaui-safe-area-inset-top: 0px;
+  --zaui-safe-area-inset-bottom: 0px;
+  --zaui-safe-extra-top: 0px;
+}
+
+/* Khi trình duyệt hỗ trợ env(safe-area-*) thì override */
+@supports (padding: max(0px)) {
+  :root {
+    --zaui-safe-area-inset-top: env(safe-area-inset-top);
+    --zaui-safe-area-inset-bottom: env(safe-area-inset-bottom);
+  }
+}
+
+/* -------------------------------------------------------------------------------------------------
+ * 3) Utilities
+ * ------------------------------------------------------------------------------------------------*/
+/* Padding safe-area trực tiếp */
+.safe-pt { padding-top: var(--zaui-safe-area-inset-top) !important; }
+.safe-pb { padding-bottom: var(--zaui-safe-area-inset-bottom) !important; }
+
+/* Luôn có tối thiểu 16px + cộng thêm safe-area khi có (dùng cho web & production) */
+.safe-pt-16 { padding-top: max(16px, var(--zaui-safe-area-inset-top)) !important;  }
+.safe-pb-16 { padding-bottom: max(16px, var(--zaui-safe-area-inset-bottom)) !important;  }
+
+.bg-background { background-color: #ffffff; }
+
+/* -------------------------------------------------------------------------------------------------
+ * 4) Components: Offcanvas bottom sheet (NgbOffcanvas)
+ * ------------------------------------------------------------------------------------------------*/
+.offcanvas-bottom-sheet.offcanvas-bottom {
+  height: auto;
+  max-height: min(85vh, 1000px);
+  border-top-left-radius: 16px;
+  border-top-right-radius: 16px;
+  overflow: auto;
+}
+.bg-background {
+  background-color: #ffffff;
+}
+
+.offcanvas-bottom-sheet.offcanvas-bottom {
+  height: auto;
+  max-height: min(85vh, 720px);
+  border-top-left-radius: 16px;
+  border-top-right-radius: 16px;
+  overflow: auto;
+}
+
+.text-gray {
+  color: gray;
+}
+
+.text-13 {
+  font-size: 13px;
+}
+
+.modal.show.fade .modal-community {
+  transform: translateX(0);
+}
+
+.modal.fade .modal-community {
+  transform: translateX(-100%);
+  transition: transform 0.3s ease-out;
+  left: 0;
+  top: max(16px, var(--zaui-safe-area-inset-top)) !important;
+  margin: 0;
+}
+
+.modal-community .modal-content {
+  border-top-left-radius: 0;
+  border-bottom-left-radius: 0;
+  border: none;
+  width: 70vw;
+  height: 100vh;
+}
+
+.text-brand-color {
+  color: var(--brand-color);
+}
+
+.text-small {
+  font-size: 10px;
+}
+
+app-follow-oa.oa-user>div.p-2 {
+  padding: 0 !important;
+}
+
+app-follow-oa.oa-user .follow-oa-card {
+  background: #fff !important;
+  border-radius: 0;
+}
+
+app-user .p-2 {
+  padding: 10px 15px !important;
+}
+
+app-follow-oa.oa-user .follow-oa-card .oa-description {
+  font-size: 11px;
+  border-bottom: 1px solid #ccc;
+}
+
+app-follow-oa.oa-user  .follow-oa-card .oa-left .oa-avatar {
+  width: 25px;
+  height: 25px;
+}
+
+app-follow-oa.oa-user {
+  margin-bottom: 10px;
+}
+
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+.text-middle {
+  font-size: 12px;
+}
+
+.h-fit-content {
+  height: fit-content;
+}
+
+.text-invert .text-white {
+  color: #000 !important;
+}
+
+.border-brand-color {
+  border: 1px solid var(--brand-color);
+}
+
+.sheet-footer  {
+  margin-bottom: 2rem;
+}
+
+input, button {
+  outline: none !important;
+}
+
+.bg-brand-color {
+  background-color: rgb(from var(--brand-color) r g b / 0.1) !important;
+}
+
+app-auto-numeric input {
+  padding: 0 10px !important;
+  border: none !important;
+  outline: none !important;
+  font-size: 13px !important;
+  color: #000;
+  text-align: center;
+  box-shadow: none !important;
+  width: fit-content;
+  flex: unset !important;
+  height: 20px !important;
+}
+
+app-auto-numeric .p-inputnumber-decrement-button, app-auto-numeric .p-inputnumber-increment-button {
+  width: 20px !important;
+  height: 20px !important;
+  border-radius: 50% !important;
+  border: none !important;
+  background: #ccc;
+  padding: 0 !important;
+  font-size: 9px !important;
+  color: #000 !important;
+}
+
+app-auto-numeric p-inputnumber {
+  height: 20px !important;
+}
+
+.bg-brand-color-origin {
+  background: var(--brand-color);
+}
+
+.custom-modal-share .modal-content {
+  border: none;
+}
+.modal.show .custom-modal-share.modal-dialog {
+  margin: 0;
+  width: 100%;
+}
+.custom-modal-share.modal-dialog.modal-dialog-centered {
+  min-height: unset;
+  display: block
+}
+.modal-voucher.modal-dialog-centered .modal-body {
+  height: 70vh
+}
+.modal-voucher.modal-dialog-centered .modal-content {
+  height: 100%;
+}
+.custom-modal-share .modal-share .img-banner-qr {
+  padding: 7px;
+  border: 1px solid #ccc;
+  width: 250px;
+  height: 250px;
+  display: block;
+}
+.custom-modal-share .modal-share .style_logo {
+  width: 40px;
+  height: 40px;
+  display: inline-flex;
+  color: #000;
+  border-radius: 50%;
+  background: #fff;
+  justify-content: center;
+  align-items: center;
+}
+.custom-modal-share p {
+  font-size: 13px;
+}
+.modal.fade .modal-dialog-bottom {
+  transform: translateY(100%);
+  transition: transform 0.3s ease-out;
+  position: absolute;
+  bottom: 0;
+}
+.modal.show .modal-dialog-bottom {
+  transform: translateY(0);
+}
+.modal.fade .modal-dialog-bottom .modal-content {
+  border-bottom-left-radius: 0;
+  border-bottom-right-radius: 0;
+}
+app-voucher-modal button {
+  background: var(--brand-color) !important;
+  color: #fff !important;
+  font-size: 13px !important;
+}
+
+.h-100-vh {
+  height: 100vh;
+}

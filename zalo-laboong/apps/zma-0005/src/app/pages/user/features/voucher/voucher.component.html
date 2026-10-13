@@ -1,0 +1,15 @@
+<article class="voucher-card">
+  <div class="voucher-left">
+    <span class="voucher-badge">VOUCHER</span>
+    <div class="voucher-value">10K</div>
+  </div>
+
+  <div class="voucher-body">
+    <div class="voucher-title">Giảm 10k cho đơn hàng từ 50...</div>
+    <div class="voucher-code">{{ voucher.code }}</div>
+    <div class="voucher-meta">
+      HSD: {{ voucher.expire | date:'dd/MM/yyyy' }}
+      <a class="voucher-terms" (click)="openTerms()">Điều kiện</a>
+    </div>
+  </div>
+</article>

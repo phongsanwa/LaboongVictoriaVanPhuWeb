@@ -1,0 +1,66 @@
+<div class="py-2">
+  @if (product.availableColors && product.availableColors.length) {
+    <div class="d-flex mt-3">
+      <div class="flex-shrink-0 w-25">Màu sắc</div>
+      <div class="d-flex flex-1 flex-wrap gap-2">
+        @for (color of product.availableColors; track color) {
+          <span class="btn btn-sm fw-semibold border"
+                [class.btn-primary]="color === prdService.objPro.color"
+                (click)="prdService.onColorChange(color)">
+              {{ color }}
+      </span>
+        }
+      </div>
+    </div>
+  }
+
+  @if (prdService.availableSizes && prdService.availableSizes.length) {
+    <div class="d-flex mt-3">
+      <div class="flex-shrink-0 w-25">Kích thước</div>
+      <div class="d-flex flex-1 flex-wrap gap-2">
+        @for (size of this.prdService.availableSizes; track size) {
+          <span class="btn btn-sm fw-semibold border"
+                [class.btn-primary]="size === prdService.objPro.size"
+                [ngClass]="checkDisableSize(size)"
+                (click)="prdService.onSizeChange(size)">
+            {{ size }}
+          </span>
+        }
+      </div>
+    </div>
+  }
+
+  <div class="d-flex mt-3">
+    <div class="flex-shrink-0 w-25">Số lượng</div>
+    <div>
+      <app-auto-numeric
+        [ngStyleInput]="{
+                              'border-radius': '0',
+                              'width': '40px',
+                              'height': '36px',
+                              'text-align': 'center',
+                              'padding':'0'
+                            }"
+        [showButtonChange]="true"
+        [(value)]="prdService.objPro.quantity"
+        [classInput]="'inputQttSmaller text-center'"
+      />
+    </div>
+  </div>
+
+  @if (prdService.isRequiredAttr || prdService.isRequiredChild) {
+    <div class="py-2 px-3 mt-2 position-sticky bottom-0">
+      <div class="alert w-100 alert-warning m-0 p-2">
+        @if (prdService.isRequiredAttr) {
+          {{ prdService.isRequiredAttr }}
+        }
+        @if (prdService.isRequiredChild) {
+          {{ prdService.isRequiredChild }}
+        }
+      </div>
+    </div>
+  }
+  <button class="btn btn-primary btn-add-to-cart flex-fill bg-orange text-white text-center rounded-1" (click)="confirmOrder()">
+    Mua ngay
+  </button>
+</div>

@@ -1,0 +1,16 @@
+.action-button button, .action-button input {
+  border: none;
+  text-align: center;
+  width: 33px;
+  height: 33px;
+}
+
+.btn-add-to-cart {
+  background: var(--brand-color);;
+  height: 35px;
+  display: flex;
+  align-items: center;
+  border: none;
+  width: 100%;
+  margin-top: 15px;
+}

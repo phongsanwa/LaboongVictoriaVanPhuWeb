@@ -1,0 +1,94 @@
+<div class="header-color safe-pt-16 pb-3 h-14 header-user-icon
+  w-100 d-flex align-items-center px-2 text-white after-hidden">
+  <i class="ph ph-caret-left me-2" (click)="back()"></i>
+  <div class="position-relative w-50">
+    <input
+      type="text"
+      placeholder="Nhập để tìm kiếm..."
+      class="input-focus w-100 h-12 ps-4 bg-section border border-0 text-lg rounded-lg outline-none"
+      [value]="keyword"
+      (input)="onKeywordChange($event)"
+      autocomplete="off"
+    />
+    <i class="text-12 ph-light ph-magnifying-glass position-absolute search-icon top-50 translate-middle-y"></i>
+  </div>
+</div>
+<div class="bg-">
+  @if (isLoading && currentPage === 1) {
+    <div class="d-flex justify-content-center align-items-center h-100-vh w-100">
+      <div class="text-center d-flex justify-content-center"></div>Đang tải...
+    </div>
+  }
+
+  @if (errorMessage) {
+    <div class="d-flex justify-content-center align-items-center h-100-vh w-100">
+      <div class="alert alert-danger">{{ errorMessage }}</div>
+    </div>
+  }
+
+  @if (!isLoading && products.length === 0 && !errorMessage) {
+    <div class="d-flex justify-content-center align-items-center h-100-vh w-100">
+      <div class="text-search text-center">
+        <i class="ph-light ph-magnifying-glass h1 mb-0 text-muted fw-normal"></i>
+        <p class="text-muted">Nhập để tìm kiếm</p>
+      </div>
+    </div>
+  }
+
+  @if (products.length) {
+    <div class="container-fluid">
+      <div class="row row-cols-2 g-2 mt-2 pb-2 scrollable" (scroll)="onScroll($event)">
+        @for (prd of products; track prd.id) {
+          <div class="flex flex-col group h-100">
+            <div class="border border-1 rounded-3 cursor-pointer bg-white">
+              <a class="d-block w-full rounded-t-lg" [routerLink]="uriFeConst.product.detail"
+                 [queryParams]="{ id: prd.id }">
+                <img [src]="prd.image || 'https://dummyimage.com/300x300/163645/fff'"
+                     class="w-full aspect-square object-cover rounded-t-lg"
+                     [alt]="prd.name"
+                />
+              </a>
+              <div class="p-2 pb-3">
+                <div class="text-3xs text-subtitle truncate">
+                  {{ prd.category?.name || '' }}
+                </div>
+                <div class="text-xs mb-2 fw-medium line-clamp-2 fw-semibold">
+                  {{ prd.name }}
+                </div>
+
+                <div class="product-price d-flex gap-1 position-relative">
+                  @if (prd.prices && (prd.prices.contactPrice || !prd.prices.price)) {
+                    <div class="mt-0.5 text-sm fw-semibold">Liên hệ</div>
+                  } @else if (prd.prices.priceAfterDiscount) {
+                    <div class="mt-0.5 text-sm fw-semibold">
+                      {{ prd.prices.priceAfterDiscount | i18nCurrencyAmount : {showSymbol: true} }}
+                    </div>
+                    <div class="mt-0.5 text-xs fw-medium line-through opacity-75">
+                      {{ prd.prices.price | i18nCurrencyAmount : {showSymbol: true} }}
+                    </div>
+                  } @else if (prd.prices) {
+                    <div class="mt-0.5 text-sm fw-semibold">
+                      {{ prd.prices.price | i18nCurrencyAmount : {showSymbol: true} }}
+                    </div>
+                    @if (prd.prices.priceOld) {
+                      <div class="mt-0.5 text-xs fw-medium line-through opacity-75">
+                        {{ prd.prices.priceOld | i18nCurrencyAmount : {showSymbol: true} }}
+                      </div>
+                    }
+                  } @else {
+                    <div class="mt-0.5 text-sm fw-semibold">Liên hệ</div>
+                  }
+                  <button class="add-to-cart position-absolute rounded-full
+                                  d-flex justify-content-center align-items-center bg-white"
+                  >
+                    <i class="ph ph-shopping-cart"></i>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        }
+      </div>
+    </div>
+  }
+</div>

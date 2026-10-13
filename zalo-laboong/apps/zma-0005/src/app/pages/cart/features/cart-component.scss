@@ -1,0 +1,17 @@
+.tag {
+  padding: 2px 4px;
+  width: fit-content;
+}
+
+.tag:first-child {
+  background: lightblue;
+}
+
+.delete {
+  top: 0.5rem;
+  right: 0.5rem;
+}
+
+.total-money {
+  width: calc(100% - 150px);
+}

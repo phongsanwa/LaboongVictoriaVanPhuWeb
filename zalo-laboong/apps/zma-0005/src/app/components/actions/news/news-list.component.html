@@ -1,0 +1,25 @@
+<div class="d-flex items-center justify-content-between px-2">
+  <div class="title mb-2 d-flex align-items-center justify-content-between w-100">
+    <h2 class="text-uppercase fw-normal mb-0 h4">Tin tức</h2>
+    <a class="text-12" [routerLink]="uriFeConst.news.category">Xem tất cả</a>
+  </div>
+</div>
+@if (newsList && newsList.length > 0) {
+  <div class="bg-white py-2">
+    <div class="container">
+      <div class="justify-content-start latest-news">
+        @for (item of newsList; track item.id) {
+          <div class="news-item mb-2">
+            <div class="row">
+              <a class="col-4" [routerLink]="uriFeConst.news.detail" [queryParams]="{ id: item.id }"><img [src]="item.avatarUri" class="card-img-top" [alt]="item.title"></a>
+              <div class="card-body col-8">
+                <p class="category-name text-brand-color text-small text-uppercase">Tin tức</p>
+                <a class="text-black text-capitalize" [routerLink]="uriFeConst.news.detail" [queryParams]="{ id: item.id }">{{ item.title }}</a>
+              </div>
+            </div>
+          </div>
+        }
+      </div>
+    </div>
+  </div>
+}

@@ -1,0 +1,174 @@
+<div class="bg-light mb-item-2">
+  <div class="bg-white top-info-bar safe-pt-16 pb-3 px-3 shadow-sm">
+    <div class="row row-cols-2 align-items-center">
+      <div class="h1 fw-normal mb-0 lh-24">Tài khoản</div>
+      @if (userInfo && userInfo.name) {
+        <div class="d-flex action-top gap-2">
+          <i class="ph-bold ph-user bg-brand-color ms-3" [routerLink]="uriFeConst.user.profileEdit"></i>
+          <i class="ph-bold ph-share bg-brand-color" (click)="shareZaloMiniApp()"></i>
+        </div>
+      }
+    </div>
+  </div>
+  @if (!(userInfo && userInfo.name)) {
+    <div class="header-card bg-white d-flex align-items-center p-2" (click)="grantPermission()">
+      <div class="icon-circle text-brand-color me-3">
+        <i class="ph ph-user"></i>
+      </div>
+      <div class="flex-grow-1">
+        <div class="fw-bold">Đăng ký thành viên</div>
+        <small class="text-muted">Tích điểm đổi thưởng, mở rộng tiện ích</small>
+      </div>
+      <i class="ph-light ph-caret-right"></i>
+    </div>
+  } @else {
+    <div class="bg-white px-3 py-2 position-relative">
+      <div class="d-flex justify-content-between align-items-center">
+        <div class="d-flex gap-2">
+          <img class="rounded-circle" width="40" height="40"
+               [src]="userInfo && userInfo.avatar ? userInfo.avatar : 'assets/img/avatar-placeholder.jpg'">
+          <div>
+            <div class="lh-24">{{ userInfo.name }}</div>
+            <div class="text-small">{{ userInfo.phoneNumber }}</div>
+          </div>
+        </div>
+        <i class="ph ph-caret-right"></i>
+      </div>
+      <div class="edit-profile bg-brand-color" [routerLink]="uriFeConst.user.profileEdit">
+        <i class="ph-bold ph-user"></i> Chỉnh sửa thông tin
+      </div>
+    </div>
+
+    <app-follow-oa class="oa-user"
+                   [oaId]="'762755468038541624'"
+                   [buttonText]="'Quan tâm'"
+                   [img]="'https://posstatic.nvndev.net/assets/img/favicon.svg'"
+                   [explanationTitle]="'Nhanh.vn Official'"
+                   [explanationContent]="'Quan tâm OA để nhận các chương trình đặc quyền ưu đãi'"
+    >
+    </app-follow-oa>
+
+    <div class="p-2 bg-white d-flex justify-content-between mt-2" [routerLink]="uriFeConst.user.membership" >
+      <div class="d-flex gap-2 align-items-center block-action">
+        <i class="ph-bold ph-star bg-yellow text-small p-1 rounded rounded-pill text-white"></i>
+        <div class="text-title w-75">
+          <p class="mb-0 lh-24">Thành viên</p>
+          <div class="text-small">Bạn cần tích lũy thêm 100 điểm để đạt thành viên bạc</div>
+        </div>
+      </div>
+      <div class="d-flex gap-2 align-items-center">
+        <div class="text-brand-color fw-semibold">0 điểm</div>
+        <i class="ph-bold ph-caret-right text-gray"></i>
+      </div>
+    </div>
+
+    <div class="p-2 bg-white d-flex justify-content-between mt-2" [routerLink]="uriFeConst.user.points">
+      <div class="d-flex gap-2 align-items-center block-action point-block">
+        <i class="ph-bold ph-wallet rounded rounded-pill"></i>
+        <div class="text-title w-75">
+          <p class="mb-0 lh-24">Ví điểm</p>
+        </div>
+      </div>
+      <div class="d-flex gap-2 align-items-center">
+        <div class="text-brand-color fw-semibold">0 điểm</div>
+        <i class="ph-bold ph-caret-right text-gray"></i>
+      </div>
+    </div>
+
+    <div class="p-2 bg-white d-flex justify-content-between mt-2" [routerLink]="uriFeConst.user.voucher">
+      <div class="d-flex gap-2 align-items-center block-action block-voucher">
+        <i class="ph-bold ph-ticket"></i>
+        <div class="text-title w-100">
+          <p class="mb-0 lh-24">Voucher của tôi</p>
+          <div class="text-small">Sử dụng các mã giảm giá đã nhận</div>
+        </div>
+      </div>
+      <div class="d-flex gap-2 align-items-center">
+        <i class="ph-bold ph-caret-right text-gray"></i>
+      </div>
+    </div>
+
+    <div class="p-2 bg-white d-flex justify-content-between mt-2" [routerLink]="uriFeConst.user.address">
+      <div class="d-flex gap-2 align-items-center block-action block-address">
+        <i class="ph-bold ph-map-pin"></i>
+        <div class="text-title w-100">
+          <p class="mb-0 lh-24">Địa chỉ của tôi</p>
+          <div class="text-small">Quản lý địa chỉ nhận hàng</div>
+        </div>
+      </div>
+      <div class="d-flex gap-2 align-items-center">
+        <i class="ph-bold ph-caret-right text-gray"></i>
+      </div>
+    </div>
+
+    <div class="p-2 bg-white d-flex justify-content-between mt-2">
+      <div class="d-flex gap-2 align-items-center block-action block-security">
+        <i class="ph-bold ph-shield-check"></i>
+        <div class="text-title w-100">
+          <p class="mb-0 lh-24">Chính sách bảo mật</p>
+        </div>
+      </div>
+      <div class="d-flex gap-2 align-items-center">
+        <i class="ph-bold ph-caret-right text-gray"></i>
+      </div>
+    </div>
+
+    <div class="p-2 bg-white d-flex justify-content-between mt-2" (click)="createShortcut()">
+      <div class="d-flex gap-2 align-items-center block-action block-key">
+        <i class="ph-bold ph-stack"></i>
+        <div class="text-title w-100">
+          <p class="mb-0 lh-24">Tạo lối tắt ra màn hình chính</p>
+          <div class="text-small">Đưa app ra ngoài màn hình chính trên điện thoại</div>
+        </div>
+      </div>
+      <div class="d-flex gap-2 align-items-center">
+        <i class="ph-bold ph-caret-right text-gray"></i>
+      </div>
+    </div>
+
+    <div class="p-2 bg-white d-flex justify-content-between mt-2">
+      <div class="d-flex gap-2 align-items-center block-action block-ìnfo">
+        <i class="ph-bold ph-info"></i>
+        <div class="text-title w-100">
+          <p class="mb-0 lh-24">Thông tin ứng dụng</p>
+          <div class="text-small">© Mini Shop - Mua sắm đơn giản - Phiên bản: 1.1</div>
+        </div>
+      </div>
+    </div>
+  }
+
+  <div class="text-center pt-3 bg-white">
+    <p class="text-center">Chia sẻ cửa hàng của bạn</p>
+    <img #qrCodeImage
+         src="{{ appInfo && appInfo.qrCodeUrl ? appInfo.qrCodeUrl : '' }}"
+         alt="QR Code Zalo"
+         class="qr-code w-100"
+    >
+    <div class="px-3 mb-3">
+      <p class="m-0">Mời bạn tham gia <span class="text-brand-color fw-semibold">"{{ appInfo && appInfo.name ? appInfo.name : '' }}"</span> - Mua sắm đơn giản qua đường dẫn hoặc Quét mã QR tải App.</p>
+    </div>
+    <div class="link bg-brand-color px-2 py-1 rounded-1 w-75 mx-auto mb-2 text-brand-color" style="font-size: 11px;">{{ appInfo.appUrl }} <i class="ph ph-link text-brand-color"></i></div>
+    <div class="container-fluid">
+      <div class="row pt-0 g-2 pb-3">
+        <div class="col-4 d-flex flex-column rounded-3">
+          <div class="p-2 rounded-3 h-100" (click)="onCopyLink()">
+            <i class="ph-bold ph-copy text-brand-color"></i>
+            <p class="m-0 mt-1" style="font-size: 11px">Sao chép</p>
+          </div>
+        </div>
+        <div class="col-4 d-flex flex-column rounded-3">
+          <div class="p-2 rounded-3 h-100" (click)="shareZaloMiniApp()">
+            <i class="ph-bold ph-share text-brand-color"></i>
+            <p class="m-0 mt-1" style="font-size: 11px">Chia sẻ</p>
+          </div>
+        </div>
+        <div class="col-4 d-flex flex-column rounded-3">
+          <div class="p-2 rounded-3 h-100" (click)="downloadQRCode()">
+            <i class="ph-bold ph-download text-brand-color"></i>
+            <p class="m-0 mt-1" style="font-size: 11px">Lưu QR</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

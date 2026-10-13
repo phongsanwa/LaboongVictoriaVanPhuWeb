@@ -1,0 +1,232 @@
+<main>
+  <div class="container">
+    <div class="bottom-header-wrap float-in pb-3 border-10">
+      <div class="bottom-header">
+        <div class="row">
+          <div class="col-12">
+            <div class="bg-white rounded-2 shadow-lg">
+              <div class="d-flex justify-content-between align-items-center" [routerLink]="uriFeConst.user.profile">
+                @if (isGreeting(cfg)) {
+                  <div class="bottom-header-left p-2">
+                    <div
+                      [routerLink]="uriFeConst.user.profile"
+                      class="user-header rounded d-flex align-items-center"
+                    >
+                      <img
+                        [src]="user?.avatar || 'assets/img/avatar-placeholder.jpg'"
+                        [attr.alt]="user?.name || ''"
+                        class="rounded-circle me-2"
+                        width="27"
+                        height="27"
+                      />
+                      <div class="px-2 border-start border-1">
+                        @if (user?.name) {
+                          {{ user?.name }}
+                        } @else {
+                          @if (cfg.showGreetingText !== false) {
+                            <div class="fw-semibold">Khách</div>
+                            <div class="block-name">
+                              <i class="ph-bold ph-star"></i> Thành viên
+                            </div>
+                          }
+                        }
+                      </div>
+                    </div>
+                  </div>
+                  <div class="bottom-header-right p-2 text-end">
+                    <i class="ph ph-caret-right text-gray"></i>
+                    <p class="fw-semibold">0 điểm</p>
+                  </div>
+                }
+              </div>
+
+              <div class="border-top border-1 py-2">
+                <div class="row row-cols-3">
+                  <div class="text-center" (click)="minimizeOpenChat()">
+                    <i class="ph-light ph-chat-circle-dots h1 fw-light mb-0"></i>
+                    <p class="text-13 fw-semibold">Chat hỗ trợ</p>
+                  </div>
+                  <div class="text-center" [routerLink]="uriFeConst.user.voucher">
+                    <i class="ph-bold ph-ticket h1 fw-light mb-0"></i>
+                    <p class="text-13 fw-semibold">Ưu đãi</p>
+                  </div>
+                  <div class="text-center" (click)="onShareClick()">
+                    <i class="ph-bold ph-share-fat h1 fw-light mb-0"></i>
+                    <p class="text-13 fw-semibold">Chia sẻ</p>
+                  </div>
+                </div>
+              </div>
+
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="mt-4">
+        <div class="row row-cols-4 gx-1">
+          @for (c of categories; track c.id) {
+            <div class="text-center">
+              <img class="object-fit-cover" width="40" height="40" src="{{ c.image }}" alt="{{ c.name }}" />
+              <p class="text-12 mt-2 line-height-15">{{ c.name }}</p>
+            </div>
+          }
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="bg-light pt-4 pb-3">
+    <div class="container">
+      <div class="float-in pb-3">
+        @for (b of middleBanners; track b.id) {
+          <a target="_self" class="d-block text-center">
+            <img class="w-100 rounded-lg"
+                 src="{{ b.imageUrl }}"
+                 alt="{{ b.name }}">
+            </a>
+        }
+      </div>
+    </div>
+    <div class="mt-0 mb-3 bg-light float-in">
+      <app-follow-oa
+        [oaId]="'762755468038541624'"
+        [buttonText]="'Quan tâm'"
+        [img]="'https://posstatic.nvndev.net/assets/img/favicon.svg'"
+        [explanationTitle]="'Nhanh.vn Official'"
+        [explanationContent]="'Quan tâm OA để nhận các chương trình đặc quyền ưu đãi'"
+        >
+      </app-follow-oa>
+    </div>
+    <div class="container">
+      <div class="title mb-2 d-flex align-items-center justify-content-between float-in">
+        <h2 class="text-uppercase fw-normal mb-0 h4">Sản phẩm Hot</h2>
+        <a class="text-12" [routerLink]="uriFeConst.product.category">Xem tất cả</a>
+      </div>
+      <div class="tour-wrapper d-flex gap-3 overflow-auto mb-4 float-in">
+        <app-universal-slide [items]="products" [config]="{ slidesPerView: 2, spaceBetween: 12 }">
+          <ng-template let-prd>
+            <div class="tour-card shadow-lg">
+              <div class="image-wrapper position-relative" [routerLink]="uriFeConst.product.detail" [queryParams]="{ id: prd.id }">
+                <img [src]="prd.image" [alt]="prd.name" />
+              </div>
+              <div class="p-2">
+                <p class="mb-1 line-clamp-2">{{ prd.name }}</p>
+                <div class="tour-price mt-2">
+                  @if (prd.prices.contactPrice || !prd.prices.price) {
+                    <span class="price">Liên hệ</span>
+                  } @else if (prd.prices.priceAfterDiscount) {
+                    <span class="text-muted text-decoration-line-through me-2">
+                      {{ prd.prices.price | i18nCurrencyAmount : { showSymbol: true } }}
+                    </span>
+                    <span class="price">
+                      {{ prd.prices.priceAfterDiscount | i18nCurrencyAmount : { showSymbol: true } }}
+                    </span>
+                  } @else {
+                    @if (prd.prices.priceOld) {
+                      <span class="text-muted text-decoration-line-through me-2">
+                        {{ prd.prices.priceOld | i18nCurrencyAmount : { showSymbol: true } }}
+                      </span>
+                    }
+                    <span class="price">
+                      {{ prd.prices.price | i18nCurrencyAmount : { showSymbol: true } }}
+                    </span>
+                  }
+
+                </div>
+
+              </div>
+            </div>
+          </ng-template>
+        </app-universal-slide>
+      </div>
+
+      <div class="title mb-2 d-flex align-items-center justify-content-between float-in">
+        <h2 class="text-uppercase fw-normal mb-0 h4">Sản phẩm mới</h2>
+        <a class="text-12" [routerLink]="uriFeConst.product.category">Xem tất cả</a>
+      </div>
+      <div class="tour-wrapper d-flex gap-3 overflow-auto mb-4 float-in">
+        <app-universal-slide [items]="products" [config]="{ slidesPerView: 2, spaceBetween: 12 }">
+          <ng-template let-prd>
+            <div class="tour-card shadow-lg">
+              <div class="image-wrapper position-relative" [routerLink]="uriFeConst.product.detail"
+                   [queryParams]="{ id: prd.id }">
+                <img [src]="prd.image" [alt]="prd.name" />
+              </div>
+              <div class="p-2">
+                <p class="mb-1 line-clamp-2" [routerLink]="uriFeConst.product.detail" [queryParams]="{ id: prd.id }">{{ prd.name }}</p>
+                <div class="tour-price mt-2">
+                  @if (prd.prices.contactPrice || !prd.prices.price) {
+                    <span class="price">Liên hệ</span>
+                  } @else if (prd.prices.priceAfterDiscount) {
+                    <span class="text-muted text-decoration-line-through me-2">
+                      {{ prd.prices.price | i18nCurrencyAmount : { showSymbol: true } }}
+                    </span>
+                    <span class="price">
+                      {{ prd.prices.priceAfterDiscount | i18nCurrencyAmount : { showSymbol: true } }}
+                    </span>
+                  } @else {
+                    @if (prd.prices.priceOld) {
+                      <span class="text-muted text-decoration-line-through me-2">
+                        {{ prd.prices.priceOld | i18nCurrencyAmount : { showSymbol: true } }}
+                      </span>
+                    }
+                    <span class="price">
+                      {{ prd.prices.price | i18nCurrencyAmount : { showSymbol: true } }}
+                    </span>
+                  }
+
+                </div>
+
+              </div>
+            </div>
+          </ng-template>
+        </app-universal-slide>
+      </div>
+
+      <div class="title mb-2 d-flex align-items-center justify-content-between float-in">
+        <h2 class="text-uppercase fw-normal mb-0 h4">Sản phẩm nổi bật</h2>
+        <a class="text-12" [routerLink]="uriFeConst.product.category">Xem tất cả</a>
+      </div>
+      <div class="tour-wrapper d-flex gap-3 overflow-auto mb-4 float-in">
+        <app-universal-slide [items]="products" [config]="{ slidesPerView: 2, spaceBetween: 12 }">
+          <ng-template let-prd>
+            <div class="tour-card shadow-lg">
+              <div class="image-wrapper position-relative">
+                <img [src]="prd.image" [alt]="prd.name" />
+              </div>
+              <div class="p-2">
+                <p class="mb-1 line-clamp-2">{{ prd.name }}</p>
+                <div class="tour-price mt-2">
+                  @if (prd.prices.contactPrice || !prd.prices.price) {
+                    <span class="price">Liên hệ</span>
+                  } @else if (prd.prices.priceAfterDiscount) {
+                    <span class="text-muted text-decoration-line-through me-2">
+                      {{ prd.prices.price | i18nCurrencyAmount : { showSymbol: true } }}
+                    </span>
+                    <span class="price">
+                      {{ prd.prices.priceAfterDiscount | i18nCurrencyAmount : { showSymbol: true } }}
+                    </span>
+                  } @else {
+                    @if (prd.prices.priceOld) {
+                      <span class="text-muted text-decoration-line-through me-2">
+                        {{ prd.prices.priceOld | i18nCurrencyAmount : { showSymbol: true } }}
+                      </span>
+                    }
+                    <span class="price">
+                      {{ prd.prices.price | i18nCurrencyAmount : { showSymbol: true } }}
+                    </span>
+                  }
+
+                </div>
+
+              </div>
+            </div>
+          </ng-template>
+        </app-universal-slide>
+      </div>
+    </div>
+    <div class="container">
+      <div class="float-in">
+        <app-news-list></app-news-list>
+      </div>
+    </div>
+  </div>
+</main>

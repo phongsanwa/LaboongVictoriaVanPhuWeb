@@ -1,0 +1,130 @@
+<app-spinner
+  [loading]="isLoading"
+  position="position-fixed"
+  [opacity]="0.8">
+</app-spinner>
+
+@if (!isLoading) {
+  <div class="d-flex align-items-center justify-content-around position-absolute left-0 top-0 w-100 safe-pt-16 px-2 z-index">
+    <div class="w-25">
+      <div class="d-flex w-fit-content p-2 rounded-5 border border-white bg-opacity-header text-white">
+        <i class="ph ph-caret-left pe-2 border-end border-white" (click)="back()"></i>
+        <i class="ph ph-house ps-2"></i>
+      </div>
+    </div>
+    <div class="w-75">
+      <div class="d-flex gap-2 ps-4 align-items-center detail-btn">
+        <i class="ph-light ph-shopping-cart bg-opacity-header" [routerLink]="uriFeConst.cart.index"></i>
+        <i class="ph-light ph-chat-circle-dots bg-opacity-header" (click)="minimizeOpenChat()"></i>
+        <i class="ph-light ph-share-fat bg-opacity-header" (click)="onShare()"></i>
+      </div>
+    </div>
+  </div>
+  @if (product) {
+    <div class="w-100 float-in">
+      @if (imagesItem.length > 1) {
+        <app-universal-slide [items]="imagesItem"
+                             [config]="{ showNavigation: false, showPagination: true, autoplay: true, slidesPerView: 1 }">
+        </app-universal-slide>
+      } @else {
+        <img [src]="imagesItem[0].image" class="w-100 h-100" alt="{{ imagesItem[0].title }}"/>
+      }
+      <div class="container">
+        <div class="text-xl mb-2 mt-3">{{ product.name }}</div>
+
+        <div class="d-flex align-items-center justify-content-between">
+          <div class="d-inline-block">
+            @if(product.contactPrice || !product.price ){
+              <span class="price fw-semibold">
+            Liên hệ
+          </span>
+            } @else if (product.priceAfterDiscount){
+              <span class="price text-orange">
+            {{ product.priceAfterDiscount | i18nCurrencyAmount :{showSymbol: true} }}
+          </span>
+              <span class="text-muted text-decoration-line-through ms-2">
+            {{ product.price | i18nCurrencyAmount :{showSymbol: true} }}
+          </span>
+            } @else {
+              <span class="price text-orange">
+            {{ product.price | i18nCurrencyAmount :{showSymbol: true} }}
+          </span>
+              @if (product.priceOld){
+                <span class="text-muted text-decoration-line-through ms-2">
+            {{ product.priceOld | i18nCurrencyAmount :{showSymbol: true} }}
+            </span>
+              }
+            }
+          </div>
+          <app-shared-button
+            [payload]="{
+          title: product.name,
+          thumbnail: product.image,
+          path: '/product/view/?id=' + product.id
+        }">
+          </app-shared-button>
+        </div>
+
+        @if (haveAvailable) {
+          <app-add-to-cart [prdService]="prdManageService"></app-add-to-cart>
+        }
+      </div>
+
+      <div class="product-code text-muted py-2 border-top border-bottom my-2">
+        <div class="container">
+          Mã sản phẩm <span class="ms-2">{{ product.code }}</span>
+        </div>
+      </div>
+
+      <div class="container">
+        <div class="detail-product-content" [innerHTML]="product.description">
+        </div>
+      </div>
+    </div>
+
+    <div class="container my-3 float-in">
+      <div class="title mb-2 d-flex align-items-center justify-content-between">
+        <h2 class="text-uppercase fw-normal mb-0 h4">Sản phẩm liên quan</h2>
+      </div>
+      <app-universal-slide [items]="products" [config]="{ slidesPerView: 2, spaceBetween: 12 }">
+        <ng-template let-prd>
+          <div class="tour-card shadow-lg">
+            <div class="image-wrapper position-relative">
+              <img [src]="prd.image" [alt]="prd.name" />
+            </div>
+            <div class="p-2">
+              <p class="mb-1 line-clamp-2">{{ prd.name }}</p>
+              <div class="tour-price mt-2">
+                @if (prd.prices.contactPrice || !prd.prices.price) {
+                  <span class="price">Liên hệ</span>
+                } @else if (prd.prices.priceAfterDiscount) {
+                  <span class="text-muted text-decoration-line-through me-2">
+                      {{ prd.prices.price | i18nCurrencyAmount : { showSymbol: true } }}
+                    </span>
+                  <span class="price">
+                      {{ prd.prices.priceAfterDiscount | i18nCurrencyAmount : { showSymbol: true } }}
+                    </span>
+                } @else {
+                  @if (prd.prices.priceOld) {
+                    <span class="text-muted text-decoration-line-through me-2">
+                        {{ prd.prices.priceOld | i18nCurrencyAmount : { showSymbol: true } }}
+                      </span>
+                  }
+                  <span class="price">
+                      {{ prd.prices.price | i18nCurrencyAmount : { showSymbol: true } }}
+                    </span>
+                }
+
+              </div>
+
+            </div>
+          </div>
+        </ng-template>
+      </app-universal-slide>
+    </div>
+  } @else {
+    <p class="alert alert-danger">
+      {{ errorMessage || 'Không tìm thấy sản phẩm.' }}
+    </p>
+  }
+}

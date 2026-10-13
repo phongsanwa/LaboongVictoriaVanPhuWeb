@@ -1,0 +1,22 @@
+<div class="container float-in">
+  <app-nav-tabs
+    [tabs]="tabs"
+    [active]="activeTab"
+    (activeChange)="onTabChange($event)"
+    [colors]="{ text: '#444', active: '#0b2e69', underline: '#0b2e69' }"
+  ></app-nav-tabs>
+
+  <div class="mt-3">
+    @for (item of filteredNews; track item) {
+      <div class="news-item mb-2">
+        <div class="row">
+          <a class="col-4" [routerLink]="uriFeConst.news.detail" [queryParams]="{ id: item.id }"><img [src]="item.avatarUri" class="card-img-top" [alt]="item.title"></a>
+          <div class="card-body col-8">
+            <p class="category-name text-brand-color text-small text-uppercase">Tin tức</p>
+            <a class="text-black text-capitalize" [routerLink]="uriFeConst.news.detail" [queryParams]="{ id: item.id }">{{ item.title }}</a>
+          </div>
+        </div>
+      </div>
+    }
+  </div>
+</div>

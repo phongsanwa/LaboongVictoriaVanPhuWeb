@@ -1,0 +1,161 @@
+.header-card .icon-circle {
+  width: 3rem;
+  height: 3rem;
+  background-color: var(--brand-color);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+}
+.list-group-item {
+  border: none;
+  padding: 1rem 0;
+}
+.list-group-item + .list-group-item, .box-qr {
+  border-top: 1px solid #dee2e6;
+}
+.list-icon {
+  width: 1.5rem;
+  text-align: center;
+  color: var(--brand-color);
+}
+.chevron {
+  color: #6c757d;
+}
+
+.qr-card {
+  text-align: center;
+}
+.qr-card .small-text {
+  color: #6c757d;
+}
+.qr-code {
+  max-width: 260px;
+  width: 100%;
+  margin: 1.5rem auto;
+  display: block;
+}
+.btn-qrcode {
+  min-width: 140px;
+  border-radius: 50px;
+  font-size: 1rem;
+  padding: 0.75rem 1.5rem;
+}
+.footer {
+  font-size: 0.75rem;
+  color: #adb5bd;
+  margin-top: 2rem;
+}
+
+// member card
+.bg-blue {
+  background-color: var(--brand-color);
+}
+/* Màu chữ Member */
+.text-mint {
+  color: #3fcf9d;
+}
+/* Bo góc và shadow cho cả khối */
+.card-custom {
+  border: none;
+  border-radius: 1rem;
+  overflow: hidden;
+}
+/* Giảm gap giữa 2 card (lồng cạnh bo chung) */
+.card-top {
+  border-bottom: 1px solid rgba(0,0,0,0.05);
+}
+/* Icon vòng tròn */
+.icon-circle {
+  width: 2.5rem;
+  height: 2.5rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background-color: #e9ecef;
+  color: var(--brand-color);
+}
+
+.mb-item-2>* {
+  margin-top: 6px !important;
+  margin-bottom: 6px !important;
+}
+
+.mb-item-2>*.top-info-bar {
+  margin-top: 0 !important;
+}
+
+.point-block i {
+  color: #f8760f;
+  font-size: 18px;
+}
+
+.block-action i {
+  width: 22px;
+  height: auto;
+}
+
+.action-top i {
+  font-size: 8px;
+  color: var(--brand-color);
+  width: 20px;
+  height: 20px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  border-radius: 50%;
+  line-height: 17px;
+}
+
+.block-voucher i {
+  font-size: 18px;
+  color: #f71000;
+}
+
+.block-address i {
+  font-size: 18px;
+  color: #772f84;
+}
+
+.block-security i {
+  font-size: 18px;
+  color: #1D9BF0;
+}
+
+.block-key i {
+  font-size: 18px;
+  color: #a89e41;
+}
+
+.block-info i {
+  font-size: 18px;
+  color: #a89e41;
+}
+
+.lh-24 {
+  line-height: 24px;
+}
+
+.text-small {
+  line-height: 13px;
+}
+
+.edit-profile {
+  font-size: 9px;
+  color: #aaa;
+  position: absolute;
+  padding: 3px 25px 3px 7px;
+  right: 0;
+  bottom: 0;
+  border-top-left-radius: 5px;
+}
+
+.top-info-bar {
+  position: sticky;
+  top: 0;
+  left: 0;
+  z-index: 9;
+  width: 100vw;
+}

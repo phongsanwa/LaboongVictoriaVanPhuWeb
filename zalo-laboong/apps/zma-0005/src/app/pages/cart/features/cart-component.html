@@ -1,0 +1,50 @@
+<div class="bg-light">
+  <div class="bg-white d-flex align-items-center gap-1 py-1 px-2 border-bottom">
+    <div class="logo">
+      <img
+        class="rounded-1"
+        src="https://dummyimage.com/27x27/fff/000"
+        alt="Logo"
+      />
+    </div>
+    Mini Store
+  </div>
+  <div class="list-product bg-white">
+
+  </div>
+  @if ((cartData.items | keyvalue).length) {
+    <div class="list-product bg-white" [routerLink]="uriFeConst.checkout.index">
+      <div class="item">
+        <div class="position-relative d-flex gap-2 p-2 border-bottom">
+          <i class="ph-bold ph-shopping-cart text-small mt-1"></i>
+          <div>
+            <div class="tag rounded rounded-1 text-white text-small">Đơn hàng</div>
+            <div class="tag mt-1 mb-2 rounded rounded-1 bg-brand-color text-brand-color text-small">Chưa thanh toán</div>
+            <div class="text-middle">{{ getCombinedProductNames() }}</div>
+            <div class="text-small delete text-danger position-absolute" (click)="onRemoveProduct()">Hủy</div>
+          </div>
+        </div>
+        <div class="d-flex py-1 px-2 text-middle fw-semibold justify-content-between align-items-center">
+          <div>{{ cartData.totalQuantities }} sản phẩm</div>
+          <div class="total-money d-flex align-items-center justify-content-end gap-1">
+            Tổng thanh toán:
+            <div class="text-brand-color">{{ totalPrice | i18nCurrencyAmount : { showSymbol: true } }}</div>
+          </div>
+        </div>
+        @if (promoResult?.discount?.promotions?.length) {
+          <div class="d-flex py-1 px-2 justify-content-between text-danger text-small">
+            <span><i class="ph-bold ph-ticket me-1"></i> {{ promoResult!.discount!.promotions[0].name }}</span>
+            <span>-{{ (totalDiscount | i18nCurrencyAmount : {showSymbol: true}) }}</span>
+          </div>
+        }
+      </div>
+    </div>
+  } @else {
+    <p class="text-center p-5">
+      Không có sản phẩm nào trong giỏ hàng
+    </p>
+
+  }
+</div>
+
+

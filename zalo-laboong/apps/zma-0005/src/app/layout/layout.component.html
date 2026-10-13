@@ -1,0 +1,19 @@
+<div class="w-screen h-screen bg-white d-flex flex-col text-foreground">
+  <app-spinner
+    [loading]="(isLoading$ | async) ?? false"
+    [opacity]="0.8"
+    position="position-fixed"
+  ></app-spinner>
+<!--  <ng-container *ngIf="isHomePage$ | async; else customHeader">-->
+  <ng-container>
+    <app-header></app-header>
+  </ng-container>
+<!--  <ng-template #customHeader>-->
+<!--    <app-header-custom></app-header-custom>-->
+<!--  </ng-template>-->
+  <div class="flex-1_custom overflow-y-auto" (scroll)="onScroll($event)">
+    <router-outlet></router-outlet>
+  </div>
+
+  <app-footer></app-footer>
+</div>

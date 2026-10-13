@@ -1,0 +1,16 @@
+@if(newsDetail) {
+  <div class="page-news-detail px-2 float-in">
+    @if(newsDetail.avatarUri) {
+      <img class="w-100 mb-2" src="{{ newsDetail.avatarUri }}" alt="{{ newsDetail.title }}">
+    }
+    <h1 class="news-title mb-0">
+      {{ newsDetail.title }}
+    </h1>
+    <span class="text-muted small"><i class="ph ph-clock me-1"></i>{{ newsDetail.publishedDate | date:'dd/MM/yyyy' }}</span>
+    <div class="mt-1" [innerHTML]="newsDetail.content">
+    </div>
+  </div>
+  <div class="share text-center shadow-lg text-muted pt-2 pb-3">
+    <i class="ph ph-share-fat me-1"></i> Chia sẻ
+  </div>
+}

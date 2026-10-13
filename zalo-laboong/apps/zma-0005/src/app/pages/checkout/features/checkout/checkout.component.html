@@ -1,0 +1,193 @@
+@if (payload) {
+  <div class="bg-light min-h-screen">
+    <div class="p-2 bg-white d-flex gap-2 mb-1">
+       <i class="ph-bold ph-map-pin mt-1 text-small"></i>
+      <div (click)="goToAddressList()" class="position-relative right-address">
+        <p>Địa chỉ giao hàng</p>
+        <div>
+          @if (payload.customer && payload.customer.name) {
+            <div>
+              {{ payload.customer.name }}
+            </div>
+            @if (payload.customer.mobile) {
+              <div>{{ payload.customer.mobile }}</div>
+            }
+            <div class="text-muted">{{ payload.customer.address }}</div>
+            <div class="text-small text-danger position-absolute top-0 end-0">Thay đổi</div>
+          } @else {
+            <span><i class="ph-light ph-plus text-primary"></i> Thêm địa chỉ nhận hàng</span>
+          }
+        </div>
+      </div>
+    </div>
+
+    <div class="bg-white p-2 mb-1">
+      <div class="d-flex gap-2">
+        <i class="ph-bold ph-pencil-simple  mt-1 text-small"></i>
+        <div class="">
+          <p class="mb-0">Ghi chú <span class="text-muted text-small d-inline-block">(Thời gian giao hàng, ghi chú khác)</span></p>
+        </div>
+      </div>
+      <input class="border-0 w-100 input-description" placeholder="Nhập ghi chú của bạn tại đây..." [(ngModel)]="noteInput"
+             (ngModelChange)="onNoteInput($event)">
+    </div>
+
+    <div class="bg-white mb-1">
+      <div class="d-flex gap-2 p-2">
+        <i class="ph-bold ph-shopping-cart mt-1 text-small"></i>
+        <div>Mặt hàng đã chọn</div>
+      </div>
+      <div class="list-product-checkout">
+        @if (items.length > 0) {
+          @for (it of items; track it.productId) {
+            <div class="item d-flex py-2 px-1 border-top flex-wrap">
+              <a class="col-2">
+                <img class="w-100" [src]="it.image || 'https://dummyimage.com/100x100/163645/fff'" [alt]="it.name">
+              </a>
+              <div class="col-9 ps-3">
+                <div class="price mb-2">
+                  <p class="m-0 fw-semibold">{{ it.name }}</p>
+                  <p class="m-0 d-flex gap-1 align-items-center">
+                    <span class="fw-bold semibold text-brand-color">{{ it.price | i18nCurrencyAmount : {showSymbol: true} }}</span>
+                    @if (it.priceOld && it.priceOld > it.price) {
+                      <del class="text-mute me-1">{{ it.priceOld | i18nCurrencyAmount : {showSymbol: true} }}</del>
+                    }
+                  </p>
+                </div>
+                <app-auto-numeric
+                  [ngStyleInput]="{
+                              'border-radius': '0',
+                              'width': '35px',
+                              'height': '25px',
+                              'text-align': 'center',
+                              'padding':'0',
+                            }"
+                  [showButtonChange]="true"
+                  [styleClass]="'height: 25px'"
+                  [(value)]="it.quantity"
+                  (valueChange)="onQuantityChange(it, $event)"
+                  [classInput]="'inputQttSmaller text-center'"
+                />
+              </div>
+              <div class="col-1 d-flex flex-column justify-content-between align-items-center">
+                <i class="ph ph-x text-gray" (click)="onRemoveProduct(it)"></i>
+              </div>
+            </div>
+          }
+        }
+      </div>
+    </div>
+
+    <div class="p-2 bg-white mb-1">
+      <div class="d-flex justify-content-between align-items-center" [class.pm-error]="showPaymentHint" (click)="openSelectMethod()">
+        <div class="d-flex align-items-center gap-2 mb-2">
+          <i class="ph-bold ph-currency-dollar ext-small"></i>
+          Hình thức thanh toán
+        </div>
+        <div class="text-small text-brand-color">Thay đổi</div>
+      </div>
+      <div class="d-flex gap-2">
+        @if (paymentMethod?.logo) {
+          <img [src]="paymentMethod!.logo" alt="logo" class="pm-logo">
+        } @else {
+          <i class="ph-bold ph-credit-card text-primary"></i>
+        }
+        <span class="text-muted">
+          {{ paymentMethod?.displayName }}
+        </span>
+      </div>
+    </div>
+
+    <div class="p-2 bg-white mb-1">
+      <div class="d-flex align-items-center justify-content-between mb-2 text-middle">
+        <div>Tổng tiền hàng</div>
+        <div>{{ summary.subtotal | i18nCurrencyAmount : {showSymbol: true} }}</div>
+      </div>
+      <div class="d-flex align-items-center justify-content-between text-brand-color mb-2 text-middle">
+        <div>Phí vận chuyển</div>
+        <div>{{ summary.shippingFee | i18nCurrencyAmount : {showSymbol: true} }}</div>
+      </div>
+      @if (summary.discount > 0) {
+        <div class="d-flex align-items-center justify-content-between text-danger mb-2 text-middle">
+          <div>Giảm giá</div>
+          <div>-{{ summary.discount | i18nCurrencyAmount : {showSymbol: true} }}</div>
+        </div>
+        @if (promoResult?.discount?.promotions?.length) {
+          @for (promo of promoResult!.discount!.promotions; track promo.id) {
+            <div class="d-flex align-items-center text-muted small ps-2 mb-1">
+              <i class="ph-bold ph-tag me-1"></i>{{ promo.name }}
+            </div>
+          }
+        }
+      }
+      <div class="d-flex align-items-center justify-content-between border-top pt-2">
+        <div class="fw-semibold">
+          Tổng thanh toán <span class="d-inline-block text-small fw-normal">({{ summary.totalQuantities }} sản phẩm)</span>
+        </div>
+        <div class="text-brand-color">
+          {{ summary.total | i18nCurrencyAmount : {showSymbol: true} }}
+        </div>
+      </div>
+    </div>
+
+    <!-- Đơn vị vận chuyển -->
+<!--    @if ((carrier && carrier.serviceId)) {-->
+<!--      <div class="carrier-box p-2">-->
+<!--        <div class="carrier-list border rounded bg-white mb-2">-->
+<!--          <label class="carrier-item d-flex align-items-center justify-content-between p-2 rounded active">-->
+<!--            <div class="d-flex align-items-center gap-2">-->
+<!--              <div class="fw-semibold">-->
+<!--                <img [src]="carrier.logo" class="carrier-logo" alt=""/>-->
+<!--              </div>-->
+<!--              <div>-->
+<!--                <div class="text-muted">{{ carrier.serviceName }}</div>-->
+<!--                <div class="text-muted small">{{ carrier.serviceDesc }}</div>-->
+<!--              </div>-->
+<!--            </div>-->
+<!--            <div class="carrier-fee fw-bold">-->
+<!--              {{ carrier.customerShipFee | i18nCurrencyAmount : {showSymbol: true} }}-->
+<!--            </div>-->
+<!--          </label>-->
+<!--        </div>-->
+
+<!--        <div class="text-end">-->
+<!--          <span class="cursor-pointer" (click)="onChangeCarrier(carrier)">-->
+<!--            Chọn đơn vị vận chuyển khác-->
+<!--          </span>-->
+<!--        </div>-->
+<!--      </div>-->
+<!--    } @else {-->
+<!--      <div class="carrier-box p-2">-->
+<!--        <div class="carrier-list border rounded bg-white mb-2">-->
+<!--          <label class="carrier-item d-flex align-items-center justify-content-between p-2 rounded active">-->
+<!--            Liên hệ phí vận chuyển-->
+<!--          </label>-->
+<!--        </div>-->
+<!--      </div>-->
+<!--    }-->
+
+    <div class="p-2 bg-white d-flex justify-content-between align-items-center mb-1">
+      <div class="row w-100">
+        <div class="col-4 d-flex align-items-center gap-2 border-end">
+          <i class="ph-bold ph-ticket"></i>
+          <div class="fw-semibold">Voucher</div>
+        </div>
+        <div class="col-8">
+          <div (click)="openVoucherModal()" class="text-center w-100">Chọn hoặc nhập mã</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="p-2 bg-white d-flex justify-content-between align-items-center mb-1">
+      <div class="fw-semibold">Ví điểm</div>
+      <div class="fw-semibold text-brand-color">+24 điểm</div>
+    </div>
+  </div>
+
+  <div class="position-fixed bottom-0 w-100 d-flex justify-content-between bg-white px-2 pt-2 safe-pb-16">
+    <button class="fw-medium btn bg-brand-color-origin text-white outline-none shadow-none w-100 h-100" [disabled]="appFm.disabledSubmit"
+            (click)="onPlaceOrder()">
+      Đặt hàng
+    </button>
+  </div>
+}

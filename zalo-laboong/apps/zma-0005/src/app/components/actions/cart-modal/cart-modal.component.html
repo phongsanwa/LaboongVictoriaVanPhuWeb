@@ -1,0 +1,105 @@
+<div class="cart-sheet">
+  <div class="sheet-header">
+    <div class="h5 mb-0 text-center">Giỏ hàng</div>
+    <button type="button" class="btn-close text-muted position-absolute top-0 end-0 m-3"
+            aria-label="Close"
+            (click)="active.dismiss('close')">
+      <i class="bi bi-x-xl"></i>
+    </button>
+  </div>
+  <div class="border-top"></div>
+
+  <!-- Body -->
+  <div class="sheet-body">
+    @if ((cartData.items | keyvalue).length) {
+      <div class="d-flex align-items-center justify-content-between">
+        <span class="fw-semibold">Chi tiết đơn hàng ({{ cartData.totalQuantities | i18nInteger }})</span>
+        <div (click)="removeAllCart()" class="text-danger">
+          Xóa hết
+        </div>
+      </div>
+      @for (it of itemsCart; track it.productId; let last = $last) {
+        <div class="cart-line d-flex align-items-start">
+          <img [src]="it.image" alt="" class="thumb rounded me-2">
+
+          <div class="flex-grow-1">
+            <div class="mb-2 d-flex justify-content-between align-items-center">
+              <div class="name fw-semibold text-truncate-2">{{ it.name }}</div>
+              <button type="button" class="btn btn-link text-muted p-0 me-1" (click)="onRemoveProduct(it)">
+                <i class="ph ph-x"></i>
+              </button>
+            </div>
+
+            <div class="row gx-1 gy-2">
+              <div class="col-12 box-body_bottom d-flex justify-content-between align-items-center">
+                <div class="price-and-color_size prices d-flex align-items-baseline gap-2">
+                  <div class="price-box">
+                    <div class="price h5 mb-0">
+                      {{ it.price | i18nCurrencyAmount : {showSymbol: true} }}
+                    </div>
+                    @if (it.priceOld) {
+                      <del class="old text-muted">
+                        {{ it.priceOld | i18nCurrencyAmount : {showSymbol: true} }}
+                      </del>
+                    }
+                  </div>
+                  @if (it.sizeChecked || it.colorChecked) {
+                    <div class="availableColorsSize">
+                      <span class="text-muted">
+                        @if (it.sizeChecked) {
+                          {{ it.sizeChecked }}
+                        }
+                        @if (it.sizeChecked && it.colorChecked) {
+                          &nbsp;/&nbsp;
+                        }
+                        @if (it.colorChecked) {
+                          {{ it.colorChecked }}
+                        }
+                      </span>
+                    </div>
+                  }
+                </div>
+                <app-auto-numeric
+                  [ngStyleInput]="{
+                              'border-radius': '0',
+                              'width': '35px',
+                              'height': '25px',
+                              'text-align': 'center',
+                              'padding':'0'
+                            }"
+                  [showButtonChange]="true"
+                  [styleClass]="'height: 25px'"
+                  [(value)]="it.quantity"
+                  (valueChange)="onQuantityChange(it, $event)"
+                  [classInput]="'inputQttSmaller text-center'"
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+        @if (!last) {
+        <div class="divider"></div>
+        }
+      }
+    } @else {
+      <div class="text-center text-muted py-4">Giỏ hàng trống</div>
+    }
+  </div>
+
+  <div class="sheet-footer border-top pt-2 p-4">
+    <div class="d-flex align-items-center justify-content-between mb-2">
+      <div class="text-muted">Tổng thanh toán:</div>
+      <div class="h5 mb-0">
+        {{ cartData.totalAmount | i18nCurrencyAmount : {showSymbol: true} }}
+      </div>
+    </div>
+
+    <button
+      type="button"
+      class="btn btn-primary w-100 py-2 fw-semibold btn-checkout"
+      (click)="toCheckout()"
+      [disabled]="cartData.totalQuantities === 0">
+      Thanh toán ngay <span class="mx-1">•</span> {{ cartData.totalQuantities }} sản phẩm
+    </button>
+  </div>
+</div>

@@ -1,0 +1,42 @@
+@if (cfg && cfg.show !== false) {
+  <div class="header-wrap">
+    <div
+      [class]="
+          (cfg.className || 'header-color') +
+          ' safe-pt-16 pb-3 h-14 header-user-icon w-100 d-flex align-items-center px-2 text-white ' + (isTitle(cfg) ? 'after-hidden' : '')
+        "
+    >
+      @if (isTitle(cfg)) {
+        <div class="d-flex gap-2 align-items-center">
+          @if (cfg.back !== false) {
+            <i class="ph ph-caret-left text-white" (click)="back()"></i>
+          }
+          <div class="text-white fw-semibold">
+            {{ cfg.title }}
+          </div>
+        </div>
+      } @else {
+        <button class="border-0 bg-transparent outline-none text-white">
+          <i class="ph-bold ph-list" (click)="onMenuBarClick()"></i>
+        </button>
+        <a [routerLink]="uriFeConst.home" class="logo">
+          <img
+            class="rounded-1"
+            src="https://dummyimage.com/27x27/fff/000"
+            alt="Logo"
+          />
+        </a>
+        <div class="wr-search position-relative w-35 ms-2" (click)="goToSearch()">
+          <i class="ph-light ph-magnifying-glass position-absolute top-50 padding-left-10 translate-middle-y"></i>
+          <input class=" ps-4 shadow-none outline-none w-100" placeholder="Minishop Store">
+        </div>
+        <div class="ms-2" [routerLink]="uriFeConst.cart.index">
+          <i class="ph-light ph-shopping-cart"></i>
+        </div>
+        <div class="ms-2" (click)="openSupportChat()">
+          <i class="ph-light ph-chat-circle-dots"></i>
+        </div>
+      }
+    </div>
+  </div>
+}
