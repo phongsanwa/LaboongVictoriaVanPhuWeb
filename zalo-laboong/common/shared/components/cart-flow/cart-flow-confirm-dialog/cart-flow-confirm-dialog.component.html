@@ -1,0 +1,12 @@
+@if (show) {
+  <div class="confirm-backdrop" [class.confirm-backdrop--closing]="closing" (click)="cancelAction.emit()">
+    <div class="confirm-dialog" (click)="$event.stopPropagation()">
+      <h2>Xác nhận</h2>
+      <p>{{ text }}</p>
+      <div class="confirm-dialog__actions">
+        <button class="confirm-dialog__cancel" type="button" (click)="cancelAction.emit()">Thoát</button>
+        <button class="confirm-dialog__ok" type="button" (click)="confirmAction.emit()">Đồng ý</button>
+      </div>
+    </div>
+  </div>
+}

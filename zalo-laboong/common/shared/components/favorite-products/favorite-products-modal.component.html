@@ -1,0 +1,64 @@
+<div class="sheet safe-pb-16">
+  <div class="sheet__header" role="heading" aria-level="2">
+    <h3 class="sheet__title">{{ title }}</h3>
+    <button type="button" class="sheet__close btn-icon" aria-label="Đóng" (click)="close()">
+      <i class="ph ph-x"></i>
+    </button>
+  </div>
+
+  <label class="search">
+    <input
+      type="text"
+      [value]="query"
+      (input)="onInput($event)"
+      [placeholder]="searchPlaceholder"
+      autocomplete="off"
+      spellcheck="false"
+    />
+    <i class="ph ph-magnifying-glass"></i>
+  </label>
+
+  @if (!lists.length) {
+    <div class="empty">
+      <svg width="168" height="168" viewBox="0 0 168 168" aria-hidden="true">
+        <circle cx="84" cy="84" r="78" fill="#f2f3f5"/>
+        <rect x="56" y="74" width="56" height="42" rx="8" fill="#dfe3e8"/>
+        <path d="M62 74l8-16h28l8 16" fill="none" stroke="#c9ced6" stroke-width="4"/>
+        <circle cx="90" cy="96" r="5" fill="#bfc6ce"/>
+      </svg>
+      <div class="empty-text">Danh sách trống.</div>
+    </div>
+  } @else {
+    <div class="list">
+      @if (filtered().length > 1) {
+        <label class="item">
+          <input type="checkbox"
+                 class="ck"
+                 [checked]="allSelected()"
+                 (change)="toggleAll(($any($event.target).checked))" />
+          <span class="label">Chọn tất cả</span>
+        </label>
+      }
+
+      @for (l of filtered(); track l.id) {
+        <label class="item">
+          <input type="checkbox"
+                 class="ck"
+                 [checked]="isSelected(l.id)"
+                 (change)="toggle(l.id, ($any($event.target).checked))" />
+          <span class="label">{{ l.name }}</span>
+        </label>
+      }
+    </div>
+  }
+
+  <div class="actions">
+    <button type="button" class="btn btn-primary" (click)="addFavorite()">
+      <i class="ph ph-plus me-2"></i> Thêm danh sách
+    </button>
+
+    <button type="button" class="btn btn-primary outline" (click)="onDone()">
+      Xong
+    </button>
+  </div>
+</div>

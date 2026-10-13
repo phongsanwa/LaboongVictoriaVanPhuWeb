@@ -1,0 +1,74 @@
+.spinner-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1060;
+  display: grid;
+  place-items: center;
+  pointer-events: auto;
+
+  &.hidden {
+    display: none;
+  }
+
+  &::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, var(--overlay-alpha, .6));
+  }
+}
+
+.spin-wrapper {
+  --size: 2.85rem;
+  --thickness: 3px;
+  --speed: 1s;
+  --track-color: #ccc;
+  --segment-color: #f82c2c;
+
+  position: relative;
+  z-index: 1;
+  width: var(--size);
+  height: var(--size);
+}
+
+.logo-wrap {
+  position: absolute;
+  inset: calc(var(--thickness) + 4px);
+  border-radius: 50%;
+  background: #f2f3f3;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.logo-wrap img {
+  width: 1.25rem;
+  height: 1.25rem;
+  object-fit: contain;
+  border-radius: 50%;
+}
+
+@keyframes rotation {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.spin-track,
+.spin-loader {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  box-sizing: border-box;
+}
+
+.spin-track {
+  border: 1px solid var(--track-color);
+  opacity: 0.5;
+}
+
+.spin-loader {
+  border-top: var(--thickness) solid var(--segment-color);
+  border-right: var(--thickness) solid transparent;
+  animation: rotation var(--speed) linear infinite;
+}

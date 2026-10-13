@@ -1,0 +1,139 @@
+
+.gm-modal {
+  background: #fff;
+  border-radius: 16px;
+  padding: 16px 16px 20px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, .18);
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+  color: #111;
+  max-width: 520px;
+  margin: 0 auto;
+}
+
+.gm-title {
+  text-align: center;
+  font-weight: 800;
+  font-size: 20px;
+  margin: 0 0 6px;
+}
+
+.gm-sub {
+  text-align: center;
+  color: #8b8f96;
+  line-height: 1.35;
+}
+
+.gm-sub.small {
+  font-size: 13px;
+}
+
+/* Steps */
+.gm-steps {
+  display: grid;
+  grid-template-columns:1fr 120px 1fr;
+  align-items: center;
+  gap: 16px;
+  margin: 6px 0 2px;
+}
+
+.gm-step {
+  display: flex;
+  justify-content: center;
+  flex-direction: column;
+  align-items: center;
+}
+
+.gm-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 999px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid #e4e6eb;
+  color: #a9adb3;
+  font-weight: 700;
+  background: #fff;
+}
+
+.gm-icon.zalo {
+  background: #1e73ff;
+  color: #fff;
+  border-color: #1e73ff;
+}
+
+.gm-step.active .gm-icon {
+  border-color: #1e73ff;
+  color: #1e73ff;
+}
+
+.gm-step.active .gm-icon.zalo {
+  color: #fff;
+}
+
+.gm-bar {
+  height: 3px;
+  border-radius: 999px;
+  background: #e8eaef;
+  position: relative;
+  overflow: hidden;
+}
+
+.gm-bar.active::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  background: #1e73ff;
+}
+
+.gm-step-labels .label.active {
+  color: #1e73ff;
+}
+
+.gm-body {
+  margin-top: 6px;
+  text-align: center;
+}
+
+.gm-btn {
+  height: 44px;
+  min-width: 160px;
+  border-radius: 12px;
+  border: none;
+  padding: 0 18px;
+  font-weight: 700;
+  font-size: 16px;
+  cursor: pointer;
+}
+
+.gm-btn.start {
+  background: #1e73ff;
+  color: #fff;
+}
+
+.gm-btn.ghost {
+  background: #f3f4f7;
+  color: #1e73ff;
+}
+
+.gm-error {
+  color: #d93025;
+  font-size: 13px;
+  margin-top: 8px;
+}
+
+.gm-next-title {
+  font-weight: 800;
+  margin-bottom: 6px;
+}
+
+.created-button {
+  background-color: var(--brand-color);
+  color: #ffffff;
+}
+
+.confirm-button {
+  flex-direction: column;
+  align-items: center;
+}

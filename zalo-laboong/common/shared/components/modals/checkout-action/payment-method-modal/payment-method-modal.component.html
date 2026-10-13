@@ -1,0 +1,33 @@
+<div class="payment-modal">
+  <div class="payment-picker">
+    <header class="payment-picker__header">
+      <h2>Chọn phương thức thanh toán</h2>
+      <button type="button" aria-label="Đóng" (click)="offcanvas.dismiss()">
+        <i class="ph ph-x"></i>
+      </button>
+    </header>
+
+    <div class="payment-picker__list">
+      @for (method of methods; track method.method) {
+        <button
+          class="payment-picker__item"
+          type="button"
+          [class.payment-picker__item--active]="selectedMethod?.method === method.method"
+          (click)="onSelect(method)"
+        >
+          <span class="payment-picker__item-icon">
+            @if (method.logo) {
+              <img [src]="method.logo" alt="" />
+            } @else {
+              <i class="ph-light ph-credit-card"></i>
+            }
+          </span>
+          <span class="payment-picker__item-name">{{ method.displayName }}</span>
+          @if (selectedMethod?.method === method.method) {
+            <i class="ph-bold ph-check-circle payment-picker__item-check"></i>
+          }
+        </button>
+      }
+    </div>
+  </div>
+</div>

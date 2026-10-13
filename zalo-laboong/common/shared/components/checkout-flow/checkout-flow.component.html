@@ -1,0 +1,305 @@
+<section
+  class="checkout-flow"
+  [class.checkout-flow--picker]="screen === 'voucher-picker'"
+  [class.checkout-flow--forward]="screenTransition === 'forward'"
+  [class.checkout-flow--back]="screenTransition === 'back'"
+>
+  @if (screen === 'checkout' && payload) {
+    <main class="checkout-view">
+      <button
+        class="receiver-card surface"
+        type="button"
+        [class.receiver-card--empty]="!payload.customer.address"
+        (click)="onOpenAddress()"
+      >
+        @if (payload.customer.address) {
+          <span class="receiver-card__icon">
+            <i class="ph-bold ph-map-pin"></i>
+          </span>
+          <span class="receiver-card__body">
+            <span class="receiver-card__name">
+              {{ payload.customer.name }}
+              <span>{{ payload.customer.mobile }}</span>
+            </span>
+            <span class="receiver-card__address">{{ payload.customer.address }}</span>
+          </span>
+          <i class="ph ph-caret-right receiver-card__arrow"></i>
+        } @else {
+          <span class="receiver-card__empty">
+            <span class="receiver-card__empty-icon">
+              <i class="ph-bold ph-map-pin"></i>
+            </span>
+            <span class="receiver-card__empty-label">+ Thêm địa chỉ nhận hàng</span>
+          </span>
+        }
+      </button>
+
+      <section class="product-panel surface">
+        <header class="panel-heading">
+          <span>
+            <i class="ph-light ph-storefront"></i>
+            Nhanh Store
+          </span>
+          <small>{{ totalQuantity }} sản phẩm</small>
+        </header>
+
+        @for (item of items; track item.productId) {
+          <article class="checkout-product">
+            <div class="checkout-product__main">
+              <span class="checkout-product__qty">{{ item.quantity }}x</span>
+              <img
+                class="checkout-product__image"
+                [src]="item.image || 'assets/img/product-image.png'"
+                [alt]="item.name"
+              />
+              <div class="checkout-product__body">
+                <p class="checkout-product__name">{{ item.name }}</p>
+                @if (item.sizeChecked || item.colorChecked) {
+                  <p class="checkout-product__variant">
+                    @if (item.sizeChecked) { {{ item.sizeChecked }} }
+                    @if (item.sizeChecked && item.colorChecked) { | }
+                    @if (item.colorChecked) { {{ item.colorChecked }} }
+                  </p>
+                }
+                <p class="checkout-product__price">
+                  {{ formatPrice(item.price) }}
+                  @if (item.priceOld && item.priceOld > item.price) {
+                    <del>{{ formatPrice(item.priceOld) }}</del>
+                  }
+                </p>
+              </div>
+            </div>
+
+            @if (getProductGifts(item.productId).length) {
+              <div class="gift-strip">
+                @for (gift of getProductGifts(item.productId); track gift.productId) {
+                  <div class="gift-strip__row">
+                    <span class="gift-strip__info">
+                      <img class="gift-strip__image" [src]="gift.image || 'assets/img/no-image.png'" [alt]="gift.name">
+                      <span class="gift-strip__name">{{ gift.name }}</span>
+                    </span>
+                    <strong class="gift-strip__free">x {{ gift.quantity }} Miễn phí</strong>
+                  </div>
+                }
+              </div>
+            }
+          </article>
+        }
+
+        @if (billGifts.length) {
+          <div class="gift-strip gift-strip--bill">
+            <div class="gift-strip__header">
+              <i class="ph-light ph-gift"></i>
+              <span>Quà tặng</span>
+            </div>
+            @for (gift of billGifts; track gift.productId) {
+              <div class="gift-strip__row">
+                <span class="gift-strip__info">
+                  <img class="gift-strip__image" [src]="gift.image || 'assets/img/no-image.png'" [alt]="gift.name">
+                  <span class="gift-strip__name">{{ gift.name }}</span>
+                </span>
+                <strong class="gift-strip__free">x {{ gift.quantity }} Miễn phí</strong>
+              </div>
+            }
+          </div>
+        }
+
+        <label class="note-row">
+          <span>Ghi chú</span>
+          <input
+            type="text"
+            placeholder="Lưu ý cho người bán..."
+            [(ngModel)]="noteInput"
+            (ngModelChange)="onNoteInput($event)"
+          />
+        </label>
+      </section>
+
+      <section class="fulfillment-panel surface">
+        @if (carrierLoading) {
+          <div class="carrier-box carrier-box--loading">
+            <div class="carrier-box__selected">
+              <span class="carrier-box__loading">
+                <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
+                <span>Đang load phí vận chuyển</span>
+              </span>
+            </div>
+          </div>
+        } @else if (checkedCarrier?.serviceId) {
+          <div class="carrier-box">
+            <label class="carrier-box__selected">
+              <span class="carrier-box__info">
+                <img [src]="checkedCarrier!.logo" class="carrier-box__logo" alt="" />
+                <span class="carrier-box__detail">
+                  <span class="carrier-box__name">{{ checkedCarrier!.serviceName }}</span>
+                  <small class="carrier-box__desc">{{ checkedCarrier!.serviceDesc }}</small>
+                </span>
+              </span>
+              <strong class="carrier-box__fee">{{ formatPrice(shippingFee) }}</strong>
+            </label>
+            <button class="carrier-box__change" type="button" (click)="onOpenCarrier()">
+              Chọn đơn vị vận chuyển khác
+            </button>
+          </div>
+        } @else {
+          <button class="info-row" type="button" (click)="onOpenCarrier()">
+            <span class="info-row__left">
+              <span class="info-row__icon info-row__icon--ship">
+                <i class="ph-light ph-truck"></i>
+              </span>
+              <span>
+                <strong>Đơn vị vận chuyển</strong>
+                <small>Liên hệ phí vận chuyển</small>
+              </span>
+            </span>
+            <i class="ph ph-caret-right"></i>
+          </button>
+        }
+      </section>
+
+      <section class="promotion-panel surface">
+        <button class="info-row" type="button" (click)="openVoucherPicker()">
+          <span class="info-row__left">
+            <span class="info-row__icon info-row__icon--voucher">
+              <i class="ph-light ph-ticket"></i>
+            </span>
+            <span>
+              <strong>Voucher</strong>
+              <small>{{ appliedVoucherText }}</small>
+            </span>
+          </span>
+          <i class="ph ph-caret-right"></i>
+        </button>
+
+        <div class="point-row" [class.point-row--active]="showPointHint">
+          <button class="point-row__text" type="button" (click)="togglePointHint($event)">
+            <span>
+              Sử dụng điểm
+              <i class="ph-light ph-info"></i>
+            </span>
+            <small>{{ maxUsablePoints }} điểm khả dụng</small>
+          </button>
+          <button
+            class="switch"
+            type="button"
+            [class.switch--on]="usePoint"
+            [disabled]="!canUsePoint"
+            (click)="togglePoint()"
+            aria-label="Sử dụng điểm"
+          >
+            <span></span>
+          </button>
+
+          @if (showPointHint) {
+            <div class="point-tooltip">
+              <p>Điểm sẽ được trừ sau khi đơn hàng được xác nhận thành công.</p>
+              <button type="button" (click)="closePointHint()">Đã hiểu</button>
+            </div>
+          }
+        </div>
+      </section>
+
+      <section class="payment-panel surface" (click)="onOpenPaymentMethod()">
+        <header class="panel-heading">
+          <span>Phương thức thanh toán</span>
+          <i class="ph ph-caret-right"></i>
+        </header>
+        @if (paymentMethod) {
+          <div class="payment-selected">
+            <span class="payment-selected__icon">
+              @if (paymentMethod.logo) {
+                <img [src]="paymentMethod.logo" alt="" />
+              } @else {
+                <i class="ph-light ph-credit-card"></i>
+              }
+            </span>
+            <span class="payment-selected__name">{{ paymentMethod.displayName }}</span>
+          </div>
+        } @else {
+          <div class="payment-empty" [class.payment-empty--error]="showPaymentHint">
+            @if (showPaymentHint) {
+              Vui lòng chọn phương thức thanh toán
+            } @else {
+              Chọn phương thức thanh toán
+            }
+          </div>
+        }
+      </section>
+
+      <section class="summary-panel surface">
+        <header class="panel-heading">
+          <span>Thanh toán</span>
+        </header>
+        <div class="summary-row">
+          <span>Tạm tính</span>
+          <strong>{{ formatPrice(subtotal) }}</strong>
+        </div>
+        @if (productDiscount > 0) {
+          <div class="summary-row">
+            <span>Giảm giá sản phẩm</span>
+            <strong>-{{ formatPrice(productDiscount) }}</strong>
+          </div>
+        }
+        @if (promoResult?.discount?.promotions?.length) {
+          @for (promo of promoResult!.discount!.promotions; track promo.id) {
+            <div class="summary-row summary-row--sub">
+              <span><i class="ph-bold ph-tag"></i> {{ promo.name }}</span>
+            </div>
+          }
+        }
+        @if (voucherDiscount > 0) {
+          <div class="summary-row">
+            <span>Voucher giảm giá</span>
+            <strong>-{{ formatPrice(voucherDiscount) }}</strong>
+          </div>
+        }
+        @if (pointDiscount > 0) {
+          <div class="summary-row">
+            <span>Điểm sử dụng</span>
+            <strong>-{{ formatPrice(pointDiscount) }}</strong>
+          </div>
+        }
+        <div class="summary-row">
+          <span>Phí vận chuyển</span>
+          <strong>{{ formatPrice(shippingFee) }}</strong>
+        </div>
+        <div class="summary-row summary-row--total">
+          <span>Tổng thanh toán</span>
+          <strong>{{ formatPrice(grandTotal) }}</strong>
+        </div>
+      </section>
+    </main>
+
+    @if (showPointHint) {
+      <div class="hint-backdrop" (click)="closePointHint()"></div>
+    }
+
+    <footer class="checkout-flow-footer">
+      <button class="support-button" type="button" aria-label="Hỗ trợ" (click)="onOpenSupportChat()">
+        <i class="ph-light ph-headset"></i>
+      </button>
+      <div class="checkout-flow-footer__total">
+        <span>Tổng thanh toán</span>
+        <strong>{{ formatPrice(grandTotal) }}</strong>
+      </div>
+      <button
+        class="order-button"
+        type="button"
+        [disabled]="orderDisabled"
+        (click)="onPlaceOrder()"
+      >
+        Đặt hàng
+      </button>
+    </footer>
+  }
+
+  @if (screen === 'voucher-picker') {
+    <app-checkout-flow-voucher-picker
+      [couponResult]="promoResult?.coupon ?? null"
+      [appliedCode]="appliedCouponCode"
+      [loading]="couponLoading"
+      (applyCoupon)="onApplyCoupon($event)"
+      (complete)="onVoucherComplete($event)"
+    />
+  }
+</section>

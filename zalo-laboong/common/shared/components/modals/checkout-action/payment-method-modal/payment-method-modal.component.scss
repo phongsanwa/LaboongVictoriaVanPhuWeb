@@ -1,0 +1,108 @@
+$primary: #3459a7;
+$zalo: #0068ff;
+$muted: #6f7071;
+$line: #eef0f2;
+$text: #0d0d0d;
+
+:host {
+  display: block;
+}
+
+.payment-modal {
+  width: min(100vw, 430px);
+  margin: 0 auto;
+}
+
+.payment-picker {
+  border-radius: 16px 16px 0 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  background: #fff;
+  max-height: min(72vh, 520px);
+
+  &__header {
+    min-height: 50px;
+    padding: 8px 16px;
+    border-bottom: 1px solid $line;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+
+    h2 {
+      margin: 0;
+      font-size: 16px;
+      line-height: 22px;
+      font-weight: 700;
+    }
+
+    button {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      color: $muted;
+      border: 0;
+      background: transparent;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+    }
+  }
+
+  &__list {
+    overflow: auto;
+    padding-bottom: max(10px, var(--zaui-safe-area-inset-bottom));
+  }
+
+  &__item {
+    width: 100%;
+    min-height: 56px;
+    padding: 10px 16px;
+    border: 0;
+    border-bottom: 1px solid $line;
+    background: #fff;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    text-align: left;
+
+    &--active {
+      background: #f6f9ff;
+    }
+  }
+
+  &__item-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    background: #f1f4fb;
+    color: $primary;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 36px;
+    font-size: 16px;
+
+    img {
+      width: 24px;
+      height: 24px;
+      object-fit: contain;
+    }
+  }
+
+  &__item-name {
+    flex: 1;
+    min-width: 0;
+    color: $text;
+    font-size: 14px;
+    line-height: 19px;
+    font-weight: 500;
+  }
+
+  &__item-check {
+    color: $zalo;
+    font-size: 17px;
+  }
+}

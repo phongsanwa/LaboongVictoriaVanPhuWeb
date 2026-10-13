@@ -1,0 +1,95 @@
+@if (step === 1) {
+  <div class="gm-modal">
+    <h3 class="gm-title">Follow OA của Nhanh.vn để nhận lượt chơi</h3>
+    <p class="gm-sub mb-3">Để bắt đầu chơi game, bạn cần có lượt chơi chỉ với 2 bước</p>
+
+    <div class="gm-steps">
+      <div class="gm-step active">
+        <div class="gm-icon zalo">Zalo</div>
+        <div class="label active">Bước 1</div>
+      </div>
+      <div class="gm-bar"></div>
+      <div class="gm-step">
+        <div class="gm-icon phone">
+          <i class="ph-light ph-device-mobile"></i>
+        </div>
+        <div class="label">Bước 2</div>
+      </div>
+    </div>
+
+    <div class="gm-body">
+      <div class="step1">
+        <button type="button"
+                class="gm-btn start"
+                (click)="onStartFollow()">
+          Bắt đầu
+        </button>
+      </div>
+    </div>
+  </div>
+} @else if (step === 2) {
+  <form class="sheet" [formGroup]="form">
+    <div class="sheet-header d-flex align-items-center py-3 px-2">
+      <h5 class="flex-1 text-center fw-semibold m-0">Mời bạn nhập thông tin trước khi chơi</h5>
+      <button type="button" class="btn btn-link text-dark px-2" (click)="onClose()">
+        <i class="ph-light ph-x ph-lg"></i>
+      </button>
+    </div>
+
+    <div class="sheet-body p-2">
+      <div class="form-floating form-control-feedback mb-3">
+        <input
+          type="text"
+          class="form-control showPlaceholder"
+          [ngClass]="{ 'ng-error': showError('name') }"
+          formControlName="name"
+          placeholder=""
+        />
+        <label>Họ và tên <span class="text-danger">*</span></label>
+
+        @if (getError('name')) {
+          <small class="text-danger d-block mt-1">{{ getError('name') }}</small>
+        }
+      </div>
+
+      <div class="form-floating form-control-feedback mb-3">
+        <input
+          type="text"
+          class="form-control showPlaceholder"
+          [ngClass]="{ 'ng-error': showError('mobile') }"
+          formControlName="mobile"
+          placeholder=""
+        />
+        <label>Số điện thoại <span class="text-danger">*</span></label>
+
+        @if (getError('mobile')) {
+          <small class="text-danger d-block mt-1">{{ getError('mobile') }}</small>
+        }
+      </div>
+
+      <div class="form-floating form-control-feedback mb-3">
+        <input
+          type="text"
+          class="form-control showPlaceholder"
+          [ngClass]="{ 'ng-error': showError('email') }"
+          formControlName="email"
+          placeholder=""
+        />
+        <label>Email</label>
+
+        @if (getError('email')) {
+          <small class="text-danger d-block mt-1">{{ getError('email') }}</small>
+        }
+      </div>
+    </div>
+
+    <div class="confirm-button d-flex justify-content-center px-3 pb-3 pt-0">
+      <button type="button" (click)="onSubmit()" class="btn created-button w-100 outline">
+        Xác nhận
+      </button>
+
+      <p class="muted mt-2">Vui lòng điền chính xác thông tin để nhận quà</p>
+    </div>
+  </form>
+}
+

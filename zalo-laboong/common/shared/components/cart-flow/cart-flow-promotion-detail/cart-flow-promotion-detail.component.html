@@ -1,0 +1,57 @@
+<section
+  class="promotion-detail-panel"
+  [class.promotion-detail-panel--closing]="closing"
+  role="dialog"
+  aria-labelledby="promotion-detail-title"
+>
+  <header class="promotion-detail-panel__header">
+    <h2 id="promotion-detail-title">Chi tiết khuyến mại</h2>
+    <button type="button" (click)="close.emit()" aria-label="Đóng chi tiết khuyến mại">
+      <i class="ph ph-x"></i>
+    </button>
+  </header>
+
+  <div class="promotion-detail-panel__body">
+    <div class="promotion-detail-row">
+      <span>Tổng tiền hàng</span>
+      <strong>{{ formatPrice(detail.subtotal) }}</strong>
+    </div>
+
+    <div class="promotion-detail-divider"></div>
+
+    <div class="promotion-detail-group">
+      @if (detail.productDiscount > 0) {
+        <div class="promotion-detail-row">
+          <span>Giảm giá sản phẩm</span>
+          <strong>{{ formatPrice(detail.productDiscount) }}</strong>
+        </div>
+      }
+      @if (detail.voucherDiscount > 0) {
+        <div class="promotion-detail-row">
+          <span>Voucher giảm giá</span>
+          <strong>{{ formatPrice(detail.voucherDiscount) }}</strong>
+        </div>
+      }
+      @for (name of detail.promotionNames; track name) {
+        <div class="promotion-detail-row promotion-detail-row--sub">
+          <span>{{ name }}</span>
+        </div>
+      }
+    </div>
+
+    @if (detail.saving > 0) {
+      <div class="promotion-detail-divider"></div>
+
+      <div class="promotion-detail-group">
+        <div class="promotion-detail-row">
+          <span>Tiết kiệm</span>
+          <strong>-{{ formatPrice(detail.saving) }}</strong>
+        </div>
+        <div class="promotion-detail-row promotion-detail-row--total">
+          <span>Tổng số tiền</span>
+          <strong>{{ formatPrice(detail.grandTotal) }}</strong>
+        </div>
+      </div>
+    }
+  </div>
+</section>

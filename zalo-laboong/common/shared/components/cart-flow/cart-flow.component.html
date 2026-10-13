@@ -1,0 +1,106 @@
+<section
+  class="gift-flow"
+  [class.gift-flow--picker]="screen !== 'cart'"
+  [class.gift-flow--forward]="screenTransition === 'forward'"
+  [class.gift-flow--back]="screenTransition === 'back'"
+  (click)="stopClickPropagation($event)"
+>
+  @if (screen === 'cart' && cartFlowItems.length) {
+    <main class="cart-flow-view">
+      <div class="select-row">
+        <button
+          class="zds-checkbox"
+          type="button"
+          [class.zds-checkbox--checked]="isAllSelected"
+          (click)="toggleAllCartItems()"
+          aria-label="Chọn tất cả"
+        >
+          @if (isAllSelected) {
+            <i class="ph-bold ph-check"></i>
+          }
+        </button>
+        <span>Tất cả</span>
+        <button
+          class="select-row__trash"
+          type="button"
+          aria-label="Xóa sản phẩm đã chọn"
+          [disabled]="!hasSelectedItems"
+          (click)="requestDeleteSelected()"
+        >
+          <i class="ph-light ph-trash"></i>
+        </button>
+      </div>
+
+      <div class="cart-products">
+        @for (item of cartFlowItems; track item.productId) {
+          <app-cart-flow-item
+            [item]="item"
+            [swiped]="swipedProductId === item.productId"
+            (toggle)="toggleCartItem(item)"
+            (quantityChange)="onQuantityChange(item, $event)"
+            (swipeOpen)="onSwipeOpen($event)"
+            (swipeClose)="closeSwipe()"
+            (requestDelete)="requestDeleteItem($event)"
+            (openGiftPicker)="openProductGiftPicker($event)"
+          />
+        }
+      </div>
+
+      @if (hasBillGifts) {
+        <section class="order-gift">
+          <div class="order-gift__header">
+            <span>
+              <i class="ph-light ph-gift"></i>
+              Quà tặng
+            </span>
+            <button type="button" (click)="openBillGiftPickerFromEvent($event)">Chọn quà tặng</button>
+          </div>
+          @if (orderGifts.length) {
+            <button class="order-gift__list" type="button" (click)="openBillGiftPickerFromEvent($event)">
+              @for (gift of orderGifts; track gift.productId) {
+                <span class="mini-gift-row">
+                  <span class="mini-gift-row__product">
+                    <img [src]="gift.image" [alt]="gift.name" />
+                    <span>{{ gift.name }}</span>
+                  </span>
+                  <span>x {{ gift.quantity }}</span>
+                </span>
+              }
+            </button>
+          }
+        </section>
+      }
+    </main>
+  } @else if (screen === 'cart') {
+    <main class="empty-cart-view">
+      <div class="empty-cart-state">
+        <img class="empty-cart-state__image" src="assets/img/cart-not-product.png" alt="Không có sản phẩm trong giỏ hàng" />
+        <p>Không có sản phẩm trong giỏ hàng</p>
+      </div>
+    </main>
+
+  } @else if (screen === 'voucher-picker') {
+    <app-cart-flow-voucher-picker
+      [couponResult]="promoResult?.coupon ?? null"
+      [appliedCode]="appliedCouponCode"
+      [loading]="couponLoading"
+      (applyCoupon)="onApplyCoupon($event)"
+      (complete)="onVoucherComplete($event)"
+    />
+  } @else {
+    <app-cart-flow-gift-picker
+      [choices]="currentGiftChoices"
+      [mode]="giftMode"
+      [maxSelections]="giftMaxSelections"
+      (complete)="onGiftComplete($event)"
+    />
+  }
+
+  <app-cart-flow-confirm-dialog
+    [show]="showDeleteConfirm"
+    [closing]="deleteConfirmClosing"
+    [text]="deleteConfirmText"
+    (confirmAction)="onConfirmDelete()"
+    (cancelAction)="onCancelDelete()"
+  />
+</section>

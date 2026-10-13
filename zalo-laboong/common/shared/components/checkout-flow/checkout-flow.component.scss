@@ -1,0 +1,897 @@
+$primary: #3459a7;
+$zalo: #0068ff;
+$green: #17a36b;
+$red: #e53935;
+$text: #0d0d0d;
+$muted: #6f7071;
+$soft: #f7f7f8;
+$line: #eef0f2;
+
+:host {
+  display: block;
+  min-height: 100%;
+  background: $soft;
+  font-family: Roboto, Inter, Arial, sans-serif;
+}
+
+button,
+input {
+  font: inherit;
+}
+
+button {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  padding: 0;
+}
+
+.checkout-flow {
+  width: 100%;
+  max-width: 430px;
+  min-height: 100vh;
+  margin: 0 auto;
+  background: $soft;
+  color: $text;
+  position: relative;
+  overflow-x: hidden;
+
+  &--forward {
+    .voucher-picker,
+    app-checkout-flow-voucher-picker {
+      animation: screenPushIn 280ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+    }
+
+    .flow-header__bar h1 {
+      animation: titlePushIn 220ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+    }
+  }
+
+  &--back {
+    .checkout-view {
+      animation: screenReturnIn 260ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+    }
+
+    .checkout-flow-footer {
+      animation: footerReturnIn 260ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+    }
+
+    .flow-header__bar h1 {
+      animation: titleReturnIn 200ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+    }
+  }
+}
+
+@keyframes screenPushIn {
+  from { opacity: 0.86; transform: translateX(28px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes screenReturnIn {
+  from { opacity: 0.9; transform: translateX(-18px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes footerReturnIn {
+  from { opacity: 0.9; transform: translateX(calc(-50% - 18px)); }
+  to { opacity: 1; transform: translateX(-50%); }
+}
+
+@keyframes titlePushIn {
+  from { opacity: 0; transform: translateX(12px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes titleReturnIn {
+  from { opacity: 0; transform: translateX(-8px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+// ── Header ──────────────────────────────────────────────────────────────────
+
+.flow-header {
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  background: #fff;
+}
+
+.flow-header__bar {
+  height: 48px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 8px;
+
+  h1 {
+    flex: 1;
+    margin: 0;
+    font-size: 18px;
+    line-height: 24px;
+    font-weight: 500;
+    letter-spacing: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+}
+
+.flow-header__back {
+  width: 36px;
+  height: 40px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #141415;
+  font-size: 18px;
+}
+
+// ── Checkout view ───────────────────────────────────────────────────────────
+
+.checkout-view {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-bottom: 112px;
+}
+
+.surface {
+  background: #fff;
+}
+
+// ── Receiver card ───────────────────────────────────────────────────────────
+
+.receiver-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 14px 16px;
+  text-align: left;
+  border-top: 1px solid $line;
+
+  &__icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: #e8effc;
+    color: $primary;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 36px;
+  }
+
+  &__body {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  &__name {
+    color: $primary;
+    font-size: 14px;
+    line-height: 18px;
+    font-weight: 600;
+
+    span {
+      color: $muted;
+      font-weight: 400;
+      margin-left: 8px;
+    }
+  }
+
+  &__address {
+    color: $muted;
+    font-size: 13px;
+    line-height: 18px;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+
+  &__arrow {
+    color: #a7a9ad;
+    flex: 0 0 auto;
+  }
+
+  &--empty {
+    min-height: 104px;
+    justify-content: center;
+    padding: 18px 16px 16px;
+  }
+
+  &__empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    width: 100%;
+  }
+
+  &__empty-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: #a7a9ad;
+    font-size: 45px;
+    line-height: 1;
+  }
+
+  &__empty-label {
+    color: $text;
+    font-size: 14px;
+    line-height: 18px;
+    font-weight: 600;
+  }
+}
+
+// ── Panel heading ───────────────────────────────────────────────────────────
+
+.panel-heading {
+  height: 44px;
+  padding: 0 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid $line;
+
+  span {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 14px;
+    line-height: 18px;
+    font-weight: 600;
+  }
+
+  i {
+    color: $primary;
+  }
+
+  small {
+    color: $muted;
+    font-size: 12px;
+    line-height: 16px;
+  }
+}
+
+// ── Product items ───────────────────────────────────────────────────────────
+
+.checkout-product {
+  padding: 12px 16px;
+  border-bottom: 1px solid $line;
+
+  &:last-of-type {
+    border-bottom: 0;
+  }
+
+  &__main {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+  }
+
+  &__qty {
+    width: 24px;
+    flex: 0 0 24px;
+    padding-top: 2px;
+    color: $muted;
+    font-size: 13px;
+    line-height: 18px;
+    font-weight: 600;
+  }
+
+  &__image {
+    width: 56px;
+    height: 56px;
+    border-radius: 8px;
+    object-fit: cover;
+    flex: 0 0 56px;
+    background: #eef0f2;
+  }
+
+  &__body {
+    flex: 1;
+    min-width: 0;
+  }
+
+  &__name {
+    margin: 0 0 3px;
+    font-size: 14px;
+    line-height: 19px;
+    font-weight: 500;
+    color: $text;
+  }
+
+  &__variant {
+    margin: 0 0 5px;
+    color: $muted;
+    font-size: 12px;
+    line-height: 16px;
+  }
+
+  &__price {
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: $primary;
+    font-size: 13px;
+    line-height: 18px;
+    font-weight: 700;
+
+    del {
+      color: #a7a9ad;
+      font-size: 11px;
+      line-height: 16px;
+      font-weight: 400;
+    }
+  }
+}
+
+// ── Gift strip ──────────────────────────────────────────────────────────────
+
+.gift-strip {
+  margin: 8px 0 0 30px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+
+  &--bill {
+    margin: 0;
+    padding: 10px 16px;
+    border-top: 1px solid $line;
+  }
+
+  &__header {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: $green;
+    font-size: 13px;
+    font-weight: 600;
+    margin-bottom: 4px;
+  }
+
+  &__row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 5px;
+    min-width: 0;
+  }
+
+  &__info {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    min-width: 0;
+    max-width: 192px;
+  }
+
+  &__image {
+    width: 20px;
+    height: 20px;
+    flex: 0 0 20px;
+    border: 0.2px solid rgba(0, 0, 0, 0.13);
+    border-radius: 2px;
+    object-fit: cover;
+  }
+
+  &__name {
+    flex: 1;
+    min-width: 0;
+    color: #1f2937;
+    font-size: 12px;
+    line-height: 1;
+    font-family: Inter, Roboto, Arial, sans-serif;
+    font-weight: 400;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+
+  &__free {
+    color: #1f2937;
+    font-size: 12px;
+    line-height: 1;
+    font-family: Inter, Roboto, Arial, sans-serif;
+    font-weight: 400;
+    white-space: nowrap;
+  }
+}
+
+// ── Note row ────────────────────────────────────────────────────────────────
+
+.note-row {
+  min-height: 46px;
+  padding: 0 16px;
+  border-top: 1px solid $line;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+
+  span {
+    color: $text;
+    font-size: 14px;
+    line-height: 18px;
+    font-weight: 600;
+  }
+
+  input {
+    flex: 1;
+    min-width: 0;
+    border: 0;
+    outline: 0;
+    background: transparent;
+    color: $text;
+    text-align: right;
+    font-size: 14px;
+
+    &::placeholder {
+      color: #a7a9ad;
+    }
+  }
+}
+
+// ── Info row ────────────────────────────────────────────────────────────────
+
+.info-row {
+  width: 100%;
+  min-height: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 16px;
+  border-bottom: 1px solid $line;
+  text-align: left;
+
+  &:last-child {
+    border-bottom: 0;
+  }
+
+  &__left {
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  &__icon {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 32px;
+
+    &--ship { color: $green; background: #e7f6ef; }
+    &--voucher { color: $red; background: #ffeded; }
+  }
+
+  strong,
+  small {
+    display: block;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+
+  strong {
+    color: $text;
+    font-size: 14px;
+    line-height: 18px;
+    font-weight: 600;
+  }
+
+  small {
+    margin-top: 2px;
+    color: $muted;
+    font-size: 12px;
+    line-height: 16px;
+  }
+
+  i,
+  &__value {
+    flex: 0 0 auto;
+    color: $muted;
+    font-size: 13px;
+  }
+
+  &__value {
+    color: $text;
+    font-weight: 600;
+  }
+}
+
+// ── Points ──────────────────────────────────────────────────────────────────
+
+.point-row {
+  position: relative;
+  min-height: 56px;
+  padding: 10px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  z-index: 1;
+
+  &--active {
+    z-index: 203;
+  }
+
+  &__text {
+    min-width: 0;
+    text-align: left;
+
+    span,
+    small {
+      display: block;
+    }
+
+    span {
+      color: $text;
+      font-size: 14px;
+      line-height: 18px;
+      font-weight: 600;
+
+      i {
+        margin-left: 4px;
+        color: #a7a9ad;
+      }
+    }
+
+    small {
+      margin-top: 2px;
+      color: $muted;
+      font-size: 12px;
+      line-height: 16px;
+    }
+  }
+}
+
+.switch {
+  width: 46px;
+  height: 28px;
+  border-radius: 999px;
+  background: #dce1e5;
+  padding: 3px;
+  flex: 0 0 46px;
+  transition: background 0.2s ease;
+
+  span {
+    display: block;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: #fff;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.16);
+    transition: transform 0.2s ease;
+  }
+
+  &--on {
+    background: $zalo;
+
+    span {
+      transform: translateX(18px);
+    }
+  }
+}
+
+.hint-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 200;
+}
+
+.point-tooltip {
+  position: absolute;
+  left: 16px;
+  right: 16px;
+  top: calc(100% + 10px);
+  background: $zalo;
+  border-radius: 8px;
+  padding: 12px 14px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: #fff;
+  box-shadow: 0 10px 24px rgba(0, 104, 255, 0.24);
+
+  &::before {
+    content: "";
+    position: absolute;
+    top: -7px;
+    left: 88px;
+    width: 0;
+    height: 0;
+    border-left: 7px solid transparent;
+    border-right: 7px solid transparent;
+    border-bottom: 7px solid $zalo;
+  }
+
+  p {
+    flex: 1;
+    margin: 0;
+    font-size: 12px;
+    line-height: 17px;
+    font-weight: 500;
+  }
+
+  button {
+    color: #fff;
+    font-size: 13px;
+    line-height: 18px;
+    font-weight: 700;
+    white-space: nowrap;
+  }
+}
+
+// ── Carrier box ────────────────────────────────────────────────────────────
+
+.carrier-box {
+  padding: 12px 16px;
+
+  &__selected {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 10px 12px;
+    border: 1px solid $line;
+    border-radius: 8px;
+    background: #fff;
+  }
+
+  &__info {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+  }
+
+  &__logo {
+    width: 36px;
+    height: 36px;
+    object-fit: contain;
+    flex: 0 0 36px;
+    border-radius: 4px;
+  }
+
+  &__detail {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+  }
+
+  &__name {
+    color: $text;
+    font-size: 13px;
+    line-height: 18px;
+    font-weight: 500;
+  }
+
+  &__desc {
+    color: $muted;
+    font-size: 12px;
+    line-height: 16px;
+    margin-top: 1px;
+  }
+
+  &__fee {
+    color: $text;
+    font-size: 14px;
+    line-height: 18px;
+    font-weight: 700;
+    white-space: nowrap;
+    flex: 0 0 auto;
+  }
+
+  &__change {
+    display: block;
+    margin-top: 8px;
+    margin-left: auto;
+    color: $primary;
+    font-size: 13px;
+    line-height: 18px;
+    font-weight: 500;
+  }
+
+  &--loading {
+    .carrier-box__selected {
+      justify-content: center;
+      pointer-events: none;
+    }
+  }
+
+  &__loading {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    min-height: 36px;
+    color: $muted;
+    font-size: 13px;
+    line-height: 18px;
+    font-weight: 500;
+  }
+}
+
+// ── Payment panel ───────────────────────────────────────────────────────────
+
+.payment-selected {
+  padding: 10px 16px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+
+  &__icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    background: #f1f4fb;
+    color: $primary;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 36px;
+    font-size: 16px;
+
+    img {
+      width: 24px;
+      height: 24px;
+      object-fit: contain;
+    }
+  }
+
+  &__name {
+    flex: 1;
+    color: $text;
+    font-size: 14px;
+    font-weight: 500;
+  }
+}
+
+.payment-empty {
+  padding: 10px 16px;
+  color: $muted;
+  font-size: 13px;
+
+  &--error {
+    color: $red;
+  }
+}
+
+// ── Summary ─────────────────────────────────────────────────────────────────
+
+.summary-row {
+  min-height: 42px;
+  padding: 0 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  border-bottom: 1px solid $line;
+  color: $muted;
+  font-size: 13px;
+  line-height: 18px;
+
+  strong {
+    color: $text;
+    font-size: 14px;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+
+  &--sub {
+    min-height: 28px;
+    color: $muted;
+    font-size: 12px;
+    border-bottom: 0;
+
+    i {
+      margin-right: 4px;
+      color: $primary;
+    }
+  }
+
+  &--total {
+    min-height: 48px;
+    color: $text;
+    font-weight: 700;
+    border-bottom: 0;
+
+    strong {
+      color: $primary;
+      font-size: 16px;
+    }
+  }
+}
+
+// ── Footer ──────────────────────────────────────────────────────────────────
+
+.checkout-flow-footer {
+  position: fixed;
+  left: 50%;
+  bottom: 0;
+  width: min(100vw, 430px);
+  transform: translateX(-50%);
+  background: #fff;
+  z-index: 40;
+  box-shadow: 0 -2px 14px rgba(17, 24, 39, 0.08);
+  min-height: 72px;
+  padding: 10px 12px max(10px, var(--zaui-safe-area-inset-bottom));
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr) 118px;
+  align-items: center;
+  gap: 10px;
+
+  &__total {
+    min-width: 0;
+
+    span,
+    strong {
+      display: block;
+      overflow: hidden;
+      white-space: nowrap;
+      text-overflow: ellipsis;
+    }
+
+    span {
+      color: $muted;
+      font-size: 12px;
+      line-height: 16px;
+    }
+
+    strong {
+      color: $primary;
+      font-size: 16px;
+      line-height: 22px;
+      font-weight: 700;
+    }
+  }
+}
+
+.support-button {
+  width: 44px;
+  height: 44px;
+  border-radius: 8px;
+  border: 1px solid #dce5f9;
+  color: $primary;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+}
+
+.order-button {
+  height: 44px;
+  border-radius: 8px;
+  background: $zalo;
+  color: #fff;
+  font-size: 15px;
+  line-height: 20px;
+  font-weight: 700;
+
+  &:disabled {
+    opacity: 0.5;
+  }
+}
+
+// ── Responsive ──────────────────────────────────────────────────────────────
+
+@media (max-width: 360px) {
+  .checkout-flow-footer {
+    grid-template-columns: 40px minmax(0, 1fr) 104px;
+    gap: 8px;
+  }
+}

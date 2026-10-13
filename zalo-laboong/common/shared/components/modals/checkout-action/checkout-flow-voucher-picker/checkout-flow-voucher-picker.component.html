@@ -1,0 +1,47 @@
+<main class="voucher-picker">
+  <section class="voucher-search" aria-label="Nhập mã voucher">
+    <label class="voucher-search__input">
+      <input
+        type="text"
+        [(ngModel)]="voucherCode"
+        placeholder="Nhập mã voucher"
+      />
+    </label>
+    <button class="voucher-search__button" type="button" (click)="applyCode()">Áp dụng</button>
+  </section>
+
+  <section class="voucher-result" aria-label="Kết quả">
+    @if (loading) {
+      <div class="voucher-loading">Đang kiểm tra...</div>
+    } @else if (couponResult && pendingCode) {
+      <div class="voucher-card" [class.voucher-card--valid]="couponValid" [class.voucher-card--invalid]="!couponValid">
+        <span class="voucher-card__icon" aria-hidden="true">
+          <i class="ph-bold ph-ticket"></i>
+        </span>
+        <span class="voucher-card__content">
+          <span class="voucher-card__title">{{ pendingCode }}</span>
+          @if (couponValid && couponResult.amount) {
+            <span class="voucher-card__discount">Giảm {{ (couponResult.amount).toLocaleString('vi-VN') }} VND</span>
+          }
+          @if (couponMessage) {
+            <span class="voucher-card__message" [class.voucher-card__message--error]="!couponValid">
+              {{ couponMessage }}
+            </span>
+          }
+        </span>
+        @if (couponValid) {
+          <span class="voucher-card__check" aria-hidden="true">
+            <i class="ph-bold ph-check"></i>
+          </span>
+        }
+      </div>
+    } @else {
+      <div class="voucher-empty">Nhập mã voucher và bấm Áp dụng để kiểm tra</div>
+    }
+  </section>
+</main>
+
+<footer class="voucher-picker-footer">
+  <p>{{ footerText }}</p>
+  <button type="button" (click)="onComplete()" [disabled]="pendingCode && !couponValid">OK</button>
+</footer>

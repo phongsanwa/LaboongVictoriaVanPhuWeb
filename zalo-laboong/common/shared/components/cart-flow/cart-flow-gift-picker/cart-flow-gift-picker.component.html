@@ -1,0 +1,63 @@
+<main class="gift-picker">
+  <div class="gift-picker__section-title">Chọn quà tặng</div>
+  <div class="gift-picker__list">
+    @for (choice of choices; track choice.id) {
+      <button
+        class="gift-choice"
+        type="button"
+        [class.gift-choice--combo]="choice.type === 'combo'"
+        [class.gift-choice--disabled]="choice.disabled"
+        (pointerdown)="stopEventPropagation($event)"
+        (touchstart)="stopEventPropagation($event)"
+        (click)="toggleChoice(choice, $event)"
+      >
+        <span
+          class="zds-checkbox"
+          [class.zds-checkbox--checked]="choice.selected"
+          aria-hidden="true"
+        >
+          @if (choice.selected) {
+            <i class="ph-bold ph-check"></i>
+          }
+        </span>
+
+        <span class="gift-choice__content">
+          @if (choice.type === 'combo') {
+            <span class="gift-choice__title">{{ choice.title }}</span>
+          }
+          @for (gift of choice.products; track gift.productId) {
+            <span class="gift-product">
+              <img [src]="gift.image" [alt]="gift.name" />
+              <span class="gift-product__info">
+                <span class="gift-product__top">
+                  <span>{{ gift.name }}</span>
+                  <span>x {{ gift.quantity }}</span>
+                </span>
+                <span class="gift-product__price">
+                  <span>{{ formatPrice(gift.price) }}</span>
+                  @if (gift.priceOld > gift.price) {
+                    <del>{{ formatPrice(gift.priceOld) }}</del>
+                  }
+                </span>
+              </span>
+            </span>
+          }
+        </span>
+      </button>
+    } @empty {
+      <div class="gift-picker__empty">Chưa có quà tặng phù hợp</div>
+    }
+  </div>
+</main>
+
+<footer class="gift-picker-footer">
+  <span>Đã chọn {{ selectedCount }} quà</span>
+  <button
+    type="button"
+    (pointerdown)="stopEventPropagation($event)"
+    (touchstart)="stopEventPropagation($event)"
+    (click)="onComplete($event)"
+  >
+    Xong
+  </button>
+</footer>

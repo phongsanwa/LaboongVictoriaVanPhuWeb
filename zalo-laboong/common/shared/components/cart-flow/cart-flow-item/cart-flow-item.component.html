@@ -1,0 +1,110 @@
+<article
+  class="cart-product-swipe"
+  [class.cart-product-swipe--open]="swiped"
+  (pointerdown)="onPointerDown($event)"
+  (pointermove)="onPointerMove($event)"
+  (pointerup)="onPointerUp($event)"
+  (pointercancel)="onPointerCancel()"
+>
+  <button
+    class="swipe-delete-action"
+    type="button"
+    (pointerdown)="stopEventPropagation($event)"
+    (touchstart)="stopEventPropagation($event)"
+    (click)="onRequestDelete($event)"
+  >
+    <i class="ph-bold ph-trash"></i>
+    <span>Xóa</span>
+  </button>
+
+  <div class="cart-product">
+    <div class="cart-product__main">
+      <button
+        class="zds-checkbox"
+        type="button"
+        [class.zds-checkbox--checked]="item.checked"
+        (pointerdown)="stopEventPropagation($event)"
+        (touchstart)="stopEventPropagation($event)"
+        (click)="onToggle($event)"
+        aria-label="Chọn sản phẩm"
+      >
+        @if (item.checked) {
+          <i class="ph-bold ph-check"></i>
+        }
+      </button>
+
+      <img class="cart-product__image" [src]="item.image" [alt]="item.name" />
+
+      <div class="cart-product__body">
+        <p class="cart-product__name">{{ item.name }}</p>
+        @if (item.sizeChecked || item.colorChecked) {
+          <p class="cart-product__variant">
+            @if (item.sizeChecked) {
+              Size: {{ item.sizeChecked }}
+            }
+            @if (item.sizeChecked && item.colorChecked) {
+              <span>|</span>
+            }
+            @if (item.colorChecked) {
+              Color: {{ item.colorChecked }}
+            }
+          </p>
+        }
+        <div class="cart-product__meta">
+          <span class="price">{{ formatPrice(item.price) }}</span>
+          @if (item.priceOld > item.price) {
+            <del>{{ formatPrice(item.priceOld) }}</del>
+          }
+          <div class="quantity-control" (pointerdown)="stopEventPropagation($event)" (touchstart)="stopEventPropagation($event)">
+            <button type="button" (click)="onQuantityChange(-1, $event)" aria-label="Giảm số lượng">
+              <i class="ph-bold ph-minus"></i>
+            </button>
+            <span>{{ item.quantity }}</span>
+            <button type="button" (click)="onQuantityChange(1, $event)" aria-label="Tăng số lượng">
+              <i class="ph-bold ph-plus"></i>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    @if (item.hasGiftEntry && !item.selectedGifts.length) {
+      <button
+        class="cart-gift-entry"
+        type="button"
+        (pointerdown)="stopEventPropagation($event)"
+        (touchstart)="stopEventPropagation($event)"
+        (click)="onOpenGiftPicker($event)"
+      >
+        <span>
+          <i class="ph-light ph-gift"></i>
+          Chọn quà tặng
+        </span>
+        <i class="ph ph-caret-right"></i>
+      </button>
+    }
+
+    @if (item.selectedGifts.length) {
+      <button
+        class="selected-product-gifts"
+        type="button"
+        (pointerdown)="stopEventPropagation($event)"
+        (touchstart)="stopEventPropagation($event)"
+        (click)="onOpenGiftPicker($event)"
+      >
+        <i class="ph-light ph-gift"></i>
+        <span class="selected-product-gifts__rows">
+          @for (gift of item.selectedGifts; track gift.productId) {
+            <span class="mini-gift-row">
+              <span class="mini-gift-row__product">
+                <img [src]="gift.image" [alt]="gift.name" />
+                <span>{{ gift.name }}</span>
+              </span>
+              <span>x {{ gift.quantity }}</span>
+            </span>
+          }
+        </span>
+      </button>
+    }
+  </div>
+</article>

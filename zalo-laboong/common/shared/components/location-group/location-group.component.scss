@@ -1,0 +1,41 @@
+.item-location:hover {
+  background-color: var(--gray-200);
+}
+
+.barActive {
+  //width: calc(100% / 3);
+  transition: all .3s;
+  height: 2px;
+  background-color: #EF4444;
+}
+
+.group_header .active, .item-location.selected {
+  color: #EF4444;
+}
+
+.box_displayList {
+  height: 300px;
+  overflow-y: auto;
+}
+
+.noCursor {
+  cursor: no-drop;
+}
+
+.displayPlaceholder::placeholder, .showPlaceholder::placeholder {
+  color: var(--input-placeholder-color) !important;
+  opacity: 1;
+}
+
+.box_displaySearch {
+  max-height: 200px;
+  overflow: auto;
+  width: 100%;
+}
+
+.box_action_group {
+  color: grey;
+  top: 50%;
+  transform: translateY(-50%);
+  right: 6px;
+}

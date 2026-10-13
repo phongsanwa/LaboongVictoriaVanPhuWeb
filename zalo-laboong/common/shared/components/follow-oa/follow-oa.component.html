@@ -1,0 +1,19 @@
+@if (!hasFollowed) {
+  <div class="follow-oa-card">
+    <p class="oa-description">{{ explanationContent }}</p>
+
+    <div class="oa-info">
+      <div class="oa-left">
+        <img [src]="img" alt="OA Logo" class="oa-avatar"/>
+        <span class="oa-name">{{ explanationTitle }}</span>
+      </div>
+
+      <button
+        type="button"
+        class="oa-follow-btn"
+        (click)="onHandlerFollow()">
+        {{ buttonText }}
+      </button>
+    </div>
+  </div>
+}
