@@ -1,0 +1,31 @@
+<section class="product-section">
+  <div class="section-heading align-items-center d-flex justify-content-between">
+    <h2>{{ title }}</h2>
+  </div>
+
+  @if (isLoading()) {
+    <div class="product-grid">
+      @for (i of skeletonItems; track i) {
+        <div class="product-card d-flex flex-column">
+          <div class="skeleton skeleton-img w-100"></div>
+          <div class="skeleton skeleton-line"></div>
+          <div class="skeleton skeleton-title w-100"></div>
+          <div class="skeleton skeleton-price"></div>
+        </div>
+      }
+    </div>
+  } @else {
+    @if (displayProducts.length) {
+      <div class="product-grid">
+        @for (prd of displayProducts; track prd.id) {
+          <app-zma-product-card [product]="prd" (quickBuy)="openQuickBuy($event)"></app-zma-product-card>
+        }
+      </div>
+    }
+  }
+
+  <app-zma-product-quick-buy
+    [productId]="quickBuyProductId"
+    (closed)="closeQuickBuy()">
+  </app-zma-product-quick-buy>
+</section>

@@ -1,0 +1,52 @@
+<div class="user-edit-page">
+  <div class="top-gap"></div>
+
+  <form class="account-form" (ngSubmit)="onSave()">
+    <div class="avatar-row align-items-start">
+      <label>Ảnh đại diện</label>
+      <img class="rounded-circle"
+           [src]="userInfo.avatar || 'assets/img/no-image.png'"
+           alt="avatar">
+    </div>
+
+    <label class="field">
+      <span>Họ tên <em>*</em></span>
+      <input type="text" name="name" [(ngModel)]="name" autocomplete="name">
+    </label>
+
+    <label class="field">
+      <span>Số điện thoại <em>*</em></span>
+      <input type="tel" name="phone" [(ngModel)]="phone" disabled>
+    </label>
+
+    <label class="field" [class.has-error]="showEmailError">
+      <span>Email</span>
+      <input type="email" name="email" [(ngModel)]="email" autocomplete="email">
+      @if (showEmailError) {
+        <small>Vui lòng nhập email hợp lệ và không có khoảng cách</small>
+      }
+    </label>
+
+    <label class="field">
+      <span>Ngày sinh</span>
+      <input type="text" name="birthday" [(ngModel)]="birthday">
+    </label>
+
+    <div class="gender-row align-items-center d-flex">
+      <label>
+        <input type="radio" name="gender" value="male" [(ngModel)]="gender">
+        <span>Nam</span>
+      </label>
+      <label>
+        <input type="radio" name="gender" value="female" [(ngModel)]="gender">
+        <span>Nữ</span>
+      </label>
+    </div>
+
+    <div class="middle-gap"></div>
+  </form>
+</div>
+
+<div class="save-footer">
+  <button class="save-btn w-100" type="button" (click)="onSave()">Lưu thay đổi</button>
+</div>

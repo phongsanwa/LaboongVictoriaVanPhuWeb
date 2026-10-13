@@ -1,0 +1,156 @@
+.user-edit-page {
+  background: #fff;
+  color: #1f2937;
+  font-family: Roboto, Arial, sans-serif;
+  min-height: 100vh;
+  padding-bottom: 112px;
+}
+
+.top-gap,
+.middle-gap {
+  background: #f7f7f8;
+  height: 24px;
+}
+
+.account-form {
+  padding: 18px 24px 0;
+}
+
+.avatar-row {
+
+  display: grid;
+  grid-template-columns: 1fr 104px 1fr;
+  margin-bottom: 28px;
+}
+
+.avatar-row label,
+.field > span {
+  color: #202124;
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 20px;
+}
+
+.avatar-row img {
+  height: 84px;
+  object-fit: cover;
+  width: 84px;
+}
+
+.field {
+  display: block;
+  margin-bottom: 24px;
+}
+
+.field > span {
+  display: block;
+  margin-bottom: 6px;
+}
+
+.field em {
+  color: #e53935;
+  font-style: normal;
+}
+
+.field input {
+  background: #fff;
+  border: 1px solid #b8b8b8;
+  border-radius: 8px;
+  color: #202124;
+  font-size: 14px;
+  height: 48px;
+  line-height: 20px;
+  outline: 0;
+  padding: 0 12px;
+  width: 100%;
+}
+
+.field input:focus {
+  border-color: #006afe;
+  box-shadow: 0 0 0 1px #006afe;
+}
+
+.field input:disabled {
+  background: #e2e2e2;
+  border-color: #9f9f9f;
+  color: #111;
+  opacity: 1;
+}
+
+.field.has-error {
+  margin-bottom: 18px;
+}
+
+.field.has-error input {
+  border-color: #e53935;
+}
+
+.field.has-error small {
+  color: #d93025;
+  display: block;
+  font-size: 12px;
+  line-height: 16px;
+  margin-top: 4px;
+}
+
+.gender-row {
+
+  gap: 34px;
+  margin: 2px 0 24px;
+}
+
+.gender-row label {
+  align-items: center;
+  color: #1f2937;
+  display: inline-flex;
+  font-size: 14px;
+  gap: 10px;
+  line-height: 20px;
+}
+
+.gender-row input {
+  appearance: none;
+  border: 2px solid #1f2937;
+  border-radius: 50%;
+  height: 18px;
+  margin: 0;
+  position: relative;
+  width: 18px;
+}
+
+.gender-row input:checked::after {
+  background: #1f2937;
+  border-radius: 50%;
+  content: '';
+  height: 8px;
+  left: 3px;
+  position: absolute;
+  top: 3px;
+  width: 8px;
+}
+
+.middle-gap {
+  margin: 0 -24px;
+}
+
+.save-footer {
+  background: #fff;
+  bottom: 0;
+  left: 0;
+  padding: 24px 30px max(24px, var(--zaui-safe-area-inset-bottom));
+  position: fixed;
+  right: 0;
+  z-index: 10;
+}
+
+.save-btn {
+  background: #3459a7;
+  border: 0;
+  border-radius: 8px;
+  color: #fff;
+  display: block;
+  font-size: 14px;
+  font-weight: 500;
+  height: 48px;
+
+}

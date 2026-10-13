@@ -1,0 +1,57 @@
+<div class="review-form-page">
+ <main class="review-form-main d-flex flex-column">
+ <section class="product-summary d-flex align-items-start gap-2">
+ <img [src]="product.image" [alt]="product.name">
+ <div>
+ <h1>{{ product.name }}</h1>
+ <p>{{ product.variant }}</p>
+ </div>
+ </section>
+
+ <section class="rating-section d-flex flex-column text-center">
+ <h2>Đánh giá của bạn</h2>
+ <div class="rating-stars d-flex justify-content-center">
+ @for (star of Array.from({length: 5}); track $index) {
+ <button type="button" (click)="setRating($index + 1)" [attr.aria-label]="'Chọn ' + ($index + 1) + ' sao'">
+ <i class="ph-bold ph-star" [class.muted]="$index >= rating"></i>
+ </button>
+ }
+ </div>
+ </section>
+
+ <section class="review-input d-flex flex-column position-relative">
+ <label for="reviewContent">Nội dung đánh giá</label>
+ <textarea class="w-100" id="reviewContent" maxlength="255" [(ngModel)]="content"></textarea>
+ <span>{{ content.length }}/255</span>
+ </section>
+
+ <section class="media-section d-flex flex-column">
+ <h2>Thêm ít nhất 1 hình ảnh/video về sản phẩm</h2>
+ <div class="media-row d-flex gap-2">
+ @for (item of media; track item; let i = $index) {
+ <span class="media-thumb position-relative">
+ <img class="w-100 h-100" [src]="item" alt="">
+ <button class="d-flex align-items-center justify-content-center" type="button" aria-label="Xóa ảnh"><i class="ph ph-x"></i></button>
+ @if (i === 2) {
+ <span class="video-info d-flex justify-content-between align-items-center position-absolute"><i class="ph-light ph-video"></i>0:06</span>
+ }
+ </span>
+ }
+ <button class="media-add d-flex flex-column align-items-center justify-content-center" type="button">
+ <i class="ph-light ph-camera"></i>
+ <span>{{ media.length }}/5</span>
+ </button>
+ @if (isEditMode) {
+ <button class="media-add d-flex flex-column align-items-center justify-content-center" type="button">
+ <i class="ph-light ph-video"></i>
+ <span>Video</span>
+ </button>
+ }
+ </div>
+ </section>
+ </main>
+
+ <footer class="review-form-footer">
+ <button class="w-100" type="button" (click)="submit()">{{ isEditMode ? 'Lưu thay đổi' : 'Gửi đánh giá' }}</button>
+ </footer>
+</div>

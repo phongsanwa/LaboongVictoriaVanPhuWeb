@@ -1,0 +1,48 @@
+<div class="address-screen">
+ @if (hasAddresses()) {
+ <div class="section-title">Địa chỉ</div>
+ <div class="list-address d-flex flex-column">
+ @for (item of addresses; track item.id) {
+ <div class="address-card" (click)="onSelectAddress(item)">
+ <div class="address-card__top align-items-center d-flex justify-content-between">
+ <div class="address-person align-items-center d-flex gap-2">
+ <strong>{{ item.recipientName }}</strong>
+ <span></span>
+ <em>{{ item.recipientPhone }}</em>
+ </div>
+ <a class="edit-link"
+ [routerLink]="uriFeConst.user.addressAdd"
+ [queryParams]="{ id: item.id }"
+ (click)="$event.stopPropagation()">
+ Sửa
+ </a>
+ </div>
+ <p class="address">{{ addressLine(item) }}</p>
+ <div class="address-card__bottom align-items-center d-flex justify-content-between">
+ @if (item.isDefault === 1) {
+ <span class="default-badge d-inline-flex">Mặc định</span>
+ } @else {
+ <span></span>
+ }
+ <button type="button" class="remove-link" (click)="$event.stopPropagation(); onRemoveAddress(item)">
+ <i class="ph-light ph-trash"></i>
+ </button>
+ </div>
+ </div>
+ }
+ </div>
+ } @else if (!loading) {
+ <div class="empty-state align-items-center d-flex flex-column text-center">
+ <p>Bạn chưa có địa chỉ nào</p>
+ </div>
+ }
+</div>
+
+<div class="bottom-btn">
+ <button
+ class="btn-add-address d-flex align-items-center justify-content-center w-100"
+ [routerLink]="uriFeConst.user.addressAdd">
+ <i class="ph-light ph-plus"></i>
+ <span>Thêm địa chỉ mới</span>
+ </button>
+</div>

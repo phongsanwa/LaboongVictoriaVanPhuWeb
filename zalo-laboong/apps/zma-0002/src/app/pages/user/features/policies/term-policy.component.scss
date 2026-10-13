@@ -1,0 +1,50 @@
+:host {
+  background: #fff;
+  display: block;
+  min-height: 100%;
+}
+
+.policy-page {
+  font-family: Roboto, Arial, sans-serif;
+  padding: 24px 22px 0;
+}
+
+.policy-list {
+  background: #fff;
+  border-radius: 0;
+
+}
+
+.policy-item {
+
+  border-bottom: 1px solid #dedede;
+  color: #1f2937;
+
+  font-size: 14px;
+  font-weight: 400;
+
+  line-height: 20px;
+  min-height: 52px;
+
+}
+
+.policy-item:last-child {
+  border-bottom: 0;
+}
+
+.policy-item span {
+  align-items: center;
+  display: flex;
+  gap: 12px;
+  min-width: 0;
+}
+
+.policy-item span i {
+  color: #3459a7;
+  font-size: 19px;
+}
+
+.policy-item > i {
+  color: #6f7682;
+  font-size: 14px;
+}

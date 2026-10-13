@@ -1,0 +1,65 @@
+<div class="home-shell">
+  <section class="home-top">
+    <a class="search-box align-items-center d-flex" [routerLink]="uriFeConst.product.search">
+      <i class="ph-light ph-magnifying-glass"></i>
+      <span>Tìm kiếm</span>
+    </a>
+
+    <div class="hero-card pb-1">
+      @if (isLoadingBanner()) {
+        <div class="skeleton skeleton-banner w-100"></div>
+      } @else {
+        @if (displaySlides.length) {
+          <app-universal-slide
+            [items]="displaySlides"
+            [config]="{ showNavigation: false, showPagination: true, autoplay: true, autoplayDelay: 3000, slidesPerView: 1, loop: displaySlides.length > 1, showName: false, className: 'home-banner-slide' }">
+          </app-universal-slide>
+        }
+      }
+    </div>
+
+    @if (brandLogoUrl || appDisplayName || showTemplateFallbacks) {
+      <app-follow-oa
+        [img]="brandLogoUrl"
+        [explanationTitle]="appDisplayName"
+        explanationContent="Quan tâm OA để nhận các đặc quyền ưu đãi">
+      </app-follow-oa>
+    }
+  </section>
+
+  <section class="home-section category-section">
+    <div class="section-heading align-items-center d-flex justify-content-between">
+      <h2>Danh mục sản phẩm</h2>
+      <a [routerLink]="uriFeConst.product.category">Xem thêm <i class="ph ph-caret-right"></i></a>
+    </div>
+    @if (isLoadingCategories()) {
+      <div class="category-row d-flex">
+        @for (i of skeletonItems; track i) {
+          <div class="category-card skeleton-category-item align-items-center d-flex flex-column text-center p-0">
+            <div class="skeleton skeleton-img w-100"></div>
+            <div class="skeleton skeleton-text"></div>
+          </div>
+        }
+      </div>
+    } @else {
+      <app-universal-slide
+        [items]="categorySlides"
+        [config]="{ showNavigation: false, showPagination: false, autoplay: false, slidesPerView: 4, spaceBetween: 16, loop: false, showName: false, className: 'category-slide' }">
+        <ng-template let-cate>
+          <a class="category-card align-items-center d-flex flex-column text-center p-0" [routerLink]="uriFeConst.product.category" [queryParams]="{ id: cate.id }">
+            <img class="rounded-pill border-light" [src]="cate.image || 'assets/img/no-image.png'" [alt]="cate.name || ''">
+            <span>{{ cate.name }}</span>
+          </a>
+        </ng-template>
+      </app-universal-slide>
+    }
+  </section>
+
+  <app-product-list title="Sản phẩm hot" [features]="[PRODUCT_FEATURE.HOT]"></app-product-list>
+
+  <app-product-list title="Sản phẩm mới" [features]="[PRODUCT_FEATURE.NEW]"></app-product-list>
+
+  <app-product-list title="Sản phẩm trang chủ" [features]="[PRODUCT_FEATURE.HOME]"></app-product-list>
+
+  <app-news-list></app-news-list>
+</div>

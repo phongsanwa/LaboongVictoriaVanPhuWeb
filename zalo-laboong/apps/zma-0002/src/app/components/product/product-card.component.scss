@@ -1,0 +1,144 @@
+:host {
+  display: block;
+  min-width: 0;
+  width: 100%;
+}
+
+:host(.suggestion-card) {
+  flex: 0 0 100%;
+  width: 100%;
+}
+
+.zma-product-card {
+  border: 1px solid rgba(0, 0, 0, 0.13);
+  border-radius: 8px;
+  color: #0d0d0d;
+
+  min-width: 0;
+  overflow: hidden;
+  position: relative;
+  text-decoration: none;
+
+}
+
+.zma-product-card__image {
+  background: #f3f4f6;
+  overflow: hidden;
+  position: relative;
+
+}
+
+.zma-product-card__image::before {
+  content: '';
+  display: block;
+  padding-top: 100%;
+}
+
+.zma-product-card__image img {
+  height: 100%;
+  inset: 0;
+  object-fit: cover;
+  position: absolute;
+  width: 100%;
+}
+
+.zma-product-card__discount {
+
+  background: #3459a7;
+  border-radius: 0 8px 0 8px;
+  color: #fff;
+
+  font-size: 11px;
+  font-weight: 600;
+  height: 26px;
+
+  line-height: 10px;
+  min-width: 41px;
+  padding: 0 4px;
+  position: absolute;
+  right: -1px;
+  top: -1px;
+}
+
+.zma-product-card__content {
+
+  background: #fff;
+
+  min-height: 104px;
+  padding: 8px 5px;
+
+}
+
+.zma-product-card__content > * {
+  min-width: 0;
+}
+
+.zma-product-card__category {
+  color: #6f7071;
+  font-size: 11px;
+  font-weight: 400;
+  line-height: 16px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-height: 16px;
+}
+
+.zma-product-card h3 {
+  color: #0d0d0d;
+  display: -webkit-box;
+  font-size: 13px;
+  font-weight: 400;
+  height: 36px;
+  line-height: 18px;
+  width: 100%;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  margin-bottom: 3px;
+}
+
+.zma-product-card__bottom {
+
+}
+
+.zma-product-card__price {
+
+  flex: 1;
+
+  height: 34px;
+  min-width: 0;
+}
+
+.zma-product-card__price strong {
+  color: #0d0d0d;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 18px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.zma-product-card__price del {
+  color: #6f7071;
+  font-size: 11px;
+  font-weight: 400;
+  line-height: 16px;
+}
+
+.zma-product-card__quick {
+
+  background: #3459a7;
+  border: 0;
+  border-radius: 50%;
+  color: #fff;
+
+  flex: 0 0 20px;
+  font-size: 14px;
+  height: 20px;
+
+  margin-left: 4px;
+
+  width: 20px;
+}

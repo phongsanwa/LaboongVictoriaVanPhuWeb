@@ -1,0 +1,25 @@
+@if (newsDetail) {
+  <article class="news-detail-page">
+    <section class="hero">
+      <div class="detail-chrome safe-pt-16 align-items-center d-flex justify-content-start">
+        <button class="chrome-circle align-items-center d-inline-flex justify-content-center" type="button"
+                aria-label="Quay lại" (click)="goBack()">
+          <i class="ph-light ph-arrow-left"></i>
+        </button>
+      </div>
+      @if (newsDetail.avatarUri) {
+        <img class="cover-image w-100" [src]="newsDetail.avatarUri" [alt]="newsDetail.title">
+      } @else {
+        <div class="cover-image cover-image--placeholder w-100"></div>
+      }
+    </section>
+    <section class="article-body">
+      <h1>{{ newsDetail.title }}</h1>
+      <div class="article-meta align-items-center d-flex">
+        <span>{{ newsDetail.publishedDate | date:'dd/MM/yyyy' }}</span>
+        <span><i class="ph-light ph-eye"></i>{{ newsDetail.hits ?? 0 }}</span>
+      </div>
+      <div class="content-news" [innerHTML]="newsDetail.content || newsDetail.description"></div>
+    </section>
+  </article>
+}

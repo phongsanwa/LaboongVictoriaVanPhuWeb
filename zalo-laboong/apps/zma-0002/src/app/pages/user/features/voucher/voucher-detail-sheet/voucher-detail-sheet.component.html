@@ -1,0 +1,42 @@
+<div class="voucher-overlay" (click)="closed.emit()"></div>
+<section class="voucher-detail-sheet">
+ <header class="detail-header align-items-center d-flex justify-content-center">
+ <h2>Chi tiết voucher</h2>
+ <button type="button" class="sheet-close p-0" aria-label="Đóng" (click)="closed.emit()">
+ <i class="ph-light ph-x"></i>
+ </button>
+ </header>
+
+ <div class="wrap-detail-row">
+ <div class="detail-row d-flex">
+ <span class="detail-icon align-items-center d-inline-flex justify-content-center"><i class="ph-bold ph-clock"></i></span>
+ <div>
+ <h3>Hạn sử dụng mã</h3>
+ <p>{{ voucher.validRange }}</p>
+ </div>
+ </div>
+ <div class="detail-row d-flex">
+ <span class="detail-icon align-items-center d-inline-flex justify-content-center"><i class="ph-bold ph-ticket"></i></span>
+ <div>
+ <h3>Ưu đãi</h3>
+ <p>{{ voucher.name }} {{ voucher.description }}</p>
+ </div>
+ </div>
+ <div class="detail-row d-flex">
+ <span class="detail-icon align-items-center d-inline-flex justify-content-center"><i class="ph-bold ph-file-text"></i></span>
+ <div>
+ <h3>Điều kiện</h3>
+ <p>{{ voucher.condition }}</p>
+ </div>
+ </div>
+ <div class="detail-row d-flex">
+ <span class="detail-icon align-items-center d-inline-flex justify-content-center"><i class="ph-bold ph-shopping-cart"></i></span>
+ <div>
+ <h3>Áp dụng</h3>
+ <p>{{ voucher.applyTo }}</p>
+ </div>
+ </div>
+ </div>
+
+ <button type="button" class="detail-confirm" (click)="closed.emit()">Dùng ngay</button>
+</section>

@@ -1,0 +1,44 @@
+<div class="voucher-condition-page">
+ <section class="search-shell">
+ <div class="search-box align-items-center d-flex">
+ <i class="ph-light ph-magnifying-glass"></i>
+ <span>Tìm kiếm các sản phẩm có thể áp dụng</span>
+ </div>
+ </section>
+
+ <section class="condition-voucher">
+ <app-zma-voucher-card
+ [item]="voucher"
+ [showCollect]="false"
+ [conditionEnabled]="false"
+ (selected)="openDetail($event)">
+ </app-zma-voucher-card>
+ </section>
+
+ <section class="products-section">
+ <h2>Sản phẩm có thể áp dụng voucher này</h2>
+ @if (isLoading) {
+ <div class="condition-state">Đang tải sản phẩm...</div>
+ } @else if (products.length) {
+ <div class="product-grid">
+ @for (product of products; track product.id) {
+ <button type="button" class="condition-product p-0 text-start" (click)="goToProductDetail(product.id)">
+ <img [src]="productImage(product)" [alt]="product.name">
+ <span class="condition-product__category">{{ product.category?.name || 'Sản phẩm' }}</span>
+ <strong>{{ product.name }}</strong>
+ <span class="condition-product__price">{{ formatPrice(product.priceAfterDiscount || product.price) }}</span>
+ @if (product.priceOld && product.priceOld > (product.priceAfterDiscount || product.price)) {
+ <del>{{ formatPrice(product.priceOld) }}</del>
+ }
+ </button>
+ }
+ </div>
+ } @else {
+ <div class="condition-state">{{ errorMessage }}</div>
+ }
+ </section>
+
+ @if (selectedVoucher) {
+ <app-zma-voucher-detail-sheet [voucher]="selectedVoucher" (closed)="closeDetail()"></app-zma-voucher-detail-sheet>
+ }
+</div>

@@ -1,0 +1,61 @@
+<div class="reviews-page">
+ <nav class="review-tabs" aria-label="Trạng thái đánh giá">
+ <button class="text-center" type="button" [class.active]="activeTab === 'reviewed'" (click)="selectTab('reviewed')">Đã đánh giá</button>
+ <button class="text-center" type="button" [class.active]="activeTab === 'pending'" (click)="selectTab('pending')">Chưa đánh giá</button>
+ </nav>
+
+ @if (activeTab === 'pending') {
+ <section class="review-hint text-center">
+ <p>Hãy chia sẻ cảm nhận của bạn về sản phẩm để</p>
+ <p>giúp chúng tôi phục vụ bạn tốt hơn!</p>
+ </section>
+
+ <section class="pending-list d-flex flex-column">
+ @for (item of pendingItems; track item.id) {
+ <article class="pending-item d-flex bg-white">
+ <img [src]="item.image" [alt]="item.name">
+ <div class="pending-item__body d-flex flex-column justify-content-between">
+ <div>
+ <h2>{{ item.name }}</h2>
+ <p>Đã mua {{ item.purchasedAt }}</p>
+ </div>
+ <button type="button" (click)="openReviewForm(item)">Đánh giá</button>
+ </div>
+ </article>
+ }
+ </section>
+ } @else {
+ <section class="reviewed-list d-flex flex-column">
+ @for (item of reviewedItems; track item.id) {
+ <article class="review-card d-flex flex-column bg-white gap-2">
+ <div class="review-product d-flex align-items-center w-100 gap-2">
+ <img [src]="item.image" [alt]="item.name">
+ <h2>{{ item.name }}</h2>
+ </div>
+ <p class="review-variant m-0">Phân loại: {{ item.variant }}</p>
+ <div class="stars d-flex" aria-label="Đánh giá {{ item.rating }} sao">
+ @for (star of Array.from({length: 5}); track $index) {
+ <i class="ph-bold ph-star" [class.muted]="$index >= item.rating"></i>
+ }
+ </div>
+ <p class="review-content d-flex flex-column m-0">{{ item.content }}</p>
+ <div class="review-media d-flex">
+ @for (media of item.media; track media; let i = $index) {
+ <span class="review-media__item">
+ <img class="w-100 h-100" [src]="media" alt="">
+ @if (i === 2) {
+ <span class="play-overlay d-flex align-items-center justify-content-center position-absolute"><i class="ph-bold ph-play"></i></span>
+ }
+ </span>
+ }
+ </div>
+ <p class="review-date m-0">{{ item.reviewedAt }}</p>
+ <div class="review-actions d-flex flex-column">
+ <span class="me-auto d-inline-flex align-items-center"><i class="ph-light ph-thumbs-up"></i>{{ item.likes }}</span>
+ <button class="ms-auto" type="button" (click)="openReviewForm(item, true)">Sửa đánh giá</button>
+ </div>
+ </article>
+ }
+ </section>
+ }
+</div>

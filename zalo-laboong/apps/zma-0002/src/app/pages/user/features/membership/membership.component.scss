@@ -1,0 +1,292 @@
+.membership-container {
+  background: #f9fafb;
+  color: #1f2937;
+  font-family: Roboto, Arial, sans-serif;
+  min-height: 100vh;
+}
+
+.membership-main {
+
+  gap: 16px;
+  padding-top: 16px;
+}
+
+.membership-message {
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  margin: 0 16px;
+  padding: 16px;
+  text-align: center;
+}
+
+.membership-message strong {
+  color: #111827;
+  display: block;
+  font-size: 16px;
+  line-height: 24px;
+}
+
+.membership-message p {
+  color: #6b7280;
+  font-size: 14px;
+  line-height: 20px;
+  margin: 6px 0 0;
+}
+
+.membership-message button {
+  background: #3459a7;
+  border: 0;
+  border-radius: 6px;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 20px;
+  margin-top: 12px;
+  padding: 10px 18px;
+}
+
+.rank-card {
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.82) 0%, rgba(255, 255, 255, 0.34) 48%, rgba(117, 117, 117, 0.78) 100%),
+    linear-gradient(120deg, #f5f5f5 0%, #d8d8d8 45%, #a4a4a4 100%);
+  border: 1px solid #f3f4f6;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(17, 24, 39, 0.16);
+  height: 174px;
+  margin: 0 16px;
+  padding: 21px;
+}
+
+.rank-card__title {
+  color: #4c4546;
+  font-size: 26px;
+  font-weight: 800;
+  line-height: 24px;
+  text-transform: uppercase;
+}
+
+.rank-card p {
+  color: #3459a7;
+  font-size: 14px;
+  line-height: 20px;
+  margin: 18px 0 0;
+}
+
+.spend-block {
+  margin-top: 10px;
+}
+
+.spend-block > span {
+  color: #6b7280;
+  display: block;
+  font-size: 12px;
+  line-height: 16px;
+  margin-bottom: 4px;
+}
+
+.spend-block strong {
+  color: #3459a7;
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 28px;
+}
+
+.spend-block small {
+  color: #9ca3af;
+  font-size: 12px;
+  line-height: 16px;
+  margin-left: 4px;
+}
+
+.progress-track {
+  background: #e5e5e5;
+  border-radius: 2px;
+  height: 4px;
+  margin-top: 8px;
+  overflow: hidden;
+}
+
+.progress-bar {
+  background: #3459a7;
+  border-radius: inherit;
+
+}
+
+.member-tabs {
+  background: #fff;
+  border-bottom: 1px solid #f3f4f6;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  padding: 12px 12px 10px;
+}
+
+.member-tabs button {
+  align-items: center;
+  background: transparent;
+  border: 0;
+  color: #6b7280;
+  display: flex;
+  flex-direction: column;
+  font-size: 11px;
+  font-weight: 500;
+  gap: 6px;
+  line-height: 15px;
+  min-height: 54px;
+  padding: 4px;
+  position: relative;
+}
+
+.member-tabs button.active {
+  font-weight: 700;
+}
+
+.member-tabs button.current::after {
+  background: #3459a7;
+  border-radius: 999px;
+  bottom: 0;
+  content: '';
+  height: 3px;
+  left: 22%;
+  position: absolute;
+  right: 22%;
+}
+
+.member-tabs button span {
+  border-radius: 50%;
+  height: 14px;
+  width: 14px;
+}
+
+.quick-actions {
+  background: #fff;
+  border-bottom: 1px solid #f3f4f6;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  padding: 24px 16px 25px;
+}
+
+.quick-action {
+
+  gap: 8px;
+  min-width: 0;
+}
+
+.quick-action span {
+  align-items: center;
+  background: #ebeff7;
+  border-radius: 50%;
+  color: #3459a7;
+  display: flex;
+  font-size: 20px;
+  height: 48px;
+  justify-content: center;
+  width: 48px;
+}
+
+.quick-action p {
+  color: #000;
+  font-size: 10px;
+  line-height: 13px;
+  margin: 0;
+  max-width: 72px;
+  text-align: center;
+}
+
+.benefits-empty {
+  color: #6b7280;
+  font-size: 14px;
+  grid-column: 1 / -1;
+  line-height: 20px;
+  text-align: center;
+}
+
+.points-history-preview {
+  background: #fff;
+
+  gap: 24px;
+  padding: 24px 16px 16px;
+}
+
+.points-history-header {
+
+}
+
+.points-history-header h2 {
+  color: #111827;
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 24px;
+  margin: 0;
+}
+
+.points-history-header button {
+  align-items: center;
+  background: transparent;
+  border: 0;
+  color: #6b7280;
+  display: flex;
+  font-size: 14px;
+  gap: 4px;
+  line-height: 20px;
+  padding: 0;
+}
+
+.points-history-list {
+
+  gap: 24px;
+}
+
+.points-history-row {
+
+  display: grid;
+  gap: 16px;
+  grid-template-columns: 40px minmax(0, 1fr) auto;
+}
+
+.history-icon {
+
+  background: #f3f4f6;
+  border-radius: 50%;
+  color: #3459a7;
+
+  font-size: 17px;
+  height: 40px;
+
+  width: 40px;
+}
+
+.history-icon.negative {
+  color: #ef4444;
+}
+
+.history-content {
+
+  min-width: 0;
+}
+
+.history-content strong {
+  color: #1f2937;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 20px;
+}
+
+.history-content time {
+  color: #9ca3af;
+  font-size: 12px;
+  line-height: 16px;
+}
+
+.points-history-row em {
+  color: #3459a7;
+  font-size: 14px;
+  font-style: normal;
+  font-weight: 600;
+  line-height: 20px;
+  white-space: nowrap;
+}
+
+.points-history-row em.negative {
+  color: #ef4444;
+}

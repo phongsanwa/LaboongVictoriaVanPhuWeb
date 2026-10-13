@@ -1,0 +1,79 @@
+<div class="order-page">
+  <app-nav-tabs
+    [tabs]="tabs"
+    [active]="activeTab"
+    (activeChange)="onActiveChange($event)">
+  </app-nav-tabs>
+
+  <div class="order-list d-flex flex-column">
+    @for (order of ordersTracking; track order.id) {
+      <article class="order-card"
+               [routerLink]="uriFeConst.order.trackingDetail"
+               [queryParams]="{id: order.id}">
+        <div class="order-head align-items-center d-flex justify-content-between">
+          <span>Đơn hàng #{{ order.id }}</span>
+          <strong>{{ order.status.name }}</strong>
+        </div>
+
+        <div class="product-list d-flex flex-column gap-2">
+          @for (product of getOrderProducts(order); track product.id) {
+            <div class="product-row d-flex gap-2">
+              <img [src]="product.avatar" [alt]="product.name">
+              <div class="product-info">
+                <h2>{{ product.name }}</h2>
+                <div class="product-meta align-items-center d-flex justify-content-between">
+                  <span>{{ product.prices.price | i18nCurrencyAmount }}</span>
+                  <span>x{{ product.quantity }}</span>
+                </div>
+              </div>
+            </div>
+          }
+        </div>
+
+        @if (order.products.length > 1) {
+          <button class="expand-btn align-items-center d-flex justify-content-center w-100" type="button"
+                  (click)="onToggleProducts(order.id, $event)">
+            {{ isExpanded(order.id) ? 'Thu gọn' : 'Xem thêm' }}
+            <i class="ph-bold" [class.ph-caret-down]="!isExpanded(order.id)"
+               [class.ph-caret-up]="isExpanded(order.id)"></i>
+          </button>
+        }
+
+        <div class="order-total align-items-center d-flex justify-content-between">
+          <span>Tổng tiền hàng ({{ order.products.length }} sản phẩm)</span>
+          <strong>{{ order.totalAmount | i18nCurrencyAmount }}</strong>
+        </div>
+
+        @if (canCancel(order) || canPay(order)) {
+          <div class="order-actions d-flex justify-content-end">
+            @if (canCancel(order)) {
+              <button type="button" (click)="onCancelOrder(order, $event)">
+                Hủy đơn hàng
+              </button>
+            }
+          </div>
+        }
+      </article>
+    } @empty {
+      <div class="empty-state align-items-center d-flex flex-column text-center">
+        <img src="assets/img/order-empty.png" alt="">
+        <p>Hiện tại bạn chưa có đơn hàng nào</p>
+      </div>
+    }
+  </div>
+</div>
+
+<ng-template #cancelOrderModal>
+  <div class="cancel-modal text-center w-100">
+    <h3 class="cancel-modal-title m-0">Xác nhận</h3>
+    <p class="cancel-modal-message">Bạn có chắc chắn muốn hủy đơn hàng này?</p>
+    <div class="cancel-modal-actions">
+      <button class="cancel-modal-btn cancel-modal-btn-close" type="button" [disabled]="isCancelingOrder"
+              (click)="closeCancelModal()">Thoát
+      </button>
+      <button class="cancel-modal-btn cancel-modal-btn-confirm" type="button" [disabled]="isCancelingOrder"
+              (click)="confirmCancelOrder()">Đồng ý
+      </button>
+    </div>
+  </div>
+</ng-template>

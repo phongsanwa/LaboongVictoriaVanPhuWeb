@@ -1,0 +1,11 @@
+<div class="policy-detail-page">
+  @if(articleDetail) {
+    @if(articleDetail.avatarUri) {
+      <img class="policy-hero w-100" [src]="articleDetail.avatarUri" [alt]="articleDetail.title">
+    }
+    <h1>{{ articleDetail.title }}</h1>
+    <article [innerHTML]="articleDetail.content"></article>
+  } @else if (!isLoading) {
+    <div class="p-2">Bài viết đang được cập nhật...</div>
+  }
+</div>

@@ -1,0 +1,37 @@
+<button type="button"
+ class="voucher-card align-items-center d-flex p-0 text-start w-100"
+ [class.voucher-card--owned]="owned"
+ (click)="selected.emit(item)">
+ <div class="voucher-left align-items-center d-flex justify-content-center">
+ <img class="voucher-icon" src="assets/img/voucher-icon.png" alt="voucher">
+ </div>
+
+ <div class="voucher-content">
+ <h3 class="voucher-title m-0">{{ item.name }}</h3>
+ <p class="voucher-desc">{{ item.description }}</p>
+
+ <div class="voucher-footer align-items-center d-flex">
+ <span class="expire">
+ <i class="ph-light ph-clock"></i>
+ {{ item.statusText }}
+ <em role="button"
+ tabindex="0"
+ [class.disabled]="!conditionEnabled"
+ (click)="onCondition($event)"
+ (keydown.enter)="onCondition($any($event))">Điều kiện</em>
+ </span>
+ </div>
+ </div>
+
+ @if (showCollect) {
+ <div class="voucher-action align-items-center d-flex justify-content-center">
+ <button type="button"
+ class="btn-collect"
+ [class.collected]="item.collected && !owned"
+ [class.btn-collect--owned]="owned"
+ (click)="onCollect($event)">
+ {{ buttonLabel }}
+ </button>
+ </div>
+ }
+</button>

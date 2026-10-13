@@ -1,0 +1,428 @@
+<!--<div class="cart-page" (click)="closeSwipe()">-->
+
+<!-- &lt;!&ndash; ── Select all bar ─────────────────────────────────────────────── &ndash;&gt;-->
+<!-- <div class="select-bar d-flex align-items-center justify-content-between">-->
+<!-- <div class="select-bar__left d-flex align-items-center gap-2" (click)="toggleSelectAll(); $event.stopPropagation()">-->
+<!-- <div class="checkbox d-flex align-items-center justify-content-center"-->
+<!-- [class.checkbox&#45;&#45;checked]="isAllSelected"-->
+<!-- [class.checkbox&#45;&#45;indeterminate]="isIndeterminate">-->
+<!-- @if (isAllSelected) { <i class="ph-bold ph-check"></i> }-->
+<!-- @else if (isIndeterminate) { <i class="ph-bold ph-minus"></i> }-->
+<!-- </div>-->
+<!-- <span class="select-bar__label">Tất cả</span>-->
+<!-- </div>-->
+<!-- <button class="select-bar__delete"-->
+<!-- (click)="onDeleteSelected(); $event.stopPropagation()"-->
+<!-- [disabled]="!selectedIds.size">-->
+<!-- <i class="ph ph-trash"></i>-->
+<!-- </button>-->
+<!-- </div>-->
+
+<!-- &lt;!&ndash; ── Danh sách sản phẩm ─────────────────────────────────────────── &ndash;&gt;-->
+<!-- <div class="cart-list p-0 d-flex flex-column">-->
+<!-- @for (item of itemsCart; track item.productId) {-->
+<!-- <div class="swipe-wrap"-->
+<!-- [class.swipe-wrap&#45;&#45;open]="swipedItemId === item.productId"-->
+<!-- (touchstart)="onTouchStart($event, item.productId); $event.stopPropagation()"-->
+<!-- (touchmove)="onTouchMove($event, item.productId)"-->
+<!-- (touchend)="onTouchEnd()">-->
+
+<!-- <div class="cart-item d-flex align-items-center gap-2" (click)="$event.stopPropagation()">-->
+
+<!-- <div class="checkbox checkbox&#45;&#45;item d-flex align-items-center justify-content-center"-->
+<!-- [class.checkbox&#45;&#45;checked]="selectedIds.has(item.productId)"-->
+<!-- (click)="toggleSelect(item.productId)">-->
+<!-- @if (selectedIds.has(item.productId)) { <i class="ph-bold ph-check"></i> }-->
+<!-- </div>-->
+
+<!-- <div class="cart-item__image-wrap">-->
+<!-- <img class="cart-item__image" [src]="item.image" [alt]="item.name" />-->
+<!-- </div>-->
+
+<!-- <div class="cart-item__info">-->
+<!-- <p class="cart-item__name">{{ item.name }}</p>-->
+
+<!-- @if (item.sizeChecked || item.colorChecked) {-->
+<!-- <p class="cart-item__variant">-->
+<!-- @if (item.sizeChecked) { {{ item.sizeChecked }} }-->
+<!-- @if (item.sizeChecked && item.colorChecked) { &nbsp;/&nbsp; }-->
+<!-- @if (item.colorChecked) { {{ item.colorChecked }} }-->
+<!-- </p>-->
+<!-- }-->
+
+<!-- <div class="cart-item__price-row d-flex align-items-center flex-wrap">-->
+<!-- <span class="cart-item__price">{{ formatPrice(item.price) }}</span>-->
+<!-- @if (item.priceOld) {-->
+<!-- <del class="cart-item__price-old">{{ formatPrice(item.priceOld) }}</del>-->
+<!-- }-->
+<!-- </div>-->
+<!-- </div>-->
+
+<!-- <div class="qty-control d-flex align-items-center" (click)="$event.stopPropagation()">-->
+<!-- <button class="qty-control__btn d-flex align-items-center justify-content-center" (click)="onQuantityChange(item, -1)">-->
+<!-- <i class="ph-bold ph-minus"></i>-->
+<!-- </button>-->
+<!-- <span class="qty-control__value text-center">{{ item.quantity }}</span>-->
+<!-- <button class="qty-control__btn d-flex align-items-center justify-content-center" (click)="onQuantityChange(item, 1)">-->
+<!-- <i class="ph-bold ph-plus"></i>-->
+<!-- </button>-->
+<!-- </div>-->
+<!-- </div>-->
+
+<!-- <button class="swipe-delete d-flex flex-column align-items-center justify-content-center"-->
+<!-- (click)="onRemoveProduct(item); $event.stopPropagation()">-->
+<!-- <i class="ph-bold ph-trash"></i>-->
+<!-- <span>Xóa</span>-->
+<!-- </button>-->
+
+<!-- &lt;!&ndash; Quà tặng theo sản phẩm &ndash;&gt;-->
+<!-- <div class="gifts-block item-gifts d-flex align-items-baseline gap-2">-->
+<!-- <div class="gifts-block__header d-flex align-items-center">-->
+<!-- <i class="ph ph-gift"></i>-->
+<!-- </div>-->
+<!-- <div class="list-gift" style="flex:1; min-width:0;">-->
+<!-- <div class="gift-row d-flex align-items-center">-->
+<!-- <div class="gift-thumb d-flex align-items-center justify-content-center"><img [src]="'assets/img/product-gift2.png'" alt="" /></div>-->
+<!-- <span class="gift-name">Áo sơ mi trắng size L…</span>-->
+<!-- <span class="badge-free">x 1</span>-->
+<!-- </div>-->
+<!-- <div class="gift-row d-flex align-items-center">-->
+<!-- <div class="gift-thumb d-flex align-items-center justify-content-center"><img [src]="'assets/img/product-gift.png'" alt="" /></div>-->
+<!-- <span class="gift-name">Áo phông cáo…</span>-->
+<!-- <span class="badge-free">x 1</span>-->
+<!-- </div>-->
+<!-- </div>-->
+<!-- </div>-->
+
+<!-- </div>-->
+<!-- } @empty {-->
+<!-- <div class="empty-cart d-flex justify-content-center align-items-center flex-column gap-3">-->
+<!-- <i class="ph ph-shopping-cart empty-cart__icon"></i>-->
+<!-- <p class="empty-cart__text">Chưa có sản phẩm trong giỏ hàng</p>-->
+<!-- </div>-->
+<!-- }-->
+<!-- </div>-->
+
+<!-- &lt;!&ndash; Quà tặng combo (mua cả đơn hàng, fix cứng bên ngoài danh sách) &ndash;&gt;-->
+<!-- <div class="gifts-block combo-gifts m-0">-->
+<!-- <div class="gifts-block__header d-flex align-items-center">-->
+<!-- <i class="ph ph-gift"></i>-->
+<!-- <span>Quà tặng</span>-->
+<!-- <button class="gifts-block__action">Chọn quà tặng</button>-->
+<!-- </div>-->
+<!-- <div class="gift-row d-flex align-items-center">-->
+<!-- <div class="gift-thumb d-flex align-items-center justify-content-center">-->
+<!-- <img [src]="'assets/img/product-gift2.png'" alt="" />-->
+<!-- </div>-->
+<!-- <span class="gift-name">Áo sơ mi trắng size L công sở nam/nữ…</span>-->
+<!-- <span class="badge-free">x 1&nbsp; Miễn phí</span>-->
+<!-- </div>-->
+<!-- <div class="gift-row d-flex align-items-center">-->
+<!-- <div class="gift-thumb d-flex align-items-center justify-content-center">-->
+<!-- <img [src]="'assets/img/product-gift.png'" alt="" />-->
+<!-- </div>-->
+<!-- <span class="gift-name">Áo phông cáo nam/nữ công sở size M…</span>-->
+<!-- <span class="badge-free">x 1&nbsp; Miễn phí</span>-->
+<!-- </div>-->
+<!-- </div>-->
+<!--</div>-->
+
+
+<!--&lt;!&ndash; ════════ Cart footer cố định ════════ &ndash;&gt;-->
+<!--<div class="cart-footer">-->
+<!-- <div class="cart-footer__voucher d-flex align-items-center justify-content-between" (click)="openPromotionDetail()">-->
+<!-- <div class="cart-footer__voucher-left d-flex align-items-center">-->
+<!-- <i class="ph-bold ph-ticket"></i>-->
+<!-- <span>Voucher</span>-->
+<!-- </div>-->
+<!-- <div class="cart-footer__voucher-right d-flex align-items-center">-->
+<!-- <span>Chọn</span>-->
+<!-- <i class="ph ph-caret-right"></i>-->
+<!-- </div>-->
+<!-- </div>-->
+
+<!-- <div class="cart-footer__bottom d-flex align-items-center justify-content-between">-->
+<!-- <div class="cart-footer__total d-flex flex-column">-->
+<!-- <p class="cart-footer__count">Tổng cộng ({{ totalSelected }})</p>-->
+<!-- <div class="cart-footer__price-wrap d-flex align-items-center" (click)="openPromotionDetail()">-->
+<!-- <span class="cart-footer__price">{{ formatPrice(totalPrice) }}</span>-->
+<!-- <i class="ph-bold ph-caret-up cart-footer__price-icon"></i>-->
+<!-- </div>-->
+<!-- </div>-->
+<!-- <div class="cart-footer__actions d-flex align-items-center gap-2">-->
+<!-- <button class="cart-footer__support d-flex align-items-center justify-content-center">-->
+<!-- <i class="ph ph-headset"></i>-->
+<!-- </button>-->
+<!-- <button class="cart-footer__buy" [disabled]="!selectedIds.size">-->
+<!-- Mua ngay-->
+<!-- </button>-->
+<!-- </div>-->
+<!-- </div>-->
+<!--</div>-->
+
+
+<!--&lt;!&ndash; ════════ Modal xác nhận xóa ════════ &ndash;&gt;-->
+<!--@if (showDeleteConfirm) {-->
+<!-- <div class="overlay d-flex align-items-center justify-content-center" (click)="showDeleteConfirm = false">-->
+<!-- <div class="confirm-modal" (click)="$event.stopPropagation()">-->
+<!-- <p class="confirm-modal__title text-center">Xác nhận</p>-->
+<!-- <p class="confirm-modal__desc text-center">-->
+<!-- @if (deleteMode === 'one') {-->
+<!-- Bạn có chắc chắn muốn xóa sản phẩm này khỏi giỏ hàng?-->
+<!-- } @else {-->
+<!-- Bạn có chắc chắn muốn xóa hết sản phẩm khỏi giỏ hàng?-->
+<!-- }-->
+<!-- </p>-->
+<!-- <div class="confirm-modal__actions d-flex">-->
+<!-- <button class="confirm-modal__btn confirm-modal__btn&#45;&#45;cancel"-->
+<!-- (click)="showDeleteConfirm = false">Thoát</button>-->
+<!-- <button class="confirm-modal__btn confirm-modal__btn&#45;&#45;ok"-->
+<!-- (click)="confirmDelete()">Đồng ý</button>-->
+<!-- </div>-->
+<!-- </div>-->
+<!-- </div>-->
+<!--}-->
+
+
+<!--&lt;!&ndash; ════════ Promo sheet (trượt lên trên footer) ════════ &ndash;&gt;-->
+<!--@if (showPromotionDetail) {-->
+<!-- &lt;!&ndash; Backdrop &ndash;&gt;-->
+<!-- <div class="promo-sheet__backdrop" (click)="showPromotionDetail = false"></div>-->
+
+<!-- &lt;!&ndash; Sheet content nằm ngay trên footer &ndash;&gt;-->
+<!-- <div class="promo-sheet">-->
+<!-- <div class="promo-sheet__content">-->
+
+<!-- <div class="promo-sheet__header d-flex align-items-center justify-content-between">-->
+<!-- <div class="promo-sheet__close-placeholder"></div>-->
+<!-- <span class="promo-sheet__title text-center">Chi tiết khuyến mại</span>-->
+<!-- <i class="ph-bold ph-x promo-sheet__close d-flex align-items-center justify-content-center"-->
+<!-- (click)="showPromotionDetail = false"></i>-->
+<!-- </div>-->
+
+<!-- <div class="promo-sheet__row promo-sheet__row&#45;&#45;border-b d-flex justify-content-between align-items-center">-->
+<!-- <span class="promo-sheet__label">Tổng tiền hàng</span>-->
+<!-- <span class="promo-sheet__value">{{ formatPrice(cartData.totalAmount) }}</span>-->
+<!-- </div>-->
+
+<!-- <div class="promo-sheet__row d-flex justify-content-between align-items-center">-->
+<!-- <span class="promo-sheet__label">Giảm giá sản phẩm</span>-->
+<!-- <span class="promo-sheet__value">{{ formatPrice(0) }}</span>-->
+<!-- </div>-->
+<!-- <div class="promo-sheet__row promo-sheet__row&#45;&#45;border-b d-flex justify-content-between align-items-center">-->
+<!-- <span class="promo-sheet__label">Voucher giảm giá</span>-->
+<!-- <span class="promo-sheet__value">{{ formatPrice(0) }}</span>-->
+<!-- </div>-->
+
+<!-- <div class="promo-sheet__row d-flex justify-content-between align-items-center">-->
+<!-- <span class="promo-sheet__label">Tiết kiệm</span>-->
+<!-- <span class="promo-sheet__value">-{{ formatPrice(0) }}</span>-->
+<!-- </div>-->
+<!-- <div class="promo-sheet__row promo-sheet__row&#45;&#45;total d-flex justify-content-between align-items-center">-->
+<!-- <span>Tổng số tiền</span>-->
+<!-- <span class="promo-sheet__value total-text">{{ formatPrice(totalPrice) }}</span>-->
+<!-- </div>-->
+
+<!-- </div>-->
+<!-- </div>-->
+<!--}-->
+
+<div class="cart-page" (click)="closeSwipe()">
+ @if (itemsCart.length) {
+ <div class="select-bar d-flex align-items-center justify-content-between">
+ <div class="select-bar__left d-flex align-items-center gap-2" (click)="toggleSelectAll(); $event.stopPropagation()">
+ <div class="checkbox d-flex align-items-center justify-content-center"
+ [class.checkbox--checked]="isAllSelected"
+ [class.checkbox--indeterminate]="isIndeterminate"
+ >
+ @if (isAllSelected) {
+ <i class="ph-bold ph-check"></i>
+ } @else if (isIndeterminate) {
+ <i class="ph-bold ph-minus"></i>
+ }
+ </div>
+ <span class="select-bar__label">Tất cả</span>
+ </div>
+ <button class="select-bar__delete"
+ (click)="onDeleteSelected(); $event.stopPropagation()"
+ [disabled]="!selectedIds.size">
+ <i class="ph-light ph-trash"></i>
+ </button>
+ </div>
+ }
+ <div class="cart-list p-0 d-flex flex-column">
+ @for (item of itemsCart; track item.productId) {
+ <div class="swipe-wrap"
+ [class.swipe-wrap--open]="swipedItemId === item.productId"
+ (touchstart)="onTouchStart($event, item.productId); $event.stopPropagation()"
+ (touchmove)="onTouchMove($event, item.productId)"
+ (touchend)="onTouchEnd()"
+ >
+ <div class="cart-item d-flex align-items-center gap-2" (click)="$event.stopPropagation()">
+ <div class="checkbox checkbox--item d-flex align-items-center justify-content-center"
+ [class.checkbox--checked]="selectedIds.has(item.productId)"
+ (click)="toggleSelect(item.productId)"
+ >
+ @if (selectedIds.has(item.productId)) {
+ <i class="ph-bold ph-check"></i>
+ }
+ </div>
+ <div class="cart-item__image-wrap" (click)="goToProductDetail(item.productId); $event.stopPropagation()">
+ <img class="cart-item__image" [src]="item.image" [alt]="item.name"/>
+ </div>
+ <div class="cart-item__content">
+ <p class="cart-item__name"
+ (click)="goToProductDetail(item.productId); $event.stopPropagation()">
+ {{ item.name }}
+ </p>
+ @if (item.sizeChecked || item.colorChecked) {
+ <p class="cart-item__variant">
+ @if (item.sizeChecked) {
+ Size: {{ item.sizeChecked }}
+ }
+ @if (item.sizeChecked && item.colorChecked) {
+ <span class="mx-1">|</span>
+ }
+ @if (item.colorChecked) {
+ Color: {{ item.colorChecked }}
+ }
+ </p>
+ }
+ <div class="d-flex align-items-center justify-content-between">
+ <span class="cart-item__price">{{ formatPrice(item.price) }}</span>
+ @if (item.priceOld) {
+ <del class="cart-item__price-old">
+ {{ formatPrice(item.priceOld) }}
+ </del>
+ }
+ <div class="qty-control d-flex align-items-center" (click)="$event.stopPropagation()">
+ <button class="qty-control__btn d-flex align-items-center justify-content-center" (click)="onQuantityChange(item, -1)">
+ <i class="ph-bold ph-minus"></i>
+ </button>
+ <span class="qty-control__value text-center">
+ {{ item.quantity }}
+ </span>
+ <button class="qty-control__btn d-flex align-items-center justify-content-center" (click)="onQuantityChange(item, 1)">
+ <i class="ph-bold ph-plus"></i>
+ </button>
+ </div>
+ </div>
+ </div>
+ </div>
+ <button class="swipe-delete d-flex flex-column align-items-center justify-content-center" (click)="onRemoveProduct(item); $event.stopPropagation()">
+ <i class="ph-bold ph-trash"></i>
+ <span>Xóa</span>
+ </button>
+ </div>
+ } @empty {
+ <div class="empty-cart d-flex justify-content-center align-items-center flex-column gap-3">
+ <img class="empty-cart__image" src="assets/img/cart-not-product.png" alt="Không có sản phẩm trong giỏ hàng" />
+ <p class="empty-cart__text">Không có sản phẩm trong giỏ hàng</p>
+ </div>
+ }
+ </div>
+</div>
+@if (itemsCart.length) {
+<div class="cart-footer">
+ @if (promoResult?.discount?.promotions?.length) {
+ <div class="cart-footer__promo" (click)="openPromotionDetail()">
+ <div class="cart-footer__promo-left">
+ <i class="ph-bold ph-ticket"></i>
+ <span>{{ promoResult!.discount!.promotions[0].name }}</span>
+ </div>
+ <div class="cart-footer__promo-right">
+ <span class="text-danger">-{{ formatPrice(totalDiscount) }}</span>
+ <i class="ph ph-caret-right"></i>
+ </div>
+ </div>
+ }
+ <div class="cart-footer__bottom d-flex align-items-center justify-content-between">
+ <div class="cart-footer__total d-flex flex-column">
+ <p class="cart-footer__count">Tổng cộng ({{ totalSelected }})</p>
+ <div class="cart-footer__price-wrap d-flex align-items-center" (click)="openPromotionDetail()">
+ <span class="cart-footer__price">{{ formatPrice(totalPrice) }}</span>
+ @if (totalDiscount > 0) {
+ <i class="ph-bold ph-caret-up cart-footer__price-icon"></i>
+ }
+ </div>
+ </div>
+ <div class="cart-footer__actions d-flex align-items-center gap-2">
+ <button class="cart-footer__support d-flex align-items-center justify-content-center" (click)="onOpenSupportChat()">
+ <i class="ph ph-headset"></i>
+ </button>
+ <button class="cart-footer__buy" [disabled]="!selectedIds.size" (click)="onBuyNow()">
+ Mua ngay
+ </button>
+ </div>
+ </div>
+</div>
+}
+
+@if (showPromotionDetail) {
+ <div class="promo-sheet__backdrop" (click)="showPromotionDetail = false"></div>
+ <div class="promo-sheet">
+ <div class="promo-sheet__content">
+ <div class="promo-sheet__header d-flex align-items-center justify-content-between">
+ <div class="promo-sheet__close-placeholder"></div>
+ <span class="promo-sheet__title text-center">Chi tiết khuyến mại</span>
+ <i class="ph-bold ph-x promo-sheet__close d-flex align-items-center justify-content-center"
+ (click)="showPromotionDetail = false"></i>
+ </div>
+
+ <div class="promo-sheet__row promo-sheet__row--border-b d-flex justify-content-between align-items-center">
+ <span class="promo-sheet__label">Tổng tiền hàng</span>
+ <span class="promo-sheet__value">{{ formatPrice(subtotal) }}</span>
+ </div>
+
+ @if (promoResult?.discount?.totalDiscountAmount) {
+ <div class="promo-sheet__row d-flex justify-content-between align-items-center">
+ <span class="promo-sheet__label">Giảm giá khuyến mại</span>
+ <span class="promo-sheet__value text-danger">
+ -{{ formatPrice(promoResult!.discount!.totalDiscountAmount) }}
+ </span>
+ </div>
+ @for (promo of promoResult!.discount!.promotions; track promo.id) {
+ <div class="promo-sheet__row promo-sheet__row--sub d-flex justify-content-between align-items-center">
+ <span class="promo-sheet__label">{{ promo.name }}</span>
+ </div>
+ }
+ }
+
+ <div class="promo-sheet__row promo-sheet__row--border-b d-flex justify-content-between align-items-center"></div>
+
+ <div class="promo-sheet__row d-flex justify-content-between align-items-center">
+ <span class="promo-sheet__label">Tiết kiệm</span>
+ <span class="promo-sheet__value text-danger">-{{ formatPrice(totalDiscount) }}</span>
+ </div>
+ <div class="promo-sheet__row promo-sheet__row--total d-flex justify-content-between align-items-center">
+ <span>Tổng số tiền</span>
+ <span class="promo-sheet__value total-text">{{ formatPrice(totalPrice) }}</span>
+ </div>
+ </div>
+ </div>
+}
+
+@if (showDeleteConfirm) {
+ <div class="overlay d-flex align-items-center justify-content-center" (click)="showDeleteConfirm = false">
+ <div class="confirm-modal" (click)="$event.stopPropagation()">
+ <p class="confirm-modal__title text-center">Xác nhận</p>
+ <p class="confirm-modal__desc text-center">
+ @if (deleteMode === 'one') {
+ Bạn có chắc chắn muốn xóa sản phẩm này khỏi giỏ hàng?
+ } @else if (deleteMode === 'selected') {
+ Bạn có chắc chắn muốn xóa các sản phẩm đã chọn khỏi giỏ hàng?
+ } @else {
+ Bạn có chắc chắn muốn xóa hết sản phẩm khỏi giỏ hàng?
+ }
+ </p>
+ <div class="confirm-modal__actions d-flex">
+ <button class="confirm-modal__btn confirm-modal__btn--cancel" (click)="showDeleteConfirm = false">
+ Thoát
+ </button>
+ <button class="confirm-modal__btn confirm-modal__btn--ok" (click)="confirmDelete()">
+ Đồng ý
+ </button>
+ </div>
+ </div>
+ </div>
+}

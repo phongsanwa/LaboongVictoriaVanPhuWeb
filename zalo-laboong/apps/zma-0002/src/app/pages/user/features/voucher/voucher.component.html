@@ -1,0 +1,36 @@
+@if (conditionVoucher) {
+  <app-voucher-condition [voucher]="conditionVoucher" (closed)="closeCondition()"></app-voucher-condition>
+} @else {
+<div class="voucher-page">
+  <div class="voucher-input">
+    <input placeholder="Nhập mã voucher" [(ngModel)]="code">
+    <button type="button" (click)="applyCode()">Áp dụng</button>
+  </div>
+
+  <nav class="voucher-tabs">
+    @for (tab of tabs; track tab.id) {
+      <button type="button"
+              [class.active]="selectedTab === tab.id"
+              (click)="selectTab(tab.id)">
+        {{ tab.label }}
+      </button>
+    }
+  </nav>
+
+  @for (item of displayVouchers; track item) {
+    <app-zma-voucher-card
+      [item]="item"
+      [owned]="isMineTab"
+      [actionLabel]="isMineTab ? 'Dùng ngay' : ''"
+      (selected)="openDetail($event)"
+      (collected)="collect($event)"
+      (actionSelected)="useVoucher($event)"
+      (conditionSelected)="openCondition($event)">
+    </app-zma-voucher-card>
+  }
+
+  @if (selectedVoucher) {
+    <app-zma-voucher-detail-sheet [voucher]="selectedVoucher" (closed)="closeDetail()"></app-zma-voucher-detail-sheet>
+  }
+</div>
+}

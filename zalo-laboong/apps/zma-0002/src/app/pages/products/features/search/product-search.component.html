@@ -1,0 +1,227 @@
+<div class="search-page">
+  <div class="search-header align-items-center d-flex gap-2">
+    <label class="search-box align-items-center d-flex" [class.focused]="keyword">
+      <i class="ph-light ph-magnifying-glass"></i>
+      <input placeholder="Tìm kiếm"
+             [value]="keyword"
+             (focus)="onSearchFocus()"
+             (blur)="onSearchBlur()"
+             (input)="onKeywordChange($event)">
+      @if (keyword) {
+        <button type="button" class="clear-btn align-items-center d-inline-flex justify-content-center p-0"
+                aria-label="Xóa từ khóa" (click)="clearKeyword()">
+          <i class="ph-bold ph-x-circle"></i>
+        </button>
+      }
+    </label>
+
+    @if (keyword) {
+      <button type="button"
+              class="filter-btn align-items-center d-inline-flex justify-content-center p-0"
+              [class.active]="hasActiveFilters()"
+              aria-label="Bộ lọc"
+              (click)="openFilterSheet()">
+        <span class="filter-icon-wrap" aria-hidden="true">
+          <i class="ph-light ph-funnel"></i>
+          @if (hasActiveFilters()) {
+            <i class="ph-bold ph-check-circle"></i>
+          }
+        </span>
+      </button>
+    }
+  </div>
+
+  @if (keyword) {
+    <section class="section-title">
+      <h2>Kết quả ({{ totalItems }})</h2>
+    </section>
+  }
+
+  @if (isLoading) {
+    <div class="state-text text-center">Đang tìm kiếm...</div>
+  }
+
+  @if (errorMessage) {
+    <div class="state-text error text-center">{{ errorMessage }}</div>
+  }
+
+  @if (shouldShowSearchHistory) {
+    <section class="search-history">
+      <div class="history-title align-items-center d-flex">
+        <h2>Lịch sử tìm kiếm</h2>
+        <button type="button" aria-label="Xóa lịch sử tìm kiếm" (mousedown)="$event.preventDefault()"
+                (click)="clearSearchHistory()">
+          <i class="ph-light ph-trash"></i>
+        </button>
+      </div>
+
+      <div class="history-list d-flex flex-column">
+        @for (item of searchHistory; track item) {
+          <button type="button"
+                  class="history-item align-items-center d-flex text-start w-100"
+                  (mousedown)="$event.preventDefault()"
+                  (click)="selectHistoryKeyword(item)">
+            <span>{{ item }}</span>
+            <i class="ph-light ph-x" (click)="removeHistoryKeyword(item, $event)"></i>
+          </button>
+        }
+      </div>
+    </section>
+  }
+
+  @if (!isLoading && keyword && !products.length && !errorMessage) {
+    <section class="empty-result align-items-center d-flex flex-column justify-content-center text-center">
+      <div class="empty-icon align-items-center d-flex justify-content-center">
+        <i class="ph-light ph-magnifying-glass"></i>
+      </div>
+      <p>Không có sản phẩm bạn tìm kiếm</p>
+    </section>
+  }
+
+  @if (keyword && products.length > 0) {
+    <div class="product-grid" (scroll)="onScroll($event)">
+      @for (prd of products; track prd.id) {
+        <app-zma-product-card [product]="prd" (quickBuy)="openQuickBuy($event)"></app-zma-product-card>
+      }
+      @if (isLoadingMore) {
+        <div class="load-more-state align-items-center d-flex justify-content-center">
+          <span class="load-more-spinner"></span>
+          <span>Đang tải thêm sản phẩm...</span>
+        </div>
+      }
+    </div>
+  }
+
+  @if ((!keyword && !shouldShowSearchHistory) || (!isLoading && keyword && !products.length && !errorMessage)) {
+    <section class="suggestions-section">
+      <div class="section-title">
+        <h2>Gợi ý sản phẩm</h2>
+      </div>
+
+      @if (isLoadingSuggestions) {
+        <app-universal-slide
+          [items]="suggestionSkeletons"
+          [config]="{ showNavigation: false, showPagination: false, autoplay: false, slidesPerView: 2.08, spaceBetween: 8, loop: false, showName: false, className: 'suggestion-slide' }">
+          <ng-template let-i>
+            <div class="suggestion-card skeleton-card d-flex flex-column w-100">
+              <div class="skeleton-img w-100"></div>
+              <div class="skeleton-line"></div>
+              <div class="skeleton-title w-100"></div>
+            </div>
+          </ng-template>
+        </app-universal-slide>
+      } @else if (suggestions.length) {
+        <app-universal-slide
+          [items]="suggestions"
+          [config]="{ showNavigation: false, showPagination: false, autoplay: false, slidesPerView: 2.08, spaceBetween: 8, loop: false, showName: false, className: 'suggestion-slide' }">
+          <ng-template let-prd>
+            <app-zma-product-card class="suggestion-card d-flex flex-column w-100" [product]="prd"
+                                  (quickBuy)="openQuickBuy($event)"></app-zma-product-card>
+          </ng-template>
+        </app-universal-slide>
+      }
+    </section>
+  }
+
+  @if (showFilterSheet) {
+    <div class="filter-overlay" (click)="closeFilterSheet()"></div>
+    <section class="filter-sheet d-flex flex-column w-100" aria-label="Tùy chọn tìm kiếm">
+      <header class="filter-sheet__header align-items-center d-flex">
+        <h2>Tùy chọn tìm kiếm</h2>
+        <button type="button" aria-label="Đóng bộ lọc" (click)="closeFilterSheet()">
+          <i class="ph-light ph-x"></i>
+        </button>
+      </header>
+
+      <div class="filter-sheet__body d-flex flex-column gap-3">
+        <section class="filter-group d-flex flex-column gap-2">
+          <h3>Khoảng giá</h3>
+          <div class="price-inputs align-items-center gap-3">
+            <input inputmode="numeric"
+                   placeholder="Tối thiểu"
+                   [value]="draftFilters.minPrice ?? ''"
+                   (input)="updateDraftPrice('minPrice', $event)">
+            <span></span>
+            <input inputmode="numeric"
+                   placeholder="Tối đa"
+                   [value]="draftFilters.maxPrice ?? ''"
+                   (input)="updateDraftPrice('maxPrice', $event)">
+          </div>
+          <div class="chip-row three d-flex flex-wrap gap-2">
+            @for (range of priceRanges; track range.label) {
+              <button type="button"
+                      class="filter-chip text-center"
+                      [class.selected]="isSelectedPriceRange(range)"
+                      (click)="selectPriceRange(range)">
+                {{ range.label }}
+              </button>
+            }
+          </div>
+        </section>
+
+        <section class="filter-group d-flex flex-column gap-2">
+          <h3>Sắp xếp</h3>
+          <div class="chip-row d-flex flex-wrap gap-2">
+            <button type="button" class="filter-chip text-center" [class.selected]="draftFilters.sort === 'priceDesc'"
+                    (click)="selectSort('priceDesc')">
+              Giá từ cao đến thấp
+            </button>
+            <button type="button" class="filter-chip text-center" [class.selected]="draftFilters.sort === 'priceAsc'"
+                    (click)="selectSort('priceAsc')">
+              Giá từ thấp đến cao
+            </button>
+            <button type="button" class="filter-chip text-center" [class.selected]="draftFilters.sort === 'az'"
+                    (click)="selectSort('az')">
+              A → Z
+            </button>
+            <button type="button" class="filter-chip text-center" [class.selected]="draftFilters.sort === 'za'"
+                    (click)="selectSort('za')">
+              Z → A
+            </button>
+          </div>
+        </section>
+
+        <section class="filter-group d-flex flex-column gap-2">
+          <h3>Theo danh mục</h3>
+          <div class="chip-row d-flex flex-wrap gap-2">
+            @for (category of categories; track category.id) {
+              <button type="button"
+                      class="filter-chip text-center"
+                      [class.selected]="isSelectedCategory(category.id)"
+                      (click)="selectCategory(category.id)">
+                {{ category.name }}
+              </button>
+            }
+          </div>
+        </section>
+
+        @if (brands.length) {
+          <section class="filter-group d-flex flex-column gap-2">
+            <h3>Theo thương hiệu</h3>
+            <div class="chip-row d-flex flex-wrap gap-2">
+              @for (brand of brands; track brand.id) {
+                <button type="button"
+                        class="filter-chip text-center"
+                        [class.selected]="isSelectedBrand(brand.id)"
+                        (click)="selectBrand(brand.id)">
+                  {{ brand.name }}
+                </button>
+              }
+            </div>
+          </section>
+        }
+
+      </div>
+
+      <footer class="filter-actions">
+        <button type="button" class="reset-btn" (click)="resetFilters()">Thiết lập lại</button>
+        <button type="button" class="apply-btn" (click)="applyFilters()">Tìm kiếm</button>
+      </footer>
+    </section>
+  }
+
+  <app-zma-product-quick-buy
+    [productId]="quickBuyProductId"
+    (closed)="closeQuickBuy()">
+  </app-zma-product-quick-buy>
+</div>

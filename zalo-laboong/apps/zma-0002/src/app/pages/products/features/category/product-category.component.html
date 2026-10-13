@@ -1,0 +1,114 @@
+<div class="catalog-page">
+  @if (!selectedCategoryId) {
+    <section class="category-grid" aria-label="Danh mục sản phẩm">
+      @for (cate of category; track cate.id) {
+        <button type="button"
+                (click)="selectCategory(cate.id)"
+                class="category-card align-items-center d-flex flex-column text-center p-0">
+          <img loading="eager"
+               [src]="cate.image || 'assets/img/no-image.png'"
+               [alt]="cate.name">
+          <span>{{ cate.name }}</span>
+        </button>
+      }
+    </section>
+  } @else {
+    <section class="product-section">
+      @if (isLoadingAttributes || attributes.length) {
+        <div class="attribute-filter-wrap">
+          <div class="attribute-filter-bar align-items-center d-flex" aria-label="Bộ lọc thuộc tính">
+            @if (isLoadingAttributes) {
+              <span class="attribute-loading align-items-center d-inline-flex">
+                <span class="load-more-spinner"></span>
+                Đang tải bộ lọc
+              </span>
+            } @else {
+              @for (attribute of attributes; track attribute.id) {
+                <button type="button"
+                        class="filter-trigger align-items-center d-inline-flex justify-content-center"
+                        [class.active]="hasSelectedAttribute(attribute)"
+                        (click)="openAttributeFilterSheet(attribute)">
+                  <span>{{ getAttributeFilterLabel(attribute) }}</span>
+                  <i class="ph-light ph-caret-down"></i>
+                </button>
+              }
+              @if (hasSelectedAttributes()) {
+                <button type="button"
+                        class="clear-filter-btn align-items-center d-inline-flex justify-content-center"
+                        (click)="clearAllAttributeFilters()">
+                  Xóa bộ lọc
+                </button>
+              }
+            }
+          </div>
+        </div>
+      }
+
+      @if (showAttributeFilterSheet) {
+        <div class="filter-overlay" (click)="closeAttributeFilterSheet()"></div>
+        <section class="filter-sheet d-flex flex-column w-100" aria-label="Chọn thuộc tính sản phẩm">
+          <header class="filter-sheet__header align-items-center d-flex">
+            <span class="filter-sheet__spacer"></span>
+            <h2>{{ activeAttribute?.name || 'Bộ lọc' }}</h2>
+            <button type="button" aria-label="Đóng bộ lọc" (click)="closeAttributeFilterSheet()">
+              <i class="ph-light ph-x"></i>
+            </button>
+          </header>
+
+          <div class="filter-sheet__body d-flex flex-column">
+            @if (activeAttribute; as attribute) {
+              <section class="filter-group d-flex flex-column">
+                <h3>{{ attribute.name }}</h3>
+                <div class="attribute-option-grid">
+                  @for (value of attribute.values; track value.id) {
+                    <button type="button"
+                            class="attribute-option align-items-center d-flex"
+                            [class.selected]="isDraftAttributeValueSelected(attribute, value)"
+                            (click)="toggleDraftAttributeValue(attribute, value)">
+                      <span>{{ value.name }}</span>
+                      @if (isDraftAttributeValueSelected(attribute, value)) {
+                        <i class="ph-bold ph-check"></i>
+                      }
+                    </button>
+                  }
+                </div>
+              </section>
+            }
+          </div>
+
+          <footer class="filter-actions">
+            <button type="button" class="apply-btn" (click)="applyAttributeFilters()">Xác nhận</button>
+          </footer>
+        </section>
+      }
+
+      @if (products.length) {
+        <div class="product-grid" (scroll)="onScroll($event)">
+          @for (prd of products; track prd.id) {
+            <app-zma-product-card
+              [product]="prd"
+              [categoryName]="prd.category?.name || selectedParent?.name || ''"
+              (quickBuy)="openQuickBuy($event)">
+            </app-zma-product-card>
+          }
+          @if (isLoadingNextPage && !isLoadingProducts) {
+            <div class="load-more-state align-items-center d-flex justify-content-center">
+              <span class="load-more-spinner"></span>
+              <span>Đang tải thêm sản phẩm...</span>
+            </div>
+          }
+        </div>
+      } @else if (!isLoadingProducts) {
+        <div class="empty-state align-items-center d-flex flex-column text-center">
+          <img src="assets/img/no-image.png" alt="">
+          <p>Chưa có sản phẩm trong danh mục này.</p>
+        </div>
+      }
+    </section>
+  }
+
+  <app-zma-product-quick-buy
+    [productId]="quickBuyProductId"
+    (closed)="closeQuickBuy()">
+  </app-zma-product-quick-buy>
+</div>

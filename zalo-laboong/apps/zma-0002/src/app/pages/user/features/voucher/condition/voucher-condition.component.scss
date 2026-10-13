@@ -1,0 +1,114 @@
+.voucher-condition-page {
+  background: #f7f7f8;
+  color: #1f2937;
+  font-family: Roboto, Arial, sans-serif;
+  min-height: 100vh;
+}
+
+.search-shell {
+  background: #fff;
+  padding: 8px 16px;
+}
+
+.search-box {
+  background: #f7f7f8;
+  border-radius: 8px;
+  color: #a9adb2;
+  font-size: 16px;
+  gap: 12px;
+  height: 48px;
+  line-height: 22px;
+  padding: 0 12px;
+}
+
+.search-box i {
+  color: #111827;
+  font-size: 20px;
+}
+
+.condition-voucher {
+  padding: 16px;
+}
+
+.condition-voucher app-zma-voucher-card {
+  display: block;
+}
+
+.products-section {
+  background: #fff;
+  padding: 12px 16px 24px;
+}
+
+.products-section h2 {
+  color: #0d0d0d;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 18px;
+  margin: 0 0 16px;
+}
+
+.product-grid {
+  display: grid;
+  gap: 24px 16px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.condition-state {
+  color: #6f7071;
+  font-size: 13px;
+  line-height: 20px;
+  padding: 24px 0;
+  text-align: center;
+}
+
+.condition-product {
+  background: transparent;
+  border: 0;
+  color: #0d0d0d;
+  min-width: 0;
+}
+
+.condition-product img {
+  aspect-ratio: 1 / 1;
+  background: #f3f4f6;
+  border-radius: 8px 8px 0 0;
+  display: block;
+  object-fit: cover;
+  width: 100%;
+}
+
+.condition-product__category {
+  color: #6f7071;
+  display: block;
+  font-size: 11px;
+  line-height: 16px;
+  margin-top: 8px;
+}
+
+.condition-product strong {
+  color: #0d0d0d;
+  display: -webkit-box;
+  font-size: 13px;
+  font-weight: 400;
+  height: 36px;
+  line-height: 18px;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.condition-product__price {
+  color: #0d0d0d;
+  display: block;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 18px;
+  margin-top: 4px;
+}
+
+.condition-product del {
+  color: #6f7071;
+  display: block;
+  font-size: 11px;
+  line-height: 16px;
+}

@@ -1,0 +1,89 @@
+<div class="points-page">
+  <main class="points-shell">
+    <section class="loyalty-card" aria-label="Thẻ tích điểm">
+      <div class="loyalty-card__head">
+        <div class="points-total align-items-baseline d-flex justify-content-center">
+          <strong>{{ totalPointsLabel }}</strong>
+          <span>điểm</span>
+        </div>
+        <p>≈ {{ pointValueLabel }}</p>
+      </div>
+
+      <div class="barcode-card">
+        @if (!isLoggedIn) {
+          <strong>Đăng nhập để tích điểm</strong>
+          <p>Cấp quyền tài khoản để nhận mã tích điểm và theo dõi điểm thành viên.</p>
+          <button type="button" class="points-login" (click)="login()">Đăng nhập</button>
+        } @else if (loading) {
+          <strong>Đang tải điểm</strong>
+          <p>Vui lòng chờ trong giây lát.</p>
+        } @else {
+          <p>Quét mã để tích điểm</p>
+          @if (barcodeValue) {
+            <app-render-codes
+              [data]="barcodeValue"
+              mode="barcode"
+              [barcodeHeight]="86"
+              [barcodeLineWidth]="2"
+              [showValueUnderBarcode]="false">
+            </app-render-codes>
+          } @else {
+            <strong>Chưa có mã tích điểm</strong>
+          }
+        }
+      </div>
+    </section>
+
+    <section class="points-actions" aria-label="Thao tác nhanh">
+      @for (item of pointShortcuts; track item.label) {
+        <a class="points-action"
+           [routerLink]="item.route"
+           [queryParams]="item.queryParams">
+          <span class="points-action__icon align-items-center d-inline-flex justify-content-center">
+            <i [class]="item.icon"></i>
+          </span>
+          <span>{{ item.label }}</span>
+        </a>
+      }
+    </section>
+
+    @if (isLoggedIn && !loading && hasLinkedCustomer === false) {
+      <section class="points-message">
+        <strong>Chưa có điểm</strong>
+        <p>Mua hàng để bắt đầu tích điểm và mở khóa hạng thành viên.</p>
+      </section>
+    }
+
+    @if (showPointHistory) {
+      <section class="points-history">
+        <nav class="points-tabs" aria-label="Lọc điểm của tôi">
+            @for (tab of tabs; track tab.key) {
+              <button
+                type="button"
+                [class.active]="selectedTab === tab.key"
+                (click)="selectTab(tab.key)">
+                {{ tab.label }}
+              </button>
+            }
+          </nav>
+
+        <section class="history-list d-flex flex-column">
+          @for (item of filteredHistories; track item.title) {
+            <article class="history-row align-items-start">
+              <span class="history-icon align-items-center d-flex justify-content-center" [class.negative]="item.point < 0">
+                <i [class]="item.icon"></i>
+              </span>
+              <div class="history-content d-flex flex-column">
+                <strong>{{ item.title }}</strong>
+                <time>{{ item.time }}</time>
+              </div>
+              <em [class.negative]="item.point < 0">
+                {{ item.point > 0 ? '+' : '' }}{{ item.point }} điểm
+              </em>
+            </article>
+          }
+        </section>
+      </section>
+    }
+  </main>
+</div>

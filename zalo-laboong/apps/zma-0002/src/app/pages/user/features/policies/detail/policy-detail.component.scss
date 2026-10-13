@@ -1,0 +1,33 @@
+.policy-detail-page {
+  background: #f7f7f8;
+  color: #0d0d0d;
+  font-family: Roboto, Arial, sans-serif;
+  min-height: 100vh;
+  padding: 16px;
+}
+
+.policy-hero {
+  border-radius: 8px;
+  display: block;
+  margin-bottom: 16px;
+  max-height: 150px;
+  object-fit: cover;
+
+}
+
+h1 {
+  font-size: 18px;
+  font-weight: 500;
+  line-height: 24px;
+  margin: 0 0 12px;
+}
+
+article {
+  color: #0d0d0d;
+  font-size: 13px;
+  line-height: 20px;
+}
+
+article :where(img, iframe) {
+  max-width: 100%;
+}

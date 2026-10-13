@@ -1,0 +1,109 @@
+<div class="news-page">
+  @if (!isCategoryListPage) {
+    <header class="mini-chrome mini-chrome--search safe-pt-16 align-items-center">
+      <button class="chrome-icon d-inline-flex align-items-center justify-content-center" type="button"
+              aria-label="Trang chủ" (click)="goHome()">
+        <i class="ph ph-house"></i>
+      </button>
+      <a class="search-box d-flex align-items-center" [routerLink]="uriFeConst.news.search">
+        <i class="ph-light ph-magnifying-glass"></i>
+        <span>Tìm kiếm thông tin</span>
+      </a>
+    </header>
+
+    <nav class="category-tabs d-flex align-items-center" aria-label="Danh mục tin tức">
+      <button
+        class="category-tab"
+        type="button"
+        [class.category-tab--active]="selectedCategoryId === null"
+        (click)="selectCategory(null)"
+      >
+        Tất cả
+      </button>
+      @for (category of categories; track category.id) {
+        <button
+          class="category-tab"
+          type="button"
+          [class.category-tab--active]="selectedCategoryId === category.id"
+          (click)="selectCategory(category.id)"
+        >
+          {{ category.name }}
+        </button>
+      }
+    </nav>
+  } @else {
+    <header class="mini-chrome mini-chrome--title safe-pt-16 align-items-center">
+      <button class="chrome-icon d-inline-flex align-items-center justify-content-center" type="button"
+              aria-label="Quay lại" (click)="goBack()">
+        <i class="ph ph-arrow-left"></i>
+      </button>
+      <h1>{{ selectedCategoryName }}</h1>
+    </header>
+  }
+
+  @if (isLoading) {
+    <div class="news-grid" [class.news-grid--list]="isCategoryListPage">
+      @for (item of skeletonItems; track item) {
+        <div class="news-card news-card--skeleton d-flex flex-column">
+          <div class="skeleton skeleton-image w-100"></div>
+          <div class="skeleton skeleton-title w-100"></div>
+          <div class="skeleton skeleton-meta"></div>
+        </div>
+      }
+    </div>
+  } @else if (!isCategoryListPage && filteredSections.length) {
+    <div class="news-overview">
+      @for (section of filteredSections; track section.category.id) {
+        <section class="news-section">
+          <header class="news-section__header d-flex align-items-center justify-content-between">
+            <h2>{{ section.category.name }}</h2>
+            <button type="button" (click)="openCategoryList(section.category.id)">Xem thêm</button>
+          </header>
+          <div class="news-grid">
+            @for (item of section.news; track item.id; let i = $index) {
+              <a class="news-card d-flex flex-column"
+                 [routerLink]="uriFeConst.news.detail"
+                 [queryParams]="{ id: item.id }">
+                @if (item.avatarUri) {
+                  <img [src]="item.avatarUri" [alt]="item.title">
+                } @else {
+                  <div class="news-image-placeholder w-100" [class.news-image-placeholder--warm]="i % 3 !== 1"></div>
+                }
+                <h3>{{ item.title }}</h3>
+                <div class="news-meta d-flex align-items-center">
+                  <span class="d-flex align-items-center">{{ item.publishedDate | date:'dd/MM/yyyy' }}</span>
+                  <span class="d-flex align-items-center"><i class="ph-light ph-eye"></i>{{ item.hits ?? 0 }}</span>
+                </div>
+              </a>
+            }
+          </div>
+        </section>
+      }
+    </div>
+  } @else if (isCategoryListPage && filteredNews.length) {
+    <div class="news-list">
+      @for (item of filteredNews; track item.id; let i = $index) {
+        <a class="news-card d-flex flex-column"
+           [routerLink]="uriFeConst.news.detail"
+           [queryParams]="{ id: item.id }">
+          @if (item.avatarUri) {
+            <img [src]="item.avatarUri" [alt]="item.title">
+          } @else {
+            <div class="news-image-placeholder w-100" [class.news-image-placeholder--warm]="i % 3 !== 1"></div>
+          }
+          <div class="news-card__content d-flex flex-column gap-3">
+            <h3>{{ item.title }}</h3>
+            <div class="news-meta d-flex align-items-center">
+              <span class="d-flex align-items-center">{{ item.publishedDate | date:'dd/MM/yyyy' }}</span>
+              <span class="d-flex align-items-center"><i class="ph-light ph-eye"></i>{{ item.hits ?? 0 }}</span>
+            </div>
+          </div>
+        </a>
+      }
+    </div>
+  } @else {
+    <div class="empty-state text-center align-items-center d-flex flex-column">
+      Không có bài viết nào trong danh mục này.
+    </div>
+  }
+</div>

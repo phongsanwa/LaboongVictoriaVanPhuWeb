@@ -1,0 +1,86 @@
+<div class="news-search-page">
+  <header class="search-header safe-pt-16 align-items-center d-flex">
+    <button class="home-btn d-inline-flex align-items-center justify-content-center" type="button"
+            aria-label="Trang chủ" (click)="goHome()">
+      <i class="ph ph-house"></i>
+    </button>
+
+    <label class="search-box d-flex align-items-center">
+      <i class="ph-light ph-magnifying-glass"></i>
+      <input class="w-100"
+             type="search"
+             placeholder="Tìm kiếm thông tin"
+             [value]="keyword"
+             (input)="onKeywordChange($event)"/>
+    </label>
+  </header>
+
+  @if (!isSearching) {
+    <ng-container *ngTemplateOutlet="suggestionsTpl"></ng-container>
+  } @else {
+    <section class="result-section">
+      <header class="section-title">
+        <h2>{{ resultTitle }}</h2>
+      </header>
+
+      @if (isLoading) {
+        <div class="news-list">
+          @for (item of skeletonItems; track item) {
+            <div class="news-item news-item--skeleton">
+              <div class="skeleton skeleton-image"></div>
+              <div class="news-item__body d-flex flex-column justify-content-between">
+                <div class="skeleton skeleton-title w-100"></div>
+                <div class="skeleton skeleton-meta"></div>
+              </div>
+            </div>
+          }
+        </div>
+      } @else if (news.length) {
+        <div class="news-list">
+          @for (item of news; track item.id; let i = $index) {
+            <a class="news-item"
+               [routerLink]="uriFeConst.news.detail"
+               [queryParams]="{ id: item.id }">
+              @if (item.avatarUri) {
+                <img [src]="item.avatarUri" [alt]="item.title">
+              } @else {
+                <div class="news-placeholder" [class.news-placeholder--warm]="i % 3 !== 1"></div>
+              }
+
+              <div class="news-item__body d-flex flex-column justify-content-between">
+                <h3>{{ item.title }}</h3>
+                <div class="news-meta d-flex align-items-center">
+                  <span>{{ item.publishedDate | date:'dd/MM/yyyy' }}</span>
+                  <span class="d-flex align-items-center"><i class="ph-light ph-eye"></i>{{ item.hits ?? 0 }}</span>
+                </div>
+              </div>
+            </a>
+          }
+        </div>
+      } @else {
+        <div class="empty-state text-center align-items-center d-flex flex-column">
+          <div class="empty-icon d-inline-flex align-items-center justify-content-center">
+            <i class="ph-light ph-magnifying-glass"></i>
+          </div>
+          <p>Không có tin tức bạn tìm kiếm</p>
+        </div>
+        <ng-container *ngTemplateOutlet="suggestionsTpl"></ng-container>
+      }
+    </section>
+  }
+
+  <ng-template #suggestionsTpl>
+    <section class="suggestion-section">
+      <header class="section-title section-title--suggestion">
+        <h2>Gợi ý tìm kiếm</h2>
+      </header>
+      <div class="suggestion-chips d-flex flex-wrap">
+        @for (category of categories; track category.id) {
+          <button class="suggestion-chip" type="button" (click)="selectCategory(category)">
+            {{ category.name }}
+          </button>
+        }
+      </div>
+    </section>
+  </ng-template>
+</div>

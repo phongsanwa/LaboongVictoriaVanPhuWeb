@@ -1,0 +1,27 @@
+.overflow-y-auto {
+  overflow-y: auto;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.overflow-y-auto::-webkit-scrollbar {
+  display: none;
+}
+
+.flex-1_custom {
+  flex: 1 1 0%;
+}
+
+.flex-col {
+
+}
+
+.w-screen {
+  max-width: 100%;
+  overflow-x: hidden;
+
+}
+
+.h-screen {
+  height: 100vh;
+}

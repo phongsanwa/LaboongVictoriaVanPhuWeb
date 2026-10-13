@@ -1,0 +1,105 @@
+<form class="address-form-page" [formGroup]="form" (ngSubmit)="onSubmit()">
+ <section class="form-section">
+ <h2>Địa chỉ</h2>
+
+ <label class="form-field">
+ <span>Họ và tên <em>*</em></span>
+ <input type="text"
+ formControlName="recipientName"
+ [class]="'w-100'"
+ [class.invalid]="showError('recipientName')">
+ @if (showError('recipientName')) {
+ <small>{{ errorMsg('recipientName') }}</small>
+ }
+ </label>
+
+ <label class="form-field">
+ <span>Số điện thoại <em>*</em></span>
+ <input type="tel"
+ [class]="'w-100'"
+ formControlName="recipientPhone"
+ maxlength="11"
+ inputmode="numeric"
+ autocomplete="tel"
+ [class.invalid]="showError('recipientPhone')">
+ @if (showError('recipientPhone')) {
+ <small>{{ errorMsg('recipientPhone') }}</small>
+ }
+ </label>
+
+ <div class="form-field">
+ <span>Tỉnh / Thành phố và Phường / Xã <em>*</em></span>
+ <div class="location-control w-100 align-items-center d-flex" [class.invalid]="showLocationError()">
+ <app-location-dynamic
+ class="w-100"
+ [config]="{ placeholderInput: '', classInput: 'address-location-input' }"
+ [cityId]="cityId"
+ [districtId]="districtId"
+ [wardId]="wardId"
+ (valueChange)="onLocationPicked($event)"
+ />
+ <i class="ph-light ph-caret-down"></i>
+ </div>
+ @if (showLocationError()) {
+ <small>Vui lòng chọn địa chỉ</small>
+ }
+ </div>
+
+ <label class="form-field">
+ <span>Địa chỉ cụ thể (Tên đường, tòa nhà, Số nhà) <em>*</em></span>
+ <textarea rows="3" [class]="'w-100'"
+ formControlName="address"
+ [class.invalid]="showError('address')"></textarea>
+ @if (showError('address')) {
+ <small>{{ errorMsg('address') }}</small>
+ }
+ </label>
+ </section>
+
+ <section class="type-section">
+  <span class="type-label">Loại địa chỉ</span>
+  <div class="type-segmented" role="group">
+    @for (opt of addressTypeOptions; track opt.value) {
+      <button
+        type="button"
+        class="type-btn"
+        [class.type-btn--active]="form.controls.type.value === opt.value"
+        (click)="setType(opt.value)"
+      >
+        <i [class]="opt.icon"></i>
+        {{ opt.label }}
+      </button>
+    }
+  </div>
+</section>
+
+<section class="switch-section">
+  <label class="default-toggle align-items-center d-flex gap-2 m-0"
+         [class.disabled]="isCurrentDefault">
+    <input type="checkbox" formControlName="isDefault">
+    <span></span>
+    <em>Đặt làm địa chỉ mặc định</em>
+  </label>
+  @if (isCurrentDefault) {
+    <span class="default-hint">
+      <i class="ph-light ph-info"></i>
+      Để bỏ mặc định, hãy chọn địa chỉ khác làm mặc định
+    </span>
+  }
+</section>
+
+ @if (isEditMode) {
+ <section class="delete-section d-flex justify-content-center">
+ <button type="button" class="delete-btn align-items-center d-inline-flex gap-2 p-0" (click)="onDelete()">
+ <i class="ph-light ph-trash"></i>
+ <span>Xóa địa chỉ</span>
+ </button>
+ </section>
+ }
+
+ <div class="form-spacer"></div>
+
+ <div class="bottom-submit">
+ <button type="submit">Hoàn thành</button>
+ </div>
+</form>

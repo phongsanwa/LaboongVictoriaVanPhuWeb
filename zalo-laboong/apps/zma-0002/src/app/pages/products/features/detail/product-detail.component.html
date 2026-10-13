@@ -1,0 +1,404 @@
+@if (!isLoading) {
+  @if (product) {
+    <div class="product-detail-page">
+      @if (showReviewPage) {
+        <section class="review-page">
+          <div class="review-page-overview align-items-start">
+            <div class="review-page-score align-items-center d-flex flex-column">
+              <strong>{{ ratingSummary.score }}</strong>
+              <div class="star-row page-stars gap-0 align-items-center d-flex" aria-label="5 sao">
+                @for (star of reviewStars; track star) {
+                  <i class="ph-bold ph-star"></i>
+                }
+              </div>
+              <p>({{ ratingSummary.total }} đánh giá)</p>
+            </div>
+
+            <div class="review-page-bars d-flex flex-column">
+              @for (row of ratingSummary.distribution; track row.label) {
+                <div class="review-page-bar-row align-items-center">
+                  <span>{{ row.label.split(' ')[0] }}</span>
+                  <div class="review-page-bar">
+                    <span [style.width.%]="row.count / maxRatingCount * 100"></span>
+                  </div>
+                  <em>{{ row.count }}</em>
+                </div>
+              }
+            </div>
+          </div>
+
+          <div class="review-filter-tabs d-flex" aria-label="Lọc đánh giá">
+            @for (filter of reviewFilters; track filter.key) {
+              <button type="button"
+                      [class.active]="selectedReviewFilter === filter.key"
+                      (click)="selectReviewFilter(filter.key)">
+                {{ filter.label }}
+              </button>
+            }
+          </div>
+
+          <div class="review-list review-page-list gap-3 d-flex flex-column">
+            @for (review of filteredProductReviews; track review.name + review.date + $index) {
+              <article class="review-item">
+                <div class="review-avatar align-items-center d-flex justify-content-center"
+                     [style.background]="review.color">{{ review.initials }}
+                </div>
+                <div class="review-content d-flex flex-column m-0">
+                  <div class="review-top align-items-center d-flex justify-content-between">
+                    <h3>{{ review.name }}</h3>
+                    <span>
+                      <i class="ph-light ph-thumbs-up"></i>
+                      {{ review.likes }}
+                    </span>
+                  </div>
+                  <div class="review-stars align-items-center d-flex">
+                    @for (star of reviewStars; track star) {
+                      <i class="ph-bold ph-star"></i>
+                    }
+                  </div>
+                  <p class="review-variant m-0">{{ review.variant }}</p>
+                  <p class="review-text">{{ review.content }}</p>
+                  @if (review.hasImages && reviewImages.length) {
+                    <div class="review-images d-flex">
+                      @for (image of reviewImages; track image) {
+                        <img [src]="image" [alt]="product.name">
+                      }
+                    </div>
+                  }
+                  <time>{{ review.date }}</time>
+                </div>
+              </article>
+            } @empty {
+              <p class="review-empty text-center">Chưa có đánh giá phù hợp.</p>
+            }
+          </div>
+        </section>
+      } @else {
+      <section class="hero-section">
+        <div class="image-frame w-100">
+          <app-universal-slide
+            [items]="imagesItem"
+            [config]="imageSlideConfig"
+            (activeIndexChange)="selectImage($event)">
+          </app-universal-slide>
+          @if (productImages.length) {
+              <span class="image-count align-items-center d-inline-flex justify-content-center"
+                    aria-live="polite">{{ imageCounterLabel }}</span>
+          }
+        </div>
+      </section>
+
+      <section class="info-section">
+        <div class="price-product d-flex flex-column">
+          @if (!displayPrice && !product.promotionDiscount) {
+            <span class="price">Liên hệ</span>
+          } @else {
+            <span class="price">{{ formatPrice(displayPrice) }}</span>
+            @if (originalPrice && originalPrice > displayPrice) {
+              <span class="old-price">{{ formatPrice(originalPrice) }}</span>
+            }
+          }
+        </div>
+
+        <h1>{{ product.name }}</h1>
+
+        <button type="button" class="share-banner align-items-center d-flex text-start w-100"
+                (click)="shareProduct()">
+          <span>Chia sẻ ngay cho bạn bè</span>
+          <i class="ph-light ph-caret-right"></i>
+        </button>
+
+        @if (availableColors().length) {
+          <div class="option-section">
+            <h2>Color</h2>
+            <div class="color-list align-items-center d-flex flex-wrap">
+              @for (color of availableColors(); track color.name) {
+                <button type="button"
+                        class="color-option align-items-center d-inline-flex justify-content-center"
+                        [class.active]="prdManageService.objPro.color === color.name"
+                        [class.disabled]="disabledColorSet().has(color.name)"
+                        [disabled]="disabledColorSet().has(color.name)"
+                        [style.background-color]="prdManageService.objPro.color === color.name ? null : colorStyle(color)"
+                        [attr.aria-label]="color.name"
+                        [attr.title]="color.name"
+                        (click)="selectColor(color)">
+                  <span [style.background-color]="colorStyle(color)"></span>
+                </button>
+              }
+            </div>
+          </div>
+        }
+
+        @if (availableSizes().length) {
+          <div class="divider w-100"></div>
+          <div class="option-section">
+            <h2>Size</h2>
+            <div class="size-list d-flex flex-wrap">
+              @for (size of availableSizes(); track size) {
+                <button type="button"
+                        class="size-pill align-items-center d-inline-flex justify-content-center"
+                        [class.active]="prdManageService.objPro.size === size"
+                        [class.disabled]="disabledSizeSet().has(size)"
+                        [disabled]="disabledSizeSet().has(size)"
+                        (click)="selectSize(size)">
+                  {{ size }}
+                </button>
+              }
+            </div>
+          </div>
+        }
+      </section>
+
+      <section class="description-section d-flex flex-column">
+        <div class="accordion-item" [class.open]="descriptionOpen">
+          <button type="button"
+                  class="accordion-title align-items-center d-flex justify-content-between p-0 text-start w-100"
+                  (click)="descriptionOpen = !descriptionOpen">
+            <span>Mô tả sản phẩm</span>
+            <i class="ph-light" [class.ph-minus]="descriptionOpen" [class.ph-plus]="!descriptionOpen"></i>
+          </button>
+          @if (descriptionOpen) {
+            <div class="detail-product-content" [innerHTML]="product.description || product.content"></div>
+          }
+        </div>
+        <div class="divider w-100"></div>
+        <div class="accordion-item" [class.open]="materialOpen">
+          <button type="button"
+                  class="accordion-title align-items-center d-flex justify-content-between p-0 text-start w-100"
+                  (click)="materialOpen = !materialOpen">
+            <span>Chất liệu / Cách bảo quản</span>
+            <i class="ph-light" [class.ph-minus]="materialOpen" [class.ph-plus]="!materialOpen"></i>
+          </button>
+        </div>
+        <div class="divider w-100"></div>
+        <div class="accordion-item" [class.open]="guideOpen">
+          <button type="button"
+                  class="accordion-title align-items-center d-flex justify-content-between p-0 text-start w-100"
+                  (click)="guideOpen = !guideOpen">
+            <span>Hướng dẫn sử dụng</span>
+            <i class="ph-light" [class.ph-minus]="guideOpen" [class.ph-plus]="!guideOpen"></i>
+          </button>
+        </div>
+      </section>
+
+      @if (showTemplateFallbacks) {
+      <section class="reviews-section d-flex flex-column">
+        <button type="button" class="section-header align-items-center d-flex justify-content-between p-0 text-start w-100" (click)="openReviewPage()">
+          <span>Đánh giá sản phẩm ({{ ratingSummary.total }})</span>
+            <i class="ph-light ph-caret-right"></i>
+        </button>
+
+        <div class="rating-overview">
+          <div class="rating-score d-flex flex-column">
+            <div class="score-line align-items-baseline d-flex">
+              <strong>{{ ratingSummary.score }}</strong>
+              <span>/5</span>
+            </div>
+            <div class="star-row align-items-center d-flex" aria-label="5 sao">
+              @for (star of reviewStars; track star) {
+                <i class="ph-bold ph-star"></i>
+              }
+            </div>
+            <p>({{ ratingSummary.total }} đánh giá)</p>
+          </div>
+
+          <div class="rating-bars d-flex flex-column justify-content-center">
+            @for (row of ratingSummary.distribution; track row.label) {
+              <div class="rating-bar-row align-items-center">
+                <span>{{ row.label }}</span>
+                <div class="rating-bar">
+                  <span [style.width.%]="row.count / maxRatingCount * 100"></span>
+                </div>
+                <em>{{ row.count }}</em>
+              </div>
+            }
+          </div>
+        </div>
+
+        <div class="review-list d-flex flex-column">
+          @for (review of productReviews; track review.name) {
+            <article class="review-item">
+                <div class="review-avatar align-items-center d-flex justify-content-center"
+                     [style.background]="review.color">{{ review.initials }}
+                </div>
+              <div class="review-content d-flex flex-column m-0">
+                <div class="review-top align-items-center d-flex justify-content-between">
+                  <h3>{{ review.name }}</h3>
+                  <span>
+                    <i class="ph-light ph-thumbs-up"></i>
+                    {{ review.likes }}
+                  </span>
+                </div>
+                <div class="review-stars align-items-center d-flex">
+                  @for (star of reviewStars; track star) {
+                      <i class="ph-bold ph-star"></i>
+                  }
+                </div>
+                <p class="review-variant m-0">{{ review.variant }}</p>
+                <p class="review-text">{{ review.content }}</p>
+                @if (reviewImages.length) {
+                  <div class="review-images d-flex">
+                    @for (image of reviewImages; track image) {
+                      <img [src]="image" [alt]="product.name">
+                    }
+                  </div>
+                }
+                <time>{{ review.date }}</time>
+              </div>
+            </article>
+          }
+        </div>
+      </section>
+      }
+
+      @if (isLoadingOtherProducts || otherProducts.length) {
+        <section class="other-products-section">
+          <div class="section-header static align-items-center d-flex justify-content-between text-start w-100">
+            <span>Sản phẩm khác</span>
+          </div>
+
+          @if (isLoadingOtherProducts) {
+            <div class="other-products-grid">
+              @for (item of [1, 2, 3, 4]; track item) {
+                <div class="other-product-card skeleton-card d-flex flex-column w-100">
+                  <div class="skeleton-image w-100"></div>
+                  <div class="skeleton-line wide w-100"></div>
+                  <div class="skeleton-line"></div>
+                </div>
+              }
+            </div>
+          } @else {
+            <div class="other-products-grid">
+              @for (item of otherProducts; track item.id) {
+                <app-zma-product-card [product]="item" (quickBuy)="openQuickBuy($event)"></app-zma-product-card>
+              }
+            </div>
+          }
+        </section>
+      }
+
+      <div class="detail-actions">
+        @if (isSoldOutForAction) {
+          <button type="button" class="sold-out-btn w-100" (click)="showSoldOutToast()">
+            Hết hàng
+          </button>
+        } @else {
+          <button type="button" class="add-cart-btn" (click)="openPurchaseSheet('cart')">
+            Thêm vào giỏ
+          </button>
+          <button type="button" class="buy-now-btn" (click)="openPurchaseSheet('buy')">
+            Mua ngay
+          </button>
+        }
+      </div>
+
+      <button type="button" class="zalo-bubble align-items-center d-flex justify-content-center" aria-label="Chat Zalo" (click)="openSupportChat()">
+        <img src="assets/img/logo_zalo.png" alt="Zalo">
+      </button>
+
+      @if (showPurchaseSheet) {
+        <div class="sheet-overlay" (click)="closePurchaseSheet()"></div>
+        <section class="purchase-sheet d-flex flex-column gap-3 w-100" aria-label="Chọn sản phẩm">
+          <div class="sheet-summary d-flex w-100">
+            <img [src]="sheetImage" [alt]="product.name">
+            <div class="sheet-info">
+              <h2>{{ product.name }}</h2>
+              <div class="sheet-price align-items-baseline d-flex flex-wrap">
+                <span>{{ formatPrice(sheetPrice) }}</span>
+                @if (sheetOriginalPrice && sheetOriginalPrice > sheetPrice) {
+                  <del>{{ formatPrice(sheetOriginalPrice) }}</del>
+                }
+              </div>
+              <p>Kho: {{ sheetInventoryRemain }}</p>
+            </div>
+            <button type="button" class="sheet-close p-0" (click)="closePurchaseSheet()" aria-label="Đóng">
+              <i class="ph-light ph-x"></i>
+            </button>
+          </div>
+
+          <div class="divider w-100"></div>
+
+          @if (availableColors().length) {
+            <div class="sheet-option d-flex flex-column gap-2">
+              <h3>Chọn màu sắc</h3>
+              <div class="sheet-color-list align-items-center d-flex flex-wrap">
+                @for (color of availableColors(); track color.name) {
+                  <button type="button"
+                          class="sheet-color-option"
+                          [class.active]="prdManageService.objPro.color === color.name"
+                          [class.disabled]="disabledColorSet().has(color.name)"
+                          [disabled]="disabledColorSet().has(color.name)"
+                          [style.background-color]="prdManageService.objPro.color === color.name ? null : colorStyle(color)"
+                          [attr.aria-label]="color.name"
+                          [attr.title]="color.name"
+                          (click)="selectColor(color)">
+                    <span [style.background-color]="colorStyle(color)"></span>
+                  </button>
+                }
+              </div>
+            </div>
+          }
+
+          @if (availableSizes().length) {
+            <div class="sheet-option d-flex flex-column gap-2">
+              <h3>Chọn kích thước</h3>
+              <div class="sheet-size-list d-flex flex-wrap">
+                @for (size of availableSizes(); track size) {
+                  <button type="button"
+                          [class.active]="prdManageService.objPro.size === size"
+                          [class.disabled]="disabledSizeSet().has(size)"
+                          [disabled]="disabledSizeSet().has(size)"
+                          (click)="selectSize(size)">
+                    {{ size }}
+                  </button>
+                }
+              </div>
+            </div>
+          }
+
+          <div class="quantity-row align-items-center d-flex justify-content-between">
+            <span>Số lượng</span>
+            <div class="quantity-control d-flex">
+              <button type="button" (click)="decreaseQuantity()">-</button>
+              <span>{{ prdManageService.objPro.quantity }}</span>
+              <button type="button"
+                      [disabled]="prdManageService.objPro.quantity >= maxQuantity"
+                      [class.disabled]="prdManageService.objPro.quantity >= maxQuantity"
+                      (click)="increaseQuantity()">+
+              </button>
+            </div>
+          </div>
+
+          @if (prdManageService.isRequiredAttr || prdManageService.isRequiredChild) {
+            <div class="sheet-error">
+              {{ prdManageService.isRequiredAttr || prdManageService.isRequiredChild }}
+            </div>
+          }
+
+          @if (isSoldOutForAction) {
+            <button type="button" class="confirm-btn sold-out" (click)="showSoldOutToast()">Hết hàng</button>
+          } @else {
+            <div class="sheet-actions d-flex w-100">
+              <button type="button" class="confirm-btn add-cart" (click)="confirmPurchase('cart')">
+                Thêm vào giỏ
+              </button>
+              <button type="button" class="confirm-btn buy-now" (click)="confirmPurchase('buy')">
+                Mua ngay
+              </button>
+            </div>
+          }
+        </section>
+      }
+
+      <app-zma-product-quick-buy
+        [productId]="quickBuyProductId"
+        (closed)="closeQuickBuy()">
+      </app-zma-product-quick-buy>
+      }
+    </div>
+  } @else {
+    <div class="empty-state align-items-center d-flex flex-column text-center">
+      {{ errorMessage || 'Không tìm thấy sản phẩm.' }}
+    </div>
+  }
+}

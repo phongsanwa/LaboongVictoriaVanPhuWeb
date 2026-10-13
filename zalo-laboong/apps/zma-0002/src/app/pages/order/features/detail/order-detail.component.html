@@ -1,0 +1,249 @@
+<!-- Overlay backdrop -->
+<!--<div class="overlay-backdrop"-->
+<!-- [class.show]="isTooltipVisible"-->
+<!-- (click)="closePointsTooltip()">-->
+<!--</div>-->
+
+@if (orderData) {
+  <div class="phone-shell">
+    <div class="scroll-content d-flex flex-column">
+
+      <!-- 1. Thông tin giao hàng -->
+      <div class="card-section">
+        <div class="section-label d-flex align-items-center">
+          <i class="ph-light ph-map-pin"></i>
+          <span>Thông tin giao hàng</span>
+        </div>
+        <div class="recipient-name">{{ orderData.customer.name }} {{ orderData.customer.mobile }}</div>
+        <div class="address-text">
+          {{ orderData.customer.address }}
+          , {{ orderData.shippingAddress.ward.name ? orderData.shippingAddress.ward.name + ', ' : '' }} {{ orderData.shippingAddress.district.name }}
+          , {{ orderData.shippingAddress.province.name }}
+        </div>
+      </div>
+
+      <!-- 2. Thông tin vận chuyển -->
+      <div class="card-section">
+        <div class="section-label clickable d-flex align-items-center" (click)="toggleShipping()">
+          <i class="ph-light ph-truck"></i>
+          <span>Thông tin vận chuyển</span>
+          <i class="ph-light ph-caret-right end-icon chevron-icon"
+             [class.open]="isShippingOpen"></i>
+        </div>
+        <div class="status-success">{{ shippingSummaryLabel }}</div>
+        @if (shippingSummaryTime) {
+          <div class="status-time">{{ shippingSummaryTime }}</div>
+        }
+        @if (hasCarrierInfo) {
+          <div class="carrier-info d-flex flex-wrap">
+            @if (orderData.carrier?.carrierName) {
+              <span>{{ orderData.carrier?.carrierName }}</span>
+            }
+            @if (orderData.carrier?.serviceName) {
+              <span>{{ orderData.carrier?.serviceName }}</span>
+            }
+            @if (orderData.carrier?.serviceCode) {
+              <span>{{ orderData.carrier?.serviceCode }}</span>
+            }
+          </div>
+        }
+
+        @if (isShippingOpen) {
+          @if (shippingHistory.length) {
+            <div class="timeline">
+              @for (history of shippingHistory; track $index) {
+                <div class="tl-item">
+                  <div class="tl-time text-end">
+                    <strong>{{ formatTimelineDay(history.createdDateTime) }}</strong><br>
+                    {{ formatTimelineTime(history.createdDateTime) }}
+                  </div>
+                  <div class="tl-axis d-flex flex-column align-items-center">
+                    <div class="tl-dot d-flex align-items-center justify-content-center" [class.active]="$index === 0">
+                      <i [class]="historyIcon(history, $index)"></i>
+                    </div>
+                    @if (!$last) {
+                      <div class="tl-line"></div>
+                    }
+                  </div>
+                  <div class="tl-body">
+                    <div class="ev-name" [class.muted]="$index !== 0">
+                      {{ history.stepName || history.statusAfterName || 'Cập nhật đơn hàng' }}
+                    </div>
+                    @if (history.description) {
+                      <div class="ev-sub d-flex flex-column">{{ history.description }}</div>
+                    }
+                  </div>
+                </div>
+              }
+            </div>
+          } @else {
+            <div class="shipping-empty">Chưa có lịch sử vận chuyển</div>
+          }
+        }
+      </div>
+
+      <!-- 3. Sản phẩm -->
+      <div class="card-section">
+        <div class="section-title">Sản phẩm đã chọn ({{ orderData.products.length }})</div>
+
+        @if (orderData.products.length) {
+          @for (item of orderData.products; track item.id) {
+            <div class="wrap-item border-bottom border-light py-2">
+              <div class="product-item">
+                <div class="qty-badge">{{ item.quantity | i18nInteger }}x</div>
+                <div class="product-thumb d-flex align-items-center justify-content-center">
+                  <img [src]="item.avatar" alt="{{ item.name}}"/>
+                </div>
+                <div class="product-info">
+                  <div class="product-name">{{ item.name }}</div>
+                  <!-- <div class="product-variant">Size: L | Color: Black</div>-->
+                  <div class="product-price d-flex flex-column">
+                    @if (item.prices.priceAfterDiscount) {
+                      {{ item.prices.priceAfterDiscount | i18nCurrencyAmount }}
+                      <span class="original">
+ {{ item.prices.price | i18nCurrencyAmount }}
+ </span>
+                    } @else {
+                      {{ item.prices.price | i18nCurrencyAmount }}
+                    }
+                  </div>
+                </div>
+              </div>
+
+              <!-- <div class="gifts-block pt-2">-->
+              <!-- <div class="gift-row d-flex align-items-center">-->
+              <!-- <div class="gift-thumb d-flex align-items-center justify-content-center"><img [src]="'assets/img/product-gift.png'" alt=""/></div>-->
+              <!-- <span class="gift-name">Áo sơ mi trắng size L công sở…</span>-->
+              <!-- <span class="badge-free">x 1&nbsp; Miễn phí</span>-->
+              <!-- </div>-->
+              <!-- <div class="gift-row d-flex align-items-center">-->
+              <!-- <div class="gift-thumb d-flex align-items-center justify-content-center"><img [src]="'assets/img/product-gift2.png'" alt=""/></div>-->
+              <!-- <span class="gift-name">Áo phông cáo nam/nữ công…</span>-->
+              <!-- <span class="badge-free">x 1&nbsp; Miễn phí</span>-->
+              <!-- </div>-->
+              <!-- </div>-->
+
+            </div>
+          }
+        }
+
+
+        <!-- <div class="gifts-block combo-gifts m-0">-->
+        <!-- <div class="gift-row d-flex align-items-center">-->
+        <!-- <div class="gift-thumb d-flex align-items-center justify-content-center"><img [src]="'assets/img/product-gift2.png'" alt=""/></div>-->
+        <!-- <span class="gift-name">Áo sơ mi trắng size L công sở nam/nữ…</span>-->
+        <!-- <span class="badge-free">x 1&nbsp; Miễn phí</span>-->
+        <!-- </div>-->
+        <!-- <div class="gift-row d-flex align-items-center">-->
+        <!-- <div class="gift-thumb d-flex align-items-center justify-content-center"><img [src]="'assets/img/product-gift.png'" alt=""/></div>-->
+        <!-- <span class="gift-name">Áo phông cáo nam/nữ công sở size M…</span>-->
+        <!-- <span class="badge-free">x 1&nbsp; Miễn phí</span>-->
+        <!-- </div>-->
+        <!-- </div>-->
+
+        <!-- Ghi chú -->
+        <div class="note-row d-flex justify-content-between align-items-center">
+          <span class="label">Ghi chú</span>
+          <span class="value">{{ orderData.description || 'Không có' }}</span>
+        </div>
+      </div>
+
+      <!-- 4. Thanh toán -->
+      <div class="card-section">
+        <div class="section-title">Thanh toán</div>
+        <div class="payment-row d-flex justify-content-between">
+          <span>Tạm tính</span>
+          <span class="val text-end">
+ {{ orderData.totalAmount | i18nCurrencyAmount }}
+ </span>
+        </div>
+        <div class="payment-row d-flex justify-content-between"><span>Tổng giảm giá</span><span
+          class="val text-end">{{ orderData.discountAmount | i18nCurrencyAmount }}</span></div>
+        <!-- <div class="payment-row d-flex justify-content-between"><span>Điểm sử dụng</span><span class="val text-end">10.000 VND</span></div>-->
+        <div class="payment-row d-flex justify-content-between" style="border-bottom:none;">
+          <span>Phí vận chuyển</span><span
+          class="val text-end">{{ orderData.shipFee | i18nCurrencyAmount }}</span></div>
+
+        <hr class="divider w-100"/>
+
+        <div class="total-row d-flex justify-content-between align-items-center">
+          <span class="label">Tổng thanh toán</span>
+          <span
+            class="amount">{{ (orderData.totalAmount - orderData.discountAmount + orderData.shipFee) | i18nCurrencyAmount }}</span>
+        </div>
+        <!-- <div class="points-row d-flex justify-content-between align-items-center" #pointsRow>-->
+        <!-- <span class="points-label-wrap d-inline-flex align-items-center">-->
+        <!-- Điểm tích luỹ dự kiến-->
+        <!-- <button class="info-icon-btn p-0" (click)="togglePointsTooltip($event)">-->
+        <!-- <i class="ph-light ph-info"></i>-->
+        <!-- </button>-->
+        <!-- </span>-->
+        <!-- <span class="pts">13 điểm</span>-->
+        <!-- </div>-->
+
+        <!-- <div class="points-tooltip"-->
+        <!-- [class.show]="isTooltipVisible"-->
+        <!-- [style.top.px]="tooltipTop">-->
+        <!-- <div class="tooltip-inner-row d-flex align-items-center justify-content-between">-->
+        <!-- <span class="tooltip-text">-->
+        <!-- Điểm tích lũy bạn sẽ nhận được sau khi đơn hàng được giao thành công-->
+        <!-- </span>-->
+        <!-- <button class="tooltip-ok-btn" (click)="closePointsTooltip()">Đã hiểu</button>-->
+        <!-- </div>-->
+        <!-- </div>-->
+      </div>
+
+      <!-- 5. Hỗ trợ -->
+      <div class="card-section" (click)="openSupportChat()">
+        <div class="support-title">Bạn cần hỗ trợ?</div>
+        <div class="support-item d-flex align-items-start">
+          <i class="ph ph-chat-circle-dots"></i>
+          <div>
+            <div class="sup-title">Liên hệ Shop</div>
+            <div class="sup-desc">
+              Nếu bạn có vấn đề về đơn hàng, sản phẩm, vận chuyển,
+              trả hàng và hoàn tiền
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 6. Thông tin đơn hàng -->
+      <div class="card-section">
+        <div class="section-title">Thông tin đơn hàng</div>
+        <div class="info-row d-flex justify-content-between align-items-center">
+          <span>Mã đơn hàng</span>
+          <span class="val text-end">
+ {{ orderData.id }}
+            <button class="copy-btn" (click)="copyOrderCode(orderData.id)">SAO CHÉP</button>
+ </span>
+        </div>
+        <div class="info-row d-flex justify-content-between align-items-center">
+          <span>Phương thức thanh toán</span>
+          <span class="val text-end">{{ orderData.paymentMethod }}</span>
+        </div>
+        <div class="info-row d-flex justify-content-between align-items-center">
+          <span>Thời gian đặt hàng</span>
+          <span>{{ orderData.createdAt | dateI18n: 'SHORT_DATE' }}</span>
+        </div>
+        @if (orderCompletedLabel) {
+          <div class="info-row d-flex justify-content-between align-items-center" style="border-bottom:none;">
+            <span>{{ orderCompletedLabel }}</span>
+            <span class="val text-end">
+ {{ orderData.updatedAt | dateI18n: 'SHORT_DATE' }}
+ </span>
+          </div>
+        }
+        @if (canCancelOrder) {
+          <button
+            class="btn-cancel w-100"
+            type="button"
+            [disabled]="isCancelingOrder"
+            (click)="onCancelOrder()">
+            {{ isCancelingOrder ? 'Đang huỷ đơn hàng...' : 'Huỷ đơn hàng' }}
+          </button>
+        }
+      </div>
+    </div>
+  </div>
+}

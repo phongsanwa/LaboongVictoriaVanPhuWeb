@@ -1,0 +1,129 @@
+.voucher-card {
+  background: #fff;
+  border: 0;
+  border-radius: 8px;
+  color: #1f2937;
+  margin: 0 0 10px;
+  min-height: 76px;
+  overflow: hidden;
+  padding-right: 10px !important;
+}
+
+.voucher-card--owned {
+  margin: 0 0 10px;
+}
+
+.voucher-left {
+  flex: 0 0 76px;
+  width: 76px;
+}
+
+.voucher-icon {
+  display: block;
+  height: 48px;
+  object-fit: contain;
+  width: 48px;
+}
+
+.voucher-content {
+  flex: 1;
+  min-width: 0;
+  padding: 10px 10px 10px 0;
+}
+
+.voucher-card--owned .voucher-content {
+  padding-right: 10px;
+}
+
+.voucher-title {
+  color: #1f2937;
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 20px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.voucher-desc {
+  color: #6f7682;
+  font-size: 12px;
+  line-height: 16px;
+  margin: 2px 0 3px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.voucher-footer {
+  min-width: 0;
+}
+
+.expire {
+  color: #9aa2af;
+  font-size: 10px;
+  line-height: 14px;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.expire i {
+  font-size: 10px;
+  margin-right: 3px;
+}
+
+.expire em {
+  color: #1a73e8;
+  font-style: normal;
+  margin-left: 4px;
+  white-space: nowrap;
+}
+
+.expire em.disabled {
+  color: #9aa2af;
+}
+
+.btn-collect {
+  background: #3459a7;
+  border: 1px solid #3459a7;
+  border-radius: 4px;
+  color: #fff;
+  flex: 0 0 auto;
+  font-size: 11px;
+  height: 22px;
+  min-width: 36px;
+}
+
+.voucher-action {
+  flex: 0 0 52px;
+  min-height: 76px;
+}
+
+.btn-collect.collected {
+  background: #e2e2e2;
+  border-color: #e2e2e2;
+  color: #b8b8b8;
+}
+
+.btn-collect--owned,
+.btn-collect--owned.collected {
+  background: #3459a7;
+  border-color: #3459a7;
+  border-radius: 6px;
+  color: #fff;
+  font-size: 10px;
+  font-weight: 500;
+  height: 32px;
+  line-height: 12px;
+  min-width: 42px;
+  padding: 0 6px;
+  white-space: normal;
+  width: 42px;
+}
+
+.btn-collect--owned {
+  background: #fff;
+  color: #3459a7;
+}

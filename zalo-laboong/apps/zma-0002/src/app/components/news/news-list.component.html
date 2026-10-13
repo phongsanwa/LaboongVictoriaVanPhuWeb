@@ -1,0 +1,47 @@
+<div class="news-sections">
+  @if (isLoading()) {
+    <section class="news-section">
+      <div class="section-heading align-items-center d-flex justify-content-between">
+        <h2>Tin tức</h2>
+        <a [routerLink]="uriFeConst.news.index">Xem thêm</a>
+      </div>
+
+      <div class="news-grid">
+        @for (i of skeletonItems; track i) {
+          <div class="news-card d-flex flex-column">
+            <div class="skeleton skeleton-news-img w-100"></div>
+            <div class="skeleton skeleton-title w-100"></div>
+            <div class="skeleton skeleton-meta"></div>
+          </div>
+        }
+      </div>
+    </section>
+  } @else {
+    @for (block of categoryBlocks; track block.id) {
+      <section class="news-section">
+        <div class="section-heading align-items-center d-flex justify-content-between">
+          <h2>{{ block.name }}</h2>
+          <a
+            [routerLink]="isCategoryBlock(block) ? uriFeConst.news.category : uriFeConst.news.index"
+            [queryParams]="isCategoryBlock(block) ? { categoryId: block.id } : null"
+          >Xem thêm</a>
+        </div>
+
+        <div class="news-grid">
+          @for (item of block.items; track item.id) {
+            <a class="news-card d-flex flex-column"
+               [routerLink]="isApiNews(item) ? uriFeConst.news.detail : uriFeConst.news.index"
+               [queryParams]="isApiNews(item) ? { id: item.id } : null">
+              <img [src]="item.avatarUri" [alt]="item.title">
+              <h3>{{ item.title }}</h3>
+              <div class="news-meta align-items-center d-flex">
+                <span>{{ item.publishedDate | date:'dd/MM/yyyy' }}</span>
+                <span class="views ms-1 align-items-center d-flex"><i class="ph-light ph-eye"></i>{{ item.hits }}</span>
+              </div>
+            </a>
+          }
+        </div>
+      </section>
+    }
+  }
+</div>

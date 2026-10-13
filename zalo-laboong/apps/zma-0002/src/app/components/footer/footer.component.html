@@ -1,0 +1,185 @@
+@if (cfg.show !== false) {
+  @if (isTabs(cfg)) {
+    <div class="bottom-wrapper">
+      <div class="tabs">
+        <a class="nav-item align-items-center d-flex flex-column justify-content-center text-center"
+           [class.active]="isActive('/')"
+           [routerLink]="'/'">
+          <i class="ph-light ph-storefront nav-icon"></i>
+          <span>Trang chủ</span>
+        </a>
+
+        <a class="nav-item align-items-center d-flex flex-column justify-content-center text-center"
+           [class.active]="isActive(uriFeConst.product.category)"
+           [routerLink]="uriFeConst.product.category">
+          <i class="ph-light ph-squares-four nav-icon"></i>
+          <span>Danh mục</span>
+        </a>
+
+        <a class="nav-item align-items-center d-flex flex-column justify-content-center text-center"
+           [class.active]="isActive(uriFeConst.cart.index)"
+           [routerLink]="uriFeConst.cart.index">
+          <span class="icon-wrap">
+            @if (cartService.totalQuantities > 0) {
+              <span class="cart-badge align-items-center d-flex justify-content-center">{{ cartService.totalQuantities }}</span>
+            }
+             <i class="ph-light ph-shopping-cart nav-icon"></i>
+          </span>
+          <span>Giỏ hàng</span>
+        </a>
+
+        <a class="nav-item align-items-center d-flex flex-column justify-content-center text-center"
+           [class.active]="isActive(uriFeConst.user.profile)"
+           (click)="LinkToProfile(userInfo)">
+          <i class="ph-light ph-user nav-icon"></i>
+          <span>Thành viên</span>
+        </a>
+      </div>
+    </div>
+  } @else if (isCartFlow(cfg)) {
+    @if (cfg.promotionDetailOpen) {
+      <div
+        class="cart-action-backdrop"
+        [class.cart-action-backdrop--closing]="cfg.promotionDetailClosing"
+        (click)="cfg.onClosePromotionDetail?.()"
+      ></div>
+    }
+
+    <div class="cart-action-footer" [class.cart-action-footer--expanded]="cfg.promotionDetailOpen">
+      @if (cfg.promotionDetailOpen && cfg.promotionDetail) {
+        <section
+          class="promotion-detail-panel w-100"
+          [class.promotion-detail-panel--closing]="cfg.promotionDetailClosing"
+          role="dialog"
+          aria-labelledby="promotion-detail-title"
+        >
+          <header class="promotion-detail-panel__header align-items-center d-flex justify-content-center">
+            <h2 id="promotion-detail-title">Chi tiết khuyến mại</h2>
+            <button type="button" (click)="cfg.onClosePromotionDetail?.()" aria-label="Đóng chi tiết khuyến mại">
+              <i class="ph ph-x"></i>
+            </button>
+          </header>
+
+          <div class="promotion-detail-panel__body d-flex flex-column">
+            <div class="promotion-detail-row align-items-center d-flex justify-content-between">
+              <span>Tổng tiền hàng</span>
+              <strong>{{ formatPrice(cfg.promotionDetail.subtotal) }}</strong>
+            </div>
+
+            <div class="promotion-detail-divider"></div>
+
+            <div class="promotion-detail-group d-flex flex-column">
+              @if (cfg.promotionDetail.productDiscount > 0) {
+                <div class="promotion-detail-row align-items-center d-flex justify-content-between">
+                  <span>Giảm giá sản phẩm</span>
+                  <strong>{{ formatPrice(cfg.promotionDetail.productDiscount) }}</strong>
+                </div>
+              }
+              @if (cfg.promotionDetail.voucherDiscount > 0) {
+                <div class="promotion-detail-row align-items-center d-flex justify-content-between">
+                  <span>Voucher giảm giá</span>
+                  <strong>{{ formatPrice(cfg.promotionDetail.voucherDiscount) }}</strong>
+                </div>
+              }
+              @for (name of cfg.promotionDetail.promotionNames; track name) {
+                <div
+                  class="promotion-detail-row promotion-detail-row--sub align-items-center d-flex justify-content-between">
+                  <span>{{ name }}</span>
+                </div>
+              }
+            </div>
+
+            @if (cfg.promotionDetail.saving > 0) {
+              <div class="promotion-detail-divider"></div>
+
+              <div class="promotion-detail-group d-flex flex-column">
+                <div class="promotion-detail-row align-items-center d-flex justify-content-between">
+                  <span>Tiết kiệm</span>
+                  <strong>-{{ formatPrice(cfg.promotionDetail.saving) }}</strong>
+                </div>
+                <div
+                  class="promotion-detail-row promotion-detail-row--total align-items-center d-flex justify-content-between">
+                  <span>Tổng số tiền</span>
+                  <strong>{{ formatPrice(cfg.promotionDetail.grandTotal) }}</strong>
+                </div>
+              </div>
+            }
+          </div>
+        </section>
+      }
+
+      <button class="voucher-row align-items-center d-flex justify-content-between w-100" type="button" (click)="cfg.onOpenVoucher?.()">
+        <span>
+          <i class="ph-light ph-ticket"></i>
+          Voucher
+        </span>
+        <span>
+          {{ cfg.voucherText || 'Chọn' }}
+          <i class="ph ph-caret-right"></i>
+        </span>
+      </button>
+
+      <div class="checkout-row align-items-center d-flex justify-content-between">
+        <button class="checkout-row__total text-start" type="button" (click)="cfg.onTogglePromotionDetail?.()">
+          <span>Tổng cộng ({{ cfg.selectedCount || 0 }})</span>
+          <strong>{{ formatPrice(cfg.totalPrice || 0) }}<i class="ph ph-caret-up"></i></strong>
+        </button>
+        <div class="checkout-row__actions align-items-center d-flex">
+          <button class="support-button align-items-center d-inline-flex justify-content-center" type="button" aria-label="Hỗ trợ" (click)="cfg.onOpenSupportChat?.()">
+            <i class="ph-light ph-headset"></i>
+          </button>
+          <button class="buy-button" type="button" (click)="cfg.onBuyNow?.()">Mua ngay</button>
+        </div>
+      </div>
+
+      <div class="bottom-wrapper bottom-wrapper--static">
+        <div class="tabs">
+          <a class="nav-item align-items-center d-flex flex-column justify-content-center text-center" [class.active]="isActive('/')" [routerLink]="'/'">
+            <i class="ph-light ph-storefront nav-icon"></i>
+            <span>Trang chủ</span>
+          </a>
+
+          <a class="nav-item align-items-center d-flex flex-column justify-content-center text-center"
+             [class.active]="isActive(uriFeConst.product.category)" [routerLink]="uriFeConst.product.category">
+            <i class="ph-light ph-squares-four nav-icon"></i>
+            <span>Danh mục</span>
+          </a>
+
+          <a class="nav-item align-items-center d-flex flex-column justify-content-center text-center" [class.active]="isActive(uriFeConst.cart.index)" [routerLink]="uriFeConst.cart.index">
+            <span class="icon-wrap">
+              @if (cartService.totalQuantities > 0) {
+                <span class="cart-badge align-items-center d-flex justify-content-center">{{ cartService.totalQuantities }}</span>
+              }
+              <i class="ph-light ph-shopping-cart nav-icon"></i>
+            </span>
+            <span>Giỏ hàng</span>
+          </a>
+
+          <a class="nav-item align-items-center d-flex flex-column justify-content-center text-center"
+             [class.active]="isActive(uriFeConst.user.profile)" (click)="LinkToProfile(userInfo)">
+            <i class="ph-light ph-user nav-icon"></i>
+            <span>Thành viên</span>
+          </a>
+        </div>
+      </div>
+    </div>
+  } @else {
+    @if (isCartPage()) {
+      <div class="d-flex p-2 align-items-center">
+        <div class="col-6 d-flex align-items-center gap-2">
+          Tổng tiền:
+          <span class="f-price">
+               {{ cartService.totalAmount ? (cartService.totalAmount | i18nCurrencyAmount : {showSymbol: true}) : '0đ' }}
+              </span>
+        </div>
+        <div class="col-6">
+          <button [disabled]="cartService.totalQuantities === 0"
+                  [routerLink]="uriFeConst.checkout.index"
+                  class="btn-checkout btn-danger outline-none shadow-none w-100 h-100">
+            Đặt hàng
+          </button>
+          </div>
+      </div>
+    }
+  }
+}

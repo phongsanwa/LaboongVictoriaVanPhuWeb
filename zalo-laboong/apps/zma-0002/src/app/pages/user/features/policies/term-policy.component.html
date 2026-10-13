@@ -1,0 +1,16 @@
+<div class="policy-page">
+ @if (policyList.length) {
+ <div class="policy-list p-0">
+ @for (item of policyList; track item.slug) {
+ <a [routerLink]="[uriFeConst.user.termsAndPolicy, item.slug]"
+ class="policy-item align-items-center d-flex justify-content-between p-0">
+ <span>
+ <i class="ph-light ph-file-lock"></i>
+ {{ item.title }}
+ </span>
+ <i class="ph-bold ph-caret-right"></i>
+ </a>
+ }
+ </div>
+ }
+</div>

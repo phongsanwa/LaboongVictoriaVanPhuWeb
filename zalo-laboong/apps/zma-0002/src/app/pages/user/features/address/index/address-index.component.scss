@@ -1,0 +1,117 @@
+.address-screen {
+  background: #f7f7f8;
+  font-family: Roboto, Arial, sans-serif;
+  min-height: 100%;
+  padding: 0 0 96px;
+}
+
+.section-title {
+  background: #fff;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+  color: #0d0d0d;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 18px;
+  padding: 13px 16px;
+}
+
+.list-address {
+  background: #fff;
+
+}
+
+.address-card {
+  background: #fff;
+  border-bottom: 1px solid #e5e5e5;
+  padding: 22px 16px 14px;
+}
+
+.address-card__top {
+
+  color: #0d0d0d;
+
+  margin-bottom: 8px;
+}
+
+.address-person {
+
+  min-width: 0;
+}
+
+.address-person strong {
+  color: #0d0d0d;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 18px;
+}
+
+.address-person span {
+  background: #8a8a8a;
+  height: 14px;
+  width: 1px;
+}
+
+.address-person em {
+  color: #777;
+  font-size: 14px;
+  font-style: normal;
+  font-weight: 400;
+  line-height: 18px;
+}
+
+.edit-link {
+  color: #0d0d0d;
+  flex: none;
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 18px;
+}
+
+.address {
+  color: #777;
+  font-size: 14px;
+  line-height: 20px;
+  margin: 0 0 10px;
+}
+
+.default-badge {
+  border: 1px solid #3459a7;
+  border-radius: 10px;
+  color: #3459a7;
+
+  font-size: 10px;
+  line-height: 14px;
+  padding: 1px 9px;
+}
+
+.empty-state {
+  min-height: calc(100vh - 184px);
+}
+
+.bottom-btn {
+  background: #fff;
+  bottom: 0;
+  box-shadow: 0 -1px 0 rgba(13, 13, 13, 0.08);
+  left: 0;
+  padding: 12px 16px max(16px, var(--zaui-safe-area-inset-bottom));
+  position: fixed;
+  right: 0;
+}
+
+.btn-add-address {
+  background: #3459a7;
+  border: 0;
+  border-radius: 8px;
+  color: #fff;
+
+  gap: 12px;
+  font-size: 14px;
+  font-weight: 700;
+  height: 48px;
+
+}
+
+.btn-add-address i {
+  font-size: 22px;
+  font-weight: 300;
+}

@@ -1,0 +1,65 @@
+<div class="membership-container">
+  <main class="membership-main d-flex flex-column">
+    @if (!isLoggedIn) {
+      <section class="membership-message">
+        <strong>Đăng nhập để xem hạng thành viên</strong>
+        <p>Cấp quyền tài khoản để theo dõi hạng và quyền lợi của bạn.</p>
+        <button type="button" (click)="openLogin()">Đăng nhập</button>
+      </section>
+    } @else if (!loading && !hasLinkedCustomer) {
+      <section class="membership-message">
+        <strong>Chưa có hạng thành viên</strong>
+        <p>Mua hàng để bắt đầu tích lũy doanh số và mở khóa hạng thành viên.</p>
+      </section>
+    }
+
+    @if (!loading && hasLinkedCustomer) {
+      <section class="rank-card">
+        <div class="rank-card__title">{{ currentRankLabel | uppercase }}</div>
+        @if (showProgress) {
+          <p>Để nâng thứ hạng thẻ tiếp theo</p>
+
+          <div class="spend-block">
+            <span>Chi tiêu</span>
+            <div>
+              <strong>{{ formattedSpend }}</strong>
+              <small>/{{ formattedTarget }}</small>
+            </div>
+            <div class="progress-track">
+              <div class="progress-bar h-100" [style.width.%]="progressPercent"></div>
+            </div>
+          </div>
+        }
+      </section>
+
+      @if (memberTabs.length) {
+        <section class="member-tabs" aria-label="Thang hạng thành viên">
+          @for (tab of memberTabs; track tab.levelId) {
+            <button
+              type="button"
+              [class.active]="selectedTab === tab.id"
+              [class.current]="currentRank?.levelId === tab.levelId"
+              [style.color]="selectedTab === tab.id ? tab.color : null"
+              (click)="selectTab(tab.id)">
+              <span [style.background]="tab.color"></span>
+              {{ tab.label }}
+            </button>
+          }
+        </section>
+      }
+
+      <section class="quick-actions" aria-label="Quyền lợi thành viên">
+        @if (benefits.length) {
+          @for (benefit of benefits; track benefit) {
+            <div class="quick-action align-items-center d-flex flex-column">
+              <span><i class="ph-light ph-seal-check"></i></span>
+              <p>{{ benefit }}</p>
+            </div>
+          }
+        } @else {
+          <div class="benefits-empty">Hạng này chưa có quyền lợi riêng.</div>
+        }
+      </section>
+    }
+  </main>
+</div>

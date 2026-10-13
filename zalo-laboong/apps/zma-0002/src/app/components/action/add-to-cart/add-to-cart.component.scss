@@ -1,0 +1,22 @@
+.btn-primary{
+  background: var(--brand-color) !important;
+  border-color: var(--brand-color) !important;
+}
+.btn-addtoCart{
+  background: var(--brand-color);
+  border: none;
+  color: #fff;
+}
+.f-price{
+  font-size: 18px;
+  font-weight: 700;
+}
+.addtocart-bottom{
+  position: fixed;
+  bottom: 0;
+
+  background: #fff;
+  left: 0;
+  z-index: 9999;
+  border-top: 1px solid #ddd;
+}

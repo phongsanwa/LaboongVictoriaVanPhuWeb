@@ -1,0 +1,85 @@
+@switch (gateState()) {
+  @case ('ready') {
+    <router-outlet></router-outlet>
+  }
+
+  @case ('loading') {
+    <main class="app-gate app-gate--centered" aria-live="polite" aria-busy="true">
+      <section class="app-gate__status-card">
+        <img class="app-gate__logo" src="assets/img/webapp-expiry/pos-logo.png" alt="POS" />
+        <span class="app-gate__spinner" aria-hidden="true"></span>
+        <p>Đang kiểm tra hạn sử dụng...</p>
+      </section>
+    </main>
+  }
+
+  @case ('error') {
+    <main class="app-gate app-gate--centered" aria-live="assertive">
+      <section class="app-gate__status-card app-gate__status-card--error">
+        <img class="app-gate__logo" src="assets/img/webapp-expiry/pos-logo.png" alt="POS" />
+        <img
+          class="app-gate__illustration"
+          src="assets/img/webapp-expiry/expired-illustration.png"
+          alt=""
+        />
+        <div>
+          <h1>Không thể kiểm tra hạn sử dụng</h1>
+          <p>Đã có lỗi xảy ra. Vui lòng kiểm tra kết nối và thử lại.</p>
+        </div>
+        <button class="app-gate__primary-button" type="button" (click)="checkExpiry()">
+          Thử lại
+        </button>
+      </section>
+    </main>
+  }
+
+  @case ('expired') {
+    <main class="app-gate">
+      <section class="expiry-card">
+        <img class="app-gate__logo" src="assets/img/webapp-expiry/pos-logo.png" alt="POS" />
+        <img
+          class="app-gate__illustration"
+          src="assets/img/webapp-expiry/expired-illustration.png"
+          alt=""
+        />
+
+        <h1 class="expiry-card__title">
+          Dịch vụ đã hết hạn
+          @if (expiredDate()) {
+            <span>từ ngày <strong>{{ expiredDate() }}</strong>.</span>
+          }
+        </h1>
+
+        <button
+          class="app-gate__primary-button"
+          type="button"
+          (click)="scrollToSupport(support)"
+        >
+          Gia hạn dịch vụ
+        </button>
+
+        <section #support class="expiry-support" aria-labelledby="support-title">
+          <h2 id="support-title">Liên hệ hỗ trợ</h2>
+          <div class="expiry-support__grid">
+            <a class="expiry-support__item" href="tel:19002812">
+              <img src="assets/img/webapp-expiry/phone.png" alt="" />
+              <span>Hotline: 1900.2812</span>
+            </a>
+            <div class="expiry-support__item">
+              <img src="assets/img/webapp-expiry/email.png" alt="" />
+              <span>Gửi email</span>
+            </div>
+            <div class="expiry-support__item">
+              <img src="assets/img/webapp-expiry/messenger.png" alt="" />
+              <span>Chat Messenger</span>
+            </div>
+            <div class="expiry-support__item">
+              <img src="assets/img/webapp-expiry/zalo.png" alt="" />
+              <span>Chat Zalo</span>
+            </div>
+          </div>
+        </section>
+      </section>
+    </main>
+  }
+}
