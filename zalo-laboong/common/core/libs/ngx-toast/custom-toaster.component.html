@@ -1,0 +1,18 @@
+<div class="app-toast d-flex align-items-center" [ngClass]="alertClass" role="status" aria-live="polite">
+  @if (alertIcon) {
+    <div class="app-toast__icon">
+      <i class="ph-bold" [ngClass]="alertIcon"></i>
+    </div>
+  }
+
+  <div class="app-toast__content">
+    @if (title) {
+      <div class="app-toast__title">{{ title }}</div>
+    }
+    <div class="app-toast__message" [innerHTML]="message"></div>
+  </div>
+
+  <button type="button" class="app-toast__close ms-auto" aria-label="Đóng thông báo" (click)="remove(); $event.stopPropagation()">
+    <i class="ph-bold ph-x"></i>
+  </button>
+</div>
