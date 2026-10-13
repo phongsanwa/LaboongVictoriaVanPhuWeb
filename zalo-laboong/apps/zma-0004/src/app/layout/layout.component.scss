@@ -1,0 +1,28 @@
+.overflow-y-auto {
+  overflow-y: auto;
+}
+
+.flex-1_custom {
+  flex: 1 1 0%;
+}
+
+.flex-col {
+  flex-direction: column;
+}
+
+.w-screen {
+  width: 100vw;
+}
+
+.h-screen {
+  height: 100vh;
+}
+
+.bg-scroll {
+  background-color: rgba(255, 0, 0, 1);
+  transition: background-color 1s ease;
+}
+
+
+
+

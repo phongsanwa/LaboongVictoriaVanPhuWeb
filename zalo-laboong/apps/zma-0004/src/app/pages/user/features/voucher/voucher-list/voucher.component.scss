@@ -1,0 +1,86 @@
+.coupon-list {
+  display: flex;
+  flex-direction: column;
+  font-family: sans-serif;
+}
+
+.coupon-item {
+  display: flex;
+  align-items: center;
+  padding: 0 12px;
+  border-bottom: 1px solid #eee;
+  cursor: pointer;
+}
+
+.coupon-item .icon {
+  width: 60px;
+  height: 60px;
+  background: #ff9800;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 28px;
+  flex-shrink: 0;
+  margin-right: 12px;
+}
+
+.coupon-item .content_coupon {
+  flex: 1 1 auto;
+  max-width: calc(100% - 80px);
+  padding: 10px;
+}
+
+.coupon-item .code {
+  font-weight: bold;
+  margin-bottom: 2px;
+}
+
+.coupon-item .desc {
+  color: #555;
+  font-size: 14px;
+  margin-bottom: 4px;
+}
+
+.coupon-item .date {
+  color: #999;
+  font-size: 12px;
+}
+
+.coupon-item .select {
+  margin-left: 12px;
+}
+
+.coupon-item input[type="radio"] {
+  width: 18px;
+  height: 18px;
+}
+.coupon-item .select {
+  position: relative;
+  width: 24px;
+  height: 24px;
+}
+
+.coupon-item .select input[type="radio"] {
+  appearance: none;
+  width: 24px;
+  height: 24px;
+  border: 2px solid #e60012;
+  border-radius: 50%;
+  position: relative;
+  cursor: pointer;
+}
+
+.coupon-item .select input[type="radio"]:checked::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 12px;
+  height: 12px;
+  background: #e60012;
+  border-radius: 50%;
+}
+

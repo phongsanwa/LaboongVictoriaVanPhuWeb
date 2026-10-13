@@ -1,0 +1,145 @@
+<div class="banner-main">
+  <app-universal-slide
+    [items]="slides"
+    [config]="{ showNavigation: false,autoplay: true,showPagination: true, showName: false }">
+  </app-universal-slide>
+</div>
+
+<div class="bg-white mb-1">
+  <div class="px-2 wr-card">
+    <div class="card mb-0">
+      <div class="p-2">
+        <div class="row mb-3" (click)="handleLinkToProfile()">
+
+          @if (userInfo && userInfo.name) {
+            <div class="col-5" [routerLink]="uriFeConst.user.profile">
+              <div class="profile d-flex align-items-center">
+                <div class="me-2" style="width: 40px; height: 40px;">
+                  <img class="h-100 w-100 rounded-circle object-fit-cover"
+                    [src]="userInfo.avatar || 'assets/img/avatar-placeholder.jpg'"
+                    alt="Avatar">
+                </div>
+                <div>
+                  <p class="m-0 small">
+                    @if (userInfo.name) {
+                      {{ userInfo.name }}
+                    }
+                  </p>
+                  <p class="m-0 small">
+                    @if (userInfo.phoneNumber) {
+                      {{ userInfo.phoneNumber }}
+                    }
+                  </p>
+                </div>
+              </div>
+            </div>
+            <div class="col-4" [routerLink]="uriFeConst.user.profile">
+              <span class="small bg-secondary rounded-1 text-white p-1">Hạng thành viên</span>
+            </div>
+            <div class="col-3" [routerLink]="uriFeConst.user.points">
+              <img width="50" [src]="'assets/img/barcode.png'">
+            </div>
+          } @else {
+            <div class="col-5">
+              <div class="profile d-flex align-items-center" >
+                <div class="me-2">
+                  <i class="ph-bold ph-user-circle" style="font-size: 40px;"></i>
+                </div>
+                <div>
+                  <p class="m-0 small">Khách</p>
+                </div>
+              </div>
+            </div>
+            <div class="col-4">
+              <span class="small bg-secondary rounded-1 text-white p-1">Hạng thành viên</span>
+            </div>
+            <div class="col-3">
+              <img width="50" [src]="'assets/img/barcode.png'">
+            </div>
+          }
+
+
+        </div>
+        <div class="action-button d-flex justify-content-around text-center">
+          <div class="order d-flex flex-column align-items-center gap-2"
+               [routerLink]="uriFeConst.order.tracking" [queryParams]="{ status: 1 }">
+            <i class="ph-light ph-shopping-bag rounded-circle common-background text-white p-1 fs-2"></i>
+            <span class="small fw-medium">Đơn hàng</span>
+          </div>
+          <div class="d-flex flex-column align-items-center gap-2" [routerLink]="uriFeConst.user.membership">
+            <i class="ph ph-piggy-bank rounded-circle common-background text-white p-1 fs-2"></i>
+            <span class="small fw-medium">Tích luỹ</span>
+          </div>
+          <div class="d-flex flex-column align-items-center gap-2" [routerLink]="uriFeConst.user.voucher">
+            <i class="ph ph-money-wavy rounded-circle common-background text-white p-1 fs-2"></i>
+            <span class="small fw-medium">Mã ưu đãi</span>
+          </div>
+          <div class="d-flex flex-column align-items-center gap-2">
+            <i class="ph-light ph-game-controller rounded-circle common-background text-white p-1 fs-2"></i>
+            <span class="small fw-medium">Mini game</span>
+          </div>
+          <div class="d-flex flex-column align-items-center gap-2" (click)="handleLinkToProfile()">
+            <i class="ph-bold ph-dots-three-vertical rounded-circle common-background text-white p-1 fs-2"></i>
+            <span class="small fw-medium">Xem thêm</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <app-product-flash-sale></app-product-flash-sale>
+
+</div>
+
+@if (categories) {
+  <div class="bg-white mb-1 p-2 border-bottom-4px">
+    <div class="block-category">
+      <div class="d-flex justify-content-between pb-1">
+        <div class=" title-flashsale fw-bold">
+          <i class="ph-light ph-basket rounded-circle common-background text-white p-1 me-1"></i>
+          Danh mục sản phẩm
+        </div>
+
+        <!--        <div class="">-->
+        <!--          <a class="small" href="/product">Xem tất cả</a>-->
+        <!--        </div>-->
+
+      </div>
+      <div class="list-grid list-category">
+        @for (cate of categories; track cate.id) {
+          <a class="item text-center d-block" [routerLink]="uriFeConst.product.category"
+             [queryParams]="{ id: cate.id }">
+            <img [src]="cate.image || 'https://dummyimage.com/52x52/163645/fff'"
+                 class="w-100 rounded-lg"/>
+            <span class="mt-1 text-sm fw-bold category-name">{{ cate.name }}</span>
+          </a>
+        }
+      </div>
+    </div>
+  </div>
+}
+
+<div class="bg-white px-2 eat-today">
+  <div class="block-category py-2">
+    <div class="d-flex justify-content-between pb-2">
+      <div class=" title-flashsale fw-bold">
+        <i class="ph-bold ph-shopping-bag rounded-circle common-background text-white p-1 me-1"></i>
+        Hôm nay mua gì
+      </div>
+    </div>
+    <div class="list-category d-flex">
+      @for (txtSearch of nameSearch; track txtSearch.name) {
+        <a class="item text-center d-block" (click)="onQuickSearch(txtSearch.name)">
+          <img [src]="txtSearch.image"
+               class="w-100 rounded-lg"/>
+          <span class="mt-2 text-sm fw-bold category-name">{{ txtSearch.name }}</span>
+        </a>
+      }
+    </div>
+  </div>
+</div>
+
+<div class="bg-white mb-1">
+  <app-product-list></app-product-list>
+</div>
+

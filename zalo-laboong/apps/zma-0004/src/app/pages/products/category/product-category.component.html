@@ -1,0 +1,18 @@
+<app-spinner
+  [loading]="isLoading"
+  position="position-fixed"
+  [opacity]="0.8">
+</app-spinner>
+<div class="px-2">
+  <div class="list-product" (scroll)="onScroll($event)">
+    @if (products.length) {
+      @for (prd of products; track prd.id) {
+        <app-product-item [product]="prd"></app-product-item>
+      }
+    } @else {
+      <p class="p-4 text-center">Chưa có sản phẩm nào</p>
+    }
+
+  </div>
+</div>
+

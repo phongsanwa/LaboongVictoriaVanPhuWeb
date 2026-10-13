@@ -1,0 +1,22 @@
+<div class="p-2">
+  <div class="border-bottom">
+    <p class="text-center px-4">Quý khách vui lòng đưa mã này cho thu ngân để tích luỹ/ sử dụng điểm</p>
+    <div class="py-3">
+      <app-render-codes
+        [data]="appService.getUserInfo && appService.getUserInfo.phoneNumber ? appService.getUserInfo.phoneNumber : '0868323415'"
+        [mode]="codeMode"
+        [barcodeHeight]="80"
+        [showValueUnderBarcode]="false"
+        [qrSize]="70"
+      ></app-render-codes>
+    </div>
+  </div>
+
+  <p class="p-4 text-center">Số điểm hiện tại của bạn : 5000</p>
+</div>
+<div class="footer px-2 pt-3 safe-pb-16 position-fixed bottom-0 w-100 bg-white">
+  <app-product-flash-sale></app-product-flash-sale>
+  <button class="fs-5 fw-bold btn text-white common-background outline-none shadow-none w-100 h-100"
+          [routerLink]="uriFeConst.user.voucher">Code giảm giá
+  </button>
+</div>

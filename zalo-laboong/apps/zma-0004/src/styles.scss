@@ -1,0 +1,130 @@
+/* You can add global styles to this file, and also import other style files */
+@use "styles/my.style";
+
+.bg-background {
+  background-color: #ffffff;
+  //background-color: #ececec;
+}
+
+.offcanvas-bottom-sheet.offcanvas-bottom {
+  height: auto;
+  max-height: min(85vh, 720px);
+  border-top-left-radius: 16px;
+  border-top-right-radius: 16px;
+  overflow: auto;
+}
+.list-style-none {
+  list-style: none;
+}
+
+.form-floating {
+  --form-floating-height: calc(2.5rem + calc(var(--border-width) * 2));
+  --form-floating-line-height: auto;
+  --form-floating-padding-y: 0.5rem;
+  --form-floating-padding-x: 0.875rem;
+  --form-floating-input-padding-t: 0.58rem;
+  --form-floating-input-padding-b: 0.58rem;
+  --form-floating-label-opacity: 1;
+  --form-floating-label-transform: scale(0.85) translateY(-0.4rem) translateX(0.15rem);
+  position: relative;
+}
+
+.form-floating label {
+  color: rgba(0, 0, 0, 0.7);
+}
+
+.form-floating > .form-control-plaintext ~ label,
+.form-floating > .form-control:focus ~ label,
+.form-floating > label.focusIn,
+.form-floating > .form-control:not(:placeholder-shown) ~ label,
+.form-floating > .form-select ~ label,
+.form-floating > .form-control.patchValue ~ label,
+.ft-ckeditor > label {
+  width: auto;
+  height: auto;
+  background: #fff;
+  padding: 0 5px;
+  top: -10px;
+  left: 11px;
+  opacity: 1;
+  transform: none;
+  line-height: 1.3;
+  max-width: calc(100% - 5px);
+  font-size: 0.75rem;
+  color: #777 !important;
+}
+
+
+
+/* -------------------------------------------------------------------------------------------------
+ * 2) CSS Variables: Safe Area (default + auto-detect khi hỗ trợ env())
+ * ------------------------------------------------------------------------------------------------*/
+:root {
+  /* Fallback mặc định (web/desktop không full-screen) */
+  --zaui-safe-area-inset-top: 0px;
+  --zaui-safe-area-inset-bottom: 0px;
+}
+
+/* Khi trình duyệt hỗ trợ env(safe-area-*) thì override */
+@supports (padding: max(0px)) {
+  :root {
+    --zaui-safe-area-inset-top: env(safe-area-inset-top);
+    --zaui-safe-area-inset-bottom: env(safe-area-inset-bottom);
+  }
+}
+
+/* -------------------------------------------------------------------------------------------------
+ * 3) Utilities
+ * ------------------------------------------------------------------------------------------------*/
+/* Padding safe-area trực tiếp */
+.safe-pt { padding-top: var(--zaui-safe-area-inset-top) !important; }
+.safe-pb { padding-bottom: var(--zaui-safe-area-inset-bottom) !important; }
+
+/* Luôn có tối thiểu 16px + cộng thêm safe-area khi có (dùng cho web & production) */
+.safe-pt-16 { padding-top: max(16px, var(--zaui-safe-area-inset-top)) !important; }
+.safe-pb-16 { padding-bottom: max(16px, var(--zaui-safe-area-inset-bottom)) !important; }
+
+.bg-background { background-color: #ffffff; }
+
+/* -------------------------------------------------------------------------------------------------
+ * 4) Components: Offcanvas bottom sheet (NgbOffcanvas)
+ * ------------------------------------------------------------------------------------------------*/
+.offcanvas-bottom-sheet.offcanvas-bottom {
+  height: auto;
+  max-height: min(85vh, 1000px);
+  border-top-left-radius: 16px;
+  border-top-right-radius: 16px;
+  overflow: auto;
+}
+
+
+.swiper-pagination {
+  .swiper-pagination-bullet {
+    width: 13px;
+    height: 10px;
+    display: inline-block;
+    background: var(--brand-color);
+    opacity: .2;
+    margin: 0 5px;
+    border-radius: 20px;
+    transition: opacity .5s, background-color .5s, width .5s;
+    transition-delay: .5s, .5s, 0s;
+  }
+
+  &.swiper-pagination-clickable .swiper-pagination-bullet {
+    cursor: pointer;
+  }
+
+  .swiper-pagination-bullet-active {
+    opacity: 1;
+    background: var(--brand-color);
+    width: 30px;
+    transition-delay: 0s;
+  }
+}
+.common-background {
+  background: var(--brand-color)!important;
+}
+.fw-medium {
+  font-weight: 500;
+}

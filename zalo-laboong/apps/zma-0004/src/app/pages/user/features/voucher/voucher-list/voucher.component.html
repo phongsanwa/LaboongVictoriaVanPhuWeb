@@ -1,0 +1,42 @@
+<app-nav-tabs
+  [tabs]="tabs"
+  [active]="activeTab"
+  (activeChange)="onActiveChange($event)">
+</app-nav-tabs>
+
+<div class="coupon-list">
+  <span class="p-2 text-danger">Hãy chọn một mã giảm giá</span>
+  <label class="coupon-item">
+    <div class="icon">
+      <i class="ph-bold ph-megaphone"></i>
+    </div>
+    <div class="content_coupon">
+      <div class="code">LM195353</div>
+      <div class="desc">Code giảm giá 30k đơn từ 400k</div>
+      <div class="date">Áp dụng từ : 01/11/2025 - Đến : 30/11/2025</div>
+    </div>
+    <div class="select">
+      <input type="radio" name="coupon">
+    </div>
+  </label>
+
+  <label class="coupon-item">
+    <div class="icon">
+      <i class="ph-bold ph-megaphone"></i>
+    </div>
+    <div class="content_coupon">
+      <div class="code">LMSCFBC4</div>
+      <div class="desc">Code giảm 10k phí vận chuyển khi mua trên Zalo MiniApp</div>
+      <div class="date">Áp dụng từ : 01/11/2025 - Đến : 30/11/2025</div>
+    </div>
+    <div class="select">
+      <input type="radio" name="coupon">
+    </div>
+  </label>
+</div>
+
+<div class="footer px-2 pt-3 safe-pb-16 position-fixed bottom-0 w-100 bg-white">
+  <button class="fs-5 fw-bold btn common-background text-white outline-none shadow-none w-100 h-100">Dùng ngay</button>
+</div>
+
+

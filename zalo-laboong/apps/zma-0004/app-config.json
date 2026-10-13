@@ -1,0 +1,15 @@
+{
+  "app": {
+    "title": "__APP_TITLE__",
+    "headerTitle": "__HEADER_TITLE__",
+    "headerColor": "__HEADER_COLOR__",
+    "statusBar": "transparent",
+    "actionBarHidden": true,
+    "hideAndroidBottomNavigationBar": false,
+    "hideIOSSafeAreaBottom": true,
+    "selfControlLoading": true
+  },
+  "listCSS": [],
+  "listSyncJS": [],
+  "listAsyncJS": []
+}

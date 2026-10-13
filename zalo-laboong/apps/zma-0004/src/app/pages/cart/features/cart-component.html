@@ -1,0 +1,85 @@
+<div class="px-3">
+  @if ((cartData.items | keyvalue).length) {
+    <div class="list-product">
+      @for (it of itemsCart; track it.productId) {
+        <div class="swipe-wrapper" #swipe
+             (touchstart)="onTouchStart($event, swipe)"
+             (touchmove)="onTouchMove($event)"
+             (touchend)="onTouchEnd()">
+          <div class="swipe-content">
+
+            <div class="item d-flex py-2 border-bottom flex-wrap">
+              <a class="col-2" [routerLink]="'/product/detail'"
+                 [queryParams]="{ id: it.productId }">
+                <img class="w-100" [src]="it.image" alt="">
+              </a>
+              <div class="col-9 ps-3">
+                <p class="m-0 fw-bold" [routerLink]="'/product/detail'"
+                   [queryParams]="{ id: it.productId }">{{ it.name }}</p>
+                <!--            <p class="m-0 fw-bold">90.000đ/túi</p>-->
+                <!--            <del class="text-mute me-1">100.000đ</del>-->
+                <!--            <span class="text-danger">-5%</span>-->
+                <p class="m-0 fw-bold">{{ it.price | i18nCurrencyAmount : {showSymbol: true} }}</p>
+                @if (it.priceOld) {
+                  <del class="text-mute me-1">
+                    {{ it.priceOld | i18nCurrencyAmount : {showSymbol: true} }}
+                  </del>
+                }
+                @if (it.sizeChecked || it.colorChecked) {
+                  <div class="availableColorsSize">
+                      <span class="text-muted">
+                        @if (it.sizeChecked) {
+                          {{ it.sizeChecked }}
+                        }
+                        @if (it.sizeChecked && it.colorChecked) {
+                          &nbsp;/&nbsp;
+                        }
+                        @if (it.colorChecked) {
+                          {{ it.colorChecked }}
+                        }
+                      </span>
+                  </div>
+                }
+              </div>
+
+              <div class="mt-2 text-end w-100 d-flex justify-content-end">
+                <app-auto-numeric
+                  [ngStyleInput]="{
+                              'border-radius': '0',
+                              'width': '35px',
+                              'height': '25px',
+                              'text-align': 'center',
+                              'padding':'0',
+                            }"
+                  [showButtonChange]="true"
+                  [styleClass]="'height: 25px'"
+                  [(value)]="it.quantity"
+                  (valueChange)="onQuantityChange(it, $event)"
+                  [classInput]="'inputQttSmaller text-center'"
+                />
+              </div>
+            </div>
+
+          </div>
+          <button class="swipe-delete border-0" (click)="onRemoveProduct(it)">Xoá</button>
+        </div>
+      }
+    </div>
+  } @else {
+    <p class="text-center p-5">
+      Không có sản phẩm nào trong giỏ hàng
+    </p>
+
+  }
+</div>
+
+@if (promoResult?.discount?.promotions?.length) {
+  <div class="px-3 py-2 bg-white border-top">
+    <div class="d-flex justify-content-between align-items-center text-danger">
+      <span><i class="ph-bold ph-ticket me-1"></i> {{ promoResult!.discount!.promotions[0].name }}</span>
+      <span>-{{ (totalDiscount | i18nCurrencyAmount : {showSymbol: true}) }}</span>
+    </div>
+  </div>
+}
+
+

@@ -1,0 +1,28 @@
+<div class="address-screen px-2 pt-3 pb-4">
+  @if (hasCustomer()) {
+    <div class="list-address">
+      @for (item of customerSer.getAll(); track item.id) {
+        <div class="item d-flex align-items-center border-bottom py-2">
+          <div class="d-flex align-items-center" (click)="onActiveAddress(item)">
+            <input type="radio" name="address" [checked]="item.isDefault">
+            <div class="ps-2">
+              <p class="m-0 fw-bold">{{ item.name }} {{ item.mobile }}</p>
+              <p class="m-0 text-muted">{{ fullAddress(item) }}</p>
+              @if (item.isDefault) {
+                <button class="btn border-warning p-0 px-1 text-warning">Mặc định</button>
+              }
+            </div>
+          </div>
+          <button class="btn border-0 fw-bold text-danger" [routerLink]="uriFeConst.user.addressAdd" [queryParams]="{ id: item.id }">Sửa</button>
+          <button class="btn border-0 fw-bold text-danger" (click)="onRemoveAddress(item)">Xoá</button>
+        </div>
+      }
+    </div>
+  } @else {
+    <p class="text-center pt-4">Vui lòng thêm địa chỉ giao hàng</p>
+  }
+</div>
+<div class="position-fixed bottom-0 w-100 pb-4 px-2">
+  <button class="btn bg-warning text-white w-100" [routerLink]="uriFeConst.user.addressAdd">Thêm mới địa chỉ giao hàng
+  </button>
+</div>

@@ -1,0 +1,156 @@
+.choose-address .body-address {
+  position: relative;
+  top: -3px;
+}
+
+.wrap-choose-address > div {
+  //flex: 0 0 80%;
+  //max-width: 80%;
+  flex: 0 0 100%;
+  max-width: 100%;
+}
+
+.wrap-choose-address {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.expected-delivery {
+  border-right: 2px solid #000;
+}
+.line {
+  height: 5px;
+  background: #ececec;
+}
+.shadow-custom {
+  box-shadow: rgba(0, 0, 0, 0.24) 0px 3px 8px;
+}
+
+.switch {
+  position: relative;
+  display: inline-block;
+  width: 50px;
+  height: 28px;
+}
+
+.switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: #ccc;
+  transition: .4s;
+}
+
+.slider:before {
+  position: absolute;
+  content: "";
+  height: 20px;
+  width: 20px;
+  left: 4px;
+  bottom: 4px;
+  background-color: white;
+  transition: .4s;
+}
+
+input:checked + .slider {
+  background-color: red;
+}
+
+input:focus + .slider {
+  box-shadow: 0 0 1px #38a169;
+}
+
+input:checked + .slider:before {
+  transform: translateX(22px); /* Di chuyển nút tròn sang phải */
+}
+
+/* Bo tròn các góc */
+.slider.round {
+  border-radius: 28px;
+}
+
+.slider.round:before {
+  border-radius: 50%;
+}
+.input-description {
+  border: 1px solid #ccc;
+  outline: none;
+  width: 100%;
+  padding: 0 10px;
+  margin-top: 10px;
+  background: transparent;
+  border-radius: 4px;
+  height: 35px;
+}
+.input-description:focus-within {
+  border-color: #dc3545 !important;
+}
+.input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  height: 35px;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  background-color: white;
+  font-size: 12px;
+}
+.input-wrapper:focus-within {
+  border-color: #dc3545 !important;
+}
+.custom-input {
+  border: none;
+  outline: none;
+  width: 100%;
+  height: 100%;
+  padding: 0 10px;
+  background: transparent;
+}
+.clear-button {
+  position: absolute;
+  right: 0.5rem;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  margin: 0;
+  background: #000;
+  color: #fff;
+  border-radius: 50%;
+  height: 12px;
+  width: 12px;
+  line-height: 1;
+  font-size: 10px;
+}
+.carrier-logo {
+  max-width: 80px;
+  max-height: 20px;
+  object-fit: contain;
+}
+.carrier-item.active {
+  border-color: #037B8A !important;
+  background-color: #E6F5F7 !important;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+}
+.carrier-list .carrier-item {
+  border: 1px solid #ddd;
+}
+.checkout-payment-icon .pm-logo {
+  width: 24px;
+  height: 24px;
+  object-fit: contain;
+}
+.min-h-screen {
+  padding-bottom: 6rem;
+}

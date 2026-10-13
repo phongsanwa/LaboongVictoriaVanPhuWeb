@@ -1,0 +1,13 @@
+body {
+  overflow: auto !important;
+}
+
+a {
+  color: inherit;
+  text-decoration: inherit;
+}
+
+.outline-none {
+  outline: 2px solid transparent;
+  outline-offset: 2px;
+}

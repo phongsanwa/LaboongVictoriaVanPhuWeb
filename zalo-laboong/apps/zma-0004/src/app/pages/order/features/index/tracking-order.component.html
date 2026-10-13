@@ -1,0 +1,37 @@
+<app-nav-tabs
+  [tabs]="tabs"
+  [active]="activeTab"
+  (activeChange)="onActiveChange($event)">
+</app-nav-tabs>
+
+<div class="list">
+  @for (order of ordersTracking; track order.id) {
+    <div class="order-card"
+         [routerLink]="uriFeConst.order.trackingDetail"
+         [queryParams]="{id: order.id}">
+      <div class="card-head">
+        <div class="code">{{ order.id }}</div>
+        <app-order-status-pill [statusCode]="+order.status"></app-order-status-pill>
+      </div>
+
+      <div class="card-body">
+        <img class="thumb" [src]="order.products[0].avatar" alt=""/>
+        <div class="meta">
+          <div class="title">{{ order.products[0].name }}</div>
+          <div class="sub">
+            <span>{{ order.products.length }} sản phẩm</span>
+            <span class="sep">|</span>
+            <span class="price">{{ order.totalAmount | i18nCurrencyAmount }}</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="card-foot">
+        <i class="ph ph-clock me-1 opacity-75"></i>
+        <span>{{ order.createdAt | date: 'short' }}</span>
+      </div>
+    </div>
+  } @empty {
+    <div class="empty">Chưa có đơn hàng</div>
+  }
+</div>

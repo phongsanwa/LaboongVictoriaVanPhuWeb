@@ -1,0 +1,69 @@
+@if (cfg && cfg.show !== false) {
+  @if (isGreeting(cfg)) {
+    <div [ngClass]="headerClass" class="px-2 safe-pt-16 pb-3 position-fixed top-0 w-100 z-index-10" #headerRef>
+      <div class="wr-search position-relative" (click)="openSearchModal()">
+        <i class="ph-light ph-magnifying-glass position-absolute top-50 padding-left-10 translate-middle-y"></i>
+        <input class="ps-4 shadow-none outline-none input-home border-0" placeholder="Bạn muốn mua gì?">
+      </div>
+    </div>
+
+    @if (isSearchModalOpen()) {
+      <div class="search-modal position-fixed top-0 start-0 w-100 h-100 bg-white z-index-20 p-2 safe-pt-16">
+        <div class="modal-header p-2">
+          <i class="ph-light ph-caret-left text-black me-3 fs-4" (click)="closeSearchModal()"></i>
+        </div>
+
+        <div class="modal-body p-2 h-100">
+          <app-search-bar #searchBar></app-search-bar>
+        </div>
+      </div>
+    }
+  } @else if (isTitle(cfg)) {
+    @if (isCategoryPage()) {
+      <!--      modal search khi ở trang dmsp-->
+      <div class="d-flex align-items-center justify-content-between back-header p-2 safe-pt-16">
+        @if (cfg.back !== false) {
+          <button type="button"
+                  class="btn btn-light rounded-circle p-0 border-0 me-3 d-flex align-items-center justify-content-center header-back"
+                  (click)="back()">
+            <i class="ph ph-arrow-left text-black"></i>
+          </button>
+        }
+        <div class="flex-grow-1">
+          <div class="wr-search position-relative border border-1" (click)="openSearchModal()">
+            <i class="ph-light ph-magnifying-glass position-absolute top-50 padding-left-10 translate-middle-y"></i>
+            <input class="ps-4 shadow-none outline-none input-home border-0 w-100" placeholder="Bạn muốn mua gì?">
+          </div>
+        </div>
+        <div class="btn-width-fixed flex-shrink-0 w-20"></div>
+      </div>
+
+      <!-- Modal search -->
+      @if (isSearchModalOpen()) {
+        <div class="search-modal position-fixed top-0 start-0 w-100 h-100 bg-white z-index-20 p-2 safe-pt-16">
+          <div class="modal-header p-2">
+            <i class="ph-light ph-caret-left text-black me-3 fs-4" (click)="closeSearchModal()"></i>
+          </div>
+
+          <div class="modal-body p-2 h-100">
+            <app-search-bar #searchBar></app-search-bar>
+          </div>
+        </div>
+      }
+    } @else {
+      <div class="d-flex align-items-center justify-content-between back-header p-2 safe-pt-16">
+        @if (cfg.back !== false) {
+          <button type="button"
+                  class="btn btn-light rounded-circle p-0 border-0 me-3 d-flex align-items-center justify-content-center header-back"
+                  (click)="back()">
+            <i class="ph ph-arrow-left text-black"></i>
+          </button>
+        }
+        <div class="mb-0 text-black flex-grow-1 text-center fw-bold">
+          {{ cfg.title }}
+        </div>
+        <div class="btn-width-fixed flex-shrink-0 w-20"></div>
+      </div>
+    }
+  }
+}

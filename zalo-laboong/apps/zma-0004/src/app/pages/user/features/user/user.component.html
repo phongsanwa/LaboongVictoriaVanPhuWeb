@@ -1,0 +1,102 @@
+<div class="px-2">
+  <div class="card mt-1 overflow-hidden">
+    <div class="card-body background-profile">
+      <div class="row">
+        <div class="col-5">
+          <div class="profile d-flex align-items-center">
+            @if (appService.getUserInfo && appService.getUserInfo.avatar) {
+              <div class="me-2" style="width: 40px; height: 40px;">
+                <img
+                  class="h-100 w-100 rounded-circle object-fit-cover"
+                  [src]="appService.getUserInfo && appService.getUserInfo.avatar ? appService.getUserInfo.avatar : 'assets/img/avatar-placeholder.jpg'"
+                  alt="Avatar">
+              </div>
+            } @else {
+              <div class="me-2">
+                <i class="ph-bold ph-user-circle" style="font-size: 40px;"></i>
+              </div>
+            }
+            <div>
+              <p
+                class="m-0 small">{{ appService.getUserInfo && appService.getUserInfo.name ? appService.getUserInfo.name : 'Guest' }}</p>
+              @if (appService.getUserInfo && appService.getUserInfo.phoneNumber) {
+                <p class="m-0 small">{{ appService.getUserInfo.phoneNumber }}</p>
+              }
+            </div>
+          </div>
+        </div>
+        <div class="col-4">
+          <span class="small bg-secondary rounded-1 text-white p-1">Hạng thành viên</span>
+        </div>
+        <div class="col-3 text-end" [routerLink]="uriFeConst.user.profileEdit">
+          <i class="ph-light ph-pencil-simple"></i>
+        </div>
+      </div>
+
+      <div class="rank-box mt-3">
+        <div class="title">Lên hạng tiếp theo</div>
+
+        <div class="amount">
+          <span class="red">0 đ</span>/1.000.000 đ
+        </div>
+
+        <div class="progress-wrap">
+          <div class="progress-bar">81%</div>
+        </div>
+
+        <p class="note">Dữ liệu mua sắm trong ngày sẽ được cập nhật vào ngày hôm sau</p>
+
+<!--        <div class="more">-->
+<!--          Ưu đãi mỗi thứ hạng →-->
+<!--        </div>-->
+      </div>
+
+    </div>
+  </div>
+  <div class="card box-shadow-style">
+    <div class="card-header d-flex align-items-center justify-content-between"
+         [routerLink]="uriFeConst.order.tracking"
+         [queryParams]="{ status: 1 }">
+      <p class="card-text m-0">Đơn hàng của tôi</p>
+      <i class="ph ph-caret-right"></i>
+    </div>
+
+    <div class="card-body">
+      <app-quick-order-status
+        [trackingRoute]="uriFeConst.order.tracking"
+        [statuses]="orderStatusData">
+      </app-quick-order-status>
+    </div>
+
+  </div>
+</div>
+<ul class="m-0 list-action-policy border-top list-style-none">
+  <li class="border-bottom pt-0" [routerLink]="uriFeConst.user.membership">
+    <span><i class="ph-light ph-wallet"></i></span>
+    <span class="flex-fill title">Điểm tích luỹ</span>
+    <span><i class="ph ph-caret-right"></i></span>
+  </li>
+  <li class="border-bottom" [routerLink]="uriFeConst.user.voucher">
+    <span><i class="ph ph-percent"></i></span>
+    <span class="flex-fill title">Code giảm giá</span>
+    <span><i class="ph ph-caret-right"></i></span>
+  </li>
+  <li class="border-bottom" (click)="minimizeOpenChat()">
+    <span><i class="ph-light ph-headphones"></i></span>
+    <span class="flex-fill title">Trung tâm hỗ trợ và góp ý</span>
+    <span><i class="ph ph-caret-right"></i></span>
+  </li>
+  <li class="border-bottom" [routerLink]="uriFeConst.user.address">
+    <i class="ph-bold ph-notebook"></i>
+    <span class="flex-fill title">Sổ địa chỉ</span>
+    <span><i class="ph ph-caret-right"></i></span>
+  </li>
+  <li class="border-bottom" [routerLink]="uriFeConst.user.aboutUs">
+    <span><i class="ph-bold ph-truck"></i></span>
+    <span class="flex-fill title">Chính sách và điều khoản</span>
+    <span><i class="ph ph-caret-right"></i></span>
+  </li>
+</ul>
+
+
+

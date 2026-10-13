@@ -1,0 +1,7 @@
+@if (products && products.length > 0) {
+  <div class="list-product p-2" (scroll)="onContainerScroll($event)">
+    @for (prd of products; track prd.id) {
+      <app-product-item [product]="prd"></app-product-item>
+    }
+  </div>
+}

@@ -1,0 +1,63 @@
+@if (products && products.length > 0) {
+  <div class="block-flashsale py-2">
+    <div class="px-2 d-flex justify-content-between">
+      <div class=" title-flashsale fw-bold">
+        <i class="ph-light ph-lightning rounded-circle common-background text-white p-1"></i>
+        Flash Sale
+      </div>
+      <div class="">
+        @if (!countdown().isExpired) {
+          <div class="d-flex align-items-center small">
+            <span class="me-2">Đang diễn ra:</span>
+            <div class="time-box common-background text-white px-1 me-1 rounded fw-bold">
+              {{ formatNumber(countdown().days) }}
+            </div>
+            <span class="me-1 fw-bold text-danger">:</span>
+            <div class="time-box common-background text-white px-1 me-1 rounded fw-bold">
+              {{ formatNumber(countdown().hours) }}
+            </div>
+            <span class="me-1 fw-bold text-danger">:</span>
+            <div
+              class="time-box common-background text-white px-1 me-1 rounded fw-bold">
+              {{ formatNumber(countdown().minutes) }}
+            </div>
+            <span class="me-1 fw-bold text-danger">:</span>
+            <div class="time-box common-background text-white px-1 rounded fw-bold">
+              {{ formatNumber(countdown().seconds) }}
+            </div>
+          </div>
+        }
+      </div>
+    </div>
+
+
+    <div class="product-list d-flex">
+
+      @for (prd of products; track prd.id) {
+        <div class="item" [routerLink]="uriFeConst.product.detail"
+             [queryParams]="{ id: prd.id }">
+          <a class="text-center d-block">
+            <img class="w-100" [src]="prd.image" alt="{{ prd.name }}">
+
+            @if (prd.prices.contactPrice || !prd.prices.price) {
+              <p class="small text-danger m-0 fw-medium">Liên hệ</p>
+            } @else if (prd.prices.priceAfterDiscount) {
+              <p
+                class="small text-decoration-line-through text-muted m-0">{{ prd.prices.price | i18nCurrencyAmount :{showSymbol: true} }}</p>
+              <p
+                class="small text-danger m-0 fw-medium">{{ prd.prices.priceAfterDiscount | i18nCurrencyAmount :{showSymbol: true} }}</p>
+            } @else {
+              @if (prd.prices.priceOld) {
+                <p
+                  class="small text-decoration-line-through text-muted m-0">{{ prd.prices.priceOld | i18nCurrencyAmount :{showSymbol: true} }}</p>
+              }
+              <p class="small text-danger m-0 fw-medium">{{ prd.prices.price | i18nCurrencyAmount :{showSymbol: true} }}</p>
+            }
+            <span class="small text-bestseller border border-danger rounded-pill text-white">Đang bán chạy</span>
+          </a>
+        </div>
+      }
+
+    </div>
+  </div>
+}

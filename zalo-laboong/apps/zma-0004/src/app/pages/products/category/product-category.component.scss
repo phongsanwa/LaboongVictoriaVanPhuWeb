@@ -1,0 +1,10 @@
+.list-product {
+  max-height: 90vh;
+  overflow-y: auto;
+  overflow: -moz-scrollbars-none;
+  -ms-overflow-style: none;
+}
+.list-product::-webkit-scrollbar {
+  width: 0 !important;
+  display: none;
+}

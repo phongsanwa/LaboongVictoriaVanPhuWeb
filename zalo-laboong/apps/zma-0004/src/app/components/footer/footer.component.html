@@ -1,0 +1,61 @@
+@if (cfg.show !== false) {
+  <div class="footer px-2 pt-2 safe-pb-16">
+    <div class="d-flex justify-content-between">
+
+      @if (isTabs(cfg)) {
+        <div class="col-8 d-flex text-center align-items-center justify-content-between p-2 pe-4">
+          <div class="block-member" [routerLink]="uriFeConst.user.points">
+            <span class="text-muted">
+              <i class="ph-light ph-barcode fs-3"></i>
+              <p class="m-0 small">Thành viên</p>
+            </span>
+          </div>
+          <div class="block-shop">
+            <span class="text-muted">
+              <i class="ph-bold ph-house fs-3"></i>
+              <p class="m-0 small">Trang chủ</p>
+            </span>
+          </div>
+          <div class="block-cart text-muted" [routerLink]="uriFeConst.cart.index">
+            <span class="position-relative ">
+              <i class="ph-light ph-shopping-cart fs-3"></i>
+              <span class="small position-absolute top-0 start-100 translate-middle badge rounded-pill common-background">
+                {{ cartService.totalQuantities }}
+              </span>
+            </span>
+            <p class="m-0 small">Giỏ hàng</p>
+          </div>
+        </div>
+        <div class="col-4" [routerLink]="uriFeConst.cart.index">
+          <button class="fs-5 fw-bold btn text-white common-background outline-none shadow-none w-100 h-100">Đặt mua</button>
+        </div>
+      } @else {
+        <div class="col-5 d-flex text-center align-items-center justify-content-around pe-2">
+
+          <div class="block-cart text-muted" [routerLink]="uriFeConst.cart.index">
+            <span class="position-relative">
+              <i class="ph-light ph-shopping-cart fs-3"></i>
+              <span class="small position-absolute top-0 start-100 translate-middle badge rounded-pill common-background">
+                  {{ cartService.totalQuantities }}
+              </span>
+            </span>
+          </div>
+          <div class="block-shop">
+            <span class="text-muted text-start">
+              <p class="m-0">Tạm tính</p>
+              <p class="m-0 text-danger">
+                {{ cartService.totalAmount ? (cartService.totalAmount | i18nCurrencyAmount : {showSymbol: true}) : '0đ' }}
+              </p>
+            </span>
+          </div>
+        </div>
+        <div class="col-7">
+          <button [disabled]="cartService.totalQuantities === 0" [routerLink]="uriFeConst.checkout.index"
+                  class="fw-medium btn common-background text-white outline-none shadow-none w-100 h-100">Đặt hàng
+          </button>
+        </div>
+      }
+    </div>
+
+  </div>
+}

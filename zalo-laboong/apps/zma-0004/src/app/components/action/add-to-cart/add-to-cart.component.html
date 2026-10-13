@@ -1,0 +1,136 @@
+<div class="box-add-to-cart">
+  <div class="sheet p-3 pb-5 position-relative">
+    <button
+      type="button"
+      class="btn-close position-absolute top-0 end-0 m-3"
+      aria-label="Close"
+      (click)="active.dismiss('close')">
+    </button>
+
+    <div class="d-flex align-items-start gap-3 mb-3">
+      <img
+        [src]="prdService.objPro.image || product.image"
+        alt=""
+        class="rounded"
+        width="72"
+        height="72"
+      />
+      <div class="flex-1">
+        <div class="fw-semibold">{{ prdService.objPro.name }}</div>
+        <div class="d-flex align-items-baseline gap-2">
+          @if (prdService.objPro.contactPrice || !prdService.objPro.price) {
+            <div class="h5 mb-0">Liên hệ</div>
+          } @else if (prdService.objPro.priceAfterDiscount) {
+            <div class="h5 mb-0">{{ prdService.objPro.priceAfterDiscount | i18nCurrencyAmount :{showSymbol: true} }}
+            </div>
+            <del
+              class="text-muted">{{ prdService.objPro.price | i18nCurrencyAmount :{showSymbol: true} }}
+            </del>
+          } @else {
+            <div class="h5 mb-0">{{ prdService.objPro.price | i18nCurrencyAmount :{showSymbol: true} }}</div>
+
+            @if (prdService.objPro.priceOld) {
+              <del
+                class="text-muted">{{ product.priceOld | i18nCurrencyAmount :{showSymbol: true} }}
+              </del>
+            }
+          }
+        </div>
+      </div>
+      <button type="button" class="btn btn-link p-0 ms-auto" (click)="active.dismiss('x')">
+        <i class="bi bi-x-lg"></i>
+      </button>
+    </div>
+
+    <div class="border-top"></div>
+    @if (selectChilds.length) {
+      <div class="d-flex align-items-center mt-2">
+        <div class="flex-shrink-0 w-25">Phân loại</div>
+        <div class="flex-1 w-75">
+          <p-select
+            [options]="selectChilds"
+            [(ngModel)]="product.id"
+            (onChange)="onChangeChild($event.value)"
+            name="childVariant"
+            size="small"
+            optionLabel="name"
+            optionValue="code"
+            [placeholder]="''"
+            class="w-100"
+            [panelStyleClass]="'custom-dropdown-panel'"
+          />
+        </div>
+      </div>
+    } @else {
+
+      @if (product.availableColors && product.availableColors.length) {
+        <div class="d-flex mt-3">
+          <div class="flex-shrink-0 w-25">Màu sắc</div>
+          <div class="d-flex flex-1 flex-wrap gap-2">
+            @for (color of product.availableColors; track color) {
+              <span class="btn btn-sm fw-semibold border"
+                    [class.attrActive]="color === prdService.objPro.color"
+                    (click)="prdService.onColorChange(color)">
+                            {{ color }}
+                        </span>
+            }
+          </div>
+        </div>
+      }
+
+      @if (prdService.availableSizes && prdService.availableSizes.length) {
+        <div class="d-flex mt-2">
+          <div class="flex-shrink-0 w-25">Kích thước</div>
+          <div class="d-flex flex-1 flex-wrap gap-2">
+            @for (size of this.prdService.availableSizes; track size) {
+              <span class="btn btn-sm fw-semibold border"
+                    [class.attrActive]="size === prdService.objPro.size"
+                    [ngClass]="checkDisableSize(size)"
+                    (click)="prdService.onSizeChange(size)">
+                                    {{ size }}
+                                </span>
+            }
+          </div>
+        </div>
+      }
+    }
+
+    <div class="d-flex mt-3">
+      <div class="flex-shrink-0 w-25">Số lượng</div>
+      <div class="d-flex flex-1 flex-wrap gap-2">
+        <app-auto-numeric
+          [ngStyleInput]="{
+                              'border-radius': '0',
+                              'width': '50px',
+                              'height': '36px',
+                              'text-align': 'center',
+                              'padding':'0'
+                            }"
+          [showButtonChange]="true"
+          [(value)]="prdService.objPro.quantity"
+          [classInput]="'inputQttSmaller text-center'"
+        />
+      </div>
+    </div>
+
+    @if (prdService.isRequiredAttr || prdService.isRequiredChild) {
+      <div class="py-2 px-3 mt-2 position-sticky bottom-0">
+        <div class="alert w-100 alert-warning m-0 p-2">
+          @if (prdService.isRequiredAttr) {
+            {{ prdService.isRequiredAttr }}
+          }
+          @if (prdService.isRequiredChild) {
+            {{ prdService.isRequiredChild }}
+          }
+        </div>
+      </div>
+    }
+
+    <div class="d-flex gap-3 mt-2 safe-bottom">
+      <button class="btn flex-fill" (click)="confirmOrder()">
+        Xác nhận
+      </button>
+    </div>
+  </div>
+</div>
+
