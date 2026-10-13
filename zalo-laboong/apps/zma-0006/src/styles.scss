@@ -1,0 +1,26 @@
+/* You can add global styles to this file, and also import other style files */
+
+.bg-background {
+  background-color: #ffffff;
+}
+
+.offcanvas-bottom-sheet.offcanvas-bottom {
+  height: auto;
+  max-height: min(85vh, 720px);
+  border-top-left-radius: 16px;
+  border-top-right-radius: 16px;
+  overflow: auto;
+}
+
+.text-gray {
+  color: gray;
+}
+
+.text-13 {
+  font-size: 13px;
+}
+
+img {
+  width: 100%;
+  height: auto;
+}
