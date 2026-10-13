@@ -1,0 +1,54 @@
+.personal-info-block h5 {
+  font-size: 16px;
+  font-weight: 600;
+  margin-bottom: 16px;
+}
+
+.form-group {
+  margin-bottom: 14px;
+}
+
+.input-group {
+  display: flex;
+  align-items: center;
+}
+
+.input-group .prefix {
+  background: #f5f5f5;
+  border: 1px solid #ddd;
+  border-right: none;
+  border-radius: 6px;
+  padding: 8px 10px;
+}
+
+.input-group input {
+  flex: 1;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  padding: 8px;
+}
+
+.btn-clear {
+  border: none;
+  background: transparent;
+  font-size: 16px;
+  margin-left: -32px;
+  cursor: pointer;
+}
+
+.gender-group {
+  display: flex;
+  gap: 20px;
+}
+
+.btn-save {
+  width: 100%;
+  background: var(--brand-color);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 10px;
+  font-size: 15px;
+  font-weight: 500;
+  cursor: pointer;
+}

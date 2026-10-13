@@ -1,0 +1,104 @@
+<div class="address-screen">
+  <!-- Trạng thái CHƯA có địa chỉ -->
+  @if (!hasCustomer()) {
+    <div class="address-empty d-flex align-items-center justify-content-between p-3">
+      <span class="text-primary fw-semibold">Thêm địa chỉ mới</span>
+      <button (click)="addAddressModal()" type="button" class="btn p-0 text-primary">
+        <i class="ph-light ph-plus ph-lg"></i>
+      </button>
+    </div>
+  }
+
+  @if (hasCustomer()) {
+    <div class="address-title px-3 pt-3 pb-2 fw-semibold">
+      Đơn hàng sẽ được gửi đến địa chỉ này !
+    </div>
+
+    <!-- @for (item of customerSer.getAll(); track item.id) {-->
+      <!-- <div (click)="onActiveAddress(item)" class="address-card mx-3 position-relative mb-3"-->
+      <!-- [style]="!item.isDefault ? 'border: none' : ''"-->
+      <!-- role="button" tabindex="0">-->
+      <!-- @if (item.isDefault) {-->
+      <!-- <div class="check-corner">-->
+      <!-- <i class="ph-bold ph-check"></i>-->
+      <!-- </div>-->
+      <!-- }-->
+
+      <!-- <div class="addr-body">-->
+      <!-- <div class="addr-name fw-bold">{{ item.name }}</div>-->
+      <!-- <div class="addr-phone text-muted">{{ item.mobile }}</div>-->
+      <!-- <div class="addr-line text-muted text-wrap">-->
+      <!-- {{ fullAddress(item) }}-->
+      <!-- </div>-->
+      <!-- </div>-->
+
+      <!-- <i (click)="editAddress(item)" class="ph-light ph-caret-right chevron-right"></i>-->
+      <!-- <button class="btn border-0 fw-bold text-danger" (click)="onRemoveAddress(item)">Xoá</button>-->
+      <!-- </div>-->
+      <!-- }-->
+
+    @for (item of customerSer.getAll(); track item.id) {
+
+      <div class="swipe-item"
+           #swipeItem
+           (touchstart)="onTouchStart($event)"
+           (touchmove)="onTouchMove($event, swipeItem)"
+           (touchend)="onTouchEnd(swipeItem)">
+
+        <button
+          class="delete-btn"
+          (click)="onRemoveAddress(item)">
+          Xoá
+        </button>
+
+        <div
+          class="address-card-wrapper"
+          (click)="onActiveAddress(item)"
+          role="button"
+          tabindex="0">
+
+          <div class="address-card position-relative"
+               [class.active]="item.isDefault">
+
+            @if (item.isDefault) {
+              <div class="check-corner">
+                <i class="ph-bold ph-check"></i>
+              </div>
+            }
+
+            <div class="addr-body">
+              <div class="addr-name fw-bold">{{ item.name }}</div>
+              <div class="addr-phone text-muted">{{ item.mobile }}</div>
+              <div class="addr-line text-muted text-wrap">
+                {{ fullAddress(item) }}
+              </div>
+            </div>
+
+            <i
+              (click)="editAddress(item)"
+              class="ph-light ph-caret-right chevron-right">
+            </i>
+
+          </div>
+        </div>
+      </div>
+    }
+
+
+    <div (click)="addAddressModal()" class="address-empty d-flex align-items-center gap-2 px-3 py-3">
+      <button type="button" class="btn p-0 text-primary">
+        <i class="ph-light ph-plus ph-lg"></i>
+      </button>
+      <span class="text-primary fw-semibold">Thêm địa chỉ mới</span>
+    </div>
+  }
+</div>
+@if (hasCustomer() && !isAddressBook) {
+  <div class="confirm-address-button p-2 safe-pb-16">
+    <button
+      class="btn btn-primary btn-order__add w-100 fw-semibold rounded"
+      (click)="onConfirm()">
+      Xác nhận
+    </button>
+  </div>
+}

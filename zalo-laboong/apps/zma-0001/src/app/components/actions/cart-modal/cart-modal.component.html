@@ -1,0 +1,192 @@
+<div class="cart-sheet">
+  <div class="sheet-header">
+    <div class="h5 mb-0 text-center">Giỏ hàng</div>
+    <button type="button" class="btn-close text-muted position-absolute top-0 end-0 m-3"
+            aria-label="Close"
+            (click)="active.dismiss('close')">
+      <i class="bi bi-x-xl"></i>
+    </button>
+  </div>
+  <div class="border-top"></div>
+
+  <div class="sheet-body">
+    @if ((cartData.items | keyvalue).length) {
+      <div class="d-flex align-items-center justify-content-between">
+        <button type="button" class="select-all-btn" (click)="toggleSelectAll()">
+          <span class="cart-checkbox" [class.cart-checkbox--checked]="isAllSelected">
+            @if (isAllSelected) {
+              <i class="ph-bold ph-check"></i>
+            }
+          </span>
+          <span class="fw-semibold">Chi tiết đơn hàng ({{ cartData.totalQuantities | i18nInteger }})</span>
+        </button>
+        <div (click)="removeAllCart()" class="text-danger">
+          Xóa hết
+        </div>
+      </div>
+      @for (it of itemsCart; track it.productId; let last = $last) {
+        <div class="cart-line d-flex align-items-start">
+          <button type="button" class="cart-checkbox cart-checkbox--item" [class.cart-checkbox--checked]="selectedIds.has(it.productId)" (click)="toggleSelect(it)">
+            @if (selectedIds.has(it.productId)) {
+              <i class="ph-bold ph-check"></i>
+            }
+          </button>
+          <img [src]="it.image" alt="" class="thumb rounded me-2">
+
+          <div class="flex-grow-1">
+            <div class="mb-2 d-flex justify-content-between align-items-center">
+              <div class="name fw-semibold text-truncate-2">{{ it.name }}</div>
+              <button type="button" class="btn btn-link text-muted p-0 me-1" (click)="onRemoveProduct(it)">
+                <i class="ph ph-x"></i>
+              </button>
+            </div>
+
+            <div class="row gx-1 gy-2">
+              <div class="col-12 box-body_bottom d-flex justify-content-between align-items-center">
+                <div class="price-and-color_size prices d-flex align-items-baseline gap-2">
+                  <div class="price-box">
+                    <div class="price h5 mb-0">
+                      {{ it.price | i18nCurrencyAmount : {showSymbol: true} }}
+                    </div>
+                    @if (it.priceOld) {
+                      <del class="old text-muted">
+                        {{ it.priceOld | i18nCurrencyAmount : {showSymbol: true} }}
+                      </del>
+                    }
+                  </div>
+                  @if (it.sizeChecked || it.colorChecked) {
+                    <div class="availableColorsSize">
+                      <span class="text-muted">
+                        @if (it.sizeChecked) {
+                          {{ it.sizeChecked }}
+                        }
+                        @if (it.sizeChecked && it.colorChecked) {
+                          &nbsp;/&nbsp;
+                        }
+                        @if (it.colorChecked) {
+                          {{ it.colorChecked }}
+                        }
+                      </span>
+                    </div>
+                  }
+                </div>
+                <app-auto-numeric
+                  [ngStyleInput]="{
+                              'border-radius': '0',
+                              'width': '35px',
+                              'height': '25px',
+                              'text-align': 'center',
+                              'padding':'0'
+                            }"
+                  [showButtonChange]="true"
+                  [styleClass]="'height: 25px'"
+                  [(value)]="it.quantity"
+                  (valueChange)="onQuantityChange(it, $event)"
+                  [classInput]="'inputQttSmaller text-center'"
+                />
+              </div>
+            </div>
+
+            @if (selectedIds.has(it.productId) && productGiftChoicesMap[it.productId]?.length) {
+              <div class="gift-choice-list">
+                @for (choice of productGiftChoicesMap[it.productId]; track choice.id) {
+                  <button type="button" class="gift-choice" [class.gift-choice--selected]="choice.selected" (click)="selectProductGift(it.productId, choice)">
+                    <span class="cart-checkbox" [class.cart-checkbox--checked]="choice.selected">
+                      @if (choice.selected) {
+                        <i class="ph-bold ph-check"></i>
+                      }
+                    </span>
+                    <span class="gift-choice__content">
+                      @if (choice.title) {
+                        <span class="gift-choice__title">{{ choice.title }}</span>
+                      }
+                      @for (gift of choice.products; track $index) {
+                        <span class="mini-gift-row">
+                          <span class="mini-gift-row__product">
+                            <img [src]="gift.image" [alt]="gift.name">
+                            <span>{{ gift.name }}</span>
+                          </span>
+                          <span>x {{ gift.quantity }}</span>
+                        </span>
+                      }
+                    </span>
+                  </button>
+                }
+              </div>
+            }
+          </div>
+        </div>
+        @if (!last) {
+          <div class="divider"></div>
+        }
+      }
+
+      @if (billGiftChoices.length) {
+        <section class="order-gift">
+          <div class="order-gift__header">
+            <span>
+              <i class="ph-light ph-gift"></i>
+              Chọn quà tặng
+            </span>
+          </div>
+          <div class="gift-choice-list gift-choice-list--bill">
+            @for (choice of billGiftChoices; track choice.id) {
+              <button type="button" class="gift-choice" [class.gift-choice--selected]="choice.selected" (click)="selectBillGift(choice)">
+                <span class="cart-checkbox" [class.cart-checkbox--checked]="choice.selected">
+                  @if (choice.selected) {
+                    <i class="ph-bold ph-check"></i>
+                  }
+                </span>
+                <span class="gift-choice__content">
+                  @if (choice.title) {
+                    <span class="gift-choice__title">{{ choice.title }}</span>
+                  }
+                  @for (gift of choice.products; track $index) {
+                    <span class="mini-gift-row">
+                      <span class="mini-gift-row__product">
+                        <img [src]="gift.image" [alt]="gift.name">
+                        <span>{{ gift.name }}</span>
+                      </span>
+                      <span>x {{ gift.quantity }}</span>
+                    </span>
+                  }
+                </span>
+              </button>
+            }
+          </div>
+        </section>
+      }
+    } @else {
+      <div class="text-center text-muted p-2">
+        <img src="assets/img/cart-empty.png" style="width: 180px; height: 166px">
+        <div class="hint cart-empty">Giỏ hàng trống</div>
+      </div>
+    }
+  </div>
+
+  <div class="sheet-footer border-top pt-2 p-4">
+    @if ((cartData.items | keyvalue).length) {
+      <div class="d-flex align-items-center justify-content-between mb-2">
+        <div class="text-muted">Tổng thanh toán:</div>
+        <div class="h5 mb-0">
+          {{ selectedTotal | i18nCurrencyAmount : {showSymbol: true} }}
+        </div>
+      </div>
+
+      <button
+        type="button"
+        class="btn btn-primary w-100 py-2 fw-semibold btn-checkout"
+        (click)="toCheckout()"
+        [disabled]="selectedCount === 0">
+        Thanh toán ngay <span class="mx-1">•</span> {{ selectedCount }} sản phẩm
+      </button>
+    } @else {
+      <button
+        type="button"
+        class="btn btn-primary w-100 py-2 fw-semibold btn-checkout"
+        [routerLink]="uriFeConst.product.category">
+        Tiếp tục mua sắm
+      </button>
+    }
+  </div>
+</div>

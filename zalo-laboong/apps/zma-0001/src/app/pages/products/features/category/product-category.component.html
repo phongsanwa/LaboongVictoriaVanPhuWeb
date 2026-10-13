@@ -1,0 +1,72 @@
+<div class="page-category bg-section overflow-hidden position-relative">
+  <div class="bg-background">
+    <div #categoryScroll class="bg-light d-flex flex-nowrap no-scrollbar gap-3 text-nowrap
+      overflow-auto space-x-6 overflow-x-auto p-2">
+      @for (cate of category; track cate.id) {
+        <a
+          [attr.data-cate-id]="cate.id"
+          class="d-flex h-100 flex-column align-items-center category-item cursor-pointer p-1 pb-1
+            {{ cate.id === selectedParentCategoryId ? 'bg-white rounded-3 border-end-4 color-active' : '' }}"
+          (click)="selectCategory(cate.id)"
+        >
+          <img
+            loading="eager"
+            [src]="cate.image || 'https://dummyimage.com/52x52/163645/fff'"
+            class="rounded-3 object-cover rounded-full img-category w-52 h-52"
+            [alt]="cate.name"
+          />
+          <div class="text-center text-uppercase mt-2 text-sm w-full line-clamp-2 text-subtitle text-normal">
+            {{ cate.name }}
+          </div>
+        </a>
+      }
+    </div>
+
+    @if (selectedParent?.childs?.length) {
+      <div class="subcate-dropdown-wrap">
+        <button
+          type="button"
+          class="subcate-btn"
+          (click)="showSubCategory = !showSubCategory"
+        >
+          <i class="ph-light ph-list"></i>
+        </button>
+
+        <div
+          class="subcate-dropdown
+    {{ showSubCategory ? 'show' : '' }}"
+        >
+
+          @for (c of selectedParent?.childs ?? []; track c.id) {
+
+            <a
+              class="subcate-dropdown-item
+        {{ c.id === selectedCategoryId ? 'active' : '' }}"
+              (click)="
+                 selectSubCategory(c.id);
+                 showSubCategory = false
+                 "
+            >
+              {{ c.name }}
+            </a>
+
+          }
+
+        </div>
+
+      </div>
+    }
+
+    <div class="row gx-0">
+      <div class="col-12">
+        @if (products.length) {
+          <div class="grid grid-cols-2 px-2 pt-2 pb-4 gap-3 scrollable" (scroll)="onScroll($event)">
+            @for (prd of products; track prd.id) {
+              <app-product-item [productInList]="prd"></app-product-item>
+            }
+          </div>
+        }
+      </div>
+    </div>
+  </div>
+</div>

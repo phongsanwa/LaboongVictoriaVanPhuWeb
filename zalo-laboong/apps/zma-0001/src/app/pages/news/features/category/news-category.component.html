@@ -1,0 +1,29 @@
+<div class="container">
+  <app-nav-tabs
+    [tabs]="tabs"
+    [active]="activeTab"
+    (activeChange)="onTabChange($event)"
+    [colors]="{ text: '#444', active: '#0b2e69', underline: '#0b2e69' }"
+  ></app-nav-tabs>
+
+  <div class="row mt-3">
+    @for (item of filteredNews; track item) {
+      <div class="col-6 mb-3" [routerLink]="uriFeConst.news.detail" [queryParams]="{ id: item.id }">
+        <div class="card shadow-sm h-100">
+          <a>
+            <img [src]="item.avatarUri" class="card-img-top" [alt]="item.title"/>
+          </a>
+          <div class="card-body">
+            <h6 class="card-title">
+              <a>{{ item.title }}</a>
+            </h6>
+            <p class="card-text text-muted small mb-0">
+              <i class="ph-light ph-calendar"></i>
+              {{ item.publishedDate | date: 'dd/MM/yyyy' }}
+            </p>
+          </div>
+        </div>
+      </div>
+    }
+  </div>
+</div>

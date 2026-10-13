@@ -1,0 +1,105 @@
+@if (product) {
+  <div class="w-100 px-2">
+    <div class="py-2 rounded-lg">
+      @if (imagesItem.length > 1) {
+        <app-universal-slide [items]="imagesItem"
+                             [config]="{ showNavigation: false, showPagination: true, autoplay: true, slidesPerView: 1 }">
+        </app-universal-slide>
+      } @else {
+        <img
+          [src]="imagesItem[0].image || 'assets/img/placeholder.jpg'"
+          class="w-100 h-100"
+          [alt]="imagesItem[0].title"
+        />
+      }
+    </div>
+
+    <div class="text-xl mb-2">{{ product.name }}</div>
+
+    <div class="d-inline-block">
+      @if (!product.price && !product.promotionDiscount) {
+        <span class="price fw-semibold">
+            Liên hệ
+          </span>
+      } @else if (product.promotionDiscount) {
+        <span class="price fw-semibold">
+            {{ product.promotionDiscount.finalPrice | i18nCurrencyAmount :{showSymbol: true} }}
+          </span>
+        <span class="text-muted text-decoration-line-through ms-2">
+            {{ product.promotionDiscount.originPrice | i18nCurrencyAmount :{showSymbol: true} }}
+          </span>
+      } @else {
+        <span class="price fw-semibold">
+            {{ product.price | i18nCurrencyAmount :{showSymbol: true} }}
+          </span>
+        @if (product.oldPrice) {
+          <span class="text-muted text-decoration-line-through ms-2">
+            {{ product.oldPrice | i18nCurrencyAmount :{showSymbol: true} }}
+            </span>
+        }
+      }
+    </div>
+
+    <div class="py-2">
+      <app-shared-button
+        [payload]="{
+            title: product.name,
+            thumbnail: product.imageThumb?.path || '',
+            path: '/product/view/?id=' + product.id
+          }">
+      </app-shared-button>
+    </div>
+
+    <div class="prd-detail py-2">
+      <h4 class="headline">Mô tả sản phẩm</h4>
+
+      @if ((product.content || '').trim()) {
+        <div class="minimize-overview">
+          <div class="minimize-overview-content"
+               [class.hide-minimize-content]="!expanded"
+               [class.show-minimize-content]="expanded"
+               [style.--collapsed-height.px]="collapsedHeight">
+            <div #contentEl id="minimizeOverviewTextHeight"
+                 class="minimize-overview-text richtext"
+                 [innerHTML]="product.content">
+            </div>
+          </div>
+
+          <div class="minimize-overview-gradient"
+               [class.show-minimize-gradient]="!expanded && showToggle"
+               [class.hide-minimize-gradient]="expanded || !showToggle">
+          </div>
+        </div>
+
+        @if (showToggle) {
+          <button type="button" class="more-about-minimize-link" (click)="toggle()">
+            <span class="more-about-minimize-text me-1">
+              <span class="more-about-minimize-more-less">
+                {{ expanded ? 'Thu gọn' : 'Xem thêm' }}
+              </span>
+            </span>
+            <span class="more-about-minimize-arrow"
+                  [class.arrow-down]="!expanded"
+                  [class.arrow-up]="expanded"></span>
+          </button>
+        }
+      } @else {
+        <div class="richtext-empty">Đang cập nhật mô tả…</div>
+      }
+    </div>
+
+<!--    <div class="related-product">-->
+<!--      <div class="section-title">-->
+<!--        <span>Có thể bạn sẽ thích</span>-->
+<!--      </div>-->
+
+<!--      <div class="px-2 py-2">-->
+<!--        <app-universal-slide [items]="relatedProducts" [config]="{ slidesPerView: 2, spaceBetween: 12 }">-->
+<!--          <ng-template let-prd>-->
+<!--            <app-product-item [productInList]="prd"></app-product-item>-->
+<!--          </ng-template>-->
+<!--        </app-universal-slide>-->
+<!--      </div>-->
+<!--    </div>-->
+  </div>
+}

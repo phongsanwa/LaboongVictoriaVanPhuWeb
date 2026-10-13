@@ -1,0 +1,99 @@
+
+.f-6 {
+  font-size: 1.25rem;
+}
+
+.pb-0\.5 {
+  padding-bottom: 0.125rem;
+}
+
+.flex-col {
+  flex-direction: column;
+}
+
+.grid {
+  display: grid;
+}
+
+.footer-nav {
+  grid-template-columns: repeat(5, 1fr);
+}
+
+.footer-nav a.active i {
+  color: var(--brand-color) !important;
+}
+
+.add-to-cart {
+  background-color: #e9ecef;
+  color: #212529;
+  border: none;
+  border-radius: 0.75rem;
+}
+
+.buy-now {
+  background-color: var(--brand-color);
+  color: #fff;
+  border: none;
+  border-radius: 0.75rem;
+}
+
+.btn {
+  font-size: 1rem;
+  font-weight: 500;
+}
+
+.zalo-chat_text {
+  font-size: 9px;
+}
+
+.logo-zalo-size {
+  width: 26px;
+}
+
+.chat_zalo {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.nav-item_nav {
+  width: 100%;
+  padding-left: 1rem;
+}
+
+.grid footer-nav .active span {
+  color: var(--brand-color) !important;
+}
+
+.text-2xs {
+  font-size: 0.75rem;
+}
+
+.translate-middle {
+  bottom: 30px;
+  right: 5px;
+}
+
+/* Active style chỉ áp cho tab KHÔNG có badge */
+.footer-nav .footer-tab.active:not(.no-active) i,
+.footer-nav .footer-tab.active:not(.no-active) span {
+  color: var(--brand-color);
+}
+
+.footer-tab.no-active {
+  position: relative;
+  background-color: transparent;
+  border: none;
+  color: #000000;
+}
+
+.footer-icon-img {
+  width: 1.3rem;
+  height: 1.3rem;
+}
+
+//class ẩn không cho click menu ở footer chưa hoạt động
+.disabled {
+  opacity: 0.4 !important;
+  pointer-events: none !important;
+}

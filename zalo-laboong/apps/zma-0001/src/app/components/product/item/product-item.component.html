@@ -1,0 +1,31 @@
+@if (productInList) {
+  <div class="prd-card rounded-3 border border-1">
+    <a class="img-wrap d-block rounded-top overflow-hidden"
+       [routerLink]="[uriFeConst.product.detail]"
+       [queryParams]="{ id: productInList.id }">
+      <img
+        ngOptimizedImage
+        [src]="productInList.imageThumb?.path || fallbackImage"
+        (error)="onImgError($event)"
+        [alt]="productInList.name"
+        class="w-100 object-cover aspect-square"/>
+    </a>
+
+    <button class="wish-btn" appOpenFavoriteSheet [product]="productInList">
+      <i class="ph-bold ph-heart" [appFavoriteActive]="productInList.id"></i>
+    </button>
+
+    <div class="p-1">
+      <div class="product-name line-clamp-2">{{ productInList.name }}</div>
+
+      <!-- <div class="price-block">{{ productInList.price }}</div>-->
+      <div class="price-block" [innerHTML]="productInList | productPriceHtml"></div>
+
+      <div class="sold text-muted">Đã bán {{ soldCount | shortNumber }}</div>
+
+    </div>
+    <button type="button" class="add-btn" (click)="onAddToCartClick($event)" aria-label="Thêm vào giỏ">
+      <i class="ph-bold ph-plus"></i>
+    </button>
+  </div>
+}

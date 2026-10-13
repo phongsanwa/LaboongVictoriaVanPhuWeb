@@ -1,0 +1,38 @@
+.w-30 {
+  width: 30%;
+}
+
+.sheet {
+  padding-bottom: max(16px, env(safe-area-inset-bottom));
+}
+
+.qty-box button {
+  width: 40px;
+}
+
+.offcanvas-bottom-sheet.offcanvas-bottom {
+  height: auto;
+  max-height: min(85vh, 720px);
+  border-top-left-radius: 16px;
+  border-top-right-radius: 16px;
+  overflow: auto;
+}
+
+.btn.active {
+  border-color: var(--bs-primary);
+  color: var(--bs-primary);
+}
+
+.safe-bottom > button {
+  background-color: var(--brand-color);
+  color: #ffffff;
+}
+
+.attrActive {
+  background-color: var(--brand-color) !important;
+  color: #ffffff !important;
+}
+
+.btn.disabled {
+  opacity: 0.2;
+}

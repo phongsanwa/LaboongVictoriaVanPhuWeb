@@ -1,0 +1,53 @@
+<div class="container py-4">
+  <h2>Kết quả tìm kiếm <span class="text-primary">"{{ keyword }}"</span></h2>
+
+  @if (isLoading && currentPage === 1) {
+  <div>Đang tải...</div>
+  }
+
+  @if (errorMessage) {
+  <div class="alert alert-danger">{{ errorMessage }}</div>
+  }
+
+  @if (!isLoading && products.length === 0 && !errorMessage) {
+  <div>
+    Không tìm thấy sản phẩm nào cho từ khóa "{{ keyword }}".
+  </div>
+  }
+
+
+  <div class="g-3 product-search-wrap">
+    @for (product of products; track product) {
+    <div class="product-item">
+      <a [routerLink]="uriFeConst.product.detail"
+         [queryParams]="{ id: product.id }">
+      <div class="card">
+        <img [src]="product.imageThumb?.path || 'https://dummyimage.com/950x1425/fff'"
+               class="card-img-top"
+               [alt]="product.name"
+               onerror="this.src='https://dummyimage.com/950x1425/163645/fff'"
+          >
+        <div class="card-body-product">
+          <h6 class="card-title">{{ product.name }}</h6>
+          <div class="product-price" [innerHTML]="product | productPriceHtml">
+          </div>
+        </div>
+      </div>
+      </a>
+    </div>
+    }
+  </div>
+
+@if (currentPage < totalPages) {
+  <div class="text-center">
+    <button
+      class="btn btn-primary load-more-btn"
+      [disabled]="isLoading"
+      (click)="loadMore()"
+    >
+      {{ isLoading ? 'Đang tải...' : 'Xem thêm' }}
+    </button>
+  </div>
+  }
+
+</div>

@@ -1,0 +1,167 @@
+.wrap {
+  height: 100%;
+}
+
+.step1 {
+  height: 100%;
+  background-repeat: no-repeat;
+  background-size: cover;
+  background-position: bottom center;
+  background-image: url(https://res.cloudinary.com/dxy2muzyb/image/upload/v1762503722/background_game_wheel.png) !important;
+}
+
+.step2 {
+  position: relative;
+  height: 100%;
+  background-repeat: no-repeat;
+  background-size: cover;
+  background-position: bottom center;
+  background-image: url(https://res.cloudinary.com/dxy2muzyb/image/upload/v1762591958/background_gamewheel_step2_ut5jpw.png) !important;
+}
+
+.box-spin {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.run-spin {
+  background-color: var(--brand-color) !important;
+  border: none;
+  color: #fff;
+  font-size: 1rem;
+  font-weight: 700;
+  border-radius: 15px;
+  min-width: 170px;
+}
+
+/* Nút “CHƠI GAME” ở chính giữa */
+.game-button {
+  position: absolute;
+  left: 50%;
+  top: 55%;
+  transform: translate(-50%, -50%);
+  background-color: var(--brand-color) !important;
+  border: none;
+  color: #fff;
+  font-size: 1.5rem;
+  font-weight: 700;
+  border-radius: 15px;
+  min-width: 300px;
+}
+
+.game-turn-info {
+  color: #fff;
+  font-weight: 700;
+  padding: 10px 12px;
+}
+
+.w-menu {
+  position: absolute;
+  bottom: 2rem;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 100%;
+  display: flex;
+  justify-content: space-around;
+  margin-top: 20px;
+  font-weight: 900;
+}
+
+.w-menu-item {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+
+  text-align: center;
+  color: #fff;
+  background-color: var(--brand-color);
+  width: 72px;
+  padding: 5px 6px 8px;
+  border: 0;
+  border-radius: 20px;
+  cursor: pointer;
+  user-select: none;
+
+  transition: transform .15s ease, filter .15s ease;
+
+  &:hover {
+    transform: translateY(-1px);
+  }
+
+  &:active {
+    transform: translateY(1px);
+  }
+}
+
+.w-icon {
+  width: 32px;
+  height: 32px;
+}
+
+.w-text {
+  font-size: 12px;
+  line-height: 1.2;
+  font-weight: 600;
+}
+
+.back-home {
+  position: fixed;
+  top: calc(var(--zaui-safe-area-inset-top, 0px));
+  left: 1.25rem;
+
+  width: 42px;
+  height: 42px;
+  border-radius: 999px;
+
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  background: color-mix(in oklab, #ffffff 85%, transparent);
+  backdrop-filter: blur(6px);
+
+  border: 2px solid var(--brand-color);
+  color: var(--brand-color);
+
+  box-shadow: 0 6px 18px rgba(0, 0, 0, .15);
+  z-index: 1100;
+
+  transition: transform .12s ease, box-shadow .12s ease, background-color .12s ease;
+
+  i {
+    font-size: 18px;
+    line-height: 1;
+  }
+
+  &:hover {
+    box-shadow: 0 8px 22px rgba(0, 0, 0, .18);
+  }
+
+  &:active {
+    transform: scale(.96);
+  }
+}
+
+.music-toggle {
+  position: absolute;
+  top: calc(var(--zaui-safe-area-inset-top, 0px));
+  right: 120px;
+  width: 38px; height: 38px;
+  border-radius: 999px;
+  border: none;
+  background: color-mix(in oklab, #ffffff 85%, transparent);
+  box-shadow: 0 2px 8px rgba(0,0,0,.15);
+  backdrop-filter: blur(6px);
+  color: var(--brand-color);
+  display: grid; place-items: center;
+  cursor: pointer;
+  z-index: 1;
+}
+.music-toggle.on { background: #e6f7ff; }
+.music-toggle i { font-size: 18px; line-height: 1; }

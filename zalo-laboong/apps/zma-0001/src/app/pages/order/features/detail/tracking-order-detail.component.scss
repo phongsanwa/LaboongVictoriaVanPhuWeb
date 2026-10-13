@@ -1,0 +1,268 @@
+
+$active: var(--brand-color);
+$muted: #9aa0a6;
+$bar-bg: #ececec;
+
+.steps {
+  --step-col: 1fr;
+  --bar-col: 70px;
+  --fs-label: 12px;
+  --fs-icon: 18px;
+  --step-size: 28px;
+  --bar-h: 3px;
+
+  display: grid;
+  grid-template-rows: auto auto;
+  row-gap: 8px;
+  width: 100%;
+  user-select: none;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+}
+
+.steps-icons {
+  display: grid;
+  grid-template-columns:
+    var(--step-col) var(--bar-col)
+    var(--step-col) var(--bar-col)
+    var(--step-col) var(--bar-col)
+    var(--step-col);
+  align-items: center;
+  width: 100%;
+}
+
+.steps-labels {
+  display: grid;
+  grid-template-columns:
+    var(--step-col) var(--bar-col)
+    var(--step-col) var(--bar-col)
+    var(--step-col) var(--bar-col)
+    var(--step-col);
+  width: 100%;
+}
+
+.steps-labels .label {
+  justify-self: center;
+  text-align: center;
+  font-size: var(--fs-label);
+  line-height: 1.3;
+  color: $muted;
+  width: 100%;
+  max-width: 20em;
+}
+
+.steps-labels .label:nth-child(1) {
+  grid-column: 1;
+}
+
+.steps-labels .label:nth-child(2) {
+  grid-column: 3;
+}
+
+.steps-labels .label:nth-child(3) {
+  grid-column: 5;
+}
+
+.steps-labels .label:nth-child(4) {
+  grid-column: 7;
+}
+
+.steps-labels .label.active {
+  color: $active;
+  font-weight: 500;
+}
+
+.step {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--step-size);
+  height: var(--step-size);
+  margin: 0 auto;
+}
+
+.step i {
+  font-size: var(--fs-icon);
+  line-height: 1;
+  color: #c8cdd3;
+}
+
+.step.active i {
+  color: $active;
+}
+
+.bar {
+  width: 100%;
+  height: var(--bar-h);
+  border-radius: 999px;
+  background: $bar-bg;
+  position: relative;
+  overflow: hidden;
+}
+
+.bar::after {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 0%;
+  height: 100%;
+  background: $active;
+  border-radius: inherit;
+  transition: width .3s ease;
+}
+
+.bar.active::after {
+  width: 100%;
+}
+
+.steps-icons > .step.active + .bar:not(.active)::after {
+  width: 0%;
+  animation: tracker-sweep 1.6s ease-in-out infinite;
+}
+
+@keyframes tracker-sweep {
+  0% {
+    width: 0%;
+  }
+  100% {
+    width: 100%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .steps-icons > .step:nth-child(1).active + .bar:not(.active)::after {
+    animation: none;
+    width: 50%;
+  }
+}
+
+@media (max-width: 390px) {
+  .steps {
+    --bar-col: 54px;
+    --fs-label: 12px;
+    --fs-icon: 16px;
+    --step-size: 24px;
+  }
+}
+
+@media (max-width: 350px) {
+  .steps {
+    --bar-col: 48px;
+    --fs-label: 11px;
+    --fs-icon: 15px;
+    --step-size: 22px;
+  }
+}
+
+.block {
+  padding: 14px 12px;
+
+  h4 {
+    margin: 0 0 10px;
+    font-size: 18px;
+    font-weight: 800;
+    color: #1d1c1a;
+  }
+
+  .item {
+    display: grid;
+    grid-template-columns: 28px 56px 1fr auto;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 0;
+    border-top: 1px solid #eee;
+
+    &:first-child { border-top: none; }
+  }
+
+  .qty {
+    color: #7c7670;
+    font-weight: 600;
+    text-align: center;
+  }
+
+  .thumb {
+    width: 56px;
+    height: 56px;
+    object-fit: cover;
+    border-radius: 8px;
+    border: 1px solid #eee;
+  }
+
+  .meta {
+    .title {
+      font-weight: 700;
+      line-height: 1.3;
+      color: #222;
+    }
+    .variant {
+      margin-top: 6px;
+      color: #9a968f;
+      font-weight: 600;
+      letter-spacing: .2px;
+    }
+  }
+
+  .price {
+    font-weight: 800;
+    color: #1d1c1a;
+    white-space: nowrap;
+  }
+}
+
+.shipping {
+  background: #fff8f2;
+
+  h4 { color: #000; }
+
+  .ship-type {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 10px;
+    color: #ff9332;
+    font-weight: 800;
+
+    .icon {
+      width: 28px;
+      height: 28px;
+      border-radius: 999px;
+      background: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: 1px solid #ffd8b1;
+    }
+  }
+
+  .receiver {
+    display: flex;
+    gap: 6px;
+    color: #2b2a28;
+    margin-bottom: 6px;
+
+    .mobile { opacity: .85; }
+  }
+
+  .addr {
+    color: #3b3936;
+    margin-bottom: 10px;
+  }
+
+  .note {
+    label {
+      display: block;
+      color: #7a756f;
+      margin-bottom: 6px;
+    }
+  }
+}
+
+.form-control {
+  width: 100%;
+  border: 1px solid #e7e3de;
+  border-radius: 10px;
+  padding: 10px 12px;
+  background: #fff;
+  color: #514f4a;
+  resize: none;
+}

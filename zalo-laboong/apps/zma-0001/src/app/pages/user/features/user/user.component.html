@@ -1,0 +1,171 @@
+@if (!(userInfo && userInfo.name)) {
+  <div class="login-prompt-box">
+    <div class="login-prompt-container">
+      <p class="prompt-text">Bạn chưa kích hoạt thành viên!</p>
+
+      <button class="login-button" (click)="grantPermission()">
+        <div class="icon-wrapper">
+          <i class="ph-bold ph-user"></i>
+        </div>
+
+        <div class="text-content">
+          <span class="main-cta">Kích hoạt thành viên</span>
+          <span class="sub-text">Tích điểm đổi thưởng, mở rộng tiện ích</span>
+        </div>
+      </button>
+    </div>
+  </div>
+} @else {
+  <div class="bg-gradient-top"
+       [style.background]="
+ 'linear-gradient(90deg, rgba(45,128,196,0.7) 0%, rgba(196,45,190,0.7) 100%), url('
+ + ('assets/img/mask_profile-mini-app.png' | assetUrl)
+ + ') no-repeat top right'
+ ">
+    <div class="py-3 px-2">
+      <div class="profile-hero">
+        <div class="info">
+          <div class="avatar">
+            <img
+              [src]="appService.getUserInfo && appService.getUserInfo.avatar ? appService.getUserInfo.avatar : 'assets/img/avatar-placeholder.jpg'"
+              [alt]="appService.getUserInfo && appService.getUserInfo.name ? appService.getUserInfo.avatar : ''"/>
+          </div>
+
+          <div class="text">
+            <h2
+              class="name">{{ appService.getUserInfo && appService.getUserInfo.name ? appService.getUserInfo.name : 'Guest' }}</h2>
+            @if (appService.getUserInfo && appService.getUserInfo.phoneNumber) {
+              <div class="phone">
+                <span class="ellipsis">{{ appService.getUserInfo.phoneNumber }}</span>
+              </div>
+            }
+          </div>
+        </div>
+
+        <!-- <button class="edit-btn" type="button" aria-label="Chỉnh sửa"-->
+        <!-- [routerLink]="uriFeConst.user.profileEdit">-->
+        <!-- <i class="ph-light ph-pencil-simple"></i>-->
+        <!-- </button>-->
+      </div>
+    </div>
+    <div class="profile-box">
+      <div class="pd-box">
+        <div class="order-card-box">
+          <div class="profile-card-box mb-2 pb-2">
+            <div class="card-section membership-section">
+              <div class="icon-wrapper gold-icon me-2">
+                <img [src]="'assets/img/member-star-tier.png'" alt="">
+              </div>
+              <div class="text-content">
+                <span class="main-text gold-text">Mới</span>
+                <span class="sub-text">Thành viên</span>
+              </div>
+              <!-- <i class="ph-bold ph-caret-right arrow-icon"></i>-->
+            </div>
+
+            <div class="vertical-divider"></div>
+
+            <div class="card-section points-section">
+              <div class="icon-wrapper points-icon me-2">
+                <img [src]="'assets/img/point.png'" alt="">
+              </div>
+              <div class="text-content">
+                <span class="main-text points-value">0</span>
+                <span class="sub-text">Điểm</span>
+              </div>
+              <!-- <i class="ph-bold ph-caret-right arrow-icon"></i>-->
+            </div>
+          </div>
+
+          <div class="order-card-header">
+            <span class="header-title">Đơn hàng của tôi</span>
+            <span class="header-link"
+                  [routerLink]="uriFeConst.order.tracking">
+ Xem tất cả
+ <i class="ph-light ph-caret-right"></i>
+ </span>
+          </div>
+          <div class="status-items-grid px-2">
+            <app-quick-order-status
+              [trackingRoute]="uriFeConst.order.tracking"
+              [statuses]="orderStatusData">
+            </app-quick-order-status>
+          </div>
+        </div>
+      </div>
+      <div class="settings-list-box">
+        <!-- <div class="list-item pd-box"-->
+        <!-- [routerLink]="uriFeConst.user.affiliate">-->
+        <!-- <i class="ph-light ph-sparkle me-2"></i>-->
+        <!-- <span class="item-text">Affiliate Marketing</span>-->
+        <!-- </div>-->
+
+        <div class="list-item pd-box"
+             [routerLink]="uriFeConst.user.address">
+          <i class="ph-light ph-notebook me-2"></i>
+          <span class="item-text">Sổ địa chỉ</span>
+        </div>
+
+        <!-- <div class="list-item pd-box"-->
+        <!-- [routerLink]="uriFeConst.user.feedback">-->
+        <!-- <i class="ph-light ph-envelope-simple me-2"></i>-->
+        <!-- <span class="item-text">Phản hồi</span>-->
+        <!-- </div>-->
+
+        <div class="list-item pd-box"
+             [routerLink]="uriFeConst.user.favoriteProducts">
+          <i class="ph-light ph-heart me-2"></i>
+          <span class="item-text">Sản phẩm yêu thích</span>
+        </div>
+
+        <div class="list-item pd-box"
+             [routerLink]="uriFeConst.user.termsAndPolicy">
+          <i class="ph-light ph-users me-2"></i>
+          <span class="item-text">Điều khoản và chính sách</span>
+        </div>
+
+        <div class="list-item pd-box">
+          <i class="ph-light ph-gear me-2"></i>
+          <span class="item-text">Phiên bản: v{{ appInfo && appInfo.version ? appInfo.version : '1' }}</span>
+        </div>
+
+        <div class="list-item pd-box content-bottom">
+          <div class="create-shortcut mb-2 text-center border border-dark p-2 rounded-pill w-100"
+               (click)="createShortcut()">
+            <i class="ph-light ph-plus-square me-2"></i>
+            Tạo phím tắt ứng dụng
+          </div>
+
+          <div class="box-qr d-flex justify-content-center align-items-center py-2">
+            <div class="qr-card">
+              <div class="small-text mb-2">
+                Chia sẻ mã QR này để kết bạn nhanh chóng, bảo mật
+              </div>
+
+              <h2 class="fw-bold mb-3">{{ appInfo && appInfo.name ? appInfo.name : '' }}</h2>
+
+              <img #qrCodeImage
+                   src="{{ appInfo && appInfo.qrCodeUrl ? appInfo.qrCodeUrl : '' }}"
+                   alt="QR Code Zalo"
+                   class="qr-code w-100"
+              >
+
+              <div class="d-flex justify-content-center gap-3 mt-3">
+                <button class="btn btn-light btn-qrcode shadow-sm" (click)="downloadQRCode()">
+                  <i class="ph-light ph-arrow-line-down me-2"></i> Tải xuống
+                </button>
+                <button class="btn btn-light btn-qrcode shadow-sm" (click)="onShareClick()">
+                  <i class="ph-light ph-share-fat me-2"></i> Chia sẻ
+                </button>
+              </div>
+
+              <div class="footer text-center mt-3">
+                POWERED BY NHANH.VN
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+}

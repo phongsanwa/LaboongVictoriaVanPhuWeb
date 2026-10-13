@@ -1,0 +1,18 @@
+@if (!isLoading && articleDetail) {
+  <div class="page-news-detail">
+    @if(articleDetail.avatarUri) {
+      <img
+        class="w-100 mb-2"
+        [src]="articleDetail.avatarUri"
+        [alt]="articleDetail.title">
+    }
+    <h1 class="news-title mb-0 px-2">
+      {{ articleDetail.title }}
+    </h1>
+    <div class="mt-1 px-2"
+         [innerHTML]="articleDetail.content">
+    </div>
+  </div>
+} @else if (!isLoading && !articleDetail) {
+  <div class="p-2">Bài viết đang được cập nhật...</div>
+}

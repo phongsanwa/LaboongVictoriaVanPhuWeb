@@ -1,0 +1,149 @@
+@if (orderData) {
+  <div class="steps py-3 px-2">
+    <div class="steps-icons">
+      <div class="step" [class.active]="step>=1"><i class="ph-light ph-receipt"></i></div>
+      <div class="bar" [class.active]="step>=2"></div>
+
+      <div class="step" [class.active]="step>=2"><i class="ph-light ph-seal-check"></i></div>
+      <div class="bar" [class.active]="step>=3"></div>
+
+      <div class="step" [class.active]="step>=3"><i class="ph-light ph-truck"></i></div>
+      <div class="bar" [class.active]="step>=4"></div>
+
+      <div class="step" [class.active]="step>=4" [class.canceled]="isCanceled">
+        <i class="ph-light ph-flag-pennant"></i>
+      </div>
+    </div>
+
+    <div class="steps-labels">
+      <div class="label" [class.active]="step>=1">{{ labels[0] }}</div>
+      <div class="label" [class.active]="step>=2">{{ labels[1] }}</div>
+      <div class="label" [class.active]="step>=3">{{ labels[2] }}</div>
+      <div class="label" [class.active]="step>=4" [class.canceled]="isCanceled">{{ labels[3] }}</div>
+    </div>
+  </div>
+
+  <section class="block shipping">
+    <h4 class="fw-semibold mb-2">Thông tin giao hàng</h4>
+
+    <div class="ship-type">
+      <div class="icon">
+        <i class="ph ph-truck"></i>
+      </div>
+      <div class="type">Giao hàng tận nơi</div>
+    </div>
+
+    <div class="receiver">
+      <div><span class="fw-semibold">{{ orderData.customer.name }}</span> - {{ orderData.customer.mobile }}</div>
+    </div>
+    <div class="addr">{{ shippingAddressText }}</div>
+
+    <div class="note">
+      <label>Ghi chú</label>
+      <textarea class="form-control" rows="2" [disabled]="true">{{ orderData.description || 'Không có' }}</textarea>
+    </div>
+  </section>
+
+  <section class="block">
+    <div class="d-flex align-items-center justify-content-between mb-2">
+      <h4 class="fw-semibold mb-2">Theo dõi đơn hàng</h4>
+      @if (trackingUrl) {
+        <button class="btn btn-link p-0 text-decoration-none" type="button" (click)="openTracking()">Xem</button>
+      }
+    </div>
+
+    <h4>Sản phẩm đã chọn ({{ orderData.products.length }})</h4>
+
+    @if (orderData.products.length) {
+      @for (item of orderData.products; track item.id) {
+        <div class="item">
+          <div class="qty">{{ item.quantity | i18nInteger }}x</div>
+          <img class="thumb" [src]="item.avatar || 'assets/img/no-image.png'" alt="{{ item.name}}"/>
+          <div class="meta">
+            <div class="title">{{ item.name }}</div>
+          </div>
+          <div class="price">
+            @if (item.prices.priceAfterDiscount) {
+              {{ item.prices.priceAfterDiscount | i18nCurrencyAmount }}
+            } @else {
+              {{ item.prices.price | i18nCurrencyAmount }}
+            }
+          </div>
+        </div>
+      }
+    }
+
+  </section>
+
+  <section class="px-3 pt-3 pb-2">
+    <h6 class="fw-semibold mb-2">Thanh toán</h6>
+
+    <div class="d-flex justify-content-between py-1">
+      <span class="text-body-secondary">Tạm tính</span>
+      <span>{{ orderData.totalAmount | i18nCurrencyAmount }}</span>
+    </div>
+
+    <div class="d-flex justify-content-between py-1">
+      <span class="text-body-secondary">Phí vận chuyển</span>
+      <span>{{ orderData.shipFee | i18nCurrencyAmount }}</span>
+    </div>
+
+    <div class="d-flex justify-content-between py-1">
+      <span class="text-danger">Giảm giá</span>
+      <span class="text-danger">{{ orderData.discountAmount | i18nCurrencyAmount }}</span>
+    </div>
+
+    <hr class="my-2">
+
+    <div class="d-flex justify-content-between align-items-center py-1">
+      <span class="fw-semibold">Tổng cộng</span>
+      <span
+        class="fw-bold fs-5">{{ (orderData.totalAmount - orderData.discountAmount + orderData.shipFee) | i18nCurrencyAmount }}</span>
+    </div>
+  </section>
+
+  <section class="px-3 py-3">
+    <h6 class="fw-semibold mb-2">Thông tin đơn hàng</h6>
+
+    <div class="d-flex justify-content-between align-items-center py-1">
+      <div class="text-body-secondary">Mã đơn hàng</div>
+      <div class="d-inline-flex align-items-center gap-2">
+        <span class="fw-semibold">{{ orderData.id }}</span>
+        <button class="btn btn-link p-0 text-decoration-none"
+                type="button"
+                (click)="copyOrderCode(orderData.id)"
+                aria-label="Copy mã">
+          <i class="ph ph-copy"></i>
+        </button>
+      </div>
+    </div>
+
+    <div class="d-flex justify-content-between py-1">
+      <div class="text-body-secondary">Ngày đặt hàng</div>
+      <div>{{ orderData.createdAt | dateI18n: 'SHORT_DATE' }}</div>
+    </div>
+
+    @if (orderCompletedLabel) {
+      <div class="d-flex justify-content-between py-1">
+        <div class="text-body-secondary">{{ orderCompletedLabel }}</div>
+        <div>{{ orderData.updatedAt | dateI18n: 'SHORT_DATE' }}</div>
+      </div>
+    }
+  </section>
+
+  <section class="px-3 py-3">
+    <div class="d-flex align-items-start gap-3" (click)="openSupportChat()">
+      <img src="assets/img/logo_zalo.svg" alt="Zalo" width="28" height="28" class="flex-shrink-0">
+      <div class="flex-grow-1">
+        <div class="fw-semibold mb-1">Chat với hỗ trợ</div>
+        <div class="text-body-secondary small">
+          Nếu bạn có vấn đề về sản phẩm, vận chuyển, trả hàng hoàn tiền
+        </div>
+      </div>
+      <button class="btn btn-link p-0 text-decoration-none flex-shrink-0"
+              type="button">
+        <i class="ph-bold ph-caret-right"></i>
+      </button>
+    </div>
+  </section>
+}

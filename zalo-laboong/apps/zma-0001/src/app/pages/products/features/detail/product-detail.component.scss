@@ -1,0 +1,126 @@
+.rounded-lg {
+  border-radius: 0.5rem;
+}
+
+.text-xl {
+  font-size: 18px;
+  line-height: 24px;
+}
+
+.bg-share {
+  --tw-bg-opacity: 1;
+  background-color: rgb(1 107 217 / 1);
+  border: none;
+}
+
+.price {
+  font-size: 19px;
+}
+
+.old-price {
+  font-size: 16px;
+  text-transform: uppercase;
+  color: #696969;
+}
+
+.detail-product-content img {
+  width: 100%;
+  height: auto;
+}
+
+.minimize-overview {
+  position: relative;
+  padding-bottom: 24px;
+}
+
+.minimize-overview-content {
+  overflow: hidden;
+}
+
+.hide-minimize-content {
+  height: var(--collapsed-height, 81px);
+  overflow: hidden;
+}
+
+.show-minimize-content {
+  height: auto;
+  overflow: visible;
+}
+
+.minimize-overview-text {
+  font-family: 'Lato', system-ui, -apple-system, 'Segoe UI', Roboto, Arial, sans-serif;
+  font-size: 16px;
+  line-height: 27px;
+  text-align: left;
+  padding-left: 14px;
+}
+
+.minimize-overview-gradient {
+  position: relative;
+  background: linear-gradient(to bottom, rgba(255, 255, 255, 0) 0%, #fff 100%);
+}
+
+.hide-minimize-gradient {
+  height: 0;
+  margin-top: 0;
+}
+
+.show-minimize-gradient {
+  height: 27px;
+  margin-top: -27px;
+}
+
+.more-about-minimize-link {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding-bottom: 20px;
+  background: none;
+  border: 0;
+}
+
+.more-about-minimize-text {
+  font-size: 14px;
+  color: inherit;
+  display: inline-block;
+  text-decoration: underline;
+}
+
+.more-about-minimize-arrow {
+  display: inline-block;
+  width: 0;
+  height: 0;
+  border-left: 6px solid transparent;
+  border-right: 6px solid transparent;
+  border-top: 8px solid currentColor;
+  transition: transform .2s ease;
+}
+
+.more-about-minimize-arrow.arrow-up {
+  transform: rotate(180deg);
+}
+
+.section-title {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  margin: 20px 0;
+}
+
+.section-title::before,
+.section-title::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: #ddd;
+  margin: 0 10px;
+}
+
+.section-title span {
+  font-size: 16px;
+  font-weight: 500;
+  color: #222;
+  white-space: nowrap;
+}

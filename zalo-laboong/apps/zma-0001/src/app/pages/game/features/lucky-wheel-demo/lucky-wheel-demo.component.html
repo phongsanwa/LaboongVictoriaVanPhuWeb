@@ -1,0 +1,90 @@
+<div class="wrap w-bg-main-screen">
+  <button
+    type="button"
+    class="back-home"
+    aria-label="Về trang chủ"
+    [routerLink]="'/'">
+    <i class="ph-light ph-caret-left"></i>
+  </button>
+
+  <button
+    type="button"
+    class="music-toggle"
+    [class.on]="musicOn"
+    (click)="toggleMusic()"
+    [attr.aria-pressed]="musicOn"
+    [attr.aria-label]="musicOn ? 'Tắt nhạc nền' : 'Bật nhạc nền'">
+    <i class="ph-light" [ngClass]="musicOn ? 'ph-speaker-high' : 'ph-speaker-x'"></i>
+  </button>
+
+  @if (step === 1) {
+    <section class="step1">
+      <button class="game-button shadow-lg py-3" type="button" (click)="openGame(step)">
+        CHƠI GAME
+      </button>
+
+      <div class="w-menu">
+        <button type="button" class="w-menu-item w-btn-guide" (click)="openRules()">
+          <div class="w-icon">
+            <i class="ph-bold ph-book-open ph-lg"></i>
+          </div>
+          <div class="w-text">Thể lệ</div>
+        </button>
+
+        <button type="button" class="w-menu-item w-btn-gift" (click)="openGifts()">
+          <div class="w-icon">
+            <i class="ph-bold ph-gift ph-lg"></i>
+          </div>
+          <div class="w-text">Túi quà</div>
+        </button>
+      </div>
+    </section>
+  }
+
+  @if (step === 2) {
+    <section class="step2">
+      <div class="box-spin">
+        <app-lucky-wheel
+          #wheel
+          [segments]="segments"
+          [size]="340"
+          [innerRadius]="48"
+          [spinTurns]="7"
+          [durationSec]="spinDurationSec"
+          [winnerId]="winnerId"
+          (spinEnd)="onSpinEnd($event)">
+        </app-lucky-wheel>
+
+        <button class="run-spin shadow-lg py-3" type="button" (click)="onSpinClick()">
+          Quay ngay
+        </button>
+
+        <div class="game-turn-info">
+          Lượt còn lại: <b>{{ countSpin }}</b>
+        </div>
+
+        <!-- <div class="game-mode-admin">-->
+        <!-- <button (click)="isReset()" style="background: transparent">-->
+        <!-- Reset-->
+        <!-- </button>-->
+        <!-- </div>-->
+      </div>
+
+      <div class="w-menu">
+        <button type="button" class="w-menu-item w-btn-guide" (click)="openRules()">
+          <div class="w-icon">
+            <i class="ph-bold ph-book-open ph-lg"></i>
+          </div>
+          <div class="w-text">Thể lệ</div>
+        </button>
+
+        <button type="button" class="w-menu-item w-btn-gift" (click)="openGifts()">
+          <div class="w-icon">
+            <i class="ph-bold ph-gift ph-lg"></i>
+          </div>
+          <div class="w-text">Túi quà</div>
+        </button>
+      </div>
+    </section>
+  }
+</div>

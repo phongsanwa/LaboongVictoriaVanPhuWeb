@@ -1,0 +1,113 @@
+<div class="min-h-full bg-section">
+  <div class="bg-background pt-2">
+    <app-search-bar></app-search-bar>
+    <div class="p-2">
+      <app-universal-slide [items]="slides"
+                           [config]="{
+                             showNavigation: false,
+                             showPagination: true,
+                             autoplay: true,
+                             slidesPerView: 1,
+                             showName: false,
+                             loop: false
+                           }">
+      </app-universal-slide>
+    </div>
+
+    <div class="menu-wrapper p-2">
+      <div class="menu-scroll">
+        <a [routerLink]="uriFeConst.user.favoriteProducts" class="menu-item">
+          <i class="ph-bold ph-heart"></i>
+          <span>Yêu thích</span>
+        </a>
+        <a [routerLink]="uriFeConst.news.category" class="menu-item">
+          <i class="ph-bold ph-bell"></i>
+          <span>Tin tức</span>
+        </a>
+        <!-- <a [routerLink]="uriFeConst.user.feedback" class="menu-item">-->
+        <!-- <i class="ph-bold ph-envelope"></i>-->
+        <!-- <span>Góp ý</span>-->
+        <!-- </a>-->
+        <a [routerLink]="uriFeConst.user.termsAndPolicy" class="menu-item">
+          <i class="ph-bold ph-users"></i>
+          <span>Về chúng tôi</span>
+        </a>
+        <a class="menu-item disabled" (click)="$event.preventDefault()">
+          <i class="ph-bold ph-game-controller"></i>
+          <span>Mini game</span>
+        </a>
+        <a class="menu-item disabled" (click)="$event.preventDefault()">
+          <i class="ph-bold ph-gift"></i>
+          <span>Ưu đãi</span>
+        </a>
+        <a class="menu-item disabled" (click)="$event.preventDefault()">
+          <i class="ph-bold ph-sparkle"></i>
+          <span>Affiliate</span>
+        </a>
+      </div>
+    </div>
+
+    <app-product-flash-sale></app-product-flash-sale>
+
+    <app-follow-oa
+      [oaId]="environment.OAId"
+      [buttonText]="'Quan tâm'"
+      [img]="'https://posstatic.nvndev.net/assets/img/favicon.svg'"
+      [explanationTitle]="'Nhanh.vn Official'"
+      [explanationContent]="'Quan tâm OA để nhận các chương trình đặc quyền ưu đãi'">
+    </app-follow-oa>
+
+    <!-- <div class="p-2">-->
+    <!-- <app-play-card-->
+    <!-- [title]="'Vòng Quay May Mắn – Follow Zalo OA để nhận lượt quay'"-->
+    <!-- [brandLogo]="'/assets/img/yody.png'"-->
+    <!-- [publishedAtLabel]="'09:34 04-10-2025'"-->
+    <!-- [openedAgo]="'19 ngày trước'"-->
+    <!-- [gameName]="'Vòng Quay May Mắn – Follow Zalo…'"-->
+    <!-- [gameId]="'fbff9e70192c2745a300835370...'"-->
+    <!-- [link]="'/luckywheel'"-->
+    <!-- [linkQuery]="{ ref: 'oa' }">-->
+    <!-- </app-play-card>-->
+    <!-- </div>-->
+
+    <div class="bg-background mt-2">
+      <div class="bg-background pt-1">
+        <div class="d-flex align-items-center justify-content-between px-2">
+          <div class="pt-2 pb-2 truncate fw-bold text-uppercase fs-6">Danh mục sản phẩm</div>
+          <a class="text-sm font-medium flex items-center space-x-1 p-2 cursor-pointer flex-none"
+             [routerLink]="uriFeConst.product.category">
+            <span>Xem thêm</span>
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+              <path fill-rule="evenodd" clip-rule="evenodd"
+                    d="M5.64642 2.64297C5.84168 2.44771 6.15826 2.44771 6.35352 2.64297L11.3535 7.64297C11.5488 7.83823 11.5488 8.15481 11.3535 8.35007L6.35352 13.3501C6.15826 13.5453 5.84168 13.5453 5.64642 13.3501C5.45115 13.1548 5.45115 12.8382 5.64642 12.643L10.2929 7.99652L5.64642 3.35007C5.45115 3.15481 5.45115 2.83823 5.64642 2.64297Z"
+                    fill="currentColor"></path>
+            </svg>
+          </a>
+        </div>
+        <div class="pt-1 pb-4 d-flex space-x-6 overflow-x-auto px-2 list-category">
+          <app-universal-slide [items]="categories" [config]="{ slidesPerView: 4, spaceBetween: 12, loop: false }">
+            <ng-template let-cate>
+              <a class="text-center no-hover d-block" [routerLink]="uriFeConst.product.category"
+                 [queryParams]="{ id: cate.id }">
+                <img [src]="cate.image || 'assets/img/no-image.png'" [alt]="cate.name || ''" class=" rounded-lg"/>
+                <span class="mt-2 text-sm font-medium ellipsis-1">{{ cate.name }}</span>
+              </a>
+            </ng-template>
+          </app-universal-slide>
+        </div>
+      </div>
+      <div class="bg-background pt-1">
+        <app-product-list title="Sản phẩm hot" [features]="[PRODUCT_FEATURE.HOT]"></app-product-list>
+      </div>
+      <div class="bg-background pt-1">
+        <app-product-list title="Sản phẩm mới" [features]="[PRODUCT_FEATURE.NEW]"></app-product-list>
+      </div>
+      <div class="bg-background pt-1">
+        <app-product-list title="Sản phẩm trang chủ" [features]="[PRODUCT_FEATURE.HOME]"></app-product-list>
+      </div>
+      <div class="bg-background pt-1 container">
+        <app-news-list></app-news-list>
+      </div>
+    </div>
+  </div>
+</div>

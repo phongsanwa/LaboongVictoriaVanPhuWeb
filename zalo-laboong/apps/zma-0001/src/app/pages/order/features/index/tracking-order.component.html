@@ -1,0 +1,73 @@
+﻿<app-nav-tabs
+  [tabs]="tabs"
+  [active]="activeTab"
+  [colors]="{ text: '#5f6b85', active: '#FFFFFF', underline: 'transparent' }"
+  (activeChange)="onActiveChange($event)">
+</app-nav-tabs>
+
+<div class="list">
+  @for (order of ordersTracking; track order.id) {
+    <div class="order-card">
+      <!-- <div class="card-head">-->
+      <!-- <app-order-status-pill [statusCode]="order.status"></app-order-status-pill>-->
+      <!-- </div>-->
+
+      <div class="product-box">
+        @for (product of getShowProducts(order); track product.id) {
+          <div class="product-item">
+            <img class="thumb" [src]="product.avatar" alt=""/>
+            <div class="meta">
+              <div class="name">{{ product.name }}</div>
+              <div class="qty">x {{ product.quantity }}</div>
+            </div>
+            <div class="price">{{ getProductTotal(product) | i18nCurrencyAmount }}</div>
+          </div>
+        }
+
+        @if (getRemainingProducts(order) > 0) {
+          <button class="more" type="button" (click)="toggleProducts(order.id)">
+            Xem thêm {{ getRemainingProducts(order) }} sản phẩm
+          </button>
+        } @else if ((order.products.length || 0) > 1) {
+          <button class="more" type="button" (click)="toggleProducts(order.id)">
+            Thu gọn danh sách
+          </button>
+        }
+
+        <div class="customer">
+          <div class="line main">
+            <i class="ph ph-user"></i>
+            <span>{{ order.customer.name || '-' }}</span>
+            <span class="dot">•</span>
+            <span>{{ order.customer.mobile || '-' }}</span>
+          </div>
+          <div class="line address">
+            <i class="ph-bold ph-map-pin"></i>
+            <span>{{ order.customer.address || '-' }}</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="card-foot">
+        <div class="left">
+          <div class="total">
+            <span>Tổng thanh toán</span>
+            <b>{{ order.totalAmount | i18nCurrencyAmount }}</b>
+          </div>
+          <div class="purchase-date">
+            <i class="ph ph-clock"></i>
+            <span>{{ order.createdAt | dateI18n: 'SHORT_DATE' }}</span>
+          </div>
+        </div>
+
+        <button class="btn-detail"
+                [routerLink]="uriFeConst.order.trackingDetail"
+                [queryParams]="{id: order.id}"
+                type="button">Xem chi tiết
+        </button>
+      </div>
+    </div>
+  } @empty {
+    <div class="empty">Chưa có đơn hàng</div>
+  }
+</div>

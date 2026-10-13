@@ -1,0 +1,16 @@
+<div class="w-screen h-screen d-flex flex-col bg-background text-foreground">
+  <app-spinner-with-logo
+    [loading]="(isLoading$ | async) ?? false"
+    [position]="'position-fixed'"
+    [opacity]="0.25">
+  </app-spinner-with-logo>
+  <app-header></app-header>
+  <div class="flex-1_custom overflow-y-auto">
+    <router-outlet></router-outlet>
+  </div>
+  <app-footer></app-footer>
+  <app-fab-actions
+    [showOn]="['/']"
+    (share)="openShare()">
+  </app-fab-actions>
+</div>

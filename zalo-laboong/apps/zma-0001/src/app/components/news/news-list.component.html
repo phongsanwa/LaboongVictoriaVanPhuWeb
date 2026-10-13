@@ -1,0 +1,31 @@
+<div class="d-flex align-items-center justify-content-between">
+  <div class="pt-2 pb-2 truncate fw-bold text-uppercase fs-6">Tin tức</div>
+  <a class="text-sm font-medium d-flex align-items-center space-x-1 p-2 cursor-pointer flex-none"
+     [routerLink]="uriFeConst.news.category">
+    <span>Xem thêm</span>
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+      <path fill-rule="evenodd" clip-rule="evenodd"
+            d="M5.64642 2.64297C5.84168 2.44771 6.15826 2.44771 6.35352 2.64297L11.3535 7.64297C11.5488 7.83823 11.5488 8.15481 11.3535 8.35007L6.35352 13.3501C6.15826 13.5453 5.84168 13.5453 5.64642 13.3501C5.45115 13.1548 5.45115 12.8382 5.64642 12.643L10.2929 7.99652L5.64642 3.35007C5.45115 3.15481 5.45115 2.83823 5.64642 2.64297Z"
+            fill="currentColor"></path>
+    </svg>
+  </a>
+</div>
+
+@if (newsList && newsList.length > 0) {
+  <div class="justify-content-start latest-news">
+    @for (n of newsList; track n.id) {
+      <div class="news-item">
+        <div class="card shadow-sm" [routerLink]="uriFeConst.news.detail" [queryParams]="{ id: n.id }">
+          <a><img [src]="n.avatarUri" class="card-img-top" [alt]="n.title"></a>
+          <div class="card-body">
+            <h6 class="card-title"><a>{{ n.title }}</a></h6>
+            <p class="card-text text-muted small mb-0">
+              <i class="ph-light ph-calendar"></i> {{ n.publishedDate | date:'dd/MM/yyyy' }}
+            </p>
+          </div>
+        </div>
+      </div>
+    }
+  </div>
+}
+

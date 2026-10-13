@@ -1,0 +1,33 @@
+@if (products && products.length) {
+  @for (prd of products; track prd.id) {
+    <div class="cart-item d-flex gap-3 mb-3">
+
+      <div class="cart-item-image position-relative">
+        <img src="{{ prd.image }}" alt="{{ prd.name}}">
+      </div>
+
+      <div class="d-flex flex-grow-1" style="min-width: 0;">
+
+        <div class="flex-grow-1" style="min-width: 0;">
+          <h6 class="cart-item-info mb-2">{{ prd.name }}</h6>
+
+          <div class="price-line main-price">
+            <span>Giá:</span>
+            <span
+              class="price-value">{{ prd.price ? (prd.price | i18nCurrencyAmount: {showSymbol: true}) : 'Liên hệ' }}</span>
+          </div>
+        </div>
+
+        <div class="align-self d-flex flex-column justify-content-between">
+          <button class="btn btn-delete-icon" (click)="removeProduct(prd.id)">
+            <i class="ph-bold ph-trash"></i>
+          </button>
+          <button type="button" class="add-btn" (click)="onAddToCartClick(prd.id)" aria-label="Thêm vào giỏ">
+            <i class="ph-bold ph-plus"></i>
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+}
+

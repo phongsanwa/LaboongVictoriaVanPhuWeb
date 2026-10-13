@@ -1,0 +1,40 @@
+@if(program) {
+  <div class="wrap w-bg-main-screen">
+    <h2 class="title">{{ program.name }}</h2>
+
+    <app-lucky-wheel
+      #wheel
+      [segments]="segments"
+      [size]="340"
+      [innerRadius]="48"
+      [spinTurns]="7"
+      [durationSec]="4.5"
+      [winnerId]="winnerId"
+      (spinEnd)="onSpinEnd($event)">
+    </app-lucky-wheel>
+
+    @if (!hasPlayer) {
+      <form [formGroup]="form" class="form">
+        <input class="form-control" placeholder="Họ tên" formControlName="name">
+        <input class="form-control" placeholder="Số điện thoại" formControlName="phone">
+        <select class="form-select" formControlName="gender">
+          <option value="male">Nam</option>
+          <option value="female">Nữ</option>
+          <option value="other">Khác</option>
+        </select>
+      </form>
+    }
+
+    <div class="cta">
+      <button class="btn"
+              (click)="onSpinClick()"
+              [disabled]="spinning || ((program.remainingSpins) <= 0)">
+        {{ spinning ? 'Đang quay...' : 'QUAY NGAY' }}
+      </button>
+    </div>
+
+    <p class="mt-2 text-center">
+      Lượt còn lại: <b>{{ program.remainingSpins }}</b>
+    </p>
+  </div>
+}

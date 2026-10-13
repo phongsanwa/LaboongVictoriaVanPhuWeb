@@ -1,0 +1,90 @@
+
+.confirm-address-button {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  background-color: #fff;
+  box-shadow: 0 -4px 8px rgba(0, 0, 0, 0.02);
+}
+
+.btn-order__add {
+  background-color: var(--brand-color);
+  border-color: var(--brand-color);
+}
+
+.address-empty {
+  // khoảng trắng theo thiết kế
+}
+
+.address-title {
+  color: var(--brand-color)
+}
+
+.address-card {
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 12px 44px 12px 12px;
+  transition: .2s ease;
+}
+
+.address-card.active {
+  border: 2px solid var(--brand-color);
+  box-shadow: 0 2px 8px rgba(11, 46, 105, .12);
+}
+
+.check-corner {
+  position: absolute;
+  right: 0;
+  top: 0;
+  width: 30px;
+  height: 24px;
+  background: var(--brand-color);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-top-right-radius: 10px;
+  border-bottom-left-radius: 10px;
+}
+
+.chevron-right {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  opacity: .7;
+}
+
+.addr-body .addr-name { line-height: 1.25; margin-bottom: 4px; }
+.addr-body .addr-phone { line-height: 1.25; margin-bottom: 4px; }
+.addr-body .addr-line  { line-height: 1.25; }
+
+.swipe-item {
+  position: relative;
+  overflow: hidden;
+  margin: 0 1rem 1rem;
+  border-radius: 12px;
+  background: #fff;
+}
+
+.delete-btn {
+  position: absolute;
+  top: 0;
+  right: 0px;
+  width: 84px;
+  height: 99%;
+  border: none;
+  background: var(--brand-color);
+  color: #fff;
+  font-weight: 600;
+  border-radius: 12px;
+}
+
+.address-card-wrapper {
+  position: relative;
+  transition: transform .2s ease;
+  will-change: transform;
+  background: #fff;
+}

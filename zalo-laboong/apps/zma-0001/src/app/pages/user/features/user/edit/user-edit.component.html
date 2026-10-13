@@ -1,0 +1,53 @@
+<div class="page-user-edit px-2">
+  <div class="avatar text-center py-3">
+    <img class="rounded-circle" width="100" height="100"
+         [src]="userInfo && userInfo.avatar ? userInfo.avatar : 'assets/img/avatar-placeholder.jpg'">
+  </div>
+
+  <div class="personal-info-block">
+
+    <h5>Thông tin cá nhân</h5>
+    <form class="personal-info-form">
+      <div class="form-group">
+        <label for="fullname">Họ và tên <span class="text-danger">*</span></label>
+        <div class="input-group">
+          <input [value]="userInfo && userInfo.name ? userInfo.name : ''" type="search" id="fullname" class="form-control"
+                 placeholder="Nhập họ và tên"/>
+
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="phone">Số điện thoại <span class="text-danger">*</span></label>
+        <div class="input-group">
+          <span class="prefix">+84</span>
+          <input [value]="userInfo && userInfo.phoneNumber ? userInfo.phoneNumber : ''" type="text" id="phone"
+                 class="form-control" placeholder="Nhập số điện thoại"/>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="email">Email</label>
+        <input type="email" id="email" class="form-control" placeholder="Nhập địa chỉ email"/>
+      </div>
+
+      <div class="form-group">
+        <label for="birthday">Ngày sinh</label>
+        <input type="date" id="birthday" class="form-control"/>
+      </div>
+
+      <div class="form-group">
+        <label>Giới tính</label>
+        <div class="gender-group py-1">
+          <label><input type="radio" name="gender" value="male"/> Nam</label>
+          <label><input type="radio" name="gender" value="female"/> Nữ</label>
+        </div>
+      </div>
+    </form>
+
+  </div>
+</div>
+<div class="position-fixed bottom-0 w-100 px-2 pb-4">
+  <button type="submit" class="btn-save">Lưu thay đổi</button>
+</div>
+
