@@ -1,0 +1,36 @@
+<div class="container">
+  <!-- Tabs danh mục -->
+  <app-nav-tabs
+    [tabs]="tabs"
+    [active]="activeTab"
+    (activeChange)="onTabChange($event)"
+    [colors]="{ text: 'var(--brand-text)', active: 'var(--brand-color)', underline: 'var(--brand-color)' }"
+  ></app-nav-tabs>
+
+  <!-- Danh sách tin -->
+  <div class="row justify-content-start latest-news mt-3">
+    @for (item of filteredNews; track item) {
+    <div class="col-6">
+      <div class="card shadow-sm">
+        <a [routerLink]="uriFeConst.news.detail" [queryParams]="{ id: item.id }">
+          <img [src]="item.avatarUri" class="card-img-top" [alt]="item.title" />
+        </a>
+        <div class="card-body">
+          <h6 class="card-title">
+            <a [routerLink]="uriFeConst.news.detail" [queryParams]="{ id: item.id }">{{ item.title }}</a>
+          </h6>
+          <p class="card-text text-muted small mb-0">
+            {{ item.publishedDate | date: 'dd/MM/yyyy' }}
+          </p>
+        </div>
+      </div>
+    </div>
+    }
+
+    @if (!filteredNews.length) {
+    <div class="text-center py-5 text-muted">
+      Không có bài viết nào trong danh mục này.
+    </div>
+    }
+  </div>
+</div>

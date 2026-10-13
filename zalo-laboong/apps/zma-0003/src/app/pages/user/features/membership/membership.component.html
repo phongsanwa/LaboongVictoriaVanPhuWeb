@@ -1,0 +1,115 @@
+<div class="container my-3">
+  <div class="member-card p-2 text-white"
+       [style.background]="
+       'linear-gradient(90deg, rgba(45,128,196,0.7) 0%, rgba(196,45,190,0.7) 100%), url('
+       + ('assets/img/background_card.png' | assetUrl)
+       + ')'
+     ">
+
+    <div class="d-flex align-items-baseline justify-content-between pb-2">
+      <div class="avatar-wrapper">
+        <img [src]="(appService.getUserInfo && appService.getUserInfo.avatar) ?
+        appService.getUserInfo.avatar : 'https://dummyimage.com/50x50/163645/fff'" alt="avatar" class="avatar">
+        <span>{{ appService.getUserInfo && appService.getUserInfo.name ? appService.getUserInfo.name : 'Guest' }}</span>
+      </div>
+
+      <div class="barcode-wrapper" (click)="toggleCodeMode()" style="cursor: pointer;">
+        <div class="barcode-inner">
+          <app-render-codes
+            [data]="appService.getUserInfo && appService.getUserInfo.phoneNumber ? appService.getUserInfo.phoneNumber : '0868323415'"
+            [mode]="codeMode"
+            [barcodeHeight]="80"
+            [showValueUnderBarcode]="false"
+            [qrSize]="70"
+          ></app-render-codes>
+        </div>
+        <small class="barcode-caption">
+          <i class="ph-bold ph-arrow-counter-clockwise"></i>
+          {{ codeMode === 'barcode' ? 'QR Code' : 'Barcode' }}
+        </small>
+      </div>
+    </div>
+    <div class="d-flex align-items-center justify-content-between">
+      <h5 class="mb-0">Thành viên mới</h5>
+      <h5 class="mb-0">0 điểm</h5>
+    </div>
+    <div class="d-flex align-items-center gap-2">
+      <div class="flex-grow-1">
+        <div class="progress bg-white bg-opacity-50 rounded-pill" style="height:8px;">
+          <div class="progress-bar bg-white" style="width:100%;"></div>
+        </div>
+      </div>
+      <div class="member-star bg-new"></div>
+    </div>
+    <p class="small m-0">
+      Còn 700.000 đ nữa để lên Thành viên hạng Đồng
+    </p>
+  </div>
+  <div class="mt-3">
+    <ul class="list-group list-group-flush">
+      <li class="list-group-item">
+        <a [routerLink]="uriFeConst.user.points" class="d-flex justify-content-between align-items-center">
+          Lịch sử tích điểm
+          <i class="ph-bold ph-caret-right"></i>
+        </a>
+      </li>
+      <li class="list-group-item">
+        <a [routerLink]="uriFeConst.user.voucher" class="d-flex justify-content-between align-items-center">
+          Ưu đãi hiện có
+          <i class="ph-bold ph-caret-right"></i>
+        </a>
+      </li>
+    </ul>
+  </div>
+
+
+  <div class="mt-3">
+    <div class="row text-center member-tabs" role="tablist">
+      @for (tab of memberTabs; track tab.id) {
+        <div class="col-3 nav-item p-0">
+          <button
+            class="nav-link member-pill"
+            [class.active]="selectedTab === tab.id"
+            [ngStyle]="selectedTab === tab.id ? { color: tab.color } : {}"
+            (click)="selectTab(tab.id)"
+            type="button"
+          >
+            <div class="member-star bg-new" [ngClass]="tab.bgClass"></div>
+            <div>{{ tab.label }}</div>
+
+            @if (selectedTab === tab.id) {
+              <div
+                class="active-underline"
+                [ngStyle]="{ backgroundColor: tab.color }"
+              ></div>
+            }
+          </button>
+        </div>
+      }
+    </div>
+
+    <div class="tab-content mt-3">
+      @if (selectedTab === 'new') {
+        <div>
+          <i class="ph ph-check-circle me-1" [ngStyle]="{ color: selectedColor }"></i>
+          1 Mã Miễn phí giao hàng khi mua từ 2 Sản phẩm trở lên
+        </div>
+      } @else if (selectedTab === 'silver') {
+        <div>
+          <i class="ph ph-check-circle me-1" [ngStyle]="{ color: selectedColor }"></i>
+          Ưu đãi cho Thành viên hạng đồng …
+        </div>
+      } @else if (selectedTab === 'gold') {
+        <div>
+          <i class="ph ph-check-circle me-1" [ngStyle]="{ color: selectedColor }"></i>
+          Ưu đãi cho Thành viên hạng vàng …
+        </div>
+      } @else if (selectedTab === 'ruby') {
+        <div>
+          <i class="ph ph-check-circle me-1" [ngStyle]="{ color: selectedColor }"></i>
+          Ưu đãi cho Thành viên hạng ruby …
+        </div>
+      }
+    </div>
+  </div>
+</div>

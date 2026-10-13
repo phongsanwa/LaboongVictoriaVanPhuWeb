@@ -1,0 +1,138 @@
+
+.bottom-navigation .nav-item {
+  display: flex;
+  flex-direction: row;
+  column-gap: 5px;
+  align-items: center;
+  line-height: normal;
+}
+.bottom-navigation .nav-item .nav-label{
+  white-space: nowrap;
+}
+.bottom-navigation {
+  position: fixed;
+  bottom: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #fff;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.15);
+  border-radius: 2rem;
+  z-index: 1000;
+  width: 95%;
+  max-width: 420px;
+  padding: 0.4rem 0.3rem;
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  transition: bottom 0.4s ease, opacity 0.4s ease;
+}
+
+.bottom-navigation.hidden {
+  bottom: -80px;
+  opacity: 0;
+}
+
+.nav-item {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 0.4rem 0.2rem;
+  border-radius: 1.5rem;
+  text-decoration: none;
+  color: #222;
+  font-weight: 500;
+  transition: all 0.25s ease;
+  -webkit-tap-highlight-color: transparent;
+
+  .nav-icon {
+    font-size: 1.25rem;
+    transition: all 0.25s ease;
+    color: inherit;
+    font-weight: 400;
+  }
+
+  .nav-label {
+    font-size: 0.7rem;
+    line-height: 1;
+  }
+
+  &.active {
+    background: rgba(0, 122, 255, 0.12);
+    color: #007aff;
+    padding: 5px 10px;
+
+    .nav-icon {
+      color: #007aff;
+      transform: scale(1.1);
+    }
+
+    .nav-label {
+      font-weight: 600;
+      color: #007aff;
+    }
+  }
+
+  &:active {
+    transform: scale(0.96);
+  }
+}
+.align-items-between {
+  margin: 0;
+  width: 100%;
+  align-items: center;
+}
+.buy-now {
+  background: linear-gradient(90deg, rgba(42, 70, 155, 1) 0%, rgba(87, 94, 199, 1) 50%, rgba(17, 141, 242, 1) 100%);
+  border: 0;
+  padding: 5px 20px !important;
+  width: auto !important;
+  margin: 0 0 0 auto;
+  display: block;
+  color: #fff;
+  border-radius: 20px;
+}
+.support-me {
+  background: #eee;
+  padding: 5px 10px;
+  display: flex;
+  align-items: center;
+  column-gap: 10px;
+  border-radius: 20px;
+  color: #5e5e5e;
+  font-weight: 500;
+  justify-content: center;
+}
+.add-to-cart i,.wish-list i {
+  font-size: 16px;
+}
+.wish-list {
+  padding: 5px 0;
+  line-height: 7px;
+}
+.nav-icon-wrapper {
+  position: relative;
+  .badge-dot {
+    background: red;
+    color: #fff;
+    border-radius: 50%;
+    width: 15px;
+    height: 15px;
+    display: block;
+    position: absolute;
+    top: -5px;
+    text-align: center;
+    font-size: 12px;
+    right: -10px;
+  }
+}
+@media (max-width: 576px) {
+  .nav-icon {
+    font-size: 1.2rem;
+  }
+
+  .nav-label {
+    font-size: 0.65rem;
+  }
+}

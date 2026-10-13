@@ -1,0 +1,253 @@
+<div class="banner-slide-wrapper">
+  <app-universal-slide [items]="banners"
+                       [config]="{ showNavigation: false, showPagination: true, autoplay: false, slidesPerView: 1, showName: false }">
+  </app-universal-slide>
+</div>
+<!-- Tìm kiếm -->
+<div class="search-bar">
+  <i class="ph ph-magnifying-glass"></i>
+  <input type="text" placeholder="Bạn muốn tìm gì?" (focus)="goToSearch()"/>
+</div>
+@if (categories.length > 0) {
+<div class="category-section">
+  @for (category of categories; track category; let i = $index) {
+  <div class="category-card" [ngClass]="i % 2 === 0 ? 'international' : 'domestic'">
+    <a class="category-header" [routerLink]="uriFeConst.product.category">
+      <span class="title">{{ category.name }}</span>
+      <i class="ph ph-caret-right"></i>
+    </a>
+    <div class="category-image">
+      <a [routerLink]="category.viewLink">
+        <img
+          [src]="category.image || 'https://dntt.mediacdn.vn/197608888129458176/2025/3/4/du-lich-174109688679366606627.jpg'"
+          [alt]="category.name"
+          loading="lazy"
+        />
+      </a>
+    </div>
+  </div>
+  }
+</div>
+}
+
+<!-- Phần tính năng -->
+<div class="home-features container py-2">
+  <div class="row text-center">
+    @for (item of featureItems; track item) {
+    <div class="col-3 feature-item">
+      <a [routerLink]="item.link" class="d-block text-decoration-none">
+        <div class="icon">
+          <i [class]="item.icon"></i>
+        </div>
+        <div class="title fw-semibold">{{ item.title }}</div>
+      </a>
+    </div>
+    }
+  </div>
+</div>
+
+<div class="banner-advertising">
+  <a href=""><img src="https://lienbangtravel.com/files/upload/files/Tour%205%20n%C6%B0%E1%BB%9Bc%20Ch%C3%A2u%20%C3%82U/Du%20xu%C3%A2n%20Nh%E1%BA%ADt%20B%E1%BA%A3n/du-lich-chau-au-thang-12-1.jpg" alt=""></a>
+</div>
+<!-- Khám phá địa điểm -->
+<section class="explore-section position-relative text-white mt-4">
+  <div class="overlay-gradient"></div>
+  <div class="container position-relative z-2 py-3">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+      <div>
+        <h5 class="fw-bold text-uppercase mb-1 text-warning">Khám phá địa điểm</h5>
+        <p class="mb-0 small">Cùng khám phá những địa điểm nổi bật</p>
+      </div>
+      <a routerLink="/destinations" class="text-white">
+        <i class="ph-bold ph-caret-right"></i>
+      </a>
+    </div>
+    <div class="explore-wrapper position-relative z-2">
+      @if (destinations.length > 0) {
+      <div class="destination-card large">
+        <img [src]="destinations[0].image" [alt]="destinations[0].name" />
+        <div class="info">
+          <h6>{{ destinations[0].name }}</h6>
+          <span>Khám phá</span>
+        </div>
+      </div>
+      }
+      <div class="destination-small-wrap">
+        @for (item of destinations.slice(1, 5); track item) {
+        <div class="destination-card small">
+          <img [src]="item.image" [alt]="item.name" />
+          <div class="info">
+            <h6>{{ item.name }}</h6>
+            <span>Khám phá</span>
+          </div>
+        </div>
+        }
+      </div>
+
+
+    </div>
+  </div>
+</section>
+<section class="subscribe-section my-2">
+  <app-follow-oa
+    [oaId]="'762755468038541624'"
+    [buttonText]="'Quan tâm OA'"
+    [img]="'https://posstatic.nvndev.net/assets/img/favicon.svg'"
+    [explanationTitle]="'Nhanh.vn Official'"
+    [explanationContent]="'Nhận thông báo các bài viết, sự kiện nổi bật'"
+  >
+  </app-follow-oa>
+</section>
+<section class="daily-tour-section position-relative text-dark mt-2 new-section-tour">
+  <div class="overlay-gradient"></div>
+
+  <div class="container position-relative z-2 py-3">
+    <!-- Tiêu đề -->
+    <div class="d-flex justify-content-between align-items-center mb-3">
+      <div>
+        <h5 class="fw-bold text-uppercase mb-1 text-primary">Tour trong ngày</h5>
+        <p class="mb-0 small text-primary">Trải nghiệm không thể bỏ lỡ</p>
+      </div>
+      <a routerLink="/tours" class="text-primary">
+        <i class="ph-bold ph-caret-right"></i>
+      </a>
+    </div>
+
+    <!-- Danh sách tour -->
+    <div class="tour-wrapper d-flex gap-2 overflow-auto">
+      @for (prd of newProducts; track prd) {
+      <div class="tour-card">
+        <div class="image-wrapper position-relative">
+          <a [routerLink]="[uriFeConst.product.detail]" [queryParams]="{ id: prd.id }"><img [src]="prd.image" [alt]="prd.name" /></a>
+          <button class="favorite-btn" appOpenFavoriteSheet [product]="prd">
+            <i class="ph ph-heart" [appFavoriteActive]="prd.id"></i>
+          </button>
+          <div class="rating">
+            <i class="ph-bold ph-star"></i> 4.8
+          </div>
+        </div>
+        <div class="p-2">
+          <h6 class="fw-bold text-uppercase mb-1" ><a [routerLink]="[uriFeConst.product.detail]" [queryParams]="{ id: prd.id }">{{ prd.name }}</a></h6>
+          <p class="mb-1 small text-muted">
+            <i class="ph-bold ph-map-pin me-1 text-primary"></i>
+             Du lịch nội địa
+          </p>
+          <!-- Giá -->
+          <div class="tour-price mt-2">
+            @if (prd.prices.contactPrice || !prd.prices.price) {
+            <span class="price fw-semibold text-primary">Liên hệ</span>
+            } @else if (prd.prices.priceAfterDiscount) {
+            <span class="text-muted text-decoration-line-through">
+              {{ prd.prices.price | i18nCurrencyAmount : { showSymbol: true } }}
+            </span>
+            <span class="price fw-semibold text-primary ms-2">
+              {{ prd.prices.priceAfterDiscount | i18nCurrencyAmount : { showSymbol: true } }}
+            </span>
+            } @else {
+            @if (prd.prices.priceOld) {
+            <span class="text-muted text-decoration-line-through">
+              {{ prd.prices.priceOld | i18nCurrencyAmount : { showSymbol: true } }}
+            </span>
+            }
+            <span class="price fw-semibold text-primary ms-2">
+              {{ prd.prices.price | i18nCurrencyAmount : { showSymbol: true } }}
+            </span>
+            }
+          </div>
+        </div>
+      </div>
+      }
+    </div>
+  </div>
+</section>
+<!-- Khám phá thêm tour -->
+<section class="daily-tour-section position-relative text-dark mt-4 hot-section-tour">
+  <div class="overlay-gradient"></div>
+
+  <div class="container position-relative z-2 py-3">
+    <!-- Tiêu đề -->
+    <div class="d-flex justify-content-between align-items-center mb-3">
+      <div>
+        <h5 class="fw-bold text-uppercase mb-1 text-violet">Khám phá thêm tour</h5>
+        <p class="mb-0 small text-violet">Lạc vào bức tranh phong cảnh</p>
+      </div>
+      <a routerLink="/tours" class="text-violet">
+        <i class="ph-bold ph-caret-right"></i>
+      </a>
+    </div>
+
+    <!-- Danh sách tour -->
+    <div class="tour-wrapper d-flex gap-2 overflow-auto">
+      @for (prd of homeProducts; track prd) {
+      <div class="tour-card">
+        <div class="image-wrapper position-relative">
+          <a [routerLink]="[uriFeConst.product.detail]" [queryParams]="{ id: prd.id }"><img [src]="prd.image" [alt]="prd.name" /></a>
+          <button class="favorite-btn" appOpenFavoriteSheet [product]="prd">
+            <i class="ph ph-heart" [appFavoriteActive]="prd.id"></i>
+          </button>
+          <div class="rating">
+            <i class="ph-bold ph-star"></i> 4.8
+          </div>
+        </div>
+        <div class="p-2">
+          <h6 class="fw-bold text-uppercase mb-1"><a [routerLink]="[uriFeConst.product.detail]" [queryParams]="{ id: prd.id }">{{ prd.name }}</a></h6>
+          <p class="mb-1 small text-muted">
+            <i class="ph-bold ph-map-pin me-1 text-primary"></i>
+            Du lịch nội địa
+          </p>
+          <!-- Giá -->
+          <div class="tour-price mt-2">
+            @if (prd.prices.contactPrice || !prd.prices.price) {
+            <span class="price fw-semibold text-primary">Liên hệ</span>
+            } @else if (prd.prices.priceAfterDiscount) {
+            <span class="text-muted text-decoration-line-through">
+              {{ prd.prices.price | i18nCurrencyAmount : { showSymbol: true } }}
+            </span>
+            <span class="price fw-semibold text-primary ms-2">
+              {{ prd.prices.priceAfterDiscount | i18nCurrencyAmount : { showSymbol: true } }}
+            </span>
+            } @else {
+            @if (prd.prices.priceOld) {
+            <span class="text-muted text-decoration-line-through">
+              {{ prd.prices.priceOld | i18nCurrencyAmount : { showSymbol: true } }}
+            </span>
+            }
+            <span class="price fw-semibold text-primary ms-2">
+              {{ prd.prices.price | i18nCurrencyAmount : { showSymbol: true } }}
+            </span>
+            }
+          </div>
+        </div>
+      </div>
+      }
+    </div>
+
+  </div>
+</section>
+<section class="office-card container">
+  <div class="card shadow-sm border-0 p-3">
+    <div class="card-body">
+      <h6 class="fw-bold mb-2">CÔNG TY CỔ PHẦN NHANH.VN</h6>
+      <p class="mb-1 small">
+        Tầng 2 phòng 206 Tòa nhà GP Invest, Số 170 đường La Thành, Phường Ô Chợ Dừa, Thành phố Hà Nội, Việt Nam.
+      </p>
+      <p class="mb-1 small">
+        <a href="mailto:contact@nhanh.vn" class="text-decoration-none text-dark">
+          contact@nhanh.vn
+        </a>
+      </p>
+      <p class="mb-1 small">1900.2812</p>
+      <p class="mb-0 fw-semibold">
+        <a href="https://nhanh.vn/" target="_blank" class="text-dark text-decoration-none">
+          Nhanh.vn
+        </a>
+      </p>
+    </div>
+  </div>
+</section>
+
+
+
+
+
+

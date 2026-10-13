@@ -1,0 +1,153 @@
+@if (product) {
+<div class="detail-page">
+  <div class="w-100">
+    <app-nav-tabs class="tab-detail bg-white"
+                  [tabs]="tabs"
+                  [active]="activeTab"
+                  (activeChange)="onTabChange($event)"
+                  [colors]="{ text: 'var(--brand-text)', active: 'var(--brand-color)', underline: 'var(--brand-color)' }"
+    ></app-nav-tabs>
+    <!-- Tổng quan (Overview) -->
+    <div id="overview">
+      <div class="py-2 rounded-lg bg-white">
+        @if (imagesItem.length > 1) {
+        <app-universal-slide [items]="imagesItem"
+                             [config]="{ showNavigation: false, showPagination: true, autoplay: true, slidesPerView: 1 }">
+        </app-universal-slide>
+        } @else {
+        <img [src]="imagesItem[0].image" class="w-100 h-100 images" alt="{{ imagesItem[0].title }}"/>
+        }
+      </div>
+      <div class="d-inline-block tour-price-block px-2">
+        <div class="tour-price">
+          @if (product.contactPrice || !product.price) {
+          <span class="price price-current fw-semibold">
+              Liên hệ
+            </span>
+          } @else if (product.priceAfterDiscount) {
+          <span class="price price-current fw-semibold">
+              {{ product.priceAfterDiscount | i18nCurrencyAmount :{showSymbol: true} }}
+            </span>
+          <span class="price-old text-decoration-line-through ms-2">
+              {{ product.price | i18nCurrencyAmount :{showSymbol: true} }}
+            </span>
+          } @else {
+          <span class="price price-current fw-semibold">
+              {{ product.price | i18nCurrencyAmount :{showSymbol: true} }}
+            </span>
+          @if (product.priceOld) {
+          <span class="price-old text-decoration-line-through ms-2">
+              {{ product.priceOld | i18nCurrencyAmount :{showSymbol: true} }}
+              </span>
+          }
+          }
+        </div>
+      </div>
+      <div class="company-card px-2">
+        <div class="company-header">
+          <h3 class="company-name">{{ product.name }}</h3>
+        </div>
+
+        <div class="company-rating">
+          <span class="rating-badge">5.0</span>
+          <div class="stars">
+            <i class="ph-bold ph-star" *ngFor="let star of [1,2,3,4,5]"></i>
+          </div>
+          <span class="comments">(14 Bình luận)</span>
+
+          <div class="actions">
+            <i class="ph ph-link" (click)="copyProductLink()"></i>
+            <app-shared-button
+              [payload]="{
+              title: product.name,
+              thumbnail: product.image,
+              path: '/product/view/?id=' + product.id
+            }">
+            </app-shared-button>
+
+            <i class="ph-bold ph-heart" [appFavoriteActive]="product.id"></i>
+          </div>
+        </div>
+      </div>
+      <div class="banner-advertising-detail bg-white mt-2">
+        <a href=""><img src="https://vietaunews.wordpress.com/wp-content/uploads/2015/09/banner-84ce335138.jpg" alt="" class="w-100 h-100"></a>
+      </div>
+      <div class="code-product bg-white ">
+        <div class="container border-bottom py-3 d-flex align-items-center justify-content-between">
+          <span class="label-code fw-semibold"><i class="ph-bold ph-credit-card"></i>Mã code</span>
+          <span class="code-number">{{ product.code || 'Đang cập nhật' }}</span>
+        </div>
+      </div>
+    </div>
+    <!-- Chi tiết sản phẩm (Detail) -->
+    <div id="detail" class="destination-tour pt-3 bg-white">
+      <div class="px-2">
+        <h3>Hành trình tour</h3>
+        <div class="destination-tour-content" [innerHTML]="product.description"></div>
+      </div>
+    </div>
+    <!-- Có thể bạn sẽ thích (suggestion) -->
+    <div id="suggestion" class="related-product">
+      <div class="section-title">
+        <span>Có thể bạn sẽ thích</span>
+      </div>
+
+      @if (isLoadingRelated) {
+      <div class="text-center py-4">
+        <div class="spinner-border text-primary" role="status">
+          <span class="visually-hidden">Đang tải...</span>
+        </div>
+      </div>
+      } @else if (relatedProducts.length > 0) {
+      <div class="tour-wrapper tour-grid overflow-auto px-2">
+        @for (item of relatedProducts; track item.id) {
+        <div class="tour-card">
+            <div class="image-wrapper position-relative">
+              <a [routerLink]="uriFeConst.product.detail"
+                 [queryParams]="{ id: item.id }"><img [src]="item.image || 'https://placehold.co/400x250?text=No+Image'" [alt]="item.name" /></a>
+              <button class="favorite-btn" appOpenFavoriteSheet [product]="item">
+                <i class="ph ph-heart" [appFavoriteActive]="item.id"></i>
+              </button>
+              <div class="rating">
+                <i class="ph-bold ph-star"></i> 5.0
+              </div>
+            </div>
+            <div class="tour-card-content">
+              <h6 class="fw-bold mb-1"><a [routerLink]="uriFeConst.product.detail"
+                                          [queryParams]="{ id: item.id }">{{ item.name }}</a></h6>
+              <p class="mb-1 small text-muted tour-location">
+                <i class="ph-bold ph-map-pin me-1 text-primary"></i>
+                {{ item.category?.name || 'Đang cập nhật' }}
+              </p>
+              <div class="tour-price mt-2">
+                @if (item.prices && (item.prices.contactPrice || !item.prices.price)) {
+                <span class="price fw-semibold text-primary">
+                    Liên hệ
+                  </span>
+                } @else if (item.prices.priceAfterDiscount) {
+                <span class="price fw-semibold text-primary">
+                    {{ item.prices.priceAfterDiscount | i18nCurrencyAmount :{showSymbol: true} }}
+                  </span>
+                <span class="price-old text-decoration-line-through ms-2 small">
+                    {{ item.prices.price | i18nCurrencyAmount :{showSymbol: true} }}
+                  </span>
+                } @else {
+                <span class="price fw-semibold text-primary">
+                    {{ item.prices.price | i18nCurrencyAmount :{showSymbol: true} }}
+                  </span>
+                }
+              </div>
+            </div>
+        </div>
+        }
+      </div>
+      } @else {
+      <div class="text-center py-4 text-muted">
+        <p>Không có sản phẩm liên quan</p>
+      </div>
+      }
+    </div>
+  </div>
+</div>
+
+}

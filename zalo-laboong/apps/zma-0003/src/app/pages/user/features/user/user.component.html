@@ -1,0 +1,279 @@
+
+@if (!(userInfo && userInfo.name)) {
+  <div class="wrap">
+    <div class="user-top">
+      <div class="banner">
+        <div class="left">
+          <span class="title">Kích hoạt thành viên</span>
+          <span class="desc">Tích điểm đổi thưởng, mở rộng tiện ích</span>
+        </div>
+        <button class="btn-register" (click)="grantPermission()">Đăng ký</button>
+      </div>
+      <div class="card" role="region" aria-label="Thẻ thông tin người dùng">
+        <div class="banner" [routerLink]="uriFeConst.user.membership">
+          <div class="left">
+            <div class="label">Thành viên: <span style="color:#134a94;font-weight:700">MỚI</span></div>
+          </div>
+          <div class="right">
+            <div style="font-size:12px; color:rgba(16,34,59,0.65)">Điểm tích lũy:</div>
+            <div class="score">0</div>
+          </div>
+        </div>
+
+        <div class="content">
+          <!-- Progress -->
+          <div class="progress-title" [routerLink]="uriFeConst.user.points">
+            <div class="needed">Điểm cần đạt lên hạng: <span style="color:#2f9bf0">100</span></div>
+            <div class="muted">Mã của tôi &nbsp;›</div>
+          </div>
+
+          <div class="progress-wrap" [routerLink]="uriFeConst.user.points">
+            <div class="progress-bar" aria-hidden="true">
+              <span style="width:0%"></span>
+            </div>
+            <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:8px">
+              <div style="font-size:13px; color:#50657b"> </div>
+              <div class="progress-percent">0%</div>
+            </div>
+          </div>
+
+          <!-- Orders -->
+          <div class="orders">
+            <div class="title">Đơn hàng của tôi <span class="muted">›</span></div>
+
+            <div class="order-icons" aria-hidden="true">
+              <div class="order-item col-4" [routerLink]="uriFeConst.order.tracking"
+                   [queryParams]="{ status: 1 }">
+                <div class="icon"><i class="ph-light ph-credit-card"></i></div>
+                <div>Chờ xác nhận</div>
+              </div>
+              <div class="order-item col-4" [routerLink]="uriFeConst.order.tracking"
+                   [queryParams]="{ status: 2 }">
+                <div class="icon"><i class="ph-light ph-archive-box"></i></div>
+                <div>Đã xác nhận</div>
+              </div>
+              <div class="order-item col-4">
+                <div class="icon"><i class="ph-light ph-star"></i></div>
+                <div>Đánh giá</div>
+              </div>
+            </div>
+
+            <!-- Voucher -->
+            <div class="voucher" role="button" tabindex="0" [routerLink]="uriFeConst.user.voucher">
+              <div class="left">
+                <div class="badge"><i class="ph-printer ph ph-ticket"></i></div>
+                <div class="text">Kho voucher</div>
+              </div>
+              <div class="chev">›</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card bg-white subscribe-section">
+      <app-follow-oa
+        [oaId]="'762755468038541624'"
+        [buttonText]="'Quan tâm OA'"
+        [img]="'https://posstatic.nvndev.net/assets/img/favicon.svg'"
+        [explanationTitle]="'Nhanh.vn Official'"
+        [explanationContent]="'Nhận thông báo các bài viết, sự kiện nổi bật'"
+      >
+      </app-follow-oa>
+    </div>
+
+    <!-- menu list -->
+    <div class="menu bg-white">
+      <div class="menu-item" (click)="grantPermission()">
+        <a [routerLink]="uriFeConst.order.tracking"
+           [queryParams]="{ status: 1 }">
+          <div class="menu-icon"><i class="ph ph-calendar"></i></div>
+          <div class="menu-text" >Quản lý chuyến đi</div>
+          <div class="chev"><i class="ph-bold ph-caret-right"></i></div>
+        </a>
+      </div>
+
+      <div class="menu-item">
+        <a [routerLink]="uriFeConst.game">
+          <div class="menu-icon"><i class="ph-light ph-music-note"></i></div>
+          <div class="menu-text">Mini game</div>
+          <div class="chev"><i class="ph-bold ph-caret-right"></i></div>
+        </a>
+      </div>
+
+      <div class="menu-item">
+        <a [routerLink]="uriFeConst.user.favoriteProducts">
+          <div class="menu-icon"><i class="ph ph-heart"></i></div>
+          <div class="menu-text">Sản phẩm yêu thích</div>
+          <div class="chev"><i class="ph-bold ph-caret-right"></i></div>
+        </a>
+      </div>
+
+      <div class="menu-item">
+        <a [routerLink]="uriFeConst.user.feedback">
+          <div class="menu-icon"><i class="ph-bold ph-phone"></i></div>
+          <div class="menu-text">Liên hệ và góp ý</div>
+          <div class="chev"><i class="ph-bold ph-caret-right"></i></div>
+        </a>
+      </div>
+    </div>
+
+    <!-- footer small -->
+    <div class="footer-card">
+      <div style="display:flex;gap:0;align-items:center">
+        <div class="qr">QR</div>
+        <div class="powered"><div style="font-weight:700;color:#333">Chia sẻ</div><div style="margin-top:0">Powered by <span style="color:#f0b429;font-weight:700">NHANH.VN</span></div></div>
+      </div>
+      <div style="opacity:0.8;font-size:13px"> </div>
+    </div>
+    <div class="version">Travel Version 1.0</div>
+
+  </div>
+} @else {
+  <div class="wrap">
+    <div class="user-top safe-pt-16 safe-pb-16">
+      <div class="profile-head">
+        <div class="avatar" aria-hidden="true">
+          <img [src]="appService.getUserInfo && appService.getUserInfo.avatar ? appService.getUserInfo.avatar : 'assets/img/avatar-placeholder.jpg'"
+               [alt]="appService.getUserInfo && appService.getUserInfo.name ? appService.getUserInfo.avatar : ''">
+        </div>
+        <div class="profile-info">
+          <h1>{{ appService.getUserInfo && appService.getUserInfo.name ? appService.getUserInfo.name : 'Guest' }}</h1>
+          @if (appService.getUserInfo && appService.getUserInfo.phoneNumber) {
+          <div class="id">Phone: {{ appService.getUserInfo.phoneNumber }}</div>
+          }
+        </div>
+        <button class="settings" aria-label="settings">
+          <i class="ph-bold ph-gear"></i>
+        </button>
+      </div>
+      <div class="card" role="region" aria-label="Thẻ thông tin người dùng">
+        <div class="banner" [routerLink]="uriFeConst.user.membership">
+          <div class="left">
+            <div class="label">Thành viên: <span style="color:#134a94;font-weight:700">MỚI</span></div>
+          </div>
+          <div class="right">
+            <div style="font-size:12px; color:rgba(16,34,59,0.65)">Điểm tích lũy:</div>
+            <div class="score">0</div>
+          </div>
+        </div>
+
+        <div class="content">
+          <!-- Progress -->
+          <div class="progress-title" [routerLink]="uriFeConst.user.points">
+            <div class="needed">Điểm cần đạt lên hạng: <span style="color:#2f9bf0">100</span></div>
+            <div class="muted">Mã của tôi &nbsp;›</div>
+          </div>
+
+          <div class="progress-wrap" [routerLink]="uriFeConst.user.points">
+            <div class="progress-bar" aria-hidden="true">
+              <span style="width:0%"></span>
+            </div>
+            <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:8px">
+              <div style="font-size:13px; color:#50657b"> </div>
+              <div class="progress-percent">0%</div>
+            </div>
+          </div>
+
+          <!-- Orders -->
+          <div class="orders">
+            <div class="title">Đơn hàng của tôi <span class="muted">›</span></div>
+
+            <div class="order-icons" aria-hidden="true">
+              <div class="order-item col-4" [routerLink]="uriFeConst.order.tracking"
+                   [queryParams]="{ status: 1 }">
+                <div class="icon"><i class="ph-light ph-credit-card"></i></div>
+                <div>Chờ xác nhận</div>
+              </div>
+              <div class="order-item col-4" [routerLink]="uriFeConst.order.tracking"
+                   [queryParams]="{ status: 2 }">
+                <div class="icon"><i class="ph-light ph-archive-box"></i></div>
+                <div>Đã xác nhận</div>
+              </div>
+              <div class="order-item col-4">
+                <div class="icon"><i class="ph-light ph-star"></i></div>
+                <div>Đánh giá</div>
+              </div>
+            </div>
+
+            <!-- Voucher -->
+            <div class="voucher" role="button" tabindex="0" [routerLink]="uriFeConst.user.voucher">
+              <div class="left">
+                <div class="badge"><i class="ph-printer ph ph-ticket"></i></div>
+                <div class="text">Kho voucher</div>
+              </div>
+              <div class="chev">›</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card bg-white subscribe-section">
+      <app-follow-oa
+        [oaId]="'762755468038541624'"
+        [buttonText]="'Quan tâm OA'"
+        [img]="'https://posstatic.nvndev.net/assets/img/favicon.svg'"
+        [explanationTitle]="'Nhanh.vn Official'"
+        [explanationContent]="'Nhận thông báo các bài viết, sự kiện nổi bật'"
+      >
+      </app-follow-oa>
+    </div>
+
+  <!-- menu list -->
+  <div class="menu bg-white">
+    <div class="menu-item" (click)="grantPermission()">
+      <a [routerLink]="uriFeConst.order.tracking"
+         [queryParams]="{ status: 1 }">
+        <div class="menu-icon"><i class="ph ph-calendar"></i></div>
+        <div class="menu-text" >Quản lý chuyến đi</div>
+        <div class="chev"><i class="ph-bold ph-caret-right"></i></div>
+      </a>
+    </div>
+    <div class="menu-item">
+      <a [routerLink]="uriFeConst.user.address">
+        <div class="menu-icon"><i class="ph ph-smiley"></i></div>
+        <div class="menu-text">Sổ địa chỉ</div>
+        <div class="chev"><i class="ph-bold ph-caret-right"></i></div>
+      </a>
+    </div>
+    <div class="menu-item">
+      <a [routerLink]="uriFeConst.game">
+        <div class="menu-icon"><i class="ph-light ph-music-note"></i></div>
+        <div class="menu-text">Mini game</div>
+        <div class="chev"><i class="ph-bold ph-caret-right"></i></div>
+      </a>
+    </div>
+
+    <div class="menu-item">
+      <a [routerLink]="uriFeConst.user.favoriteProducts">
+        <div class="menu-icon"><i class="ph ph-heart"></i></div>
+        <div class="menu-text">Sản phẩm yêu thích</div>
+        <div class="chev"><i class="ph-bold ph-caret-right"></i></div>
+      </a>
+    </div>
+
+    <div class="menu-item">
+      <a [routerLink]="uriFeConst.user.feedback">
+        <div class="menu-icon"><i class="ph-bold ph-phone"></i></div>
+        <div class="menu-text">Liên hệ và góp ý</div>
+        <div class="chev"><i class="ph-bold ph-caret-right"></i></div>
+      </a>
+    </div>
+  </div>
+
+  <!-- footer small -->
+  <div class="footer-card">
+    <div style="display:flex;gap:0;align-items:center">
+      <div class="qr">
+        <img #qrCodeImage
+             src="{{ appInfo && appInfo.qrCodeUrl ? appInfo.qrCodeUrl : '' }}"
+             alt="QR Code Zalo"
+             class="qr-code w-100"
+        >
+      </div>
+      <div class="powered"><div style="font-weight:700;color:#333">Chia sẻ</div><div style="margin-top:0">Powered by <span style="color:#f0b429;font-weight:700">NHANH.VN</span></div></div>
+    </div>
+    <div style="opacity:0.8;font-size:13px"> </div>
+  </div>
+  <div class="version">Travel Version v{{ appInfo && appInfo.version ? appInfo.version : '1' }}</div>
+</div>
+}

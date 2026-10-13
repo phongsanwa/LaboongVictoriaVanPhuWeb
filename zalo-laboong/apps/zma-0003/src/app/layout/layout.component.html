@@ -1,0 +1,12 @@
+<div class="w-screen h-screen d-flex flex-col bg-background text-foreground">
+  <app-spinner
+    [loading]="(isLoading$ | async) ?? false"
+    [opacity]="0.8"
+    position="position-fixed"
+  ></app-spinner>
+  <app-header></app-header>
+  <div class="flex-1_custom overflow-y-auto">
+    <router-outlet></router-outlet>
+  </div>
+  <app-footer></app-footer>
+</div>

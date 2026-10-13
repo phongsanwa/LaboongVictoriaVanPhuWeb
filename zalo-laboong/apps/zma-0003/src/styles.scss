@@ -1,0 +1,127 @@
+/* You can add global styles to this file, and also import other style files */
+
+/* -------------------------------------------------------------------------------------------------
+ * 1) Global imports
+ * ------------------------------------------------------------------------------------------------*/
+@use "styles/my.style";
+
+/* -------------------------------------------------------------------------------------------------
+ * 2) CSS Variables: Safe Area (default + auto-detect khi hỗ trợ env())
+ * ------------------------------------------------------------------------------------------------*/
+:root {
+  /* Fallback mặc định (web/desktop không full-screen) */
+  --zaui-safe-area-inset-top: 0px;
+  --zaui-safe-area-inset-bottom: 0px;
+}
+
+/* Khi trình duyệt hỗ trợ env(safe-area-*) thì override */
+@supports (padding: max(0px)) {
+  :root {
+    --zaui-safe-area-inset-top: env(safe-area-inset-top);
+    --zaui-safe-area-inset-bottom: env(safe-area-inset-bottom);
+  }
+}
+
+/* -------------------------------------------------------------------------------------------------
+ * 3) Utilities
+ * ------------------------------------------------------------------------------------------------*/
+/* Padding safe-area trực tiếp */
+.safe-pt { padding-top: var(--zaui-safe-area-inset-top) !important; }
+.safe-pb { padding-bottom: var(--zaui-safe-area-inset-bottom) !important; }
+
+/* Luôn có tối thiểu 16px + cộng thêm safe-area khi có (dùng cho web & production) */
+.safe-pt-16 { padding-top: max(16px, var(--zaui-safe-area-inset-top)) !important; }
+.safe-pb-16 { padding-bottom: max(16px, var(--zaui-safe-area-inset-bottom)) !important; }
+
+.bg-background { background-color: #ffffff; }
+
+/* -------------------------------------------------------------------------------------------------
+ * 4) Components: Offcanvas bottom sheet (NgbOffcanvas)
+ * ------------------------------------------------------------------------------------------------*/
+.offcanvas-bottom-sheet.offcanvas-bottom {
+  height: auto;
+  max-height: min(85vh, 1000px);
+  border-top-left-radius: 16px;
+  border-top-right-radius: 16px;
+  overflow: auto;
+}
+/* Style chung cho modal canvas */
+
+.sheet {
+  position: relative;
+  background: #fff;
+  border-radius: 20px;
+  padding: 16px 16px 20px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, .18);
+}
+
+.sheet__header {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 48px;
+  padding: 0 44px 16px;
+  background: #fff;
+}
+
+.sheet__title {
+  margin: 0;
+  font-weight: 700;
+  text-align: center;
+  color: #222;
+}
+
+.sheet__close {
+  position: absolute;
+  right: 0;
+  top: 0;
+  width: 36px;
+  height: 36px;
+  display: grid;
+  place-items: center;
+  border: none;
+  background: transparent;
+  border-radius: 999px;
+  border: 0;
+  padding: 6px;
+  line-height: 1;
+  cursor: pointer;
+  color: #000000;
+
+  &:focus-visible {
+    outline: none;
+  }
+
+  i {
+    font-size: 22px;
+  }
+}
+
+/* -------------------------------------------------------------------------------------------------
+ * 4) Components: Offcanvas bottom sheet (NgbOffcanvas)
+ * ------------------------------------------------------------------------------------------------*/
+.offcanvas-bottom-sheet.offcanvas-bottom {
+  height: auto;
+  max-height: min(85vh, 1000px);
+  border-top-left-radius: 16px;
+  border-top-right-radius: 16px;
+  overflow: auto;
+}
+
+.price-block .discount-pill {
+  display: inline-block;
+  color: #e76a5b;
+  background: #fed2cc;
+  border-radius: 999px;
+  font-weight: 700;
+  font-size: 10px;
+  padding: 4px 8px 3px;
+  margin-bottom: 6px;
+  position: absolute;
+  top: 7px;
+  line-height: 13px;
+  left: 7px;
+}

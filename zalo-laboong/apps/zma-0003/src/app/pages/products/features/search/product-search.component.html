@@ -1,0 +1,89 @@
+<div class="header-search">
+  <div class="container">
+    <div class="search-bar">
+      <i class="ph ph-magnifying-glass"></i>
+      <input type="text" placeholder="Bạn muốn tìm gì?" (input)="onKeywordChange($event)" />
+    </div>
+    @if (products.length) {
+    <div class="results-header d-flex justify-content-between align-items-center mt-3">
+      <div class="results-count">Kết quả ({{ products.length }})</div>
+      <div class="column-arrange d-flex justify-content-between align-items-center gap-2">
+        <div class="list-tour d-flex align-items-center cursor-pointer" [class.active]="viewMode === 'list'" (click)="setListView()"><i class="ph-light ph-squares-four"></i></div>
+        <div class="grid-tour d-flex align-items-center cursor-pointer" [class.active]="viewMode === 'grid'" (click)="setGridView()"><i class="ph-bold ph-squares-four"></i></div>
+      </div>
+    </div>
+    }
+  </div>
+</div>
+
+<!-- Danh sách sản phẩm -->
+<div class="container">
+  @if (isLoading) {
+  <div class="mt-3 text-center">Đang tìm kiếm...</div>
+  }
+
+  @if (errorMessage) {
+  <div class="mt-3 text-danger">{{ errorMessage }}</div>
+  }
+
+  @if (!isLoading && products.length) {
+  <div class="tour-wrapper tour-grid overflow-auto"
+       [class.grid-product]="viewMode === 'grid'"
+       [class.list-product]="viewMode === 'list'"
+       [class.grid]="viewMode === 'grid'"
+       [class.grid-cols-2]="viewMode === 'grid'"
+  >
+    @for (item of products; track item) {
+    <div class="tour-card">
+      <div class="image-wrapper position-relative">
+        <a  [routerLink]="uriFeConst.product.detail"
+            [queryParams]="{ id: item.id }"><img [src]="item.image || 'https://placehold.co/400x250?text=No+Image'" [alt]="item.name" /></a>
+        <button class="favorite-btn" appOpenFavoriteSheet [product]="item">
+          <i class="ph ph-heart" [appFavoriteActive]="item.id"></i>
+        </button>
+        <div class="rating">
+          <i class="ph-bold ph-star"></i> 5.0
+        </div>
+      </div>
+      <div class="tour-card-content">
+        <h6 class="fw-bold text-uppercase mb-1"><a [routerLink]="uriFeConst.product.detail"
+                                                   [queryParams]="{ id: item.id }">{{ item.name }}</a></h6>
+        <p class="mb-1 small text-muted tour-location">
+          <i class="ph-bold ph-map-pin me-1 text-primary"></i>
+          {{ item.category?.name || 'Đang cập nhật' }}
+        </p>
+        <div class="tour-price mt-2">
+          @if(item.prices.contactPrice || !item.prices.price ){
+            <span class="price fw-semibold text-primary">
+              Liên hệ
+            </span>
+          } @else if (item.prices.priceAfterDiscount){
+            <span class="price fw-semibold text-primary">
+               {{ item.prices.priceAfterDiscount | i18nCurrencyAmount :{showSymbol: true} }}
+            </span>
+            <span class="text-muted text-decoration-line-through ms-2">
+              {{ item.prices.price | i18nCurrencyAmount :{showSymbol: true} }}
+            </span>
+          } @else {
+            <span class="price fw-semibold text-primary">
+              {{ item.prices.price | i18nCurrencyAmount :{showSymbol: true} }}
+            </span>
+            @if (item.prices.priceOld){
+            <span class="text-muted text-decoration-line-through ms-2">
+              {{ item.prices.priceOld | i18nCurrencyAmount :{showSymbol: true} }}
+            </span>
+            }
+          }
+        </div>
+      </div>
+    </div>
+    }
+  </div>
+  }
+
+  @if (!isLoading && !products.length && keyword) {
+  <div class="mt-3 text-center text-muted">
+    Không tìm thấy sản phẩm nào.
+  </div>
+  }
+</div>

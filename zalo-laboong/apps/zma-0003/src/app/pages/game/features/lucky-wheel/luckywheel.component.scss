@@ -1,0 +1,46 @@
+.wrap {
+  padding: 16px;
+  height: 100%;
+}
+
+.w-bg-main-screen {
+  background-repeat: no-repeat;
+  background-size: cover;
+  background-position: bottom center;
+  background-image: url(https://beta.woay.vn/w/12f91114-d9c6-45d7-8559-d8af6d09f6ca/assets/90c0b765-2122-4774-bc10-bddf56c00f9d.png) !important;
+}
+
+.cta {
+  margin-top: 16px;
+  display: flex;
+  justify-content: center;
+}
+
+.title {
+  text-align: center;
+  font-weight: 800;
+  font-size: 26px;
+  color: var(--brand-color);
+}
+
+.sub {
+  text-align: center;
+  color: #2b3;
+  font-weight: 600;
+}
+
+.btn {
+  background: var(--brand-color);
+  color: #fff;
+  border: none;
+  border-radius: 999px;
+  padding: 12px 24px;
+  font-weight: 700;
+}
+
+form.user {
+  margin: 12px auto;
+  max-width: 420px;
+  display: grid;
+  gap: 8px;
+}

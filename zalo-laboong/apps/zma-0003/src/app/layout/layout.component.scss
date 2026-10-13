@@ -1,0 +1,33 @@
+.overflow-y-auto {
+  overflow-y: auto;
+}
+
+.flex-1_custom {
+  flex: 1 1 0%;
+}
+
+.flex-col {
+  flex-direction: column;
+}
+
+.w-screen {
+  width: 100vw;
+}
+
+.h-screen {
+  height: 100vh;
+}
+::ng-deep .sheet__close.btn-icon {
+  position: absolute;
+  right: 15px;
+  top: 20px;
+  border: none;
+  width: 30px;
+  height: 30px;
+  background: transparent;
+  font-size: 20px;
+}
+::ng-deep .sheet__header {
+  padding-top: 20px;
+}
+

@@ -1,0 +1,217 @@
+@if (payload) {
+  <div class="checkout">
+    <!-- Địa chỉ -->
+
+    @if (payload.customer && payload.customer.name) {
+      <div class="px-2 pb-2 address-user">
+        <div class="d-flex justify-content-between align-items-center mb-1 address-user">
+          <div class="fw-semibold">Thông tin Khách hàng</div>
+          <button type="button" class="btn btn-link p-0 small" (click)="onChangeAddress()">Thay đổi</button>
+        </div>
+
+        <div class="d-flex align-items-center mb-2 justify-content-between">
+          <span class="text-muted">Tên khách hàng</span>
+          <span class="fw-semibold me-1">{{ payload.customer.name }}</span>
+        </div>
+        <div class="d-flex align-items-center justify-content-between mb-2 text-muted">
+          <span>Số điện thoại</span>
+          @if (payload.customer.mobile) {
+          <span class="fw-semibold me-1">{{ payload.customer.mobile }}</span>
+          }
+        </div>
+        <div class="d-flex align-items-center justify-content-between text-muted">
+          <span>Địa chỉ</span>
+          <span class="flex-1 text-end">{{ payload.customer.address }}</span>
+        </div>
+      </div>
+    } @else {
+      <div class="py-3 d-flex align-items-center flex-column gap-2 cursor-pointer address-user" (click)="onChangeAddress()">
+        <div class="checkout-address-icon d-flex justify-content-center align-items-center rounded-circle bg-light">
+          <i class="ph-light ph-package"></i>
+        </div>
+        <span><i class="ph-light ph-plus text-primary"></i> Thêm địa chỉ nhận hàng</span>
+      </div>
+    }
+
+    <!-- Sản phẩm đã chọn -->
+    <div class="py-3 px-2 bg-white my-2">
+      @if (items.length > 0) {
+        <div class="d-flex flex-column gap-3">
+          @for (it of items; track it.productId) {
+            <div class="d-flex gap-2">
+              <a class="img-product-checkout">
+                <img
+                  class="checkout-product-item-img"
+                  [src]="it.image || 'https://dummyimage.com/100x100/163645/fff'"
+                  [alt]="it.name">
+              </a>
+              <div class="d-flex flex-column content-product-checkout">
+                <div class="text-wrap fw-semibold mb-1 name-product">{{ it.name }}</div>
+                @if (variantText(it)) {
+                  <span class="text-muted">{{ variantText(it) }}</span>
+                }
+                <div class="ms-auto d-flex align-items-end">
+                <span class="text-nowrap fw-semibold">
+                  {{ it.price | i18nCurrencyAmount : {showSymbol: true} }}
+                </span>
+                  @if (it.priceOld && it.priceOld > it.price) {
+                  <span class="text-muted text-decoration-line-through small text-nowrap">
+                    {{ it.priceOld | i18nCurrencyAmount : {showSymbol: true} }}
+                  </span>
+                  }
+                </div>
+              </div>
+
+            </div>
+          }
+        </div>
+      } @else {
+        <div class="text-center text-muted py-4">Không có sản phẩm được chọn</div>
+      }
+
+      @if (promoResult?.gifts?.bill?.applied?.length) {
+        <div class="mt-3 pt-2 border-top">
+          <div class="fw-semibold small mb-1"><i class="ph ph-gift me-1"></i>Quà tặng</div>
+          @for (applied of promoResult!.gifts!.bill!.applied; track applied.promotionId) {
+            @for (rule of applied.rules; track rule.ruleId) {
+              @for (gift of rule.giftItems; track gift.productId) {
+                <div class="d-flex align-items-center gap-1 small text-muted">
+                  <i class="ph ph-gift"></i>
+                  <span>{{ gift.name }}</span>
+                  <span class="text-danger">x {{ gift.quantity }} Miễn phí</span>
+                </div>
+              }
+            }
+          }
+        </div>
+      }
+    </div>
+
+
+  <div class="checkout-note">
+    <!-- Ghi chú -->
+    <div class="d-flex align-items-center border-top border-bottom p-2 justify-content-between">
+      <span class="fw-bold">Ghi chú</span>
+      <input
+        type="text"
+        class="form-control border-0 shadow-none w-auto"
+        placeholder="Lưu ý cho người bán..."
+        [(ngModel)]="noteInput"
+        (ngModelChange)="onNoteInput($event)"/>
+    </div>
+    <!-- Mã giảm giá -->
+    <div class="voucher-box border-bottom" (click)="openVoucherBox()">
+      <div class="d-flex justify-content-between align-items-center">
+        <span class="fw-bold">Mã giảm giá</span>
+        <i class="ph-light ph-caret-right"></i>
+      </div>
+
+      @if (selectedVoucher) {
+      <div class="list-voucher mt-2">
+        <div class="item-voucher border-1 d-inline-block border border-primary text-primary py-1 px-2 me-1">
+          <i class="ph-thin ph-ticket"></i>
+          <span>{{ selectedVoucher }}</span>
+        </div>
+      </div>
+      }
+    </div>
+  </div>
+
+    <!-- Tóm tắt -->
+    <div class="py-3 px-2 summary-order bg-white">
+      <span class="fw-bold d-block mb-2">Thanh toán</span>
+
+      <div class="d-flex justify-content-between">
+        <span class="text-muted">Tạm tính</span>
+        <span>{{ summary.subtotal | i18nCurrencyAmount : {showSymbol: true} }}</span>
+      </div>
+      <div class="d-flex justify-content-between">
+        <span class="text-muted">Phí vận chuyển</span>
+        <span>{{ summary.shippingFee | i18nCurrencyAmount : {showSymbol: true} }}</span>
+      </div>
+      <div class="d-flex justify-content-between" [class.text-danger]="summary.discount > 0">
+        <span class="text-danger">Giảm giá</span>
+        <span class="text-danger">- {{ summary.discount | i18nCurrencyAmount : {showSymbol: true} }}</span>
+      </div>
+      @if (promoResult?.discount?.promotions?.length) {
+        @for (promo of promoResult!.discount!.promotions; track promo.id) {
+          <div class="d-flex align-items-center text-muted small ps-2">
+            <i class="ph-bold ph-tag me-1"></i>{{ promo.name }}
+          </div>
+        }
+      }
+
+      <!-- Đơn vị vận chuyển -->
+      @if ((carrier && carrier.serviceId)) {
+      <div class="carrier-box mt-2">
+        <div class="carrier-list border rounded bg-white mb-2">
+          <label class="carrier-item d-flex align-items-center justify-content-between p-2 rounded active">
+            <div class="d-flex align-items-center gap-2">
+              <div class="fw-semibold">
+                <img [src]="carrier.logo" class="carrier-logo" alt=""/>
+              </div>
+              <div>
+                <div class="text-muted">{{ carrier.serviceName }}</div>
+                <div class="text-muted small">{{ carrier.serviceDesc }}</div>
+              </div>
+            </div>
+            <div class="carrier-fee fw-bold">
+              {{ carrier.customerShipFee | i18nCurrencyAmount : {showSymbol: true} }}
+            </div>
+          </label>
+        </div>
+
+        <div class="text-end">
+          <span class="cursor-pointer" (click)="onChangeCarrier(carrier)">
+            Chọn đơn vị vận chuyển khác
+          </span>
+        </div>
+      </div>
+      } @else {
+      <div class="carrier-box mt-2">
+        <div class="carrier-list border rounded bg-white mb-2">
+          <label class="carrier-item d-flex align-items-center justify-content-between p-2 rounded active">
+            Liên hệ phí vận chuyển
+          </label>
+        </div>
+      </div>
+      }
+    </div>
+
+    <!-- Phương thức thanh toán -->
+    <div class="py-3 px-2 bg-white mt-2">
+      <span class="fw-bold d-block mb-2">Phương thức thanh toán</span>
+
+      <div class="border rounded-3 p-2 d-flex align-items-center gap-2"
+           [class.pm-error]="showPaymentHint"
+           (click)="openSelectMethod()">
+        <div class="checkout-payment-icon bg-light rounded-circle d-flex justify-content-center align-items-center">
+          @if (paymentMethod?.logo) {
+            <img [src]="paymentMethod!.logo" alt="logo" class="pm-logo">
+          } @else {
+            <i class="ph-bold ph-credit-card text-primary"></i>
+          }
+        </div>
+
+        <span class="text-muted">
+          {{ paymentMethod?.displayName }}
+        </span>
+      </div>
+    </div>
+  </div>
+}
+
+@if (payload) {
+  <div class="checkout-order-button p-2 pb-4">
+    <div class="d-flex justify-content-between align-items-center mb-2">
+      <span class="fw-medium">Tổng thanh toán</span>
+      <span class="fw-bold">{{ summary.total | i18nCurrencyAmount : {showSymbol: true} }}</span>
+    </div>
+    <button
+      class="btn btn-primary btn-order__add w-100 fw-semibold rounded"
+      [disabled]="appFm.disabledSubmit"
+      (click)="onPlaceOrder()">
+      Đặt hàng
+    </button>
+  </div>
+}

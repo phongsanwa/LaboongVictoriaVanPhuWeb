@@ -1,0 +1,79 @@
+<section class="ticket-wrap pt-2">
+  @if (voucher) {
+    <div class="ticket" role="region" aria-label="Chi tiết voucher">
+      <div class="holes-top" aria-hidden="true"></div>
+
+      <header class="title">
+        <p class="brand">Ưu đãi từ Nhanh.vn</p>
+        <h1 class="voucher-title">{{ voucher.title }}</h1>
+
+        <div class="code-line">
+          <span class="code-label">Mã:</span>
+          <span class="code">{{ voucher.code }}</span>
+          <button class="btn-copy" type="button" (click)="copy(voucher.code)">Sao chép</button>
+        </div>
+      </header>
+
+      <div class="info">
+        <div class="info-block">
+          <h3>Hạn sử dụng mã</h3>
+          <p>{{ formatDate(voucher.expire) }}</p>
+        </div>
+
+        <div class="info-block">
+          <h3>Sản phẩm áp dụng</h3>
+          <p>Chỉ áp dụng cho một số sản phẩm</p>
+        </div>
+
+        <div class="info-block">
+          <h3>Điều kiện áp dụng</h3>
+          <ul class="terms">
+            <li>Giá trị đơn hàng tối thiểu: Không</li>
+            <li>Số lượng tối thiểu: Không</li>
+            <li>Giới hạn sử dụng: 1</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="holes-lower" aria-hidden="true"></div>
+
+      <div class="serial">
+        <div class="serial-head">
+          <span>SERIAL</span>
+          <span class="serial-code">{{ voucher.code }}</span>
+        </div>
+
+        <div class="code-render">
+          <app-render-codes
+            [data]="barcodeData"
+            [mode]="'barcode'"
+            [barcodeHeight]="80"
+            [showValueUnderBarcode]="false"
+            [qrSize]="90">
+          </app-render-codes>
+        </div>
+
+        <div class="numbers" aria-hidden="true">
+          <div class="nums">
+            @for (d of (voucher.code || '').split(''); track d + '-' + $index) {
+              <span>{{ d }}</span>
+            }
+          </div>
+        </div>
+      </div>
+    </div>
+  } @else {
+    <div class="ticket skeleton">
+      <div class="holes-top"></div>
+      <div class="skeleton-line lg"></div>
+      <div class="skeleton-line"></div>
+      <div class="skeleton-line"></div>
+      <div class="holes-lower"></div>
+      <div class="skeleton-barcode"></div>
+    </div>
+  }
+
+  <div class="divider mt-3">
+    <span>Sản phẩm áp dụng</span>
+  </div>
+</section>

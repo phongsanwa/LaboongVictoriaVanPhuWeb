@@ -1,0 +1,33 @@
+@if (products && products.length) {
+<div class="tour-wrapper tour-grid overflow-auto position-relative">
+  @for (prd of products; track prd.id) {
+    <div class="tour-card">
+      <div class="image-wrapper position-relative">
+        <a  [routerLink]="uriFeConst.product.detail"
+            [queryParams]="{ id: prd.id }"><img [src]="prd.image || 'https://placehold.co/400x250?text=No+Image'" [alt]="prd.name" /></a>
+        <div class="btn-delete-wishlist">
+          <button class="btn btn-delete-icon" (click)="removeProduct(prd.id)">
+            <i class="ph ph-heart"></i>
+          </button>
+        </div>
+        <div class="rating">
+          <i class="ph-bold ph-star"></i> 5.0
+        </div>
+      </div>
+      <div class="tour-card-content">
+        <h6 class="fw-bold text-uppercase mb-1"><a [routerLink]="uriFeConst.product.detail"
+                                                   [queryParams]="{ id: prd.id }">{{ prd.name }}</a></h6>
+        <p class="mb-1 small text-muted tour-location">
+          <i class="ph-bold ph-map-pin me-1 text-primary"></i>
+          Đang cập nhật
+        </p>
+        <div class="tour-price mt-2">
+          <span
+            class="price-value price">{{ prd.price ? (prd.price | i18nCurrencyAmount: {showSymbol: true}) : 'Liên hệ' }}</span>
+        </div>
+      </div>
+    </div>
+  }
+</div>
+}
+

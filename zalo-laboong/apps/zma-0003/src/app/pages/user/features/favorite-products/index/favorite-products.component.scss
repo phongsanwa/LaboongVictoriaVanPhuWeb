@@ -1,0 +1,37 @@
+.list-card {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  border: none;
+}
+
+.list-icon {
+  font-size: 1.5rem;
+  color: #e54c5c;
+}
+
+.list-title {
+  font-size: 1.15rem;
+  font-weight: 500;
+  color: #212529;
+}
+
+.btn-actions {
+  background: none;
+  border: none;
+  color: #6c757d;
+  font-size: 1.25rem;
+}
+
+.btn-actions:hover,
+.btn-actions:focus {
+  color: #000;
+  background-color: #f0f0f0;
+}
+
+.dropdown-item i {
+  width: 1.25em;
+  margin-right: 0.5rem;
+}
+
+.dropdown-toggle::after {
+  display: none !important;
+}

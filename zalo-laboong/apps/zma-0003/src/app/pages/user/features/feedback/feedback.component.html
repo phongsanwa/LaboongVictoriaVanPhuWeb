@@ -1,0 +1,56 @@
+<form class="contact-form" [formGroup]="feedbackForm" (ngSubmit)="onSubmit()">
+  <div class="page-user-edit px-2">
+
+    <div class="form-group py-2">
+      <label class="pb-1" for="fullname">Họ và tên <span class="text-danger">*</span></label>
+      <div class="input-group">
+        <input type="search" id="fullname" class="form-control" formControlName="name"
+               placeholder="Nhập họ và tên"/>
+      </div>
+      @if (isInvalid('name')) {
+        <div class="text-danger small">Vui lòng nhập họ và tên</div>
+      }
+    </div>
+
+    <div class="form-group py-2">
+      <label class="pb-1" for="phone">Số điện thoại <span class="text-danger">*</span></label>
+      <div class="input-group">
+        <input formControlName="mobile" type="tel" id="phone" class="form-control" placeholder="Nhập số điện thoại"/>
+      </div>
+      @if (isInvalid('mobile')) {
+        <div class="text-danger small">Vui lòng nhập số điện thoại</div>
+      }
+    </div>
+
+    <div class="form-group py-2">
+      <label class="pb-1" for="email">Email</label>
+      <input formControlName="email" type="email" id="email" class="form-control" placeholder="Nhập địa chỉ email"/>
+      @if (isInvalid('email')) {
+        @if (feedbackForm.get('email')?.hasError('required')) {
+          <div class="text-danger small">Vui lòng nhập email</div>
+        } @else if (feedbackForm.get('email')?.hasError('email')) {
+          <div class="text-danger small">Email không hợp lệ</div>
+        }
+      }
+    </div>
+
+    <div class="form-group py-2">
+      <label class="pb-1" for="address">Địa chỉ</label>
+      <input formControlName="address" type="text" id="address" class="form-control" placeholder="Nhập địa chỉ"/>
+      @if (isInvalid('address')) {
+        <div class="text-danger small">Vui lòng nhập địa chỉ</div>
+      }
+    </div>
+    <div class="form-group py-2">
+      <label class="pb-1" for="note">Mô tả</label>
+      <textarea formControlName="content" type="text" id="note" placeholder="Nhập vào mô tả" class="form-control"
+                rows="3"></textarea>
+      @if (isInvalid('content')) {
+        <div class="text-danger small">Vui lòng nhập mô tả</div>
+      }
+    </div>
+  </div>
+  <div class="w-100 px-2 pb-4">
+    <button type="submit" class="btn-save w-100">Gửi</button>
+  </div>
+</form>

@@ -1,0 +1,124 @@
+<div class="search-category">
+  <div class="container">
+    <div class="search-category-wrap d-flex justify-content-between align-items-center gap-2">
+      <div class="search-bar">
+        <i class="ph ph-magnifying-glass"></i>
+        <input type="text" placeholder="Bạn muốn tìm gì?" (focus)="goToSearch()"/>
+      </div>
+      <div class="column-arrange d-flex justify-content-between align-items-center gap-2">
+        <div class="list-tour d-flex align-items-center cursor-pointer" [class.active]="viewMode === 'list'" (click)="setListView()"><i class="ph-light ph-squares-four"></i></div>
+        <div class="grid-tour d-flex align-items-center cursor-pointer" [class.active]="viewMode === 'grid'" (click)="setGridView()"><i class="ph-bold ph-squares-four"></i></div>
+      </div>
+    </div>
+
+  </div>
+</div>
+<div class="min-h-full bg-section overflow-hidden no-scrollbar relative">
+  <div class="bg-background">
+
+
+    <!-- Danh mục con + sản phẩm -->
+    <div class="row gx-0 category-product-wrap">
+      <!-- Thanh danh mục cha -->
+      <div class="wrap-categories col-2 ">
+        @if (selectedParent?.childs?.length) {
+        <ul class="border-2 p-0">
+          @for (c of selectedParent?.childs ?? []; track c.id) {
+          <li class="d-block text-center child-category">
+            <a
+              class="text-subtitle d-block w-100 cursor-pointer
+                  {{ c.id === selectedCategoryId ? 'fw-bold color-active' : '' }}"
+              (click)="selectSubCategory(c.id)"
+            >
+              {{ c.name }}
+            </a>
+          </li>
+          }
+        </ul>
+        }
+      </div>
+
+
+      <div [class.col-10]="selectedParent?.childs?.length" [class.col-12]="!selectedParent?.childs?.length">
+        <div class="d-flex flex-nowrap no-scrollbar gap-1 text-nowrap overflow-auto space-x-6 overflow-x-auto">
+          @for (cate of category; track cate.id) {
+          <a class="d-flex h-100 align-items-center category-item cursor-pointer p-1
+            {{ cate.id === selectedParentCategoryId ? 'bg-white border-end-3 color-active' : '' }}"
+             (click)="selectCategory(cate.id)"
+          >
+            <img
+              loading="eager"
+              [src]="cate.image || 'https://dummyimage.com/52x52/163645/fff'"
+              class="object-cover img-category w-30 h-30"
+              [alt]="cate.name"
+            />
+            <div class="name-category text-center text-sm w-full line-clamp-2 text-subtitle ">
+              {{ cate.name }}
+            </div>
+          </a>
+          }
+        </div>
+        @if (products.length) {
+          <div class="grid grid-cols-2 px-2 py-2 gap-2 scrollable product-wrap"
+               [class.grid-product]="viewMode === 'grid'"
+               [class.list-product]="viewMode === 'list'"
+               [class.grid]="viewMode === 'grid'"
+               [class.grid-cols-2]="viewMode === 'grid'"
+               (scroll)="onScroll($event)">
+            @for (prd of products; track prd.id) {
+              <div class="flex flex-col border border-1 rounded-3 cursor-pointer group tour-card position-relative">
+                <a class="d-block w-full rounded-t-lg" [routerLink]="uriFeConst.product.detail"
+                   [queryParams]="{ id: prd.id }">
+                  <img
+                    [src]="prd.image || 'https://dummyimage.com/300x300/163645/fff'"
+                    class="w-full aspect-square object-cover rounded-t-lg"
+                    [alt]="prd.name"
+                  />
+                </a>
+                <button class="favorite-btn" appOpenFavoriteSheet [product]="prd">
+                  <i class="ph ph-heart" [appFavoriteActive]="prd.id"></i>
+                </button>
+                <div class="p-2 pb-3">
+                  <div class="text-3xs text-subtitle truncate">
+                    <a [routerLink]="uriFeConst.product.detail"
+                       [queryParams]="{ id: prd.id }">{{ prd.category?.name || '' }}</a>
+                  </div>
+                  <div class="text-xs mb-2 fw-medium line-clamp-2">
+                    {{ prd.name }}
+                  </div>
+
+                  <div class="product-price position-relative">
+                    @if (prd.prices && (prd.prices.contactPrice || !prd.prices.price)) {
+                      <div class="mt-0.5 text-sm fw-semibold">Liên hệ</div>
+                    }
+                    @else if (prd.prices.priceAfterDiscount) {
+                      <div class="mt-0.5 text-sm fw-semibold">
+                        {{ prd.prices.priceAfterDiscount | i18nCurrencyAmount : { showSymbol: true } }}
+                      </div>
+                      <div class="mt-0.5 text-xs fw-medium line-through opacity-75">
+                        {{ prd.prices.price | i18nCurrencyAmount : { showSymbol: true } }}
+                      </div>
+                    }
+                    @else if (prd.prices) {
+                      <div class="mt-0.5 text-sm fw-semibold">
+                        {{ prd.prices.price | i18nCurrencyAmount : { showSymbol: true } }}
+                      </div>
+                      @if (prd.prices.priceOld) {
+                        <div class="mt-0.5 text-xs fw-medium line-through opacity-75">
+                          {{ prd.prices.priceOld | i18nCurrencyAmount : { showSymbol: true } }}
+                        </div>
+                      }
+                    }
+                    @else {
+                      <div class="mt-0.5 text-sm fw-semibold">Liên hệ</div>
+                    }
+                  </div>
+                </div>
+              </div>
+            }
+          </div>
+        }
+      </div>
+    </div>
+  </div>
+</div>
