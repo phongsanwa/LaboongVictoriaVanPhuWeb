@@ -1,0 +1,254 @@
+@if (footerConfig$ | async; as footer) {
+  @if (footer.show !== false) {
+
+    @switch (getFooterType(footer)) {
+
+      @case ('style1') {
+        <nav
+          class="w-100 p-2 grid footer-nav shadow-lg"
+          [style.padding-bottom]="'max(16px, env(safe-area-inset-bottom))'"
+          [style.grid-template-columns]="'repeat(' + getFooterColCount(footer) + ', 1fr)'"
+        >
+          @for (item of getItemsToRender(footer); track (item?.path ?? $index)) {
+            @if (!!item.path && !item.badge) {
+              <a
+                [routerLink]="item.path"
+                [queryParams]="item.queryParams"
+                [class.active]="item.path === '/'"
+                class="footer-tab no-hover d-flex flex-col align-items-center space-y-0.5 p-1 pb-0.5 position-relative cursor-pointer"
+              >
+                @if (item.iconTypeImg) {
+                  <img
+                    class="footer-icon-img"
+                    [src]="item.iconTypeImg"
+                    [attr.alt]="item.label"
+                  />
+                } @else {
+                  <i [class]="(item.iconClass) + ' f-6'"></i>
+                }
+
+                <span class="text-2xs mt-1">{{ item.label }}</span>
+              </a>
+            } @else {
+              <div
+                class="footer-tab no-active as-button d-flex flex-col align-items-center space-y-0.5 p-1 pb-0.5 position-relative cursor-pointer">
+                @if (item.iconTypeImg) {
+                  <img
+                    class="footer-icon-img"
+                    [src]="item.iconTypeImg"
+                    [attr.alt]="item.label"
+                  />
+                } @else {
+                  <i [class]="(item.iconClass || '') + ' f-6'"></i>
+                }
+
+                <span class="text-2xs mt-1">{{ item.label }}</span>
+
+                @if (item.badge) {
+                  <span
+                    class="position-absolute translate-middle badge rounded-pill"
+                    [style]="'background-color: var(--brand-color);'"
+                  >
+                    0
+                  </span>
+                }
+              </div>
+            }
+
+          } @empty {
+            <div class="text-center text-muted py-2 text-2xs">
+              Không có mục nào
+            </div>
+          }
+        </nav>
+      }
+      @case ('style2') {
+        <nav class="bottom-navigation bottom-style2">
+          @for (item of getItemsToRender(footer); track (item?.path ?? $index)) {
+            @if (!!item.path && !item.badge) {
+              <a
+                [routerLink]="item.path"
+                [queryParams]="item.queryParams"
+                [class.active]="item.path === '/'"
+                class="nav-item">
+
+                <div class="nav-icon-wrapper me-1">
+                  <i [class]="item.iconClass + ' nav-icon'"></i>
+                  @if (item.badge) {
+                    <span class="badge-dot"></span>
+                  }
+                </div>
+
+                @if (item.path === '/') {
+                  <span class="nav-label">{{ item.label }}</span>
+                }
+              </a>
+            }
+          }
+        </nav>
+      }
+      @case ('style3') {
+        <div class="bottom-wrapper bottom-style3">
+          <div class="tabs">
+            <!-- Cụm bên trái: 2 item đầu -->
+            <div class="tab tab--left">
+              @for (item of getItemsToRender(footer); track (item?.path); let i = $index) {
+                @if (i < 2) {
+                  <a
+                    class="nav-item"
+                    [class.active]="item.path === '/'"
+                    [routerLink]="item.path"
+                    [queryParams]="item.queryParams"
+                  >
+                    <div class="nav-icon-wrapper position-relative">
+                      @if (item.iconClass?.includes('ph-shopping-cart')) {
+                        <!-- Demo: luôn hiển thị 0 -->
+                        <span
+                          class="small position-absolute top-0 translate-middle badge rounded-pill start-100 bg-danger"
+                        >
+                    0
+                  </span>
+                      }
+                      <i [class]="(item.iconClass || '') + ' nav-icon'"></i>
+
+                      @if (item.badge) {
+                        <span class="badge-dot"></span>
+                      }
+                    </div>
+                    <span class="nav-label">{{ item.label }}</span>
+                  </a>
+                }
+              }
+            </div>
+
+            <!-- Nút QR ở giữa -->
+            <div class="tab tab--fab">
+              <div class="top">
+                <button class="qr-button fab" type="button">
+                  <i class="ph-light ph-qr-code fs-3"></i>
+                </button>
+              </div>
+            </div>
+
+            <!-- Cụm bên phải: item thứ 3 và 4 -->
+            <div class="tab tab--right">
+              @for (item of getItemsToRender(footer); track (item?.path); let i = $index) {
+                @if (i >= 2 && i < 4) {
+                  <a
+                    class="nav-item"
+                    [class.active]="item.path === '/'"
+                    [routerLink]="item.path"
+                    [queryParams]="item.queryParams"
+                  >
+                    <div class="nav-icon-wrapper position-relative">
+                      @if (item.iconClass?.includes('ph-shopping-cart')) {
+                        <span
+                          class="small position-absolute top-0 translate-middle badge rounded-pill start-80 bg-danger"
+                        >
+                    0
+                  </span>
+                      }
+                      <i [class]="(item.iconClass || '') + ' nav-icon'"></i>
+
+                      @if (item.badge) {
+                        <span class="badge-dot"></span>
+                      }
+                    </div>
+                    <span class="nav-label">{{ item.label }}</span>
+                  </a>
+                }
+              }
+            </div>
+          </div>
+        </div>
+      }
+      @case ('style4') {
+        <div class="footer bottom-style4 px-2 pt-2 safe-pb-16">
+          <div class="d-flex justify-content-between">
+            @if (isTabs(footer)) {
+              <div class="col-8 d-flex text-center align-items-center justify-content-between p-2 pe-4">
+                @for (item of getItemsToRender(footer); track (item?.path); let i = $index) {
+
+                  @if (i === 0) {
+                    <div class="block-member" [routerLink]="item.path || uriFeConst.user.points">
+                      <span class="text-muted">
+                        <i [class]="(item.iconClass || 'ph-light ph-barcode') + ' fs-3'"></i>
+                        <p class="m-0 small">{{ item.label || 'Thành viên' }}</p>
+                      </span>
+                    </div>
+                  }
+
+                  @if (i === 1) {
+                    <div class="block-shop" [routerLink]="item.path || '/'">
+                <span class="text-muted">
+                  <i [class]="(item.iconClass || 'ph-bold ph-house') + ' fs-3'"></i>
+                  <p class="m-0 small">{{ item.label || 'Trang chủ' }}</p>
+                </span>
+                    </div>
+                  }
+
+                  @if (i === 2) {
+                    <div class="block-cart text-muted" [routerLink]="item.path || uriFeConst.cart.index">
+                <span class="position-relative">
+                  <i [class]="(item.iconClass || 'ph-light ph-shopping-cart') + ' fs-3'"></i>
+                  <span
+                    class="small position-absolute start-80 badge rounded-pill common-background">
+                    0
+                  </span>
+                </span>
+                      <p class="m-0 small">{{ item.label || 'Giỏ hàng' }}</p>
+                    </div>
+                  }
+
+                }
+              </div>
+
+              <div class="col-4" [routerLink]="uriFeConst.cart.index">
+                <button
+                  class="fs-5 fw-bold btn text-white common-background outline-none shadow-none w-100 h-100">
+                  Đặt mua
+                </button>
+              </div>
+
+            } @else {
+              <!-- MODE 2: Tạm tính + Đặt hàng -->
+              <div class="col-5 d-flex text-center align-items-center justify-content-around pe-2">
+
+                <!-- Giỏ hàng: vẫn lấy item index 2 -->
+                @for (item of getItemsToRender(footer); track (item?.path); let i = $index) {
+                  @if (i === 2) {
+                    <div class="block-cart text-muted" [routerLink]="item.path || uriFeConst.cart.index">
+                <span class="position-relative">
+                  <i [class]="(item.iconClass || 'ph-light ph-shopping-cart') + ' fs-3'"></i>
+                  <span
+                    class="small position-absolute top-0 start-100 translate-middle badge rounded-pill common-background">
+                    0
+                  </span>
+                </span>
+                    </div>
+                  }
+                }
+
+                <div class="block-shop">
+            <span class="text-muted text-start">
+              <p class="m-0">Tạm tính</p>
+              <p class="m-0 text-danger">0đ</p>
+            </span>
+                </div>
+              </div>
+
+              <div class="col-7">
+                <button
+                  [routerLink]="uriFeConst.checkout.index"
+                  class="fw-medium btn common-background text-white outline-none shadow-none w-100 h-100">
+                  Đặt hàng
+                </button>
+              </div>
+            }
+
+          </div>
+        </div>
+      }
+    }
+  }
+}

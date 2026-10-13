@@ -1,0 +1,59 @@
+<div class="zma-hero-banner mb-2 position-relative">
+  <div class="zma-hero-banner-inner">
+
+    @switch (bannerType) {
+
+      <!-- ========== TYPE: carousel (dùng universal-slide) ========== -->
+      @case ('style1') {
+        @if (carouselItems.length > 0) {
+          <div class="banner-slide-wrapper-style1">
+            <app-universal-slide
+              [items]="carouselItems"
+              [config]="heroSlideConfig">
+            </app-universal-slide>
+
+            <div class="search-bar">
+              <i class="ph ph-magnifying-glass"></i>
+              <input type="text" placeholder="Bạn muốn tìm gì?" (focus)="goToSearch()"/>
+            </div>
+          </div>
+        }
+      }
+      @default {
+        @if (hasSlides && firstSlide) {
+          <div class="zma-hero-banner-image-wrapper">
+            <img
+              [src]="firstSlide.imageUrl"
+              alt="banner"
+              class="w-100 rounded-3"
+            />
+          </div>
+
+          <div class="zma-hero-banner-overlay px-3 py-2">
+            @if (firstSlide.title) {
+              <h5 class="mb-1 fw-semibold">{{ firstSlide.title }}</h5>
+            }
+
+            @if (firstSlide.subtitle) {
+              <p class="mb-2 small text-muted">
+                {{ firstSlide.subtitle }}
+              </p>
+            }
+
+            @if (firstSlide.ctaText) {
+              <button
+                type="button"
+                class="btn btn-sm btn-primary rounded-pill">
+                {{ firstSlide.ctaText }}
+              </button>
+            }
+          </div>
+        } @else {
+          <div class="text-center text-muted small py-2">
+            Không có banner để hiển thị.
+          </div>
+        }
+      }
+    }
+  </div>
+</div>

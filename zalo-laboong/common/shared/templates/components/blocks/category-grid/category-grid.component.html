@@ -1,0 +1,92 @@
+<div class="zma-category-grid mb-3">
+  @switch (categoryType) {
+    @case ('style1') {
+      <div class="category-section-style1">
+        <div class="category-section" *ngIf="categories?.length">
+          @for (category of categories; track (category?.id ?? category?.name); let i = $index) {
+            <div
+              class="category-card"
+              [ngClass]="i % 2 === 0 ? 'international' : 'domestic'"
+            >
+              <a
+                class="category-header"
+                [routerLink]="uriFeConst.product.category"
+              >
+                <span class="title">{{ category.name }}</span>
+                <i class="ph ph-caret-right"></i>
+              </a>
+
+              <div class="category-image">
+                <a [routerLink]="uriFeConst.product.category">
+                  <img
+                    [src]="category.iconUrl"
+                    [alt]="category.name"
+                    loading="lazy"
+                  />
+                </a>
+              </div>
+            </div>
+          }
+        </div>
+      </div>
+
+      <div class="home-features container py-2">
+        <div class="row text-center">
+          @for (item of featureItems; track item) {
+            <div class="col-3 feature-item">
+              <a [routerLink]="item.link" class="d-block text-decoration-none">
+                <div class="icon">
+                  <i [class]="item.icon"></i>
+                </div>
+                <div class="title fw-semibold">{{ item.title }}</div>
+              </a>
+            </div>
+          }
+        </div>
+      </div>
+
+      <div class="banner-advertising">
+        <a href=""><img src="https://lienbangtravel.com/files/upload/files/Tour%205%20n%C6%B0%E1%BB%9Bc%20Ch%C3%A2u%20%C3%82U/Du%20xu%C3%A2n%20Nh%E1%BA%ADt%20B%E1%BA%A3n/du-lich-chau-au-thang-12-1.jpg" alt=""></a>
+      </div>
+
+      <section class="explore-section position-relative text-white mt-4">
+        <div class="overlay-gradient"></div>
+        <div class="container position-relative z-2 py-3">
+          <div class="d-flex justify-content-between align-items-center mb-3">
+            <div>
+              <h5 class="fw-bold text-uppercase mb-1 text-warning">Khám phá địa điểm</h5>
+              <p class="mb-0 small">Cùng khám phá những địa điểm nổi bật</p>
+            </div>
+            <a routerLink="/destinations" class="text-white">
+              <i class="ph-bold ph-caret-right"></i>
+            </a>
+          </div>
+          <div class="explore-wrapper position-relative z-2">
+              @if (destinations.length > 0) {
+                <div class="destination-card large">
+                  <img [src]="destinations[0].image" [alt]="destinations[0].name" />
+                  <div class="info">
+                    <h6>{{ destinations[0].name }}</h6>
+                    <span>Khám phá</span>
+                  </div>
+                </div>
+              }
+              <div class="destination-small-wrap">
+                @for (item of destinations.slice(1, 5); track item) {
+                  <div class="destination-card small">
+                    <img [src]="item.image" [alt]="item.name" />
+                    <div class="info">
+                      <h6>{{ item.name }}</h6>
+                      <span>Khám phá</span>
+                    </div>
+                  </div>
+                }
+              </div>
+
+
+            </div>
+        </div>
+      </section>
+    }
+  }
+</div>

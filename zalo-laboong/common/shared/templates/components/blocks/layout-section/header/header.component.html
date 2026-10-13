@@ -1,0 +1,94 @@
+@if (headerConfig$ | async; as header) {
+  @if (header.show !== false) {
+    <header
+      class="zma-header d-flex flex-column"
+      [ngStyle]="{
+        'background-color': header.backgroundColor || '#ffffff',
+        'color': header.textColor || '#111827'
+      }"
+      [style.--header-bg]="header.backgroundColor || 'var(--brand-color)'"
+    >
+      @switch (getHeaderType(header)) {
+
+        @case ('style1') {
+          <div
+            class="header-color--style1 h-14 safe-pt-16 header-user-icon w-100 d-flex align-items-center px-2 py-2"
+          >
+            <div
+              [routerLink]="uriFeConst.user.profile"
+              class="user-header rounded d-flex align-items-center"
+            >
+              <div class="avatar-brand">
+                <img
+                  [src]="'https://posstatic.nvndev.net/assets/img/favicon.svg'"
+                  class="rounded-circle avatar-brand_img"
+                  width="48"
+                  height="48"
+                />
+              </div>
+              <div class="ms-2" [ngClass]="'text-white'">
+                <div>{{ header.title || 'Nhanh Shop' }}</div>
+              </div>
+            </div>
+          </div>
+        }
+        @case ('style2') {
+          <div
+            class="header-color--style2 home h-14 safe-pt-16 safe-pb-16 header-user-icon header w-100 d-flex align-items-center p-2">
+            <div
+              [routerLink]="uriFeConst.user.profile"
+              class="user-header rounded d-flex align-items-center"
+            >
+              <img
+                [src]="user?.avatar ?? 'assets/img/avatar-placeholder.jpg'"
+                [attr.alt]="user?.name ?? ''"
+                class="rounded-circle me-2"
+                width="40"
+                height="40"
+              />
+              <div class="text-black">
+                @if (user?.name) {
+                  <div class="fw-bold">{{ user?.name }}</div>
+                  @if (user?.phoneNumber) {
+                    <div class="small">{{ user?.phoneNumber }}</div>
+                  }
+                } @else {
+                  <div class="small">Xin chào,</div>
+                  <div class="fw-bold">Guest</div>
+                }
+              </div>
+            </div>
+          </div>
+        }
+        @case ('style3') {
+          <div class="header-wrap header-color--style3">
+            <div
+              [class]="'header-color safe-pt-16 pb-3 h-14 header-user-icon ' +
+               'w-100 d-flex align-items-center px-2 text-white'">
+              <a [routerLink]="uriFeConst.home" class="logo">
+                <img
+                  class="rounded-1"
+                  [src]="'https://posstatic.nvndev.net/assets/img/favicon.svg'"
+                  style="width: 27px; height: 27px; background: #ffffff; padding: 3px"
+                  alt="Logo"
+                />
+              </a>
+              <div class="wr-search position-relative w-35 ms-2" [routerLink]="uriFeConst.product.search">
+                <i class="ph-light ph-magnifying-glass position-absolute top-50 padding-left-10 translate-middle-y"></i>
+                <input class=" ps-4 shadow-none outline-none w-100" placeholder="Nhanh Shop">
+              </div>
+              <div class="ms-2" [routerLink]="uriFeConst.cart.index">
+                <i class="ph-light ph-shopping-cart"></i>
+              </div>
+              <div class="ms-2" (click)="openSupportChat()">
+                <i class="ph-light ph-chat-circle-dots"></i>
+              </div>
+
+            </div>
+          </div>
+        }
+      }
+    </header>
+  } @else {
+  }
+}

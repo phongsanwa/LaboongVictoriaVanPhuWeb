@@ -1,0 +1,71 @@
+.zma-about-store {
+  .zma-debug-tag {
+    font-size: 10px;
+    color: #6b7280;
+    display: inline-block;
+    margin-bottom: 4px;
+  }
+}
+
+/* Layout style1: card giới thiệu đơn giản */
+.about-store--style1 {
+  border-radius: 12px;
+  padding: 12px 14px;
+
+  .fw-semibold {
+    font-weight: 600;
+  }
+
+  h6 {
+    font-size: 0.95rem;
+    margin-bottom: 0.2rem;
+  }
+
+  img.rounded-circle {
+    border: 2px solid rgba(148, 163, 184, 0.5);
+  }
+
+  .small {
+    font-size: 0.8rem;
+    line-height: 1.3;
+  }
+
+  .text-muted {
+    color: #6b7280 !important;
+  }
+
+  .ph-star {
+    font-size: 0.8rem;
+  }
+
+  .ph-map-pin,
+  .ph-phone,
+  .ph-clock {
+    font-size: 0.85rem;
+    color: #6b7280;
+  }
+
+  /* Dòng địa chỉ / hotline / giờ mở cửa */
+  .d-flex.align-items-start,
+  .d-flex.align-items-center {
+    i {
+      min-width: 14px;
+      text-align: center;
+    }
+  }
+
+  /* Khoảng cách dưới cùng cho block info */
+  .small:last-child {
+    margin-bottom: 0;
+  }
+}
+
+/* Nếu bạn muốn dùng màu brand từ CSS variable (nếu có) */
+:root {
+  /* fallback: thay bằng màu brand của bạn nếu chưa có */
+  --zma-about-title-color: #111827;
+}
+
+.about-store--style1 h6 {
+  color: var(--zma-about-title-color);
+}

@@ -1,0 +1,81 @@
+<div class="zma-product-grid mb-3">
+
+  @switch (productType) {
+    @case ('style1') {
+      <section class="daily-tour-section daily-tour-section-style1 position-relative text-dark mt-2 new-section-tour">
+        <div class="overlay-gradient"></div>
+
+        <div class="container position-relative z-2 py-3">
+          <div class="d-flex justify-content-between align-items-center mb-3">
+            <div>
+              <h5 class="fw-bold text-uppercase mb-1 text-primary">
+                {{ data.title || 'Tour trong ngày' }}
+              </h5>
+            </div>
+
+            <a
+              [routerLink]="uriFeConst.product.category"
+              class="text-primary"
+            >
+              <i class="ph-bold ph-caret-right"></i>
+            </a>
+          </div>
+
+          <!-- Danh sách tour/sản phẩm -->
+          <div class="tour-wrapper d-flex gap-2 overflow-auto">
+            @for (prd of products; track (prd?.id ?? prd?.name ?? $index)) {
+              <div class="tour-card">
+                <div class="image-wrapper position-relative">
+                  <a
+                    [routerLink]="[uriFeConst.product.detail]"
+                    [queryParams]="{ id: prd.id }"
+                  >
+                    <img
+                      [src]="prd.imageUrl || 'https://via.placeholder.com/300x200?text=Tour'"
+                      [alt]="prd.name"
+                      loading="lazy"
+                    />
+                  </a>
+
+                  <!-- Nút yêu thích: demo → icon tĩnh -->
+                  <button class="favorite-btn" type="button">
+                    <i class="ph ph-heart"></i>
+                  </button>
+
+                  <!-- Rating: demo cố định 4.8, sau này có thể lấy từ prd.rating -->
+                  <div class="rating">
+                    <i class="ph-bold ph-star"></i>
+                    {{ 4.8 }}
+                  </div>
+                </div>
+
+                <div class="p-2">
+                  <h6 class="fw-bold text-uppercase mb-1">
+                    <a
+                      [routerLink]="[uriFeConst.product.detail]"
+                      [queryParams]="{ id: prd.id }"
+                      class="text-reset text-decoration-none"
+                    >
+                      {{ prd.name }}
+                    </a>
+                  </h6>
+
+                  <!-- Giá (demo đơn giản bằng formatPrice) -->
+                  <div class="tour-price mt-2">
+                    <span class="price fw-semibold text-primary ms-2">
+                      {{ formatPrice(prd.price) }}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            } @empty {
+              <div class="text-center text-muted small py-2">
+                Không có sản phẩm nào.
+              </div>
+            }
+          </div>
+        </div>
+      </section>
+    }
+  }
+</div>

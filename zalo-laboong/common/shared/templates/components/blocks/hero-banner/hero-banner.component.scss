@@ -1,0 +1,38 @@
+.banner-slide-wrapper-style1 {
+  ::ng-deep .swiper-wrapper .swiper-slide img {
+    aspect-ratio: 4 / 3 !important;
+    object-fit: cover;
+  }
+
+  .search-bar {
+    display: flex;
+    align-items: center;
+    background: #fff;
+    border-radius: 2rem;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    margin: -1.5rem auto 0;
+    width: 90%;
+    padding: 0.5rem 1rem;
+    position: relative;
+    z-index: 10;
+    bottom: 30px;
+
+    i {
+      font-size: 1.2rem;
+      color: #888;
+      margin-right: 0.5rem;
+    }
+
+    input {
+      flex: 1;
+      border: none;
+      outline: none;
+      font-size: 0.95rem;
+      color: var(--brand-text);
+
+      &::placeholder {
+        color: #aaa;
+      }
+    }
+  }
+}

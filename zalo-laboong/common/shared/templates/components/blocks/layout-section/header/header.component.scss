@@ -1,0 +1,141 @@
+.back-button {
+  padding: 0.5rem;
+  background: transparent;
+  border: 0;
+  color: #fff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  border-radius: 0.25rem;
+}
+
+.back-button:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+.back-button:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.3);
+}
+
+.header-color--style1.header-user-icon .user-header {
+  position: relative;
+}
+
+.avatar-brand {
+  background-color: #ffffff;
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  .avatar-brand_img {
+    width: 32px;
+    height: 32px;
+  }
+}
+
+
+// style 2
+.header-color--style2.home {
+  position: fixed;
+  left: 0;
+  width: 100%;
+  background: rgba(255, 255, 255, 0.5);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+  z-index: 999;
+  display: none !important;
+}
+
+.header-color--style2.header-user-icon:not(.home) {
+  position: relative;
+  padding-top: calc(max(16px, var(--zaui-safe-area-inset-top)) + var(--zaui-safe-extra-top)) !important;
+}
+
+.header-color--style2.scroll {
+  display: flex !important;
+}
+
+// style 3
+
+.header-color--style3 {
+
+  .back-button {
+    padding: 0.5rem;
+    background: transparent;
+    border: 0;
+    color: #fff;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    border-radius: 0.25rem;
+  }
+
+  .back-button:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+  }
+
+  .back-button:focus {
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.3);
+  }
+
+  .header-color.header-user-icon .user-header {
+    position: relative;
+    bottom: 5px;
+  }
+
+  .header-user-icon {
+    position: relative;
+    z-index: 2;
+  }
+
+  .header-user-icon:not(.after-hidden):after {
+    content: '';
+    position: absolute;
+    left: 0;
+    bottom: -25px;
+    width: 100%;
+    height: 50px;
+    background-color: var(--header-bg);;
+    border-radius: 50%;
+    z-index: -1;
+  }
+
+  .w-35 {
+    width: 45%;
+  }
+
+  .wr-search input {
+    background: rgba(0, 0, 0, .3);
+    color: #fff;
+    border-radius: 25px;
+    border: none;
+    padding: 0 5px;
+    height: 30px;
+    font-size: 11px;
+  }
+
+  .wr-search input::placeholder {
+    font-size: 11px;
+    color: #fff;
+  }
+
+  .wr-search i {
+    left: 10px;
+  }
+
+  .z-index-20 {
+    z-index: 20
+  }
+
+  .h-100-vh {
+    height: 100vh;
+  }
+}

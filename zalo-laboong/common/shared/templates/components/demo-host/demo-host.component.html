@@ -1,0 +1,79 @@
+<div class="w-screen h-screen d-flex flex-col bg-background text-foreground">
+  <!-- Spinner giống layout chính -->
+  <app-spinner-with-logo
+    [loading]="(isLoading$ | async) ?? false"
+    [position]="'position-fixed'"
+    [opacity]="0.25">
+  </app-spinner-with-logo>
+
+  <!-- Header đọc config từ DemoUiConfigService (type, logo, title, ...) -->
+  <app-header></app-header>
+
+  <!-- Vùng nội dung scroll -->
+  <div class="flex-1_custom overflow-y-auto">
+    <div class="zma-demo-page">
+      <ng-container *ngIf="template as tpl; else noTemplate">
+        <ng-container *ngIf="finalBlocks.length; else noBlocks">
+          <ng-container *ngFor="let block of finalBlocks">
+            <ng-container [ngSwitch]="block.type">
+
+              <!-- Banner -->
+              <app-zma-hero-banner
+                *ngSwitchCase="'hero-banner'"
+                [data]="getBlockData(block.id)"
+                [debug]="debug">
+              </app-zma-hero-banner>
+
+              <!-- Category grid -->
+              <app-zma-category-grid
+                *ngSwitchCase="'category-grid'"
+                [data]="getBlockData(block.id)"
+                [debug]="debug">
+              </app-zma-category-grid>
+
+              <!-- Product grid -->
+              <app-zma-product-grid
+                *ngSwitchCase="'product-grid'"
+                [data]="getBlockData(block.id)"
+                [debug]="debug">
+              </app-zma-product-grid>
+
+              <!-- Feature icons -->
+              <app-zma-feature-icons
+                *ngSwitchCase="'feature-icons'"
+                [data]="getBlockData(block.id)"
+                [debug]="debug">
+              </app-zma-feature-icons>
+
+              <app-zma-about-store
+                *ngSwitchCase="'about-store'"
+                [data]="getBlockData(block.id)"
+                [debug]="debug">
+              </app-zma-about-store>
+
+            </ng-container>
+          </ng-container>
+        </ng-container>
+      </ng-container>
+
+      <ng-template #noTemplate>
+        <div class="text-center text-muted p-3">
+          Không tìm thấy template phù hợp để render demo.
+        </div>
+      </ng-template>
+
+      <ng-template #noBlocks>
+        <div class="text-center text-muted p-3">
+          Template không có block nào để hiển thị.
+        </div>
+      </ng-template>
+    </div>
+  </div>
+
+  <app-footer></app-footer>
+
+  <app-fab-actions
+    [showOn]="['/demo']"
+    (share)="openShare()">
+  </app-fab-actions>
+</div>

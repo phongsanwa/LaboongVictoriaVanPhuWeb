@@ -1,0 +1,32 @@
+.zma-feature-icon i {
+  font-size: 20px;
+}
+
+.zma-feature-icon-img {
+  width: 24px;
+  height: 24px;
+  object-fit: cover;
+}
+
+.zma-feature-text {
+  flex: 1;
+}
+
+.zma-debug-tag {
+  position: relative;
+  top: -4px;
+  font-size: 10px;
+  padding: 2px 6px;
+  border-radius: 999px;
+  background: #111827;
+  color: #f9fafb;
+}
+
+.zma-debug-json {
+  background: #111827;
+  color: #e5e7eb;
+  border-radius: 8px;
+  padding: 6px 8px;
+  max-height: 200px;
+  overflow: auto;
+}
