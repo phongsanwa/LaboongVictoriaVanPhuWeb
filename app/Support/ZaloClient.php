@@ -30,7 +30,7 @@ class ZaloClient
         }
 
         try {
-            $res = Http::timeout(12)->get(self::GRAPH . '/me', [
+            $res = Http::timeout(12)->withHeaders(self::authHeaders($accessToken))->get(self::GRAPH . '/me', [
                 'access_token' => $accessToken,
                 'fields'       => 'id,name,picture',
             ]);
@@ -53,6 +53,21 @@ class ZaloClient
     }
 
     /**
+     * Header xác thực cho graph.zalo.me: access_token + appsecret_proof
+     * (HMAC-SHA256 của access token bằng app secret, Zalo yêu cầu khi app bật bảo mật).
+     */
+    private static function authHeaders(string $accessToken): array
+    {
+        $headers = ['access_token' => $accessToken];
+        $secret = trim((string) config('services.zalo.app_secret', ''));
+        if ($secret !== '') {
+            $headers['appsecret_proof'] = hash_hmac('sha256', $accessToken, $secret);
+        }
+
+        return $headers;
+    }
+
+    /**
      * Lấy số điện thoại người dùng từ "phone token" (getPhoneNumber của Mini App).
      * Cần app_secret. Trả số dạng 0xxxxxxxxx hoặc null.
      */
@@ -64,10 +79,9 @@ class ZaloClient
         }
 
         try {
-            $res = Http::timeout(12)->withHeaders([
-                'access_token' => trim($accessToken),
-                'code'         => trim($phoneToken),
-                'secret_key'   => $secret,
+            $res = Http::timeout(12)->withHeaders(self::authHeaders(trim($accessToken)) + [
+                'code'       => trim($phoneToken),
+                'secret_key' => $secret,
             ])->get(self::GRAPH . '/me/info');
 
             $number = $res->json('data.number');

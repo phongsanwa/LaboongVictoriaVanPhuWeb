@@ -10,11 +10,17 @@ class PointsController extends Controller
 {
     public function index()
     {
+        return view('points-detail', ['pointsData' => $this->buildPointsData()]);
+    }
+
+    /** Số dư + lịch sử điểm theo tháng — dùng chung cho web và API Mini App (GET /api/points). */
+    public function buildPointsData(): array
+    {
         $user = Auth::user();
         $customer = $user->customer()->with('tier')->first();
 
         if (!$customer) {
-            return view('points-detail', ['pointsData' => [
+            return [
                 'member' => ['name' => $user->name, 'id' => '—', 'tier' => '—'],
                 'balance' => 0,
                 'earnedTotal' => 0,
@@ -23,7 +29,7 @@ class PointsController extends Controller
                 'expireDate' => null,
                 'months' => [],
                 'history' => [],
-            ]]);
+            ];
         }
 
         $member = [
@@ -85,7 +91,7 @@ class PointsController extends Controller
             ->values()
             ->all();
 
-        return view('points-detail', ['pointsData' => [
+        return [
             'member' => $member,
             'balance' => $customer->total_points,
             'earnedTotal' => $customer->lifetime_points,
@@ -94,7 +100,7 @@ class PointsController extends Controller
             'expireDate' => $expireDate ? Carbon::parse($expireDate)->format('d/m/Y') : null,
             'months' => $monthList,
             'history' => $history,
-        ]]);
+        ];
     }
 
     private function entryType(CustomerPoint $cp): string

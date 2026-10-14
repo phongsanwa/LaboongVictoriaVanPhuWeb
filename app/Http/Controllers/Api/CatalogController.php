@@ -3,10 +3,11 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\HomeController;
 use App\Http\Controllers\MenuPageController;
-use App\Models\Banner;
 use App\Models\Store;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 
 class CatalogController extends Controller
 {
@@ -20,36 +21,34 @@ class CatalogController extends Controller
         return response()->json(app(MenuPageController::class)->buildMenuPageData());
     }
 
-    /** GET /api/home — banner + danh sách cửa hàng cho trang chủ Mini App. */
-    public function home(): JsonResponse
+    /**
+     * GET /api/home — dữ liệu trang chủ Mini App: banner, flash sale, chiến dịch, tin tức,
+     * cửa hàng, cấu hình điểm danh; có token thì kèm điểm/hạng/điểm danh của khách.
+     */
+    public function home(Request $request): JsonResponse
     {
-        $banners = Banner::where('status', 'active')
-            ->orderBy('sort_order')->orderByDesc('id')
-            ->get()
-            ->map(fn (Banner $b) => [
-                'desktop'  => $b->image_desktop,
-                'mobile'   => $b->image_mobile ?: $b->image_desktop,
-                'link'     => $b->link_url,
-                'title'    => $b->title,
-                'subtitle' => $b->subtitle,
-                'textPos'  => $b->text_position ?: 'none',
-                'textAlign' => $b->text_align ?: 'left',
-            ])->all();
+        $data = app(HomeController::class)->buildHomeData($request->user());
+        unset($data['adminAccess'], $data['iosGuideHtml'], $data['staffEntry']);
 
-        $stores = Store::where('status', 'active')
-            ->orderBy('name')
-            ->get()
-            ->map(fn (Store $s) => [
-                'id'        => $s->id,
-                'name'      => $s->name,
-                'address'   => $s->address,
-                'phone'     => $s->phone,
-                'latitude'  => $s->latitude !== null ? (float) $s->latitude : null,
-                'longitude' => $s->longitude !== null ? (float) $s->longitude : null,
-                'opening_time' => $s->opening_time,
-                'closing_time' => $s->closing_time,
-            ])->all();
+        $data['stores'] = collect($data['stores'])->map(fn (Store $s) => $this->storePayload($s))->values()->all();
+        $data['store']  = $data['store'] ? $this->storePayload($data['store']) : null;
 
-        return response()->json(['banners' => $banners, 'stores' => $stores]);
+        return response()->json($data);
+    }
+
+    private function storePayload(Store $s): array
+    {
+        return [
+            'id'           => $s->id,
+            'name'         => $s->name,
+            'address'      => $s->address,
+            'phone'        => $s->phone,
+            'latitude'     => $s->latitude !== null ? (float) $s->latitude : null,
+            'longitude'    => $s->longitude !== null ? (float) $s->longitude : null,
+            'opening_time' => $s->opening_time,
+            'closing_time' => $s->closing_time,
+            'photos'       => array_values(array_filter((array) ($s->photos ?? []))),
+            'operating_days' => $s->operating_days,
+        ];
     }
 }

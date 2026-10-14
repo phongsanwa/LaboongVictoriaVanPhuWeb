@@ -16,30 +16,41 @@ class HomeController extends Controller
 {
     public function index()
     {
-        $user = Auth::user();
-        $customer = $user->customer()->with(['tier', 'store'])->first();
+        return view('welcome', ['homeData' => $this->buildHomeData(Auth::user())]);
+    }
+
+    /**
+     * Dữ liệu trang chủ — dùng chung cho web và API Mini App (GET /api/home).
+     * $user = null (khách chưa đăng nhập, chỉ có ở API) → không có phần thành viên.
+     */
+    public function buildHomeData(?\App\Models\User $user): array
+    {
+        $customer = $user?->customer()->with(['tier', 'store'])->first();
+
+        $common = [
+            'checkinConfig' => CheckinController::checkinConfig(),
+            'checkinEnabled' => CheckinController::isEnabled(),
+            'news' => $this->buildNews(),
+            'adminAccess' => $user ? AdminAccess::canEnter($user) : false,
+            'iosGuideHtml' => \App\Models\AppSetting::get('general', [])['ios_guide_html'] ?? null,
+            'banners' => $this->buildBanners(),
+            'flashSale' => $this->buildFlashSale(),
+            'stores' => $this->buildStores(),
+            'staffEntry' => $user ? $this->staffEntry($user) : null,
+        ];
 
         if (!$customer) {
-            return view('welcome', ['homeData' => [
-                'member' => ['name' => $user->name, 'id' => '—', 'tier' => '—'],
+            return [
+                'member' => $user ? ['name' => $user->name, 'id' => '—', 'tier' => '—'] : null,
                 'points' => 0,
                 'goal' => 0,
                 'reward' => '',
-                'promos' => [],
+                'promos' => $user ? [] : $this->buildCampaigns(),
                 'transactions' => [],
                 'store' => null,
                 'pointsThisWeek' => 0,
                 'checkin' => ['streak' => 0, 'last' => null, 'today' => false],
-                'checkinConfig' => CheckinController::checkinConfig(),
-                'checkinEnabled' => CheckinController::isEnabled(),
-                'news' => $this->buildNews(),
-                'adminAccess' => AdminAccess::canEnter($user),
-                'iosGuideHtml' => \App\Models\AppSetting::get('general', [])['ios_guide_html'] ?? null,
-                'banners' => $this->buildBanners(),
-                'flashSale' => $this->buildFlashSale(),
-                'stores' => $this->buildStores(),
-                'staffEntry' => $this->staffEntry($user),
-            ]]);
+            ] + $common;
         }
 
         $member = [
@@ -79,26 +90,6 @@ class HomeController extends Controller
             ];
         })->values()->all();
 
-        $now = Carbon::now()->toDateString();
-        $campaigns = Campaign::where('status', 'active')
-            ->where('start_date', '<=', $now)
-            ->where('end_date', '>=', $now)
-            ->orderBy('id')
-            ->get();
-
-        $promos = $campaigns->map(function (Campaign $c) {
-            return [
-                'tag' => $this->campaignTag($c->campaign_type),
-                'icon' => $this->campaignIcon($c->campaign_type),
-                'bg' => $this->campaignBg($c->campaign_type),
-                'title' => $c->name,
-                'sub' => $c->description,
-                'benefit' => $this->campaignBenefit($c),
-                'start' => $c->start_date?->format('d/m/Y'),
-                'end' => $c->end_date?->format('d/m/Y'),
-            ];
-        })->values()->all();
-
         $store = $customer->store ?: Store::where('status', 'active')->first();
 
         $today = Carbon::today()->toDateString();
@@ -108,28 +99,40 @@ class HomeController extends Controller
             'last' => $lastCheckin ? $lastCheckin->checkin_date->toDateString() : null,
             'today' => $lastCheckin && $lastCheckin->checkin_date->toDateString() === $today,
         ];
-        $checkinConfig = CheckinController::checkinConfig();
 
-        return view('welcome', ['homeData' => [
+        return [
             'member' => $member,
             'points' => $customer->total_points,
             'goal' => $nextReward->points_required ?? 0,
             'reward' => $nextReward->name ?? '',
-            'promos' => $promos,
+            'promos' => $this->buildCampaigns(),
             'transactions' => $transactions,
             'store' => $store,
             'pointsThisWeek' => $pointsThisWeek,
             'checkin' => $checkinState,
-            'checkinConfig' => $checkinConfig,
-            'checkinEnabled' => CheckinController::isEnabled(),
-            'news' => $this->buildNews(),
-            'adminAccess' => AdminAccess::canEnter($user),
-            'iosGuideHtml' => \App\Models\AppSetting::get('general', [])['ios_guide_html'] ?? null,
-            'banners' => $this->buildBanners(),
-                'flashSale' => $this->buildFlashSale(),
-            'stores' => $this->buildStores(),
-            'staffEntry' => $this->staffEntry($user),
-        ]]);
+        ] + $common;
+    }
+
+    /** Chiến dịch đang chạy hôm nay (thẻ khuyến mãi ở trang chủ). */
+    private function buildCampaigns(): array
+    {
+        $now = Carbon::now()->toDateString();
+
+        return Campaign::where('status', 'active')
+            ->where('start_date', '<=', $now)
+            ->where('end_date', '>=', $now)
+            ->orderBy('id')
+            ->get()
+            ->map(fn (Campaign $c) => [
+                'tag' => $this->campaignTag($c->campaign_type),
+                'icon' => $this->campaignIcon($c->campaign_type),
+                'bg' => $this->campaignBg($c->campaign_type),
+                'title' => $c->name,
+                'sub' => $c->description,
+                'benefit' => $this->campaignBenefit($c),
+                'start' => $c->start_date?->format('d/m/Y'),
+                'end' => $c->end_date?->format('d/m/Y'),
+            ])->values()->all();
     }
 
     /**

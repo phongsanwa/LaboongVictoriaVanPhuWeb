@@ -1,0 +1,10 @@
+node_modules/
+www/
+dist/
+# APP_ID / ZMP_TOKEN của zmp-cli và cấu hình riêng máy — không đưa lên Git
+.env
+.env.*
+!.env.example
+zmp-cli.json
+.DS_Store
+*.log

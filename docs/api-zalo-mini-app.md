@@ -56,14 +56,20 @@ Luồng ở Mini App:
 
 ---
 
-## 4. Thực đơn & trang chủ (công khai)
+## 4. Thực đơn & trang chủ (công khai, token tuỳ chọn)
+Không cần đăng nhập; nếu gửi kèm Bearer token thì có thêm dữ liệu riêng của khách.
 - `GET /api/menu` → toàn bộ dữ liệu để dựng màn đặt hàng:
   - `cats` (danh mục), `menu` (món — mỗi món có `id` dạng `"p12"`, `price`, `salePrice`, `variants`, `isCombo`, `comboItems`…), `variantGroups` (size/topping/đường/đá),
   - `stores`, `shippingTiers`, `shippingPromos`, `orderPromos`,
   - `weatherSurcharge` (phụ thu thời tiết), `payment` (cấu hình chuyển khoản VietQR: `bankEnabled/bankCode/accountNumber/accountName`),
   - `perPoint` (số tiền / 1 điểm).
   - *Lưu ý:* trường `urls` trong payload là route web — Mini App **bỏ qua**, dùng các endpoint `/api/...` trong tài liệu này.
-- `GET /api/home` → `{ banners, stores }` cho màn hình chính.
+  - Có token: kèm `addresses` (địa chỉ đã lưu), `customerName`, `customerPhone`.
+- `GET /api/home` → dữ liệu trang chủ giống website:
+  `banners`, `flashSale` (`{name, status: live|upcoming, start, end, items[]}` hoặc `null`), `promos` (chiến dịch đang chạy),
+  `news`, `stores`, `checkinConfig`, `checkinEnabled`.
+  Có token: thêm `member`, `points`, `goal` + `reward` (quà kế tiếp), `transactions` (3 giao dịch điểm gần nhất),
+  `pointsThisWeek`, `checkin` (`{streak, last, today}`), `store`.
 
 ---
 
@@ -98,6 +104,12 @@ Dùng **chung logic với web** (server tự tính giá, khuyến mãi, phí shi
 - **Giao tận nơi:** gửi `delivery_address` + toạ độ; `shipping_fee` tính theo `shippingTiers` (server sẽ kiểm lại).
 - `selections` chỉ gửi với món có tuỳ chọn; combo/topping thêm nhanh thì bỏ `selections` (hoặc `null`).
 
+**Xem trước tổng tiền:** gửi đúng body trên kèm `"quote": true` → server tính như khi đặt thật nhưng **không tạo đơn**:
+```json
+{ "subtotal": 122000, "badge_discount": 0, "voucher_discount": 0, "promo_discount": 0, "order_discount": 0,
+  "shipping_fee": 0, "ship_discount": 0, "weather_surcharge": 0, "total": 122000, "points_earned": 12, "payment_method": "cod" }
+```
+
 **Response 201**
 ```json
 { "order_id": 34, "order_code": "LB-0034", "payment_method": "bank",
@@ -125,20 +137,26 @@ Dùng **chung logic với web** (server tự tính giá, khuyến mãi, phí shi
 ## 8. Geocode địa chỉ *(cần token)*
 - `GET /api/geo/geocode?q=<địa chỉ>` → `{ ok, lat, lng }` (đổi địa chỉ → toạ độ để tính phí ship).
 - `GET /api/geo/autocomplete?q=<chuỗi>` → `{ ok, results:[{text,lat,lng}] }`.
+- `GET /api/geo/distance?olat=&olng=&dlat=&dlng=` → `{ ok, km }` (khoảng cách đường bộ từ cửa hàng tới khách).
 Dùng đúng nhà cung cấp bản đồ đã chọn trong Admin (Google/SerpApi/Apify/Goong).
 
-## Giao diện mẫu (public/zalo)
-Có sẵn một mini web app tĩnh tại **`public/zalo/`** (`index.html` + `css/app.css` + `js/app.js`),
-giao diện bám theo mobile của website và gọi thẳng các endpoint trên. Mở thử tại
-`https://<domain>/zalo/`. Để đăng nhập Zalo thật, cắm SDK Zalo qua hook:
-```js
-// Trả về { accessToken, phoneToken } từ SDK Zalo Mini App
-window.__zaloGetTokens = async () => ({ accessToken: await getAccessToken(), phoneToken: (await getPhoneNumber()).token });
-```
-Không có hook/SDK thì app vẫn cho xem thực đơn; đăng nhập chỉ chạy trong môi trường Zalo.
+## 9. Thành viên *(cần token)*
+- `GET /api/points` → `{ balance, earnedTotal, redeemedTotal, expiring, expireDate, months:[{key,label}], history:{ "YYYY-MM": [{type,title,store,day,time,amt}] } }`
+- `GET /api/rewards` → `{ balance, gifts:[{id,name,cat,points,stock,img,grad,tags,perLimit,limitReached}] }` (`stock = -1` là không giới hạn)
+- `POST /api/rewards/redeem` `{ "reward_id": 2 }` → `{ message, balance }` · lỗi 422 khi thiếu điểm / hết quà / đạt giới hạn
+- `GET /api/rewards/wallet` → `{ balance, vouchers:[{id,name,cat,code,fine,created,expiry,status: active|used|expired}] }` — `code` là mã cho thu ngân quét
+- `GET /api/cart/vouchers` → `{ order:[…], shipping:[…], redemptions:[{…, voucher}] }` — voucher dùng được khi đặt hàng (`voucher_id` / `shipping_voucher_id`)
+- `POST /api/promotions/claim` `{ "code": "MA_GIAM" }` → `{ voucher }` (nhận mã giảm vào ví)
+- `POST /api/checkin` → `{ ok, streak, points_awarded, total_points }` · 409 nếu hôm nay đã điểm danh
+- `PUT /api/profile` `{ name, dob?, email? }` → `{ message, user }` (tài khoản tạo từ Zalo không bắt buộc email)
+
+Mã QR thẻ thành viên = `user.referral_code` (thu ngân quét ở màn hình Tích điểm).
+
+## Mini app
+Mã nguồn mini app (React + ZMP UI) nằm ở thư mục **`laboong-mini-app/`** — xem README trong đó để chạy thử và deploy.
+Thư mục `public/zalo/` là bản mẫu cũ (HTML tĩnh), giữ lại để tham khảo.
 
 ## Ghi chú kỹ thuật
 - Mọi số tiền là **VND (số nguyên)**. Điểm là số.
 - Giá & khuyến mãi **luôn được tính lại ở server** khi đặt hàng — Mini App chỉ hiển thị ước tính.
 - Token không hết hạn tự động; gọi `logout` để thu hồi. Có thể có nhiều token / thiết bị.
-- Chưa có trong bản này (làm tiếp nếu cần): đổi quà (rewards) & ví voucher qua API, cập nhật hồ sơ, điểm danh. Hiện có thể dùng tạm trên web.

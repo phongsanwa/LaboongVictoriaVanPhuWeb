@@ -155,6 +155,12 @@ class AuthController extends Controller
 
     private function userPayload(User $user): array
     {
+        return self::payloadFor($user);
+    }
+
+    /** Thông tin tài khoản trả về cho Mini App (dùng chung với Api\MemberController). */
+    public static function payloadFor(User $user): array
+    {
         $c = $user->customer()->with('tier')->first();
 
         return [
@@ -169,6 +175,7 @@ class AuthController extends Controller
             'referral_code' => $c?->referral_code,
             'total_orders'  => $c ? (int) $c->total_orders : 0,
             'total_spent'   => $c ? (int) $c->total_spent : 0,
+            'dob'           => $c?->date_of_birth?->format('Y-m-d'),
         ];
     }
 }
