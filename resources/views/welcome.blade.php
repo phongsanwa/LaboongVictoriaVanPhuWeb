@@ -13,6 +13,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&family=Baloo+2:wght@600;700;800&display=swap" rel="stylesheet" />
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css" />
 <link rel="stylesheet" href="{{ asset('css/styles.css') }}?v={{ filemtime(public_path('css/styles.css')) }}" />
+<link rel="stylesheet" href="{{ asset('css/customize-sheet.css') }}?v={{ filemtime(public_path('css/customize-sheet.css')) }}" />
 </head>
 <body>
 <div id="root"></div>
@@ -34,6 +35,7 @@
 
 <script type="text/babel" src="{{ asset('js/tweaks-panel.jsx') }}?v={{ filemtime(public_path('js/tweaks-panel.jsx')) }}"></script>
 <script type="text/babel" src="{{ asset('js/components.jsx') }}?v={{ filemtime(public_path('js/components.jsx')) }}"></script>
+<script type="text/babel" src="{{ asset('js/menu-customize.jsx') }}?v={{ filemtime(public_path('js/menu-customize.jsx')) }}"></script>
 <script type="text/babel" src="{{ asset('js/app.jsx') }}?v={{ filemtime(public_path('js/app.jsx')) }}"></script>
 </body>
 </html>

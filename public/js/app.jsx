@@ -170,6 +170,8 @@ function HomeBanners() {
 }
 
 const FLASH = HOME.flashSale || null;
+// Món flash sale dạng như trang Thực đơn (size/topping theo món) để mở bảng chọn ngay tại trang chủ.
+const FLASH_MENU = HOME.flashMenu || null;
 
 function useCountdown(target) {
   const [left, setLeft] = useState(() => Math.max(0, new Date(target) - Date.now()));
@@ -182,6 +184,9 @@ function useCountdown(target) {
 
 function FlashSaleStrip() {
   const live = FLASH?.status === "live";
+  const [pick, setPick] = useState(null);   // món đang mở bảng chọn
+  const [cart, setCart] = useState(null);   // { count, total } sau khi thêm vào giỏ
+  const [toast, setToast] = useState(null);
   const left = useCountdown(FLASH ? (live ? FLASH.end : FLASH.start) : Date.now());
   // Session starts or ends while the page is open → reload to show the new state and prices.
   useEffect(() => { if (FLASH && left === 0) { const t = setTimeout(() => location.reload(), 1500); return () => clearTimeout(t); } }, [left]);
@@ -189,6 +194,24 @@ function FlashSaleStrip() {
   const h = Math.floor(left / 3600000), m = Math.floor(left / 60000) % 60, sec = Math.floor(left / 1000) % 60;
   const box = v => <span style={{ background: "#1A2420", color: "#fff", borderRadius: 6, padding: "3px 6px", fontWeight: 800, fontVariantNumeric: "tabular-nums" }}>{String(v).padStart(2, "0")}</span>;
   const startAt = new Date(FLASH.start).toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit", timeZone: "Asia/Ho_Chi_Minh" });
+
+  // Bấm món → mở bảng chọn size / đường / đá / topping ngay tại trang chủ.
+  const openItem = (it, soldOut) => {
+    if (!live) return flashToast(`Flash sale bắt đầu lúc ${startAt} — quay lại đặt món nhé!`);
+    if (soldOut) return flashToast("Món này đã hết suất flash sale");
+    const m = FLASH_MENU && FLASH_MENU.items.find(x => x.id === it.id);
+    if (!m || m.available === false) { location.href = NAV_URLS.menu; return; }
+    setPick(m.salePrice != null ? { ...m, price: m.salePrice, origPrice: m.price } : m);
+  };
+  const flashToast = (text) => { setToast(text); clearTimeout(window.__flashToastT); window.__flashToastT = setTimeout(() => setToast(null), 2600); };
+  const pickGroups = pick ? getProductVariantGroups(pick, FLASH_MENU.variantGroups, new Set(FLASH_MENU.storeOffs[String(FLASH_MENU.storeId)] || [])) : [];
+  const onAdd = (line) => {
+    const lines = addToSavedCart(line);
+    setPick(null);
+    setCart({ count: lines.reduce((n, l) => n + (l.qty || 0), 0), total: lines.reduce((t, l) => t + (l.unit || 0) * (l.qty || 0), 0) });
+    flashToast(`Đã thêm ${line.qty} món vào giỏ hàng`);
+  };
+
   return (
     <section style={{ margin: "14px 0", background: "linear-gradient(120deg,#FFF1E6,#FFE3E3)", borderRadius: 18, padding: "14px 0 14px 14px", border: "1px solid #FFD2C2" }}>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, paddingRight: 14, flexWrap: "wrap" }}>
@@ -207,7 +230,7 @@ function FlashSaleStrip() {
           const pct = it.price > 0 ? Math.round((1 - it.flash_price / it.price) * 100) : 0;
           const soldOut = live && it.quota != null && it.sold >= it.quota;
           return (
-            <a key={it.id} href={NAV_URLS.menu} style={{ flex: "0 0 148px", scrollSnapAlign: "start", background: "#fff", borderRadius: 14, overflow: "hidden", textDecoration: "none", color: "inherit", boxShadow: "0 2px 8px rgba(228,64,47,.08)", opacity: soldOut ? 0.55 : 1 }}>
+            <a key={it.id} href={NAV_URLS.menu} onClick={e => { e.preventDefault(); openItem(it, soldOut); }} style={{ flex: "0 0 148px", scrollSnapAlign: "start", background: "#fff", borderRadius: 14, overflow: "hidden", textDecoration: "none", color: "inherit", boxShadow: "0 2px 8px rgba(228,64,47,.08)", opacity: soldOut ? 0.55 : 1, cursor: "pointer" }}>
               <div style={{ height: 104, background: it.img ? `center/cover url(${it.img})` : it.grad, position: "relative" }}>
                 {pct > 0 && <span style={{ position: "absolute", top: 6, left: 6, background: "#E4402F", color: "#fff", fontSize: 11, fontWeight: 800, padding: "2px 7px", borderRadius: 20 }}>-{pct}%</span>}
               </div>
@@ -230,6 +253,19 @@ function FlashSaleStrip() {
           );
         })}
       </div>
+
+      {/* Gắn vào <body> để lớp phủ fixed không bị ảnh hưởng bởi khung trang chủ. */}
+      {ReactDOM.createPortal(<>
+      {pick && <CustomizeSheet item={pick} variantGroups={pickGroups} onClose={() => setPick(null)} onAdd={onAdd} />}
+      {cart && cart.count > 0 && (
+        <a className="flash-cartbar" href={NAV_URLS.menu + "?cart=1"}>
+          <span className="fcb-ic"><Icon name="bag" size={20} color="#fff" /><span className="fcb-n">{cart.count}</span></span>
+          <span className="fcb-t"><b>{fmt(cart.total)}đ</b><small>Giỏ hàng · {cart.count} món</small></span>
+          <span className="fcb-go">Thanh toán <Icon name="arrow" size={16} color="currentColor" /></span>
+        </a>
+      )}
+      {toast && <div className="ci-toast" style={{ bottom: cart && cart.count > 0 ? 170 : undefined }}><span className="cit"><Icon name="check" size={14} color="#fff" /></span>{toast}</div>}
+      </>, document.body)}
     </section>
   );
 }

@@ -1,0 +1,55 @@
+/* Bảng chọn món (size / đường / đá / topping) — dùng chung cho trang Thực đơn và
+   dải Flash Sale ở trang chủ. Dựa trên biến màu chung (--brand, --card, --line…) của trang. */
+.cz-scrim { position: fixed; inset: 0; z-index: 100; background: rgba(8,30,20,.55); backdrop-filter: blur(6px); display: flex; align-items: flex-end; justify-content: center; padding: 0; animation: cz-fade .2s ease; }
+@media (min-width: 560px) { .cz-scrim { align-items: center; padding: 20px; } }
+@keyframes cz-fade { from { opacity: 0; } }
+.cz-sheet { --danger: #E8503A; width: 100%; max-width: 460px; max-height: 92vh; display: flex; flex-direction: column; background: var(--bg); border-radius: var(--r-xl) var(--r-xl) 0 0; box-shadow: var(--shadow-lg); overflow: hidden; animation: cz-up .3s cubic-bezier(.2,.8,.2,1); text-align: left; color: var(--ink); }
+@media (min-width: 560px) { .cz-sheet { border-radius: var(--r-xl); } }
+@keyframes cz-up { from { transform: translateY(40px); opacity: .6; } }
+
+.cz-h { display: flex; align-items: flex-start; gap: 14px; padding: 18px 20px; background: var(--card); border-bottom: 1px solid var(--line); position: relative; }
+.cz-thumb { width: 60px; height: 60px; border-radius: 16px; flex: none; display: grid; place-items: center; color: #fff; box-shadow: var(--shadow-sm); }
+.cz-h h3 { font-family: var(--display); font-weight: 800; font-size: 18px; margin: 0; letter-spacing: -.01em; line-height: 1.2; }
+.cz-h .cz-desc { font-size: 12.5px; color: var(--ink-2); margin-top: 3px; line-height: 1.4; }
+.cz-h .cz-base { font-family: var(--display); font-weight: 800; font-size: 15px; color: var(--brand); margin-top: 5px; }
+.cz-x { position: absolute; top: 14px; right: 14px; width: 34px; height: 34px; border-radius: 11px; background: var(--bg-2); display: grid; place-items: center; color: var(--ink-2); }
+.cz-x:hover { color: var(--ink); }
+
+.cz-b { flex: 1; overflow-y: auto; padding: 4px 20px 8px; }
+.cz-sec { padding: 16px 0 2px; }
+.cz-sec-h { display: flex; align-items: center; gap: 8px; margin-bottom: 11px; }
+.cz-sec-t { font-weight: 700; font-size: 14.5px; }
+.cz-sec-t .req { color: var(--ink-3); font-weight: 600; font-size: 12px; margin-left: 4px; }
+.cz-sec-ic { width: 26px; height: 26px; border-radius: 8px; background: var(--brand-soft); color: var(--brand); display: grid; place-items: center; flex: none; }
+
+/* chip options (sugar/ice) */
+.cz-chips { display: flex; gap: 8px; flex-wrap: wrap; }
+.cz-chip { padding: 9px 15px; border-radius: 999px; border: 1.5px solid var(--line); background: var(--card); font-size: 13.5px; font-weight: 700; color: var(--ink-2); transition: .14s; }
+.cz-chip:hover { border-color: var(--ink-3); }
+.cz-chip.on { border-color: var(--brand); background: var(--brand-soft); color: var(--brand); }
+
+/* topping checklist */
+.cz-tops { display: flex; flex-direction: column; gap: 8px; }
+.cz-top { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: var(--r-sm); border: 1.5px solid var(--line); background: var(--card); transition: .14s; cursor: pointer; text-align: left; width: 100%; }
+.cz-top:hover { border-color: var(--ink-3); }
+.cz-top.on { border-color: var(--brand); background: var(--brand-soft); }
+.cz-top .box { width: 22px; height: 22px; border-radius: 7px; border: 2px solid var(--line); display: grid; place-items: center; flex: none; transition: .14s; background: var(--card); }
+.cz-top.on .box { background: var(--brand); border-color: var(--brand); }
+.cz-top .tn { font-weight: 600; font-size: 14px; flex: 1; }
+.cz-top .tp { font-weight: 700; font-size: 13px; color: var(--ink-2); font-variant-numeric: tabular-nums; }
+.cz-top.on .tp { color: var(--brand); }
+/* Bộ chọn số lượng cho từng topping */
+.cz-top-qty { display: inline-flex; align-items: center; background: var(--bg-2); border-radius: 999px; flex: none; }
+.cz-top-qty button { width: 34px; height: 34px; display: grid; place-items: center; color: var(--brand); transition: .12s; border-radius: 999px; }
+.cz-top-qty button:disabled { color: var(--ink-3); }
+.cz-top-qty .qn { min-width: 26px; text-align: center; font-family: var(--display); font-weight: 800; font-size: 15px; font-variant-numeric: tabular-nums; }
+
+/* footer: qty + add */
+.cz-f { background: var(--card); border-top: 1px solid var(--line); padding: 14px 20px 20px; display: flex; align-items: center; gap: 14px; }
+.cz-qty { display: inline-flex; align-items: center; background: var(--bg-2); border-radius: 13px; flex: none; }
+.cz-qty button { width: 42px; height: 46px; display: grid; place-items: center; color: var(--brand); transition: .12s; }
+.cz-qty button:disabled { color: var(--ink-3); }
+.cz-qty .qn { min-width: 30px; text-align: center; font-family: var(--display); font-weight: 800; font-size: 18px; }
+.cz-add { flex: 1; padding: 15px; border-radius: var(--r-md); background: var(--brand); color: #fff; font-family: var(--display); font-weight: 700; font-size: 15.5px; display: inline-flex; align-items: center; justify-content: center; gap: 9px; transition: .15s; }
+.cz-add:hover { background: var(--brand-deep); transform: translateY(-1px); }
+

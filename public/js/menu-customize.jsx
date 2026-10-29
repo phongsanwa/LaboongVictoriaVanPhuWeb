@@ -12,6 +12,70 @@ function PromoLabel({ item, style }) {
   );
 }
 
+/* ─── Dùng chung cho trang Thực đơn và trang chủ (Flash Sale) ─── */
+
+/* Filter global variantGroups to only the options a specific product has.
+   item.variants = { SIZE: { M: {extra, available}, L: {...} }, TOPPING: {...} }
+   offSet: option hết riêng theo cửa hàng đang chọn (Set "TYPE|Name"). */
+function getProductVariantGroups(item, variantGroups, offSet) {
+  const off = offSet || new Set();
+  const isOff = (g, o) => off.has(g.key + '|' + o.id);
+
+  // A product with no variant rows serializes as [] (empty JSON array) — fall
+  // back to the global groups instead of hiding every option.
+  if (!item.variants || Object.keys(item.variants).length === 0) {
+    if (off.size === 0) return variantGroups;
+    return variantGroups.map(g => ({
+      ...g,
+      options: g.options.map(o => ({ ...o, available: o.available && !isOff(g, o) })),
+    }));
+  }
+  return variantGroups.map(g => {
+    const productOpts = item.variants[g.key];
+    if (!productOpts) return null; // product has no variants of this type
+    const options = g.options
+      .filter(o => productOpts[o.id] !== undefined)
+      .map(o => ({ ...o, extra: productOpts[o.id].extra, available: productOpts[o.id].available && !isOff(g, o), def: false }));
+    if (options.length === 0) return null;
+    // Re-apply default selection
+    const availOpts = options.filter(o => o.available);
+    const defaultId = g.options.find(o => o.def)?.id;
+    if (defaultId && options.some(o => o.id === defaultId)) {
+      options.forEach(o => { o.def = o.id === defaultId; });
+    } else if (g.required && availOpts.length > 0) {
+      options.forEach(o => { o.def = o.id === availOpts[0].id; });
+    }
+    return { ...g, options };
+  }).filter(Boolean);
+}
+
+function lineKey(l) {
+  if (l.selections) {
+    const parts = Object.entries(l.selections)
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([k, v]) => `${k}:${Array.isArray(v) ? [...v].sort().join(',') : (v ?? '-')}`)
+      .join('|');
+    return `${l.id}|${parts}`;
+  }
+  /* legacy demo line format */
+  const tops = (l.toppings || []).map(t => t.id).sort().join(",");
+  return `${l.id}|z${l.size || "-"}|s${l.sugar || "-"}|i${l.ice || "-"}|t${tops}`;
+}
+
+/* Giỏ hàng lưu ở localStorage (trang Thực đơn đọc lại khi mở) — thêm 1 dòng từ trang khác. */
+const SAVED_CART_KEY = 'laboong_cart_v2';
+function addToSavedCart(line) {
+  let state = { lines: [], note: "" };
+  try { state = JSON.parse(localStorage.getItem(SAVED_CART_KEY) || 'null') || state; } catch (e) { /* ignore */ }
+  const lines = Array.isArray(state.lines) ? [...state.lines] : [];
+  const key = lineKey(line);
+  const i = lines.findIndex(l => l.key === key);
+  if (i >= 0) lines[i] = { ...lines[i], qty: lines[i].qty + line.qty };
+  else lines.push({ ...line, key });
+  try { localStorage.setItem(SAVED_CART_KEY, JSON.stringify({ lines, note: state.note || "" })); } catch (e) { /* ignore */ }
+  return lines;
+}
+
 /* Build default selections from variantGroups array */
 function makeDefaultSelections(variantGroups) {
   const sel = {};
@@ -92,8 +156,8 @@ function CustomizeSheet({ item, variantGroups, onClose, onAdd, initialSelections
   };
 
   return (
-    <div className="scrim" onClick={onClose}>
-      <div className="cart" onClick={e => e.stopPropagation()}>
+    <div className="cz-scrim" onClick={onClose}>
+      <div className="cz-sheet" onClick={e => e.stopPropagation()}>
         <div className="cz-h">
           {item.img
             ? <div className="cz-thumb" style={{ background: item.grad, overflow: "hidden", padding: 0 }}>
@@ -194,4 +258,4 @@ function CustomizeSheet({ item, variantGroups, onClose, onAdd, initialSelections
   );
 }
 
-Object.assign(window, { CustomizeSheet });
+Object.assign(window, { CustomizeSheet, PromoLabel, getProductVariantGroups, lineKey, addToSavedCart });

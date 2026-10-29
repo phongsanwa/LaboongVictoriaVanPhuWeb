@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Http\Controllers\CheckinController;
+use App\Http\Controllers\MenuPageController;
 use App\Support\AdminAccess;
 use App\Models\Campaign;
 use App\Models\CustomerPoint;
@@ -16,7 +17,27 @@ class HomeController extends Controller
 {
     public function index()
     {
-        return view('welcome', ['homeData' => $this->buildHomeData(Auth::user())]);
+        $data = $this->buildHomeData(Auth::user());
+        $data['flashMenu'] = $data['flashSale'] ? $this->buildFlashMenu($data['flashSale']) : null;
+
+        return view('welcome', ['homeData' => $data]);
+    }
+
+    /**
+     * Món flash sale ở dạng giống trang Thực đơn (giá flash, size/topping theo món, option hết
+     * theo cửa hàng) để trang chủ mở bảng chọn món và thêm vào giỏ ngay, không phải sang Thực đơn.
+     */
+    private function buildFlashMenu(array $flash): array
+    {
+        $menu = app(MenuPageController::class)->buildMenuPageData();
+        $ids = array_column($flash['items'], 'id');
+
+        return [
+            'items'         => array_values(array_filter($menu['menu'], fn ($m) => in_array($m['id'], $ids, true))),
+            'variantGroups' => $menu['variantGroups'],
+            'storeOffs'     => $menu['storeOffs'],
+            'storeId'       => $menu['storeId'],
+        ];
     }
 
     /**
