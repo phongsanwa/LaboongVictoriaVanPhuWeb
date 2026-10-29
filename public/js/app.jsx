@@ -193,7 +193,9 @@ function FlashSaleStrip() {
     <section style={{ margin: "14px 0", background: "linear-gradient(120deg,#FFF1E6,#FFE3E3)", borderRadius: 18, padding: "14px 0 14px 14px", border: "1px solid #FFD2C2" }}>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, paddingRight: 14, flexWrap: "wrap" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <span style={{ fontWeight: 900, fontSize: 18, color: "#E4402F", letterSpacing: "0.3px" }}>⚡ FLASH SALE</span>
+          <span style={{ display: "inline-flex", alignItems: "center", gap: 6, fontWeight: 900, fontSize: 18, color: "#E4402F", letterSpacing: "0.3px" }}>
+            <img src="/images/flash-sale.png" alt="" width="28" height="28" style={{ width: 28, height: 28 }} />FLASH SALE
+          </span>
           {FLASH.name && <span style={{ fontSize: 12.5, color: "#8A4A3A", fontWeight: 600 }}>{FLASH.name}</span>}
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 12.5, fontWeight: 700, color: "#8A4A3A" }}>

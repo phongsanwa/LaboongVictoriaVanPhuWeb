@@ -1170,7 +1170,7 @@ function App() {
                             <>
                               <span className="item-price tnum" style={{ textDecoration: "line-through", color: "var(--ink-3)", fontSize: 12, fontWeight: 500 }}>{fmt(m.price)}đ</span>
                               <span className="item-price tnum" style={{ color: "var(--danger)", fontWeight: 800 }}>{fmt(m.salePrice)}đ</span>
-                              <span style={{ fontSize: 11, fontWeight: 800, background: "var(--danger)", color: "#fff", borderRadius: 5, padding: "1px 6px", marginLeft: 2 }}>{m.promoLabel}</span>
+                              <PromoLabel item={m} style={{ marginLeft: 2 }} />
                             </>
                           ) : (
                             <span className="item-price tnum">{fmt(m.price)}đ</span>

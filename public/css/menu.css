@@ -6,6 +6,7 @@
   --brand-ink: color-mix(in srgb, var(--brand) 68%, #000);
   --peach: #FF8A5B; --yellow: #FFC23D; --pink: #FF6FA5;
   --hot: #E8503A; --hot-bg: #FCE4DF;
+  --danger: var(--hot); /* nhãn khuyến mãi & giá đã giảm trên thực đơn */
   --veg: #3E9B5F; --veg-bg: #E2F4EA;
 
   --bg: #F6F1E7; --bg-2: #EFE7D7; --card: #FFFFFF;

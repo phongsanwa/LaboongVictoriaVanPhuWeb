@@ -4,6 +4,7 @@ import { Spinner } from "zmp-ui";
 import { imgUrl, money } from "../lib/format";
 import { useAuth } from "../state/auth";
 import { Ico } from "./icons";
+import flashIcon from "../static/flash-sale.png";
 
 export function Thumb({ img, grad, size = 64, radius = 14 }: { img?: string | null; grad?: string; size?: number; radius?: number }) {
   const src = imgUrl(img);
@@ -20,6 +21,19 @@ export function Price({ price, sale, flash }: { price: number; sale?: number | n
     <span className="row" style={{ gap: 6, alignItems: "baseline" }}>
       <span className={flash ? "flash-price" : "price"}>{money(has ? sale! : price)}</span>
       {has && <span className="strike">{money(price)}</span>}
+    </span>
+  );
+}
+
+export const FLASH_ICON = flashIcon;
+
+/** Nhãn khuyến mãi của món; món flash sale có icon flash sale phía trước. */
+export function PromoBadge({ label, flash }: { label: string | null; flash?: boolean }) {
+  if (!label) return null;
+  return (
+    <span className="row" style={{ gap: 4, marginTop: 4, display: "inline-flex" }}>
+      {flash && <img src={flashIcon} alt="" width={20} height={20} style={{ width: 20, height: 20 }} />}
+      <span className="badge red">{label}</span>
     </span>
   );
 }

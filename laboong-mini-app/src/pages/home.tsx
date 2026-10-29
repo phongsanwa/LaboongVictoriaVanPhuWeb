@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { Page, Sheet, Swiper, useNavigate, useSnackbar } from "zmp-ui";
 import { Ico } from "../components/icons";
-import { ErrorBox, Loading, LoginCard, Price, QRImage, Thumb } from "../components/ui";
+import { ErrorBox, FLASH_ICON, Loading, LoginCard, Price, QRImage, Thumb } from "../components/ui";
 import { BRAND } from "../config";
 import { api } from "../lib/api";
 import { imgUrl, money, num } from "../lib/format";
@@ -28,7 +28,7 @@ function FlashStrip({ sale, onOpen }: { sale: FlashSale; onOpen: (id: string) =>
     <div className="section">
       <div className="card" style={{ padding: 0, overflow: "hidden", borderColor: "#F8D3CC" }}>
         <div className="between" style={{ padding: "12px 14px", background: "linear-gradient(90deg,#E4402F,#FF7A3D)", color: "#fff" }}>
-          <div className="row" style={{ gap: 6 }}><Ico name="flame" size={20} color="#fff" /><b style={{ fontSize: 16 }}>{sale.name}</b></div>
+          <div className="row" style={{ gap: 6 }}><img src={FLASH_ICON} alt="" width={26} height={26} style={{ width: 26, height: 26, background: "#fff", borderRadius: 8, padding: 2 }} /><b style={{ fontSize: 16 }}>{sale.name}</b></div>
           <div style={{ fontSize: 12.5, fontWeight: 700 }}>{live ? "Kết thúc sau" : "Sắp diễn ra ·"} <span style={{ background: "rgba(0,0,0,.2)", padding: "2px 6px", borderRadius: 6, fontVariantNumeric: "tabular-nums" }}>{left}</span></div>
         </div>
         <div className="hscroll" style={{ padding: 12 }}>

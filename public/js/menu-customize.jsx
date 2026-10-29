@@ -1,6 +1,17 @@
 /* global React, Icon, fmt */
 const { useState: useStateCz } = React;
 
+/* Nhãn khuyến mãi của món; món flash sale có thêm icon flash sale phía trước. */
+function PromoLabel({ item, style }) {
+  if (!item.promoLabel) return null;
+  return (
+    <span style={{ display: "inline-flex", alignItems: "center", gap: 3, ...style }}>
+      {item.isFlash && <img src="/images/flash-sale.png" alt="" width="18" height="18" style={{ width: 18, height: 18, flex: "none" }} />}
+      <span style={{ fontSize: 11, fontWeight: 800, background: "var(--danger)", color: "#fff", borderRadius: 5, padding: "1px 6px" }}>{item.promoLabel}</span>
+    </span>
+  );
+}
+
 /* Build default selections from variantGroups array */
 function makeDefaultSelections(variantGroups) {
   const sel = {};
@@ -100,9 +111,7 @@ function CustomizeSheet({ item, variantGroups, onClose, onAdd, initialSelections
                 <span style={{ textDecoration: "line-through", color: "var(--ink-3)", fontSize: 13, fontWeight: 500, marginRight: 6 }}>{fmt(item.origPrice)}đ</span>
               )}
               <span style={item.origPrice != null ? { color: "var(--danger)", fontWeight: 800 } : {}}>{fmt(item.price)}đ</span>
-              {item.promoLabel && (
-                <span style={{ fontSize: 11, fontWeight: 800, background: "var(--danger)", color: "#fff", borderRadius: 5, padding: "1px 6px", marginLeft: 6 }}>{item.promoLabel}</span>
-              )}
+              <PromoLabel item={item} style={{ marginLeft: 6, verticalAlign: "middle" }} />
             </div>
           </div>
           <button className="cz-x" onClick={onClose}><Icon name="close" size={18} /></button>

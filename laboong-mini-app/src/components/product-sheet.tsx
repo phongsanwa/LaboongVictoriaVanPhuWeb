@@ -5,7 +5,7 @@ import { defaultSelections, extraOf, lineKey, productGroups, storeOffSet } from 
 import { useCart } from "../state/cart";
 import { useData } from "../state/data";
 import type { Product, Selections } from "../types";
-import { Price, Stepper, Thumb } from "./ui";
+import { Price, PromoBadge, Stepper, Thumb } from "./ui";
 
 const MAX_TOPPING = 10;
 
@@ -54,8 +54,8 @@ export function ProductSheet({ product, onClose }: { product: Product | null; on
           <Thumb img={product.img} grad={product.grad} size={88} />
           <div style={{ flex: 1, minWidth: 0 }}>
             <div className="bold" style={{ fontSize: 17 }}>{product.name}</div>
-            {product.promoLabel && <span className="badge red" style={{ marginTop: 4 }}>{product.promoLabel}</span>}
-            <div style={{ marginTop: 6 }}><Price price={product.price} sale={product.salePrice} flash={!!product.promoLabel?.includes("Flash")} /></div>
+            <PromoBadge label={product.promoLabel} flash={product.isFlash} />
+            <div style={{ marginTop: 6 }}><Price price={product.price} sale={product.salePrice} flash={!!product.isFlash} /></div>
             {product.desc && <div className="muted" style={{ marginTop: 6, lineHeight: 1.45 }}>{product.desc}</div>}
           </div>
         </div>

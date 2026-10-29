@@ -147,7 +147,7 @@ function FlashSalesApp() {
               return (
                 <div key={s.id} style={{ background: "var(--panel)", border: "1px solid var(--line)", borderRadius: 16, padding: 18 }}>
                   <div style={{ display: "flex", justifyContent: "space-between", gap: 8 }}>
-                    <div style={{ fontWeight: 800, fontSize: 16 }}>⚡ {s.name}</div>
+                    <div style={{ display: "flex", alignItems: "center", gap: 6, fontWeight: 800, fontSize: 16 }}><img src="/images/flash-sale.png" alt="" width="22" height="22" style={{ width: 22, height: 22, flex: "none" }} />{s.name}</div>
                     <span style={{ fontSize: 11.5, fontWeight: 800, color: sc, background: sb, padding: "3px 10px", borderRadius: 20, whiteSpace: "nowrap" }}>{sl}</span>
                   </div>
                   <div style={{ fontSize: 12.5, color: "var(--ink-2)", marginTop: 4 }}>{schedule(s)}</div>

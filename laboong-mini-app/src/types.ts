@@ -9,7 +9,7 @@ export interface VariantGroup {
 
 export interface Product {
   id: string; cat: string; name: string; desc: string;
-  price: number; salePrice: number | null; promoLabel: string | null;
+  price: number; salePrice: number | null; promoLabel: string | null; isFlash?: boolean;
   grad: string; img: string | null; tags: string[]; available: boolean; isCombo: boolean;
   variants: Record<string, Record<string, { extra: number; available: boolean }>> | [];
 }

@@ -3,7 +3,7 @@ import { PageHeader } from "../components/page-header";
 import { Ico } from "../components/icons";
 import { Page, Sheet, useNavigate, useSearchParams } from "zmp-ui";
 import { ProductSheet } from "../components/product-sheet";
-import { ErrorBox, Loading, Price, Thumb } from "../components/ui";
+import { ErrorBox, Loading, Price, PromoBadge, Thumb } from "../components/ui";
 import { money } from "../lib/format";
 import { useCart } from "../state/cart";
 import { useData } from "../state/data";
@@ -88,8 +88,8 @@ export default function MenuPage() {
                   {p.desc && <div className="muted small clamp2" style={{ marginTop: 2 }}>{p.desc}</div>}
                   <div className="between" style={{ marginTop: 6 }}>
                     <div>
-                      <Price price={p.price} sale={p.salePrice} flash={!!p.promoLabel?.includes("Flash")} />
-                      {p.promoLabel && <div><span className="badge red" style={{ marginTop: 4 }}>{p.promoLabel}</span></div>}
+                      <Price price={p.price} sale={p.salePrice} flash={!!p.isFlash} />
+                      {p.promoLabel && <div><PromoBadge label={p.promoLabel} flash={p.isFlash} /></div>}
                     </div>
                     {p.available
                       ? <span style={{ width: 32, height: 32, borderRadius: 10, background: "var(--brand)", color: "#fff", display: "grid", placeItems: "center", fontSize: 22, fontWeight: 700 }}>+</span>
