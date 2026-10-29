@@ -121,7 +121,7 @@ function App() {
             <h1>Top khách chi tiêu</h1>
           </div>
           <div className="topbar-spacer" />
-          {loading && <span style={{ fontSize: 13, color: 'var(--ink-3)' }}>Đang tải…</span>}
+          {loading && <span style={{ fontSize: 13, color: 'var(--ink-3)', display: 'inline-flex', alignItems: 'center', gap: 6 }}><span className="lb-spin" />Đang tải…</span>}
         </header>
 
         <div className="content">

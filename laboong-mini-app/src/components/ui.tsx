@@ -1,10 +1,10 @@
 import React, { useEffect, useState } from "react";
 import QRCode from "qrcode";
-import { Spinner } from "zmp-ui";
 import { imgUrl, money } from "../lib/format";
 import { useAuth } from "../state/auth";
 import { Ico } from "./icons";
 import flashIcon from "../static/flash-sale.png";
+import loadingIcon from "../static/loading.png";
 
 export function Thumb({ img, grad, size = 64, radius = 14 }: { img?: string | null; grad?: string; size?: number; radius?: number }) {
   const src = imgUrl(img);
@@ -59,10 +59,15 @@ export function Empty({ icon = "🧋", title, sub, action }: { icon?: string; ti
   );
 }
 
+/** Vòng xoay chờ của Laboong (8 vạch xanh, xoay theo nấc). */
+export function Spin({ size = 40 }: { size?: number }) {
+  return <img src={loadingIcon} alt="" width={size} height={size} className="lb-spin" style={{ width: size, height: size }} />;
+}
+
 export function Loading({ text = "Đang tải…" }: { text?: string }) {
   return (
     <div className="empty" style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 10 }}>
-      <Spinner visible />
+      <Spin />
       <div className="muted">{text}</div>
     </div>
   );

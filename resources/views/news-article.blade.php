@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 @include('partials.favicon')
+@include('partials.page-loader')
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <title>{{ $article->seo_title ?: $article->title }} — Laboong Victoria Văn Phú</title>
 @include('partials.seo', [

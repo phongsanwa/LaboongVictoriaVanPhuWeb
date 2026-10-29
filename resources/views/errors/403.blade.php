@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 @include('partials.favicon')
+@include('partials.page-loader')
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <title>403 · Không có quyền truy cập — Laboong</title>
 <link rel="preconnect" href="https://fonts.googleapis.com" />

@@ -134,7 +134,7 @@ function App() {
           <button className="icon-btn menu-toggle" onClick={() => setSideOpen(true)}><Icon name="coin" size={19} /></button>
           <div><div className="crumb">Quản lý · Báo cáo</div><h1>Báo cáo điểm thưởng</h1></div>
           <div className="topbar-spacer" />
-          {loading && <span style={{ fontSize: 13, color: 'var(--ink-3)' }}>Đang tải…</span>}
+          {loading && <span style={{ fontSize: 13, color: 'var(--ink-3)', display: 'inline-flex', alignItems: 'center', gap: 6 }}><span className="lb-spin" />Đang tải…</span>}
         </header>
         <div className="content">
           <div className="rp-tabs">

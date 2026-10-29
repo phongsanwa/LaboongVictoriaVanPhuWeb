@@ -237,7 +237,7 @@ function CostPanel({ store, onClose }) {
         </div>
 
         {loading ? (
-          <div style={{ flex: 1, display: 'grid', placeItems: 'center', color: 'var(--ink-3)', fontSize: 14 }}>Đang tải…</div>
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 10, color: 'var(--ink-3)', fontSize: 14 }}><span className="lb-spin lg" />Đang tải…</div>
         ) : (
           <div style={{ flex: 1, overflowY: 'auto', padding: '20px 22px', display: 'flex', flexDirection: 'column', gap: 20 }}>
 

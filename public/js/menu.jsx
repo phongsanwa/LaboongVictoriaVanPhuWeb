@@ -1267,7 +1267,7 @@ function App() {
                 </div>
                 <div className="cp-b">
                   {vouchersLoading ? (
-                    <div style={{ textAlign: "center", padding: "20px 0", color: "var(--ink-3)", fontSize: 13 }}>Đang tải voucher…</div>
+                    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 8, padding: "20px 0", color: "var(--ink-3)", fontSize: 13 }}><span className="lb-spin lg" />Đang tải voucher…</div>
                   ) : (<>
                     {/* Quà tích điểm — redemptions, applicable if has active voucher */}
                     <div className="cp-sec">Quà tích điểm</div>
