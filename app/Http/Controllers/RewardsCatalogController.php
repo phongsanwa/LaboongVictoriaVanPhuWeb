@@ -18,6 +18,12 @@ class RewardsCatalogController extends Controller
 
     public function index()
     {
+        return view('rewards-catalog', ['rewardsData' => $this->buildCatalogData()]);
+    }
+
+    /** Quà đang đổi được + số dư — dùng chung cho web và API Mini App (GET /api/rewards). */
+    public function buildCatalogData(): array
+    {
         $user = Auth::user();
         $customer = $user->customer()->first();
 
@@ -38,13 +44,19 @@ class RewardsCatalogController extends Controller
                 ->pluck('c', 'reward_id')
             : collect();
 
-        return view('rewards-catalog', ['rewardsData' => [
+        return [
             'balance' => $customer?->total_points ?? 0,
             'gifts' => $rewards->map(fn (Reward $r) => $this->formatReward($r, (int) ($myCounts[$r->id] ?? 0)))->values()->all(),
-        ]]);
+        ];
     }
 
     public function wallet()
+    {
+        return view('wallet', ['walletData' => $this->buildWalletData()]);
+    }
+
+    /** Ví quà đã đổi — dùng chung cho web và API Mini App (GET /api/rewards/wallet). */
+    public function buildWalletData(): array
     {
         $customer = Auth::user()->customer()->first();
         abort_unless($customer, 403);
@@ -54,10 +66,10 @@ class RewardsCatalogController extends Controller
             ->orderByDesc('redeemed_at')
             ->get();
 
-        return view('wallet', ['walletData' => [
+        return [
             'balance' => $customer->total_points,
             'vouchers' => $redemptions->map(fn (Redemption $r) => $this->formatVoucher($r))->values()->all(),
-        ]]);
+        ];
     }
 
     public function redeem(Request $request): JsonResponse

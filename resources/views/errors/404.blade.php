@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 @include('partials.favicon')
+@include('partials.page-loader')
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <title>404 · Không tìm thấy trang — Laboong</title>
 <link rel="preconnect" href="https://fonts.googleapis.com" />

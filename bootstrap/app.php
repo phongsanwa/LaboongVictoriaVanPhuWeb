@@ -23,6 +23,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'admin.perm' => EnsureAdminAccess::class,
             'staff' => EnsureUserIsStaff::class,
             'auth.api' => ApiAuth::class,
+            'auth.api.optional' => \App\Http\Middleware\ApiAuthOptional::class,
         ]);
 
         // Theo dõi online/offline cho mọi request web đã đăng nhập

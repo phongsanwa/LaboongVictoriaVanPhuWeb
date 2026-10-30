@@ -1,0 +1,37 @@
+{
+  "name": "laboong-mini-app",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Zalo Mini App — Laboong Victoria Văn Phú (dữ liệu lấy từ API của website)",
+  "license": "UNLICENSED",
+  "browserslist": [
+    "Android >= 5",
+    "IOS >= 9.3",
+    "Chrome >= 49",
+    "Safari >= 9.1"
+  ],
+  "scripts": {
+    "start": "zmp start",
+    "dev": "vite",
+    "build": "vite build",
+    "typecheck": "tsc --noEmit",
+    "login": "zmp login",
+    "deploy": "zmp deploy"
+  },
+  "dependencies": {
+    "qrcode": "^1.5.4",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "zmp-sdk": "^2.53.2",
+    "zmp-ui": "^1.11.15-2"
+  },
+  "devDependencies": {
+    "@types/qrcode": "^1.5.6",
+    "@types/react": "^18.3.31",
+    "@types/react-dom": "^18.3.7",
+    "@vitejs/plugin-react": "^4.7.0",
+    "typescript": "^5.9.3",
+    "vite": "^5.4.21",
+    "zmp-vite-plugin": "^1.1.6"
+  }
+}

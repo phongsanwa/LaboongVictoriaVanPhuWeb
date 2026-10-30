@@ -307,6 +307,27 @@ class OrderController extends Controller
         $pointsBase   = max(0.0, round($saleSubtotal - $orderDiscAmt, 2));
         $pointsEarned = (int) floor($pointsBase / self::PER_POINT);
 
+        // Mini App gửi quote=1 để xem trước tổng tiền theo đúng logic server, không tạo đơn.
+        if ($request->boolean('quote')) {
+            return response()->json([
+                'subtotal'          => (int) $subtotal,
+                'badge_discount'    => (int) $badgeDiscAmt,
+                'voucher_discount'  => (int) $voucherDiscAmt,
+                'promo_discount'    => (int) $orderPromoDiscAmt,
+                'order_discount'    => (int) $orderDiscAmt,
+                'shipping_fee'      => $shippingFee,
+                'ship_discount'     => (int) $shipDiscAmt,
+                'weather_surcharge' => $weatherSurcharge,
+                'total'             => (int) $totalAmount,
+                'points_earned'     => $pointsEarned,
+                'payment_method'    => $paymentMethod,
+                'voucher_applied'   => (bool) $orderVoucher,
+                'promo_applied'     => (bool) $orderPromo,
+                'ship_voucher_applied' => (bool) $shippingVoucher,
+                'ship_promo_applied'   => (bool) $shipPromo,
+            ]);
+        }
+
         $orderId = null;
 
         DB::transaction(function () use (

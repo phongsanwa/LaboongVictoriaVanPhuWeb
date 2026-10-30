@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 @include('partials.favicon')
+@include('partials.page-loader')
 @include('partials.pwa')
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <meta name="csrf-token" content="{{ csrf_token() }}" />
@@ -11,6 +12,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&family=Baloo+2:wght@600;700;800&display=swap" rel="stylesheet" />
 <link rel="stylesheet" href="{{ asset('css/menu.css') }}?v={{ filemtime(public_path('css/menu.css')) }}" />
+<link rel="stylesheet" href="{{ asset('css/customize-sheet.css') }}?v={{ filemtime(public_path('css/customize-sheet.css')) }}" />
 </head>
 <body>
 <div id="root"></div>

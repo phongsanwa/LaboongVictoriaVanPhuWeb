@@ -3,6 +3,10 @@
 use App\Http\Controllers\Api\AddressController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\CatalogController;
+use App\Http\Controllers\Api\MemberController;
+use App\Http\Controllers\CheckinController;
+use App\Http\Controllers\PromotionController;
+use App\Http\Controllers\RewardsCatalogController;
 use App\Http\Controllers\Api\OrderController as ApiOrderController;
 use App\Http\Controllers\MapsController;
 use App\Http\Controllers\OrderController;
@@ -16,8 +20,11 @@ use Illuminate\Support\Facades\Route;
 
 // Công khai (không cần token)
 Route::post('/auth/zalo', [AuthController::class, 'zalo']);
-Route::get('/menu', [CatalogController::class, 'menu']);   // xem thực đơn không cần đăng nhập
-Route::get('/home', [CatalogController::class, 'home']);
+// Xem không cần đăng nhập; có token thì kèm dữ liệu của khách (địa chỉ, điểm, điểm danh…).
+Route::middleware('auth.api.optional')->group(function () {
+    Route::get('/menu', [CatalogController::class, 'menu']);
+    Route::get('/home', [CatalogController::class, 'home']);
+});
 
 // Cần đăng nhập (Bearer token)
 Route::middleware('auth.api')->group(function () {
@@ -35,4 +42,15 @@ Route::middleware('auth.api')->group(function () {
     // Geocode địa chỉ → toạ độ (để tính phí ship). Dùng nhà cung cấp bản đồ đã chọn.
     Route::get('/geo/geocode', [MapsController::class, 'geocode']);
     Route::get('/geo/autocomplete', [MapsController::class, 'autocomplete']);
+    Route::get('/geo/distance', [MapsController::class, 'distance']);
+
+    // Thành viên: điểm, đổi quà, ví quà, voucher dùng cho giỏ hàng, điểm danh, hồ sơ.
+    Route::get('/points', [MemberController::class, 'points']);
+    Route::get('/rewards', [MemberController::class, 'rewards']);
+    Route::get('/rewards/wallet', [MemberController::class, 'wallet']);
+    Route::post('/rewards/redeem', [RewardsCatalogController::class, 'redeem']);
+    Route::get('/cart/vouchers', [PromotionController::class, 'cartVouchers']);
+    Route::post('/promotions/claim', [PromotionController::class, 'claim']);
+    Route::post('/checkin', [CheckinController::class, 'store']);
+    Route::put('/profile', [MemberController::class, 'updateProfile']);
 });

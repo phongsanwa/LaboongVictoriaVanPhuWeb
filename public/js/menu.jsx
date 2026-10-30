@@ -229,41 +229,6 @@ function storeOffSet(storeId) {
   return new Set(storeId != null ? (all[String(storeId)] || []) : []);
 }
 
-/* Filter global variantGroups to only the options a specific product has.
-   item.variants = { SIZE: { M: {extra, available}, L: {...} }, TOPPING: {...} }
-   offSet: option hết riêng theo cửa hàng đang chọn (Set "TYPE|Name"). */
-function getProductVariantGroups(item, variantGroups, offSet) {
-  const off = offSet || new Set();
-  const isOff = (g, o) => off.has(g.key + '|' + o.id);
-
-  // A product with no variant rows serializes as [] (empty JSON array) — fall
-  // back to the global groups instead of hiding every option.
-  if (!item.variants || Object.keys(item.variants).length === 0) {
-    if (off.size === 0) return variantGroups;
-    return variantGroups.map(g => ({
-      ...g,
-      options: g.options.map(o => ({ ...o, available: o.available && !isOff(g, o) })),
-    }));
-  }
-  return variantGroups.map(g => {
-    const productOpts = item.variants[g.key];
-    if (!productOpts) return null; // product has no variants of this type
-    const options = g.options
-      .filter(o => productOpts[o.id] !== undefined)
-      .map(o => ({ ...o, extra: productOpts[o.id].extra, available: productOpts[o.id].available && !isOff(g, o), def: false }));
-    if (options.length === 0) return null;
-    // Re-apply default selection
-    const availOpts = options.filter(o => o.available);
-    const defaultId = g.options.find(o => o.def)?.id;
-    if (defaultId && options.some(o => o.id === defaultId)) {
-      options.forEach(o => { o.def = o.id === defaultId; });
-    } else if (g.required && availOpts.length > 0) {
-      options.forEach(o => { o.def = o.id === availOpts[0].id; });
-    }
-    return { ...g, options };
-  }).filter(Boolean);
-}
-
 /* ─── Voucher discount calculation ─────────────────────────────── */
 /* Tổng tiền topping khách đã chọn trong giỏ (voucher Freetopping chỉ áp khi > 0) */
 function cartToppingTotal(cartLines) {
@@ -386,19 +351,6 @@ function calcOrderPromoDiscount(p, subtotal) {
 }
 
 /* ─── Line item helpers ─────────────────────────────────────────── */
-function lineKey(l) {
-  if (l.selections) {
-    const parts = Object.entries(l.selections)
-      .sort(([a], [b]) => a.localeCompare(b))
-      .map(([k, v]) => `${k}:${Array.isArray(v) ? [...v].sort().join(',') : (v ?? '-')}`)
-      .join('|');
-    return `${l.id}|${parts}`;
-  }
-  /* legacy demo line format */
-  const tops = (l.toppings || []).map(t => t.id).sort().join(",");
-  return `${l.id}|z${l.size || "-"}|s${l.sugar || "-"}|i${l.ice || "-"}|t${tops}`;
-}
-
 function optsText(l, variantGroups) {
   if (l.selections && variantGroups && variantGroups.length) {
     const parts = [];
@@ -527,6 +479,14 @@ function App() {
     r.style.setProperty("--brand-deep", d);
     r.setAttribute("data-theme", tw.dark ? "dark" : "light");
   }, [tw.brand, tw.dark]);
+
+  /* Đến từ trang chủ (bấm "Thanh toán" sau khi thêm món Flash Sale) → mở sẵn giỏ hàng. */
+  useEffect(() => {
+    if (new URLSearchParams(location.search).get('cart') === '1') {
+      if (lines.length) setDrawer(true);
+      history.replaceState(null, '', location.pathname);
+    }
+  }, []); // eslint-disable-line
 
   /* persist cart to localStorage */
   useEffect(() => {
@@ -1170,7 +1130,7 @@ function App() {
                             <>
                               <span className="item-price tnum" style={{ textDecoration: "line-through", color: "var(--ink-3)", fontSize: 12, fontWeight: 500 }}>{fmt(m.price)}đ</span>
                               <span className="item-price tnum" style={{ color: "var(--danger)", fontWeight: 800 }}>{fmt(m.salePrice)}đ</span>
-                              <span style={{ fontSize: 11, fontWeight: 800, background: "var(--danger)", color: "#fff", borderRadius: 5, padding: "1px 6px", marginLeft: 2 }}>{m.promoLabel}</span>
+                              <PromoLabel item={m} style={{ marginLeft: 2 }} />
                             </>
                           ) : (
                             <span className="item-price tnum">{fmt(m.price)}đ</span>
@@ -1267,7 +1227,7 @@ function App() {
                 </div>
                 <div className="cp-b">
                   {vouchersLoading ? (
-                    <div style={{ textAlign: "center", padding: "20px 0", color: "var(--ink-3)", fontSize: 13 }}>Đang tải voucher…</div>
+                    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 8, padding: "20px 0", color: "var(--ink-3)", fontSize: 13 }}><span className="lb-spin lg" />Đang tải voucher…</div>
                   ) : (<>
                     {/* Quà tích điểm — redemptions, applicable if has active voucher */}
                     <div className="cp-sec">Quà tích điểm</div>

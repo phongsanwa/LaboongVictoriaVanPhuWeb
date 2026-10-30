@@ -1,0 +1,17 @@
+{
+  "app": {
+    "title": "Laboong Victoria Văn Phú",
+    "headerTitle": "Laboong",
+    "headerColor": "#0F623F",
+    "textColor": "white",
+    "statusBarColor": "#0F623F",
+    "leftButton": "back",
+    "statusBar": "normal",
+    "actionBarHidden": true,
+    "hideAndroidBottomNavigationBar": false,
+    "hideIOSSafeAreaBottom": false
+  },
+  "listCSS": [],
+  "listSyncJS": [],
+  "listAsyncJS": []
+}

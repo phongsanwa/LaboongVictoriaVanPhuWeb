@@ -161,7 +161,7 @@ function Attendance({ storeId, onBack }) {
         <div className="step-title">Chấm công nhân viên</div>
         <div className="step-desc">Bấm <b>Vào ca</b> khi bắt đầu làm và <b>Ra ca</b> khi về · Bây giờ {now.toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit", timeZone: "Asia/Ho_Chi_Minh" })}</div>
         {msg && <div style={{ margin: "10px 0", padding: "10px 14px", borderRadius: 12, fontWeight: 600, fontSize: 14, background: msg.err ? "#FBEAE3" : "#EAF3EE", color: msg.err ? "#C0552B" : "var(--brand)" }}>{msg.text}</div>}
-        {list === null ? <div style={{ padding: 20, textAlign: "center", color: "var(--ink-3)" }}>Đang tải…</div>
+        {list === null ? <div style={{ padding: 20, display: "flex", flexDirection: "column", alignItems: "center", gap: 8, color: "var(--ink-3)" }}><span className="lb-spin lg" />Đang tải…</div>
           : list.length === 0 ? <div style={{ padding: 20, textAlign: "center", color: "var(--ink-3)" }}>Chưa có nhân viên của quán này — quản lý thêm ở trang Bảng lương.</div>
           : (
             <div style={{ display: "flex", flexDirection: "column", gap: 10, marginTop: 12 }}>
@@ -318,7 +318,7 @@ function Recipes({ onBack }) {
         </div>
 
         {err ? <div style={{ padding: 14, borderRadius: 12, background: "#FBEAE3", color: "#C0552B", fontWeight: 600 }}>{err}</div>
-          : list === null ? <div style={{ padding: 20, textAlign: "center", color: "var(--ink-3)" }}>Đang tải…</div>
+          : list === null ? <div style={{ padding: 20, display: "flex", flexDirection: "column", alignItems: "center", gap: 8, color: "var(--ink-3)" }}><span className="lb-spin lg" />Đang tải…</div>
           : shown.length === 0 ? <div style={{ padding: 20, textAlign: "center", color: "var(--ink-3)" }}>Không tìm thấy công thức nào{q ? ` cho "${q}"` : ""}.</div>
           : (
             <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
