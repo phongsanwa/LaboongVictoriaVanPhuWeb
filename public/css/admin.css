@@ -1296,3 +1296,17 @@ textarea.sinp { resize: vertical; min-height: 70px; line-height: 1.5; }
 .user-name { font-size: 13px; font-weight: 700; }
 .avatar-chip { width: 34px; height: 34px; border-radius: 50%; background: var(--brand); color: #fff; display: grid; place-items: center; font-weight: 800; font-size: 13px; flex: none; }
 
+
+/* ─── Email: chọn mẫu Flash Sale ─── */
+.ftp-grid { display: grid; grid-template-columns: 260px minmax(0, 1fr); gap: 16px; align-items: start; }
+.ftp-list { display: flex; flex-direction: column; gap: 8px; }
+.ftp-item { text-align: left; padding: 12px 14px; border-radius: 12px; border: 1.5px solid var(--line); background: var(--panel); color: var(--ink); cursor: pointer; font: inherit; }
+.ftp-item:hover { border-color: var(--ink-3); }
+.ftp-item.on { border-color: var(--brand); background: var(--brand-soft, rgba(15,98,63,.08)); }
+.ftp-frame { width: 100%; height: 620px; border: 1px solid var(--line); border-radius: 12px; background: #f2efe6; display: block; }
+@media (max-width: 760px) {
+  .ftp-grid { grid-template-columns: 1fr; }
+  .ftp-list { flex-direction: row; overflow-x: auto; padding-bottom: 4px; }
+  .ftp-item { flex: 0 0 200px; }
+  .ftp-frame { height: 520px; }
+}

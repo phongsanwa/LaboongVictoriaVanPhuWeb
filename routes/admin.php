@@ -109,6 +109,7 @@ Route::middleware(['auth', 'admin.perm'])->prefix('admin')->name('admin.')->grou
         Route::delete('/emails/blasts/{blast}', [EmailController::class, 'destroyBlast'])->name('emails.blasts.destroy');
         Route::post('/emails/test', [EmailController::class, 'test'])->name('emails.test');
         Route::post('/emails/upload', [EmailController::class, 'uploadImage'])->name('emails.upload');
+        Route::get('/emails/flash-templates', [EmailController::class, 'flashTemplates'])->name('emails.flash-templates');
     });
 
     // Phân quyền

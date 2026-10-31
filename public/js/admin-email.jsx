@@ -139,6 +139,88 @@ function TemplateEditor({ initial, onClose, onSaved }) {
   );
 }
 
+/* ─── Mẫu email Flash Sale: chọn đợt → xem trước các kiểu → dùng hoặc lưu thành mẫu ─── */
+function FlashTemplatePicker({ onClose, onUse, onSaved }) {
+  const sales = DATA.flashSales || [];
+  const [saleId, setSaleId] = useState(sales[0]?.id || '');
+  const [designs, setDesigns] = useState(null);
+  const [err, setErr] = useState('');
+  const [active, setActive] = useState(0);
+  const [saving, setSaving] = useState(null);
+
+  useEffect(() => {
+    if (!saleId) return;
+    setDesigns(null); setErr(''); setActive(0);
+    fetch(URLS.flashTemplates + '?sale_id=' + saleId, { headers: { Accept: 'application/json' } })
+      .then(r => r.json().then(j => r.ok ? setDesigns(j.designs) : setErr(j.message || 'Không tải được mẫu')))
+      .catch(() => setErr('Không tải được mẫu'));
+  }, [saleId]);
+
+  const sale = sales.find(x => String(x.id) === String(saleId));
+  const d = designs && designs[active];
+
+  const save = async (des) => {
+    setSaving(des.key);
+    try {
+      const res = await apiFetch('POST', URLS.storeTemplate, { name: `Flash Sale · ${des.name} · ${sale?.name || ''}`.trim(), subject: des.subject, body: des.body, attach_qr: false });
+      onSaved(res.template);
+    } catch (e) { setErr(e.message); } finally { setSaving(null); }
+  };
+
+  return (
+    <div className="modal-scrim" onClick={onClose}>
+      <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 1080, width: '100%', maxHeight: '94vh', display: 'flex', flexDirection: 'column' }}>
+        <div className="modal-h">
+          <div className="mh-ic"><img src="/images/flash-sale.png" alt="" width="24" height="24" /></div>
+          <div><h3>Mẫu email Flash Sale</h3><p>Tự điền món, giá, % giảm và giờ của đợt bạn chọn — chọn một kiểu rồi sửa thêm nếu muốn</p></div>
+          <button className="x" onClick={onClose}><Icon name="close" size={18} /></button>
+        </div>
+        <div className="modal-b" style={{ overflowY: 'auto' }}>
+          {sales.length === 0 ? (
+            <div style={{ padding: 30, textAlign: 'center', color: 'var(--ink-3)' }}>
+              Chưa có đợt flash sale nào còn hiệu lực. Tạo đợt ở trang <a href="/admin/flash-sales" style={{ color: 'var(--brand)', fontWeight: 700 }}>Flash Sale</a> trước nhé.
+            </div>
+          ) : (
+            <>
+              <div className="fld">
+                <label>Đợt flash sale</label>
+                <select className="inp" value={saleId} onChange={e => setSaleId(e.target.value)}>
+                  {sales.map(x => <option key={x.id} value={x.id}>{x.name} — {x.schedule}{x.active ? '' : ' (đang tắt)'}</option>)}
+                </select>
+              </div>
+              {err && <div className="cp-err" style={{ marginBottom: 10 }}><Icon name="alert" size={14} color="var(--hot)" /> {err}</div>}
+              {!designs && !err && <div style={{ padding: 30, display: 'flex', justifyContent: 'center' }}><span className="lb-spin lg" /></div>}
+              {designs && (
+                <div className="ftp-grid">
+                  <div className="ftp-list">
+                    {designs.map((x, i) => (
+                      <button key={x.key} className={'ftp-item' + (i === active ? ' on' : '')} onClick={() => setActive(i)}>
+                        <div style={{ fontWeight: 800, fontSize: 14.5 }}>{i + 1}. {x.name}</div>
+                        <div style={{ fontSize: 12.5, color: 'var(--ink-2)', marginTop: 3, lineHeight: 1.45 }}>{x.desc}</div>
+                      </button>
+                    ))}
+                  </div>
+                  {d && (
+                    <div className="ftp-preview">
+                      <div style={{ fontSize: 12.5, color: 'var(--ink-3)' }}>Tiêu đề (xem trước với khách "Minh Anh"):</div>
+                      <div style={{ fontWeight: 700, margin: '2px 0 10px' }}>{d.preview_subject}</div>
+                      <iframe title={'Xem trước ' + d.name} srcDoc={d.preview} sandbox="" className="ftp-frame" />
+                      <div style={{ display: 'flex', gap: 10, marginTop: 12, flexWrap: 'wrap' }}>
+                        <button className="btn primary" onClick={() => onUse(d)}><Icon name="send" size={15} color="#fff" /> Dùng mẫu này để gửi</button>
+                        <button className="btn ghost" disabled={saving === d.key} onClick={() => save(d)}><Icon name="copy" size={15} /> {saving === d.key ? 'Đang lưu…' : 'Lưu vào Mẫu email'}</button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /* ─── App ─── */
 function App() {
   const [tab, setTab] = useState('compose'); // compose | templates | history
@@ -164,6 +246,7 @@ function App() {
   const [composeErr, setComposeErr] = useState('');
 
   const [tplEditor, setTplEditor] = useState(null);
+  const [flashPicker, setFlashPicker] = useState(false);
 
   const flash = (msg, ok = true) => { setToast({ msg, ok }); setTimeout(() => setToast(null), 3000); };
 
@@ -308,10 +391,15 @@ function App() {
               <div className="card" style={{ padding: 18, background: 'var(--card,#fff)', borderRadius: 14, border: '1px solid var(--line,#eee)' }}>
                 <div className="fld">
                   <label>Dùng mẫu có sẵn (không bắt buộc)</label>
-                  <select className="inp" value={tplId} onChange={e => applyTemplate(e.target.value)}>
-                    <option value="">— Không dùng mẫu —</option>
-                    {templates.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
-                  </select>
+                  <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                    <select className="inp" style={{ flex: '1 1 240px' }} value={tplId} onChange={e => applyTemplate(e.target.value)}>
+                      <option value="">— Không dùng mẫu —</option>
+                      {templates.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+                    </select>
+                    <button className="btn ghost" style={{ whiteSpace: 'nowrap' }} onClick={() => setFlashPicker(true)}>
+                      <img src="/images/flash-sale.png" alt="" width="18" height="18" /> Mẫu Flash Sale
+                    </button>
+                  </div>
                 </div>
                 <div className="fld"><label>Tiêu đề email</label>
                   <input className="inp" value={subject} onChange={e => setSubject(e.target.value)} placeholder="VD: 🧋 Ưu đãi đặc biệt cho {name}!" /></div>
@@ -432,9 +520,14 @@ function App() {
           {/* ─── TAB: Mẫu email ─── */}
           {tab === 'templates' && (
             <div>
-              <button className="btn primary" style={{ marginBottom: 14 }} onClick={() => setTplEditor({})}>
-                <Icon name="plus" size={16} color="#fff" /> Thêm mẫu
-              </button>
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 14 }}>
+                <button className="btn primary" onClick={() => setTplEditor({})}>
+                  <Icon name="plus" size={16} color="#fff" /> Thêm mẫu
+                </button>
+                <button className="btn ghost" onClick={() => setFlashPicker(true)}>
+                  <img src="/images/flash-sale.png" alt="" width="18" height="18" /> Tạo từ mẫu Flash Sale
+                </button>
+              </div>
               {templates.length === 0 && <div style={{ padding: 40, textAlign: 'center', color: 'var(--ink-3)' }}>Chưa có mẫu email nào.</div>}
               <div style={{ display: 'grid', gap: 10 }}>
                 {templates.map(t => (
@@ -487,6 +580,11 @@ function App() {
       </div>
 
       {tplEditor !== null && <TemplateEditor initial={tplEditor} onClose={() => setTplEditor(null)} onSaved={onTplSaved} />}
+      {flashPicker && (
+        <FlashTemplatePicker onClose={() => setFlashPicker(false)}
+          onUse={d => { setTplId(''); setSubject(d.subject); setBody(d.body); setAttachQr(false); setFlashPicker(false); setTab('compose'); flash(`Đã áp dụng mẫu "${d.name}" — bạn có thể sửa trước khi gửi`); }}
+          onSaved={t => { setTemplates(ts => [t, ...ts]); flash(`Đã lưu "${t.name}" vào Mẫu email`); }} />
+      )}
 
       {toast && (
         <div className="toast">
