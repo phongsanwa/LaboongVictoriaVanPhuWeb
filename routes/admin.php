@@ -110,6 +110,8 @@ Route::middleware(['auth', 'admin.perm'])->prefix('admin')->name('admin.')->grou
         Route::post('/emails/test', [EmailController::class, 'test'])->name('emails.test');
         Route::post('/emails/upload', [EmailController::class, 'uploadImage'])->name('emails.upload');
         Route::get('/emails/flash-templates', [EmailController::class, 'flashTemplates'])->name('emails.flash-templates');
+        Route::post('/emails/branding', [EmailController::class, 'saveBranding'])->name('emails.branding.save');
+        Route::get('/emails/branding/preview', [EmailController::class, 'brandingPreview'])->name('emails.branding.preview');
     });
 
     // Phân quyền

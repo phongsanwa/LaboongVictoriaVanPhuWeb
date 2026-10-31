@@ -1310,3 +1310,5 @@ textarea.sinp { resize: vertical; min-height: 70px; line-height: 1.5; }
   .ftp-item { flex: 0 0 200px; }
   .ftp-frame { height: 520px; }
 }
+.brand-grid { display: grid; grid-template-columns: minmax(0, 380px) minmax(0, 1fr); gap: 16px; align-items: start; }
+@media (max-width: 860px) { .brand-grid { grid-template-columns: 1fr; } }

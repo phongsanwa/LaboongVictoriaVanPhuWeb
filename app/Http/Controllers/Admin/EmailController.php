@@ -4,11 +4,13 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Mail\BulkEmail;
+use App\Models\AppSetting;
 use App\Models\Customer;
 use App\Models\EmailBlast;
 use App\Models\EmailBlastRecipient;
 use App\Models\EmailTemplate;
 use App\Models\FlashSale;
+use App\Support\EmailBranding;
 use App\Support\FlashSaleEmail;
 use App\Services\EmailBlastSender;
 use App\Support\HtmlSanitizer;
@@ -58,6 +60,7 @@ class EmailController extends Controller
                 'blasts'     => EmailBlast::orderByDesc('id')->limit(50)->get()
                     ->map(fn ($b) => $this->presentBlast($b))->all(),
                 'flashSales' => $this->flashSaleOptions(),
+                'branding'   => EmailBranding::settings(),
                 'tokens'     => [
                     ['token' => '{name}',   'desc' => 'Tên khách hàng'],
                     ['token' => '{phone}',  'desc' => 'Số điện thoại'],
@@ -74,6 +77,8 @@ class EmailController extends Controller
                     'test'            => route('admin.emails.test'),
                     'uploadImage'     => route('admin.emails.upload'),
                     'flashTemplates'  => route('admin.emails.flash-templates'),
+                    'saveBranding'    => route('admin.emails.branding.save'),
+                    'brandingPreview' => route('admin.emails.branding.preview'),
                 ],
             ],
         ]);
@@ -101,6 +106,43 @@ class EmailController extends Controller
         $template->delete();
 
         return response()->json(['message' => 'Đã xoá mẫu email']);
+    }
+
+    /* ─── Giao diện email (ảnh nền phần đầu email) ─── */
+
+    /** POST /admin/emails/branding — { header_bg: URL ảnh | null, header_text: bool } */
+    public function saveBranding(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'header_bg'   => ['nullable', 'string', 'max:1000', 'regex:' . EmailBranding::URL_PATTERN],
+            'header_text' => ['boolean'],
+        ], ['header_bg.regex' => 'Địa chỉ ảnh không hợp lệ.']);
+
+        AppSetting::set(EmailBranding::KEY, [
+            'header_bg'   => $data['header_bg'] ?? null,
+            'header_text' => (bool) ($data['header_text'] ?? true),
+        ]);
+
+        return response()->json(['message' => 'Đã lưu giao diện email', 'branding' => EmailBranding::settings()]);
+    }
+
+    /** GET /admin/emails/branding/preview?bg=&text= — email mẫu với ảnh nền đang chọn (chưa cần lưu). */
+    public function brandingPreview(Request $request)
+    {
+        $bg = trim((string) $request->query('bg', ''));
+        $brand = [
+            'header_bg'   => preg_match(EmailBranding::URL_PATTERN, $bg) ? $bg : null,
+            'header_text' => $request->boolean('text', true),
+        ];
+        $sample = '<p>Chào <strong>Minh Anh</strong>,</p><p>Đây là email xem trước để bạn thấy phần đầu email với ảnh nền đang chọn. '
+            . 'Nội dung thật (khuyến mãi, flash sale…) sẽ nằm ở phần này.</p>';
+
+        return response(view('emails.bulk', [
+            'bodyHtml' => $sample,
+            'siteUrl'  => Site::base(),
+            'attachQr' => false,
+            'brand'    => $brand,
+        ])->render())->header('Content-Type', 'text/html; charset=UTF-8');
     }
 
     /* ─── Mẫu email Flash Sale ─── */
