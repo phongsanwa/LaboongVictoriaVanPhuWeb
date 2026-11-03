@@ -4,10 +4,14 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Mail\BulkEmail;
+use App\Models\AppSetting;
 use App\Models\Customer;
 use App\Models\EmailBlast;
 use App\Models\EmailBlastRecipient;
 use App\Models\EmailTemplate;
+use App\Models\FlashSale;
+use App\Support\EmailBranding;
+use App\Support\FlashSaleEmail;
 use App\Services\EmailBlastSender;
 use App\Support\HtmlSanitizer;
 use App\Support\Site;
@@ -55,6 +59,8 @@ class EmailController extends Controller
                     ->map(fn ($t) => $this->presentTemplate($t))->all(),
                 'blasts'     => EmailBlast::orderByDesc('id')->limit(50)->get()
                     ->map(fn ($b) => $this->presentBlast($b))->all(),
+                'flashSales' => $this->flashSaleOptions(),
+                'branding'   => EmailBranding::settings(),
                 'tokens'     => [
                     ['token' => '{name}',   'desc' => 'Tên khách hàng'],
                     ['token' => '{phone}',  'desc' => 'Số điện thoại'],
@@ -70,6 +76,9 @@ class EmailController extends Controller
                     'destroyBlast'    => route('admin.emails.blasts.destroy', ['blast' => '__ID__']),
                     'test'            => route('admin.emails.test'),
                     'uploadImage'     => route('admin.emails.upload'),
+                    'flashTemplates'  => route('admin.emails.flash-templates'),
+                    'saveBranding'    => route('admin.emails.branding.save'),
+                    'brandingPreview' => route('admin.emails.branding.preview'),
                 ],
             ],
         ]);
@@ -97,6 +106,88 @@ class EmailController extends Controller
         $template->delete();
 
         return response()->json(['message' => 'Đã xoá mẫu email']);
+    }
+
+    /* ─── Giao diện email (ảnh nền phần đầu email) ─── */
+
+    /** POST /admin/emails/branding — { header_bg: URL ảnh | null, header_text: bool } */
+    public function saveBranding(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'header_bg'   => ['nullable', 'string', 'max:1000', 'regex:' . EmailBranding::URL_PATTERN],
+            'header_text' => ['boolean'],
+        ], ['header_bg.regex' => 'Địa chỉ ảnh không hợp lệ.']);
+
+        AppSetting::set(EmailBranding::KEY, [
+            'header_bg'   => $data['header_bg'] ?? null,
+            'header_text' => (bool) ($data['header_text'] ?? true),
+        ]);
+
+        return response()->json(['message' => 'Đã lưu giao diện email', 'branding' => EmailBranding::settings()]);
+    }
+
+    /** GET /admin/emails/branding/preview?bg=&text= — email mẫu với ảnh nền đang chọn (chưa cần lưu). */
+    public function brandingPreview(Request $request)
+    {
+        $bg = trim((string) $request->query('bg', ''));
+        $brand = [
+            'header_bg'   => preg_match(EmailBranding::URL_PATTERN, $bg) ? $bg : null,
+            'header_text' => $request->boolean('text', true),
+        ];
+        $sample = '<p>Chào <strong>Minh Anh</strong>,</p><p>Đây là email xem trước để bạn thấy phần đầu email với ảnh nền đang chọn. '
+            . 'Nội dung thật (khuyến mãi, flash sale…) sẽ nằm ở phần này.</p>';
+
+        return response(view('emails.bulk', [
+            'bodyHtml' => $sample,
+            'siteUrl'  => Site::base(),
+            'attachQr' => false,
+            'brand'    => $brand,
+        ])->render())->header('Content-Type', 'text/html; charset=UTF-8');
+    }
+
+    /* ─── Mẫu email Flash Sale ─── */
+
+    /**
+     * GET /admin/emails/flash-templates?sale_id= — các mẫu email giới thiệu món flash sale
+     * (đã điền món, giá, giờ của đợt đó) kèm bản xem trước đúng như khách nhận.
+     */
+    public function flashTemplates(Request $request): JsonResponse
+    {
+        $sale = FlashSale::with('items.product')->find($request->integer('sale_id'));
+        if (!$sale) return response()->json(['message' => 'Không tìm thấy đợt flash sale.'], 404);
+
+        $designs = FlashSaleEmail::all($sale);
+        if (!$designs) return response()->json(['message' => 'Đợt flash sale này chưa có món nào.'], 422);
+
+        // Xem trước với thông tin khách mẫu, lồng trong đúng khung email gửi đi.
+        $sample = ['{name}' => 'Minh Anh', '{ten}' => 'Minh Anh', '{phone}' => '0912 345 678', '{sdt}' => '0912 345 678', '{points}' => '2.450', '{diem}' => '2.450'];
+        foreach ($designs as &$d) {
+            $d['preview_subject'] = strtr($d['subject'], $sample);
+            $d['preview'] = view('emails.bulk', [
+                'bodyHtml' => strtr(HtmlSanitizer::clean($d['body']) ?? '', $sample),
+                'siteUrl'  => Site::base(),
+                'attachQr' => false,
+            ])->render();
+        }
+
+        return response()->json(['designs' => $designs]);
+    }
+
+    /** Các đợt flash sale còn dùng được (đang bật, chưa kết thúc) — mới nhất trước. */
+    private function flashSaleOptions(): array
+    {
+        $today = Carbon::now('Asia/Ho_Chi_Minh')->toDateString();
+
+        return FlashSale::withCount('items')->orderByDesc('is_active')->orderByDesc('id')->get()
+            ->filter(fn ($s) => $s->items_count > 0 && ($s->repeat === 'once'
+                ? $s->start_date->toDateString() >= $today
+                : (!$s->end_date || $s->end_date->toDateString() >= $today)))
+            ->map(fn ($s) => [
+                'id'       => $s->id,
+                'name'     => $s->name,
+                'schedule' => FlashSaleEmail::scheduleText($s),
+                'active'   => (bool) $s->is_active,
+            ])->values()->all();
     }
 
     /* ─── Chiến dịch gửi email ─── */
@@ -226,7 +317,7 @@ class EmailController extends Controller
             'to'        => ['nullable', 'email'],
         ]);
 
-        $to   = $data['to'] ?: Auth::user()->email;
+        $to   = ($data['to'] ?? null) ?: Auth::user()->email;
         $body = HtmlSanitizer::clean($data['body']);
         if (!$to)   return response()->json(['message' => 'Không có địa chỉ nhận thử.'], 422);
         if (!$body) return response()->json(['message' => 'Nội dung email trống.'], 422);

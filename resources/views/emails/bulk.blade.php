@@ -10,11 +10,8 @@
     <tr><td align="center">
       <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px; background:#ffffff; border-radius:16px; overflow:hidden; box-shadow:0 6px 20px rgba(20,40,28,.08);">
 
-        {{-- Header thương hiệu --}}
-        <tr><td style="background:linear-gradient(135deg,#0F623F,#1AA86A); padding:26px 28px; text-align:center;">
-          <div style="font-size:22px; font-weight:800; color:#ffffff; letter-spacing:.3px;">LABOONG</div>
-          <div style="font-size:13px; color:#d8f3e6; margin-top:2px;">Victoria Văn Phú</div>
-        </td></tr>
+        {{-- Header thương hiệu (ảnh nền đổi ở Admin → Email → Giao diện email) --}}
+        @include('emails.partials.brand-header', ['brandTitle' => 'LABOONG', 'brandSub' => 'Victoria Văn Phú', 'brandTitleColor' => '#ffffff', 'brandSubColor' => '#d8f3e6', 'brandTitleSize' => '22px'])
 
         {{-- Nội dung do admin soạn (đã cá nhân hoá + làm sạch HTML) --}}
         <tr><td style="padding:26px 28px 8px; font-size:15px; line-height:1.65; color:#28352d;">

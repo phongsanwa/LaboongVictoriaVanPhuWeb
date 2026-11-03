@@ -139,6 +139,163 @@ function TemplateEditor({ initial, onClose, onSaved }) {
   );
 }
 
+/* ─── Mẫu email Flash Sale: chọn đợt → xem trước các kiểu → dùng hoặc lưu thành mẫu ─── */
+function FlashTemplatePicker({ onClose, onUse, onSaved }) {
+  const sales = DATA.flashSales || [];
+  const [saleId, setSaleId] = useState(sales[0]?.id || '');
+  const [designs, setDesigns] = useState(null);
+  const [err, setErr] = useState('');
+  const [active, setActive] = useState(0);
+  const [saving, setSaving] = useState(null);
+
+  useEffect(() => {
+    if (!saleId) return;
+    setDesigns(null); setErr(''); setActive(0);
+    fetch(URLS.flashTemplates + '?sale_id=' + saleId, { headers: { Accept: 'application/json' } })
+      .then(r => r.json().then(j => r.ok ? setDesigns(j.designs) : setErr(j.message || 'Không tải được mẫu')))
+      .catch(() => setErr('Không tải được mẫu'));
+  }, [saleId]);
+
+  const sale = sales.find(x => String(x.id) === String(saleId));
+  const d = designs && designs[active];
+
+  const save = async (des) => {
+    setSaving(des.key);
+    try {
+      const res = await apiFetch('POST', URLS.storeTemplate, { name: `Flash Sale · ${des.name} · ${sale?.name || ''}`.trim(), subject: des.subject, body: des.body, attach_qr: false });
+      onSaved(res.template);
+    } catch (e) { setErr(e.message); } finally { setSaving(null); }
+  };
+
+  return (
+    <div className="modal-scrim" onClick={onClose}>
+      <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 1080, width: '100%', maxHeight: '94vh', display: 'flex', flexDirection: 'column' }}>
+        <div className="modal-h">
+          <div className="mh-ic"><img src="/images/flash-sale.png" alt="" width="24" height="24" /></div>
+          <div><h3>Mẫu email Flash Sale</h3><p>Tự điền món, giá, % giảm và giờ của đợt bạn chọn — chọn một kiểu rồi sửa thêm nếu muốn</p></div>
+          <button className="x" onClick={onClose}><Icon name="close" size={18} /></button>
+        </div>
+        <div className="modal-b" style={{ overflowY: 'auto' }}>
+          {sales.length === 0 ? (
+            <div style={{ padding: 30, textAlign: 'center', color: 'var(--ink-3)' }}>
+              Chưa có đợt flash sale nào còn hiệu lực. Tạo đợt ở trang <a href="/admin/flash-sales" style={{ color: 'var(--brand)', fontWeight: 700 }}>Flash Sale</a> trước nhé.
+            </div>
+          ) : (
+            <>
+              <div className="fld">
+                <label>Đợt flash sale</label>
+                <select className="inp" value={saleId} onChange={e => setSaleId(e.target.value)}>
+                  {sales.map(x => <option key={x.id} value={x.id}>{x.name} — {x.schedule}{x.active ? '' : ' (đang tắt)'}</option>)}
+                </select>
+              </div>
+              {err && <div className="cp-err" style={{ marginBottom: 10 }}><Icon name="alert" size={14} color="var(--hot)" /> {err}</div>}
+              {!designs && !err && <div style={{ padding: 30, display: 'flex', justifyContent: 'center' }}><span className="lb-spin lg" /></div>}
+              {designs && (
+                <div className="ftp-grid">
+                  <div className="ftp-list">
+                    {designs.map((x, i) => (
+                      <button key={x.key} className={'ftp-item' + (i === active ? ' on' : '')} onClick={() => setActive(i)}>
+                        <div style={{ fontWeight: 800, fontSize: 14.5 }}>{i + 1}. {x.name}</div>
+                        <div style={{ fontSize: 12.5, color: 'var(--ink-2)', marginTop: 3, lineHeight: 1.45 }}>{x.desc}</div>
+                      </button>
+                    ))}
+                  </div>
+                  {d && (
+                    <div className="ftp-preview">
+                      <div style={{ fontSize: 12.5, color: 'var(--ink-3)' }}>Tiêu đề (xem trước với khách "Minh Anh"):</div>
+                      <div style={{ fontWeight: 700, margin: '2px 0 10px' }}>{d.preview_subject}</div>
+                      <iframe title={'Xem trước ' + d.name} srcDoc={d.preview} sandbox="" className="ftp-frame" />
+                      <div style={{ display: 'flex', gap: 10, marginTop: 12, flexWrap: 'wrap' }}>
+                        <button className="btn primary" onClick={() => onUse(d)}><Icon name="send" size={15} color="#fff" /> Dùng mẫu này để gửi</button>
+                        <button className="btn ghost" disabled={saving === d.key} onClick={() => save(d)}><Icon name="copy" size={15} /> {saving === d.key ? 'Đang lưu…' : 'Lưu vào Mẫu email'}</button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ─── Giao diện email: ảnh nền phần đầu email "LABOONG · Victoria Văn Phú" ─── */
+function BrandingPanel({ notify }) {
+  const init = DATA.branding || {};
+  const [bg, setBg] = useState(init.header_bg || '');
+  const [showText, setShowText] = useState(init.header_text !== false);
+  const [saved, setSaved] = useState({ bg: init.header_bg || '', text: init.header_text !== false });
+  const [uploading, setUploading] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [err, setErr] = useState('');
+  const fileRef = useRef(null);
+
+  const previewUrl = URLS.brandingPreview + '?' + new URLSearchParams({ bg, text: showText ? '1' : '0' }).toString();
+  const dirty = bg !== saved.bg || showText !== saved.text;
+
+  const upload = async (file) => {
+    if (!file) return;
+    setUploading(true); setErr('');
+    try {
+      const fd = new FormData();
+      fd.append('file', file);
+      const r = await fetch(URLS.uploadImage, { method: 'POST', headers: { 'X-CSRF-TOKEN': csrfToken(), Accept: 'application/json' }, body: fd });
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok || !j.url) throw new Error(j.message || Object.values(j.errors || {}).flat()[0] || 'Tải ảnh lỗi');
+      setBg(j.url);
+    } catch (e) { setErr(e.message); } finally { setUploading(false); if (fileRef.current) fileRef.current.value = ''; }
+  };
+
+  const save = async () => {
+    setSaving(true); setErr('');
+    try {
+      const res = await apiFetch('POST', URLS.saveBranding, { header_bg: bg || null, header_text: showText });
+      setSaved({ bg: res.branding.header_bg || '', text: res.branding.header_text });
+      notify(res.message);
+    } catch (e) { setErr(e.message); } finally { setSaving(false); }
+  };
+
+  return (
+    <div className="brand-grid">
+      <div className="card" style={{ padding: 18, background: 'var(--card,#fff)', borderRadius: 14, border: '1px solid var(--line,#eee)' }}>
+        <h3 style={{ margin: '0 0 4px', fontSize: 17 }}>Ảnh nền phần đầu email</h3>
+        <p style={{ margin: '0 0 14px', fontSize: 13, color: 'var(--ink-2)', lineHeight: 1.5 }}>
+          Thay nền xanh ở ô "LABOONG · Victoria Văn Phú" trên cùng email. Áp dụng cho email gửi khách (khuyến mãi, flash sale…) và email chào mừng thành viên mới.
+        </p>
+        <div style={{ borderRadius: 12, overflow: 'hidden', border: '1px solid var(--line,#eee)', marginBottom: 12, background: '#0F623F', aspectRatio: '3 / 1', display: 'grid', placeItems: 'center' }}>
+          {bg ? <img src={bg} alt="Ảnh nền đầu email" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+            : <span style={{ color: '#d8f3e6', fontWeight: 700, fontSize: 13 }}>Đang dùng nền xanh mặc định</span>}
+        </div>
+        <input ref={fileRef} type="file" accept="image/jpeg,image/png,image/webp" hidden onChange={e => upload(e.target.files && e.target.files[0])} />
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          <button className="btn ghost" disabled={uploading} onClick={() => fileRef.current && fileRef.current.click()}>
+            {uploading ? <><span className="lb-spin" /> Đang tải…</> : <><Icon name="image" size={15} /> {bg ? 'Đổi ảnh' : 'Tải ảnh lên'}</>}
+          </button>
+          {bg && <button className="btn ghost" onClick={() => setBg('')}>Dùng lại nền xanh mặc định</button>}
+        </div>
+        <div style={{ fontSize: 12, color: 'var(--ink-3)', marginTop: 8 }}>Ảnh ngang, nên dùng khoảng 1200 × 400 px (JPG/PNG/WebP, tối đa 4MB).</div>
+
+        <label style={{ display: 'flex', alignItems: 'flex-start', gap: 10, cursor: bg ? 'pointer' : 'default', marginTop: 14, opacity: bg ? 1 : 0.5 }}>
+          <input type="checkbox" checked={showText} disabled={!bg} onChange={e => setShowText(e.target.checked)} style={{ accentColor: 'var(--brand)', width: 17, height: 17, marginTop: 2 }} />
+          <span><span style={{ fontWeight: 700 }}>Hiện chữ "LABOONG · Victoria Văn Phú" trên ảnh</span><br />
+            <span style={{ fontSize: 12.5, color: 'var(--ink-2)' }}>Bỏ chọn nếu ảnh đã có sẵn logo/chữ — ảnh sẽ hiện nguyên vẹn như một banner.</span></span>
+        </label>
+
+        {err && <div className="cp-err" style={{ marginTop: 12 }}><Icon name="alert" size={14} color="var(--hot)" /> {err}</div>}
+        <button className="btn primary" style={{ marginTop: 16 }} disabled={!dirty || saving || uploading} onClick={save}>
+          <Icon name="check" size={16} color="#fff" /> {saving ? 'Đang lưu…' : dirty ? 'Lưu giao diện' : 'Đã lưu'}
+        </button>
+      </div>
+      <div>
+        <div style={{ fontSize: 12.5, color: 'var(--ink-3)', marginBottom: 6 }}>Xem trước email (chưa lưu cũng xem được):</div>
+        <iframe title="Xem trước email" src={previewUrl} className="ftp-frame" style={{ height: 560 }} />
+      </div>
+    </div>
+  );
+}
+
 /* ─── App ─── */
 function App() {
   const [tab, setTab] = useState('compose'); // compose | templates | history
@@ -164,6 +321,7 @@ function App() {
   const [composeErr, setComposeErr] = useState('');
 
   const [tplEditor, setTplEditor] = useState(null);
+  const [flashPicker, setFlashPicker] = useState(false);
 
   const flash = (msg, ok = true) => { setToast({ msg, ok }); setTimeout(() => setToast(null), 3000); };
 
@@ -293,7 +451,7 @@ function App() {
         <div className="content">
           {/* Tabs */}
           <div style={{ display: 'flex', gap: 8, marginBottom: 18, flexWrap: 'wrap' }}>
-            {[['compose', 'Soạn & Gửi', 'send'], ['templates', 'Mẫu email', 'copy'], ['history', 'Lịch sử gửi', 'receipt']].map(([key, label, ic]) => (
+            {[['compose', 'Soạn & Gửi', 'send'], ['templates', 'Mẫu email', 'copy'], ['branding', 'Giao diện email', 'image'], ['history', 'Lịch sử gửi', 'receipt']].map(([key, label, ic]) => (
               <button key={key} onClick={() => setTab(key)}
                 className={'btn' + (tab === key ? ' primary' : ' ghost')}
                 style={{ borderRadius: 999 }}>
@@ -308,10 +466,15 @@ function App() {
               <div className="card" style={{ padding: 18, background: 'var(--card,#fff)', borderRadius: 14, border: '1px solid var(--line,#eee)' }}>
                 <div className="fld">
                   <label>Dùng mẫu có sẵn (không bắt buộc)</label>
-                  <select className="inp" value={tplId} onChange={e => applyTemplate(e.target.value)}>
-                    <option value="">— Không dùng mẫu —</option>
-                    {templates.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
-                  </select>
+                  <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                    <select className="inp" style={{ flex: '1 1 240px' }} value={tplId} onChange={e => applyTemplate(e.target.value)}>
+                      <option value="">— Không dùng mẫu —</option>
+                      {templates.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+                    </select>
+                    <button className="btn ghost" style={{ whiteSpace: 'nowrap' }} onClick={() => setFlashPicker(true)}>
+                      <img src="/images/flash-sale.png" alt="" width="18" height="18" /> Mẫu Flash Sale
+                    </button>
+                  </div>
                 </div>
                 <div className="fld"><label>Tiêu đề email</label>
                   <input className="inp" value={subject} onChange={e => setSubject(e.target.value)} placeholder="VD: 🧋 Ưu đãi đặc biệt cho {name}!" /></div>
@@ -432,9 +595,14 @@ function App() {
           {/* ─── TAB: Mẫu email ─── */}
           {tab === 'templates' && (
             <div>
-              <button className="btn primary" style={{ marginBottom: 14 }} onClick={() => setTplEditor({})}>
-                <Icon name="plus" size={16} color="#fff" /> Thêm mẫu
-              </button>
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 14 }}>
+                <button className="btn primary" onClick={() => setTplEditor({})}>
+                  <Icon name="plus" size={16} color="#fff" /> Thêm mẫu
+                </button>
+                <button className="btn ghost" onClick={() => setFlashPicker(true)}>
+                  <img src="/images/flash-sale.png" alt="" width="18" height="18" /> Tạo từ mẫu Flash Sale
+                </button>
+              </div>
               {templates.length === 0 && <div style={{ padding: 40, textAlign: 'center', color: 'var(--ink-3)' }}>Chưa có mẫu email nào.</div>}
               <div style={{ display: 'grid', gap: 10 }}>
                 {templates.map(t => (
@@ -454,6 +622,9 @@ function App() {
               </div>
             </div>
           )}
+
+          {/* ─── TAB: Giao diện email ─── */}
+          {tab === 'branding' && <BrandingPanel notify={msg => flash(msg)} />}
 
           {/* ─── TAB: Lịch sử gửi ─── */}
           {tab === 'history' && (
@@ -487,6 +658,11 @@ function App() {
       </div>
 
       {tplEditor !== null && <TemplateEditor initial={tplEditor} onClose={() => setTplEditor(null)} onSaved={onTplSaved} />}
+      {flashPicker && (
+        <FlashTemplatePicker onClose={() => setFlashPicker(false)}
+          onUse={d => { setTplId(''); setSubject(d.subject); setBody(d.body); setAttachQr(false); setFlashPicker(false); setTab('compose'); flash(`Đã áp dụng mẫu "${d.name}" — bạn có thể sửa trước khi gửi`); }}
+          onSaved={t => { setTemplates(ts => [t, ...ts]); flash(`Đã lưu "${t.name}" vào Mẫu email`); }} />
+      )}
 
       {toast && (
         <div className="toast">

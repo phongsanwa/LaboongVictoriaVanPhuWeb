@@ -562,6 +562,14 @@ function App() {
               <div className="step-title">Chọn chức năng</div>
               <div className="step-desc">Bạn muốn thực hiện thao tác gì cho khách?</div>
               <div className="methods">
+                <a className="method" href="/pos/sell" style={{ textDecoration: "none", color: "inherit" }}>
+                  <div className="mi" style={{ background: "linear-gradient(150deg,#E4402F,#FF7A3D)" }}><Icon name="print" size={26} color="#fff" /></div>
+                  <div>
+                    <div className="mt">Lên đơn bán hàng</div>
+                    <div className="md">Tại chỗ, mang về, ShopeeFood, GrabFood, Xanh SM — in hoá đơn & tem</div>
+                  </div>
+                  <span className="mgo"><Icon name="chev" size={18} /></span>
+                </a>
                 <button className="method scan" onClick={() => setMode("points")}>
                   <div className="mi"><Icon name="coin" size={26} color="#fff" /></div>
                   <div>
