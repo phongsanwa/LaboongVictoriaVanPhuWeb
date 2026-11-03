@@ -110,7 +110,7 @@ function calcUnit(basePrice, variantGroups, selections) {
   return basePrice + extra;
 }
 
-function CustomizeSheet({ item, variantGroups, onClose, onAdd, initialSelections = null, initialQty = 1, editing = false }) {
+function CustomizeSheet({ item, variantGroups, onClose, onAdd, initialSelections = null, initialQty = 1, editing = false, withNote = false, initialNote = "" }) {
   const [selections, setSelections] = useStateCz(() => {
     const base = makeDefaultSelections(variantGroups);
     // Sửa món: giữ lại lựa chọn cũ cho các nhóm còn áp dụng cho món này.
@@ -125,6 +125,7 @@ function CustomizeSheet({ item, variantGroups, onClose, onAdd, initialSelections
     return base;
   });
   const [qty, setQty] = useStateCz(() => Math.max(1, initialQty || 1));
+  const [note, setNote] = useStateCz(initialNote || ""); // chỉ dùng khi withNote (màn hình lên đơn tại quầy)
 
   const unit  = calcUnit(item.price, variantGroups, selections);
   const total = unit * qty;
@@ -152,6 +153,7 @@ function CustomizeSheet({ item, variantGroups, onClose, onAdd, initialSelections
       origPrice: item.origPrice ?? null, // giá gốc khi món đang gạch giá
       grad: item.grad, img: item.img || null, cat: item.cat,
       selections: { ...selections }, unit, qty,
+      ...(withNote ? { note: note.trim() } : {}),
     });
   };
 
@@ -243,6 +245,12 @@ function CustomizeSheet({ item, variantGroups, onClose, onAdd, initialSelections
           })}
         </div>
 
+        {withNote && (
+          <div style={{ padding: "0 20px 12px", background: "var(--bg)" }}>
+            <input className="cz-note" value={note} onChange={e => setNote(e.target.value)} maxLength={255}
+              placeholder="Ghi chú cho món (VD: ít ngọt, không ống hút…)" />
+          </div>
+        )}
         <div className="cz-f">
           <div className="cz-qty">
             <button onClick={() => setQty(q => Math.max(1, q - 1))} disabled={qty <= 1}><Icon name="minus" size={17} color="currentColor" /></button>

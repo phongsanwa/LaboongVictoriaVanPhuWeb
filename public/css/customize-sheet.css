@@ -53,3 +53,5 @@
 .cz-add { flex: 1; padding: 15px; border-radius: var(--r-md); background: var(--brand); color: #fff; font-family: var(--display); font-weight: 700; font-size: 15.5px; display: inline-flex; align-items: center; justify-content: center; gap: 9px; transition: .15s; }
 .cz-add:hover { background: var(--brand-deep); transform: translateY(-1px); }
 
+.cz-note { width: 100%; padding: 12px 14px; border-radius: var(--r-sm); border: 1.5px solid var(--line); background: var(--card); color: var(--ink); font: inherit; font-size: 16px; outline: none; }
+.cz-note:focus { border-color: var(--brand); }
