@@ -370,23 +370,24 @@ class FlashSaleEmail
         ], '', '&', PHP_QUERY_RFC3986);
     }
 
-    /** Lưới 2 cột tối đa 4 món (ảnh + tên + giá flash). */
+    /** Mỗi món một hàng (ảnh nhỏ + tên + giá flash + % giảm), tối đa 4 món, món dư ghi "… và N món khác". */
     private static function miniGrid(array $items, int $max = 4): string
     {
         $show = array_slice($items, 0, $max);
         $rows = '';
-        foreach (array_chunk($show, 2) as $pair) {
-            $rows .= '<tr>';
-            foreach ($pair as $it) {
-                $rows .= '<td style="width:50%;padding:6px;vertical-align:top;">'
-                    . self::img($it, 96)
-                    . '<div style="font-size:14px;font-weight:700;color:#1C2620;margin-top:6px;line-height:1.3;">' . self::e($it['name']) . '</div>'
-                    . '<div style="margin-top:2px;"><span style="font-size:16px;font-weight:800;color:' . self::RED . ';">' . self::money($it['flash']) . '</span> '
-                    . '<span style="font-size:12px;color:#9AA19C;text-decoration:line-through;">' . self::money($it['price']) . '</span></div>'
-                    . '</td>';
-            }
-            if (count($pair) === 1) $rows .= '<td style="width:50%;padding:6px;"></td>';
-            $rows .= '</tr>';
+        foreach ($show as $i => $it) {
+            $line = $i > 0 ? 'border-top:1px solid #EEE7D8;' : '';
+            $rows .= '<tr>'
+                . '<td style="width:72px;padding:10px 12px 10px 0;vertical-align:middle;' . $line . '">' . self::thumb($it, 72) . '</td>'
+                . '<td style="padding:10px 0;vertical-align:middle;' . $line . '">'
+                . '<div style="font-size:15px;font-weight:700;color:#1C2620;line-height:1.35;">' . self::e($it['name']) . '</div>'
+                . '<div style="margin-top:4px;"><span style="font-size:17px;font-weight:800;color:' . self::RED . ';">' . self::money($it['flash']) . '</span> '
+                . '<span style="font-size:12.5px;color:#9AA19C;text-decoration:line-through;">' . self::money($it['price']) . '</span></div>'
+                . '</td>'
+                . '<td style="width:56px;padding:10px 0 10px 8px;vertical-align:middle;text-align:right;' . $line . '">'
+                . '<span style="display:inline-block;background-color:' . self::RED . ';color:#ffffff;font-size:12.5px;font-weight:800;padding:3px 9px;border-radius:999px;">-' . $it['pct'] . '%</span>'
+                . '</td>'
+                . '</tr>';
         }
         $more = count($items) - count($show);
 

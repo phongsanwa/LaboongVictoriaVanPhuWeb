@@ -5,8 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Laboong</title>
 </head>
-<body style="margin:0; padding:0; background:#f2efe6; font-family:Arial, Helvetica, sans-serif; color:#1c2620;">
-  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f2efe6; padding:24px 12px;">
+<body style="margin:0; padding:0; font-family:Arial, Helvetica, sans-serif; color:#1c2620;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
     <tr><td align="center">
       <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px; background:#ffffff; border-radius:16px; overflow:hidden; box-shadow:0 6px 20px rgba(20,40,28,.08);">
 
@@ -14,7 +14,7 @@
         @include('emails.partials.brand-header', ['brandTitle' => 'LABOONG', 'brandSub' => 'Victoria Văn Phú', 'brandTitleColor' => '#ffffff', 'brandSubColor' => '#d8f3e6', 'brandTitleSize' => '22px'])
 
         {{-- Nội dung do admin soạn (đã cá nhân hoá + làm sạch HTML) --}}
-        <tr><td style="padding:26px 28px 8px; font-size:15px; line-height:1.65; color:#28352d;">
+        <tr><td style="padding:26px 10px 8px; font-size:15px; line-height:1.65; color:#28352d;">
           {!! $bodyHtml !!}
         </td></tr>
 
