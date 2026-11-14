@@ -161,16 +161,24 @@ class EmailController extends Controller
 
         // Xem trước với thông tin khách mẫu, lồng trong đúng khung email gửi đi.
         $sample = ['{name}' => 'Minh Anh', '{ten}' => 'Minh Anh', '{phone}' => '0912 345 678', '{sdt}' => '0912 345 678', '{points}' => '2.450', '{diem}' => '2.450'];
-        foreach ($designs as &$d) {
-            $d['preview_subject'] = strtr($d['subject'], $sample);
-            $d['preview'] = view('emails.bulk', [
-                'bodyHtml' => strtr(HtmlSanitizer::clean($d['body']) ?? '', $sample),
-                'siteUrl'  => Site::base(),
-                'attachQr' => false,
-            ])->render();
-        }
+        $withPreview = function (array $list) use ($sample) {
+            foreach ($list as &$d) {
+                $d['preview_subject'] = strtr($d['subject'], $sample);
+                $d['preview'] = view('emails.bulk', [
+                    'bodyHtml' => strtr(HtmlSanitizer::clean($d['body']) ?? '', $sample),
+                    'siteUrl'  => Site::base(),
+                    'attachQr' => false,
+                ])->render();
+            }
 
-        return response()->json(['designs' => $designs]);
+            return $list;
+        };
+
+        // Mẫu nhắc "sắp diễn ra" cho phiên kế tiếp (nếu đợt còn phiên chưa bắt đầu).
+        $remind = FlashSaleEmail::reminders($sale);
+        if ($remind) $remind['reminders'] = $withPreview($remind['reminders']);
+
+        return response()->json(['designs' => $withPreview($designs), 'remind' => $remind]);
     }
 
     /** Các đợt flash sale còn dùng được (đang bật, chưa kết thúc) — mới nhất trước. */

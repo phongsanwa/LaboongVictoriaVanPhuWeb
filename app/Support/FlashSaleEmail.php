@@ -21,6 +21,14 @@ class FlashSaleEmail
         'letter'  => ['name' => 'Thư thân mật', 'desc' => 'Viết như lá thư gửi khách quen, ít hình — thân thiện và ít bị vào thư rác.'],
     ];
 
+    /** Mẫu email nhắc phiên flash sale sắp diễn ra. */
+    public const REMINDERS = [
+        'countdown' => ['name' => 'Đếm ngược', 'desc' => 'Giờ bắt đầu cỡ lớn trên nền tối, kèm vài món nổi bật — gây tò mò, nhắc đúng giờ.'],
+        'calendar'  => ['name' => 'Lịch hẹn',  'desc' => 'Tờ lịch ghi ngày giờ + nút "Thêm vào Google Calendar" để khách tự đặt nhắc trên điện thoại.'],
+        'brief'     => ['name' => 'Nhắc ngắn', 'desc' => 'Vài dòng ngắn như tin nhắn — hợp để hẹn gửi sát giờ (1 giờ hoặc 30 phút trước).'],
+    ];
+    private const WEEKDAYS_LONG = [1 => 'Thứ Hai', 2 => 'Thứ Ba', 3 => 'Thứ Tư', 4 => 'Thứ Năm', 5 => 'Thứ Sáu', 6 => 'Thứ Bảy', 7 => 'Chủ nhật'];
+
     private const RED = '#E4402F';
     private const GREEN = '#0F623F';
     private const WEEKDAYS = [1 => 'Thứ 2', 2 => 'Thứ 3', 3 => 'Thứ 4', 4 => 'Thứ 5', 5 => 'Thứ 6', 6 => 'Thứ 7', 7 => 'Chủ nhật'];
@@ -286,5 +294,172 @@ class FlashSaleEmail
             . self::button($d['url'], 'Đặt món flash sale', self::GREEN);
 
         return ['{name} ơi, Laboong có quà giờ vàng cho bạn nè 🧋', $body];
+    }
+
+    /* ═══ Email nhắc flash sale sắp diễn ra ═══ */
+
+    /**
+     * Mẫu nhắc cho phiên kế tiếp của đợt: ['session', 'send_options', 'reminders'] hoặc null
+     * (đợt không còn phiên nào / chưa có món).
+     */
+    public static function reminders(FlashSale $sale, ?Carbon $now = null): ?array
+    {
+        $now ??= ShopTime::now();
+        $session = $sale->nextUpcomingSession($now);
+        $d = self::data($sale);
+        if (!$session || !$d['items']) return null;
+
+        $start = $session['start'];
+        $end = $session['end'];
+        $weekday = self::WEEKDAYS_LONG[$start->dayOfWeekIso];
+        $d += [
+            'startTime' => $start->format('H:i'),
+            'endTime'   => $end->format('H:i'),
+            'weekday'   => $weekday,
+            'dayText'   => $weekday . ', ' . $start->format('d/m'),
+            'dayNum'    => $start->format('d'),
+            'month'     => 'THÁNG ' . $start->month,
+            'calendar'  => self::calendarUrl($d, $start, $end),
+        ];
+
+        $out = [];
+        foreach (self::REMINDERS as $key => $meta) {
+            $method = 'remind' . ucfirst($key);
+            [$subject, $body] = self::$method($d);
+            $out[] = ['key' => 'remind_' . $key] + $meta + ['subject' => $subject, 'body' => $body];
+        }
+
+        return [
+            'session'      => ['start' => $start->format('Y-m-d\TH:i'), 'text' => "{$d['startTime']} – {$d['endTime']}, {$d['dayText']}/{$start->format('Y')}"],
+            'send_options' => self::sendOptions($start, $now),
+            'reminders'    => $out,
+        ];
+    }
+
+    /** Gợi ý thời điểm hẹn gửi (giờ Việt Nam, dạng ô datetime-local). */
+    private static function sendOptions(Carbon $start, Carbon $now): array
+    {
+        $opts = [['label' => 'Gửi ngay', 'value' => null]];
+        $candidates = [
+            ['Tối hôm trước', $start->copy()->subDay()->setTime(20, 0)],
+            ['Sáng ngày diễn ra', $start->copy()->setTime(8, 0)],
+            ['3 giờ trước khi bắt đầu', $start->copy()->subHours(3)],
+            ['1 giờ trước khi bắt đầu', $start->copy()->subHour()],
+            ['30 phút trước khi bắt đầu', $start->copy()->subMinutes(30)],
+        ];
+        foreach ($candidates as [$label, $at]) {
+            if ($at->gt($now->copy()->addMinutes(5)) && $at->lt($start)) {
+                $opts[] = ['label' => $label . ' (' . $at->format('H:i d/m') . ')', 'value' => $at->format('Y-m-d\TH:i')];
+            }
+        }
+
+        return $opts;
+    }
+
+    /** Link "Thêm vào Google Calendar" cho phiên flash sale. */
+    private static function calendarUrl(array $d, Carbon $start, Carbon $end): string
+    {
+        $fmt = fn (Carbon $t) => $t->copy()->utc()->format('Ymd\THis\Z');
+
+        return 'https://calendar.google.com/calendar/render?' . http_build_query([
+            'action'   => 'TEMPLATE',
+            'text'     => 'Flash Sale Laboong · ' . $d['name'],
+            'dates'    => $fmt($start) . '/' . $fmt($end),
+            'details'  => 'Giảm đến ' . $d['maxPct'] . '% các món trà sữa Laboong. Đặt món tại ' . $d['url'],
+            'location' => $d['url'],
+        ], '', '&', PHP_QUERY_RFC3986);
+    }
+
+    /** Lưới 2 cột tối đa 4 món (ảnh + tên + giá flash). */
+    private static function miniGrid(array $items, int $max = 4): string
+    {
+        $show = array_slice($items, 0, $max);
+        $rows = '';
+        foreach (array_chunk($show, 2) as $pair) {
+            $rows .= '<tr>';
+            foreach ($pair as $it) {
+                $rows .= '<td style="width:50%;padding:6px;vertical-align:top;">'
+                    . self::img($it, 96)
+                    . '<div style="font-size:14px;font-weight:700;color:#1C2620;margin-top:6px;line-height:1.3;">' . self::e($it['name']) . '</div>'
+                    . '<div style="margin-top:2px;"><span style="font-size:16px;font-weight:800;color:' . self::RED . ';">' . self::money($it['flash']) . '</span> '
+                    . '<span style="font-size:12px;color:#9AA19C;text-decoration:line-through;">' . self::money($it['price']) . '</span></div>'
+                    . '</td>';
+            }
+            if (count($pair) === 1) $rows .= '<td style="width:50%;padding:6px;"></td>';
+            $rows .= '</tr>';
+        }
+        $more = count($items) - count($show);
+
+        return '<table style="width:100%;border-collapse:collapse;">' . $rows . '</table>'
+            . ($more > 0 ? '<p style="text-align:center;font-size:13.5px;color:#5C6B62;margin:6px 0 0;">… và ' . $more . ' món khác cũng giảm giá</p>' : '');
+    }
+
+    /* ─── Nhắc 1. Đếm ngược ─── */
+
+    private static function remindCountdown(array $d): array
+    {
+        $body = '<table style="width:100%;border-collapse:separate;background-color:#1C2620;border-radius:18px;"><tr><td style="padding:26px 18px 24px;text-align:center;">'
+            . '<span style="display:inline-block;background-color:' . self::RED . ';color:#ffffff;font-size:13px;font-weight:800;letter-spacing:1px;padding:5px 14px;border-radius:999px;">⏰ SẮP DIỄN RA</span>'
+            . '<div style="font-size:60px;line-height:1.1;font-weight:800;color:#ffffff;letter-spacing:2px;margin-top:12px;">' . $d['startTime'] . '</div>'
+            . '<div style="font-size:18px;font-weight:700;color:#FFC23D;margin-top:2px;">' . self::e($d['dayText']) . '</div>'
+            . '<div style="font-size:14px;color:#D8E3DC;margin-top:10px;">Flash Sale “' . self::e($d['name']) . '” · ' . $d['startTime'] . ' – ' . $d['endTime'] . ' · giảm đến ' . $d['maxPct'] . '%</div>'
+            . '</td></tr></table>'
+            . '<p style="font-size:15px;color:#28352d;line-height:1.65;margin:18px 0 8px;">Chào <strong>{name}</strong>! Đặt báo thức nhé ⏰ — đúng <strong>' . $d['startTime'] . ' ' . self::e($d['dayText']) . '</strong> Laboong mở Flash Sale, các món dưới đây giảm cực sâu và số suất có hạn:</p>'
+            . self::miniGrid($d['items'])
+            . self::button($d['calendar'], '📅 Thêm vào lịch để được nhắc', self::RED)
+            . '<p style="text-align:center;font-size:13px;color:#8A978D;margin:8px 0 0;">Giá flash chỉ áp dụng khi đặt trên website trong khung giờ ' . $d['startTime'] . ' – ' . $d['endTime'] . '.</p>';
+
+        return ['⏰ {name} ơi, ' . $d['startTime'] . ' ' . $d['weekday'] . ' ' . substr($d['dayText'], -5) . ' có Flash Sale giảm đến ' . $d['maxPct'] . '%!', $body];
+    }
+
+    /* ─── Nhắc 2. Lịch hẹn ─── */
+
+    private static function remindCalendar(array $d): array
+    {
+        $rows = '';
+        foreach ($d['items'] as $i => $it) {
+            $rows .= '<tr>'
+                . '<td style="padding:10px 0;border-top:' . ($i ? '1px solid #EEE7D8' : '0') . ';font-size:15px;font-weight:700;color:#1C2620;">' . self::e($it['name']) . '</td>'
+                . '<td style="padding:10px 0;border-top:' . ($i ? '1px solid #EEE7D8' : '0') . ';text-align:right;white-space:nowrap;"><span style="font-size:15.5px;font-weight:800;color:' . self::RED . ';">' . self::money($it['flash']) . '</span> '
+                . '<span style="font-size:12.5px;color:#9AA19C;text-decoration:line-through;">' . self::money($it['price']) . '</span></td>'
+                . '</tr>';
+        }
+
+        $body = '<table style="width:100%;border-collapse:collapse;"><tr>'
+            . '<td style="width:118px;vertical-align:top;">'
+            . '<table style="width:118px;border-collapse:separate;border:1px solid #EEE7D8;border-radius:14px;background-color:#ffffff;">'
+            . '<tr><td style="background-color:' . self::RED . ';color:#ffffff;text-align:center;font-size:12.5px;font-weight:800;letter-spacing:1px;padding:7px 0;border-radius:13px 13px 0 0;">' . $d['month'] . '</td></tr>'
+            . '<tr><td style="text-align:center;font-size:46px;line-height:1.1;font-weight:800;color:#1C2620;padding:8px 0 0;">' . $d['dayNum'] . '</td></tr>'
+            . '<tr><td style="text-align:center;font-size:13px;color:#5C6B62;font-weight:700;padding:0 0 10px;">' . $d['weekday'] . '</td></tr>'
+            . '</table></td>'
+            . '<td style="padding-left:16px;vertical-align:top;">'
+            . '<div style="font-size:12px;letter-spacing:2px;color:' . self::GREEN . ';font-weight:800;">FLASH SALE</div>'
+            . '<div style="font-size:22px;font-weight:800;color:#1C2620;line-height:1.25;margin-top:2px;">' . self::e($d['name']) . '</div>'
+            . '<div style="font-size:16px;font-weight:700;color:#28352d;margin-top:6px;">🕑 ' . $d['startTime'] . ' – ' . $d['endTime'] . '</div>'
+            . '<div style="font-size:13.5px;color:#5C6B62;margin-top:4px;">Giảm đến ' . $d['maxPct'] . '% · chỉ từ ' . self::money($d['minFlash']) . '</div>'
+            . '</td></tr></table>'
+            . '<p style="font-size:15px;color:#28352d;line-height:1.65;margin:18px 0 0;">Chào {name}, Laboong hẹn bạn lúc <strong>' . $d['startTime'] . ' ' . self::e($d['dayText']) . '</strong>. Bấm nút dưới đây để thêm vào lịch trên điện thoại — tới giờ sẽ có thông báo nhắc bạn:</p>'
+            . self::button($d['calendar'], 'Thêm vào Google Calendar', self::GREEN)
+            . '<div style="font-size:15px;font-weight:700;color:#1C2620;margin:18px 0 4px;">Các món sẽ giảm giá</div>'
+            . '<table style="width:100%;border-collapse:collapse;">' . $rows . '</table>'
+            . self::button($d['url'], 'Xem trước trên website', '#ffffff', self::GREEN, self::GREEN);
+
+        return ['📅 Hẹn {name} ' . $d['startTime'] . ' ' . $d['weekday'] . ' ' . substr($d['dayText'], -5) . ' — Flash Sale Laboong giảm đến ' . $d['maxPct'] . '%', $body];
+    }
+
+    /* ─── Nhắc 3. Nhắc ngắn ─── */
+
+    private static function remindBrief(array $d): array
+    {
+        $list = implode(', ', array_map(fn ($it) => self::e($it['name']) . ' chỉ <strong style="color:' . self::RED . ';">' . self::money($it['flash']) . '</strong>', $d['items']));
+
+        $body = '<p style="font-size:15.5px;color:#28352d;line-height:1.75;margin:0 0 12px;">Chào {name},</p>'
+            . '<p style="font-size:15.5px;color:#28352d;line-height:1.75;margin:0 0 12px;">Nhắc nhẹ nè: Flash Sale <strong>' . self::e($d['name']) . '</strong> bắt đầu lúc <strong>' . $d['startTime'] . ' ' . self::e($d['dayText']) . '</strong> và kết thúc lúc ' . $d['endTime'] . '.</p>'
+            . '<p style="font-size:15.5px;color:#28352d;line-height:1.75;margin:0 0 12px;">Món đang chờ bạn: ' . $list . '.</p>'
+            . '<p style="font-size:15.5px;color:#28352d;line-height:1.75;margin:0 0 12px;">Số suất có hạn, bạn đặt trên website ngay khi mở bán để giữ phần nhé!</p>'
+            . '<p style="font-size:15.5px;color:#28352d;line-height:1.75;margin:0;">Laboong Victoria Văn Phú 🧋</p>'
+            . self::button($d['url'], 'Mở website lúc ' . $d['startTime'], self::GREEN);
+
+        return ['{name} ơi, Flash Sale bắt đầu lúc ' . $d['startTime'] . ' ' . $d['weekday'] . ' nhé 🧋', $body];
     }
 }

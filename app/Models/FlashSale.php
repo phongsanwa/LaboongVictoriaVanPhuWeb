@@ -51,6 +51,26 @@ class FlashSale extends Model
         return null;
     }
 
+    /**
+     * Phiên kế tiếp CHƯA bắt đầu (không xét đang bật/tắt hay khung hiện "Sắp diễn ra") —
+     * dùng cho email nhắc flash sale. ['start' => Carbon, 'end' => Carbon] hoặc null.
+     */
+    public function nextUpcomingSession(?Carbon $now = null): ?array
+    {
+        $now ??= ShopTime::now();
+        for ($i = 0; $i <= 60; $i++) {
+            $day = $now->copy()->addDays($i);
+            if (!$this->runsOn($day)) continue;
+            $start = Carbon::parse($day->toDateString() . ' ' . $this->start_time, ShopTime::TZ);
+            if ($start->lte($now)) continue;
+            $end = Carbon::parse($day->toDateString() . ' ' . $this->end_time, ShopTime::TZ);
+            if ($end->lte($start)) $end->addDay();
+
+            return ['start' => $start, 'end' => $end];
+        }
+        return null;
+    }
+
     private function runsOn(Carbon $day): bool
     {
         $date = $day->toDateString();
