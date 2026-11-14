@@ -296,20 +296,20 @@ function BrandingPanel({ notify }) {
   return (
     <div className="brand-grid">
       <div className="card" style={{ padding: 18, background: 'var(--card,#fff)', borderRadius: 14, border: '1px solid var(--line,#eee)' }}>
-        <h3 style={{ margin: '0 0 4px', fontSize: 17 }}>Ảnh nền phần đầu email</h3>
+        <h3 style={{ margin: '0 0 4px', fontSize: 17 }}>Ảnh phần đầu email</h3>
         <p style={{ margin: '0 0 14px', fontSize: 13, color: 'var(--ink-2)', lineHeight: 1.5 }}>
-          Thay nền xanh ở ô "LABOONG · Victoria Văn Phú" trên cùng email. Áp dụng cho email gửi khách (khuyến mãi, flash sale…) và email chào mừng thành viên mới.
+          Mặc định là banner Laboong (logo + chữ LA BOONG trên nền xanh ô liu). Tải ảnh khác lên nếu muốn đổi theo dịp. Áp dụng cho email gửi khách (khuyến mãi, flash sale…), email chào mừng thành viên mới và email cấp lại mật khẩu.
         </p>
-        <div style={{ borderRadius: 12, overflow: 'hidden', border: '1px solid var(--line,#eee)', marginBottom: 12, background: '#0F623F', aspectRatio: '3 / 1', display: 'grid', placeItems: 'center' }}>
-          {bg ? <img src={bg} alt="Ảnh nền đầu email" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
-            : <span style={{ color: '#d8f3e6', fontWeight: 700, fontSize: 13 }}>Đang dùng nền xanh mặc định</span>}
+        <div style={{ borderRadius: 12, overflow: 'hidden', border: '1px solid var(--line,#eee)', marginBottom: 12, background: '#6D7836', aspectRatio: '3 / 1', position: 'relative' }}>
+          <img src={bg || '/images/email-header.png'} alt="Ảnh đầu email" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+          {!bg && <span style={{ position: 'absolute', right: 8, top: 8, background: 'rgba(0,0,0,.45)', color: '#fff', fontWeight: 700, fontSize: 11.5, padding: '3px 8px', borderRadius: 999 }}>Đang dùng banner mặc định</span>}
         </div>
         <input ref={fileRef} type="file" accept="image/jpeg,image/png,image/webp" hidden onChange={e => upload(e.target.files && e.target.files[0])} />
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
           <button className="btn ghost" disabled={uploading} onClick={() => fileRef.current && fileRef.current.click()}>
             {uploading ? <><span className="lb-spin" /> Đang tải…</> : <><Icon name="image" size={15} /> {bg ? 'Đổi ảnh' : 'Tải ảnh lên'}</>}
           </button>
-          {bg && <button className="btn ghost" onClick={() => setBg('')}>Dùng lại nền xanh mặc định</button>}
+          {bg && <button className="btn ghost" onClick={() => setBg('')}>Dùng lại banner Laboong mặc định</button>}
         </div>
         <div style={{ fontSize: 12, color: 'var(--ink-3)', marginTop: 8 }}>Ảnh ngang, nên dùng khoảng 1200 × 400 px (JPG/PNG/WebP, tối đa 4MB).</div>
 
