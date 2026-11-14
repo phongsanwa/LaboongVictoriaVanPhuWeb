@@ -370,23 +370,28 @@ class FlashSaleEmail
         ], '', '&', PHP_QUERY_RFC3986);
     }
 
-    /** Một hàng ngang tối đa 3 món (ảnh + tên + giá flash), món dư ghi "… và N món khác". */
-    private static function miniGrid(array $items, int $max = 3): string
+    /** Mỗi món một hàng (ảnh nhỏ + tên + giá flash + % giảm), tối đa 4 món, món dư ghi "… và N món khác". */
+    private static function miniGrid(array $items, int $max = 4): string
     {
         $show = array_slice($items, 0, $max);
-        $w = round(100 / max(1, count($show)), 2);
-        $row = '';
-        foreach ($show as $it) {
-            $row .= '<td style="width:' . $w . '%;padding:4px;vertical-align:top;">'
-                . self::img($it, 84, '10px')
-                . '<div style="font-size:13px;font-weight:700;color:#1C2620;margin-top:6px;line-height:1.3;">' . self::e($it['name']) . '</div>'
-                . '<div style="margin-top:2px;font-size:15px;font-weight:800;color:' . self::RED . ';line-height:1.3;">' . self::money($it['flash']) . '</div>'
-                . '<div style="font-size:11.5px;color:#9AA19C;text-decoration:line-through;line-height:1.3;">' . self::money($it['price']) . '</div>'
-                . '</td>';
+        $rows = '';
+        foreach ($show as $i => $it) {
+            $line = $i > 0 ? 'border-top:1px solid #EEE7D8;' : '';
+            $rows .= '<tr>'
+                . '<td style="width:72px;padding:10px 12px 10px 0;vertical-align:middle;' . $line . '">' . self::thumb($it, 72) . '</td>'
+                . '<td style="padding:10px 0;vertical-align:middle;' . $line . '">'
+                . '<div style="font-size:15px;font-weight:700;color:#1C2620;line-height:1.35;">' . self::e($it['name']) . '</div>'
+                . '<div style="margin-top:4px;"><span style="font-size:17px;font-weight:800;color:' . self::RED . ';">' . self::money($it['flash']) . '</span> '
+                . '<span style="font-size:12.5px;color:#9AA19C;text-decoration:line-through;">' . self::money($it['price']) . '</span></div>'
+                . '</td>'
+                . '<td style="width:56px;padding:10px 0 10px 8px;vertical-align:middle;text-align:right;' . $line . '">'
+                . '<span style="display:inline-block;background-color:' . self::RED . ';color:#ffffff;font-size:12.5px;font-weight:800;padding:3px 9px;border-radius:999px;">-' . $it['pct'] . '%</span>'
+                . '</td>'
+                . '</tr>';
         }
         $more = count($items) - count($show);
 
-        return '<table style="width:100%;border-collapse:collapse;table-layout:fixed;"><tr>' . $row . '</tr></table>'
+        return '<table style="width:100%;border-collapse:collapse;">' . $rows . '</table>'
             . ($more > 0 ? '<p style="text-align:center;font-size:13.5px;color:#5C6B62;margin:6px 0 0;">… và ' . $more . ' món khác cũng giảm giá</p>' : '');
     }
 
