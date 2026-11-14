@@ -191,13 +191,24 @@ function FlashSaleStrip() {
   // Session starts or ends while the page is open → reload to show the new state and prices.
   useEffect(() => { if (FLASH && left === 0) { const t = setTimeout(() => location.reload(), 1500); return () => clearTimeout(t); } }, [left]);
   if (!FLASH) return null;
-  const h = Math.floor(left / 3600000), m = Math.floor(left / 60000) % 60, sec = Math.floor(left / 1000) % 60;
+  const d = Math.floor(left / 86400000), h = Math.floor(left / 3600000) % 24, m = Math.floor(left / 60000) % 60, sec = Math.floor(left / 1000) % 60;
   const box = v => <span style={{ background: "#1A2420", color: "#fff", borderRadius: 6, padding: "3px 6px", fontWeight: 800, fontVariantNumeric: "tabular-nums" }}>{String(v).padStart(2, "0")}</span>;
   const startAt = new Date(FLASH.start).toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit", timeZone: "Asia/Ho_Chi_Minh" });
+  // Ngày bắt đầu (giờ VN): "hôm nay", "ngày mai" hoặc "Thứ 7, 15/11".
+  const vnDay = (t) => new Date(t).toLocaleDateString("en-CA", { timeZone: "Asia/Ho_Chi_Minh" });
+  const startDay = (() => {
+    const s = vnDay(FLASH.start), today = vnDay(Date.now()), tomorrow = vnDay(Date.now() + 86400000);
+    if (s === today) return "hôm nay";
+    if (s === tomorrow) return "ngày mai";
+    const wd = new Date(FLASH.start).toLocaleDateString("vi-VN", { weekday: "long", timeZone: "Asia/Ho_Chi_Minh" });
+    const [, mo, dd] = s.split("-");
+    const dm = `${dd}/${mo}`;
+    return `${wd.charAt(0).toUpperCase() + wd.slice(1)}, ${dm}`;
+  })();
 
   // Bấm món → mở bảng chọn size / đường / đá / topping ngay tại trang chủ.
   const openItem = (it, soldOut) => {
-    if (!live) return flashToast(`Flash sale bắt đầu lúc ${startAt} — quay lại đặt món nhé!`);
+    if (!live) return flashToast(`Flash sale bắt đầu lúc ${startAt} ${startDay} — quay lại đặt món nhé!`);
     if (soldOut) return flashToast("Món này đã hết suất flash sale");
     const m = FLASH_MENU && FLASH_MENU.items.find(x => x.id === it.id);
     if (!m || m.available === false) { location.href = NAV_URLS.menu; return; }
@@ -215,14 +226,16 @@ function FlashSaleStrip() {
   return (
     <section style={{ margin: "14px 0", background: "linear-gradient(120deg,#FFF1E6,#FFE3E3)", borderRadius: 18, padding: "14px 0 14px 14px", border: "1px solid #FFD2C2" }}>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, paddingRight: 14, flexWrap: "wrap" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <span style={{ display: "inline-flex", alignItems: "center", gap: 6, fontWeight: 900, fontSize: 18, color: "#E4402F", letterSpacing: "0.3px" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "4px 8px", flexWrap: "wrap" }}>
+          <span style={{ display: "inline-flex", alignItems: "center", gap: 6, fontWeight: 900, fontSize: 18, color: "#E4402F", letterSpacing: "0.3px", whiteSpace: "nowrap" }}>
             <img src="/images/flash-sale.png" alt="" width="28" height="28" style={{ width: 28, height: 28 }} />FLASH SALE
           </span>
+          {!live && <span style={{ fontSize: 11.5, fontWeight: 800, color: "#fff", background: "#E4402F", padding: "3px 9px", borderRadius: 999, letterSpacing: ".3px", whiteSpace: "nowrap" }}>SẮP DIỄN RA</span>}
           {FLASH.name && <span style={{ fontSize: 12.5, color: "#8A4A3A", fontWeight: 600 }}>{FLASH.name}</span>}
         </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 12.5, fontWeight: 700, color: "#8A4A3A" }}>
-          {live ? "Kết thúc sau" : `Bắt đầu lúc ${startAt} · còn`} {box(h)}:{box(m)}:{box(sec)}
+        <div style={{ display: "flex", alignItems: "center", gap: "4px 6px", flexWrap: "wrap", fontSize: 12.5, fontWeight: 700, color: "#8A4A3A" }}>
+          <span>{live ? "Kết thúc sau" : `Bắt đầu ${startAt} ${startDay} · còn`}</span>
+          <span style={{ display: "inline-flex", alignItems: "center", gap: 4, whiteSpace: "nowrap" }}>{d > 0 && <>{box(d)} ngày</>} {box(h)}:{box(m)}:{box(sec)}</span>
         </div>
       </div>
       <div style={{ display: "flex", gap: 10, overflowX: "auto", padding: "12px 14px 2px 0", scrollSnapType: "x mandatory" }}>

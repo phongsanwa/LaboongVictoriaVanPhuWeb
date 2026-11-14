@@ -15,10 +15,25 @@ function useCountdown(target: string | null) {
   useEffect(() => { const t = setInterval(() => setNow(Date.now()), 1000); return () => clearInterval(t); }, []);
   if (!target) return "";
   const s = Math.max(0, Math.floor((new Date(target).getTime() - now) / 1000));
-  const hh = String(Math.floor(s / 3600)).padStart(2, "0");
+  const d = Math.floor(s / 86400);
+  const hh = String(Math.floor((s % 86400) / 3600)).padStart(2, "0");
   const mm = String(Math.floor((s % 3600) / 60)).padStart(2, "0");
   const ss = String(s % 60).padStart(2, "0");
-  return `${hh}:${mm}:${ss}`;
+  return `${d > 0 ? d + " ngày " : ""}${hh}:${mm}:${ss}`;
+}
+
+/** "14:00 hôm nay" / "14:00 ngày mai" / "14:00 Thứ bảy, 15/11" (giờ Việt Nam). */
+function startLabel(iso: string) {
+  const tz = { timeZone: "Asia/Ho_Chi_Minh" } as const;
+  const day = (t: number) => new Date(t).toLocaleDateString("en-CA", tz);
+  const t = new Date(iso).getTime();
+  const time = new Date(iso).toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit", ...tz });
+  if (day(t) === day(Date.now())) return `${time} hôm nay`;
+  if (day(t) === day(Date.now() + 864e5)) return `${time} ngày mai`;
+  const wd = new Date(iso).toLocaleDateString("vi-VN", { weekday: "long", ...tz });
+  const [, mo, dd] = day(t).split("-");
+  const dm = `${dd}/${mo}`;
+  return `${time} ${wd.charAt(0).toUpperCase() + wd.slice(1)}, ${dm}`;
 }
 
 function FlashStrip({ sale, onOpen }: { sale: FlashSale; onOpen: (id: string) => void }) {
@@ -29,7 +44,8 @@ function FlashStrip({ sale, onOpen }: { sale: FlashSale; onOpen: (id: string) =>
       <div className="card" style={{ padding: 0, overflow: "hidden", borderColor: "#F8D3CC" }}>
         <div className="between" style={{ padding: "12px 14px", background: "linear-gradient(90deg,#E4402F,#FF7A3D)", color: "#fff" }}>
           <div className="row" style={{ gap: 6 }}><img src={FLASH_ICON} alt="" width={26} height={26} style={{ width: 26, height: 26, background: "#fff", borderRadius: 8, padding: 2 }} /><b style={{ fontSize: 16 }}>{sale.name}</b></div>
-          <div style={{ fontSize: 12.5, fontWeight: 700 }}>{live ? "Kết thúc sau" : "Sắp diễn ra ·"} <span style={{ background: "rgba(0,0,0,.2)", padding: "2px 6px", borderRadius: 6, fontVariantNumeric: "tabular-nums" }}>{left}</span></div>
+          <div style={{ fontSize: 12.5, fontWeight: 700, textAlign: "right" }}>{live ? "Kết thúc sau" : "Sắp diễn ra · còn"} <span style={{ background: "rgba(0,0,0,.2)", padding: "2px 6px", borderRadius: 6, fontVariantNumeric: "tabular-nums", whiteSpace: "nowrap" }}>{left}</span>
+            {!live && <div style={{ fontSize: 11.5, fontWeight: 600, opacity: 0.92, marginTop: 2 }}>Bắt đầu {startLabel(sale.start)}</div>}</div>
         </div>
         <div className="hscroll" style={{ padding: 12 }}>
           {sale.items.map((it) => {

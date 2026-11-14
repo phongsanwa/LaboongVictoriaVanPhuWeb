@@ -58,7 +58,7 @@ class FlashSalesController extends Controller
             'start_date' => $data['start_date'], 'end_date' => $data['repeat'] === 'weekly' ? ($data['end_date'] ?? null) : null,
             'weekdays' => $data['repeat'] === 'weekly' ? array_values(array_map('intval', $data['weekdays'] ?? [])) : null,
             'start_time' => $data['start_time'], 'end_time' => $data['end_time'],
-            'upcoming_hours' => $data['upcoming_hours'] ?? 2, 'is_active' => $data['is_active'] ?? true,
+            'upcoming_hours' => $data['upcoming_hours'] ?? 0, 'is_active' => $data['is_active'] ?? true,
         ])->save();
 
         $sale->items()->delete();
