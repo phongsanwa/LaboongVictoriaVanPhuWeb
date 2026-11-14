@@ -29,6 +29,7 @@ class AdminAccess
         'SEO'                 => 'seo_edit',
         'Điểm danh'           => 'checkin_edit',
         'Thực đơn'            => 'menu_edit',
+        'Giá bán app'         => 'menu_edit',
         'Khuyến mãi'          => 'promo_edit',
         'Flash Sale'          => 'promo_edit',
         'Cân giá & lãi'       => 'promo_edit',

@@ -19,6 +19,7 @@ const SIDEBAR_NAV = [
   { ic: 'cal',     label: 'Điểm danh',           href: '/admin/checkin' },
   { ic: 'cup',     label: 'Thực đơn',            href: '/admin/menu' },
   { ic: 'gift',    label: 'Combo',               href: '/admin/combos' },
+  { ic: 'bike',    label: 'Giá bán app',         href: '/admin/channel-prices' },
   { ic: 'percent', label: 'Khuyến mãi',          href: '/admin/promotions' },
   { ic: 'flame',   label: 'Flash Sale',          href: '/admin/flash-sales' },
   { ic: 'shield',  label: 'Cân giá & lãi',       href: '/admin/price-guard' },

@@ -242,6 +242,12 @@ Route::middleware(['auth', 'admin.perm'])->prefix('admin')->name('admin.')->grou
         Route::post('/store-settings', [StoreSettingsController::class, 'save'])->name('store-settings.save');
     });
 
+    // Giá bán trên app giao hàng (dùng khi lên đơn tại quầy)
+    Route::middleware('admin.perm:menu_edit')->group(function () {
+        Route::get('/channel-prices', [\App\Http\Controllers\Admin\ChannelPricesController::class, 'index'])->name('channel-prices.index');
+        Route::post('/channel-prices', [\App\Http\Controllers\Admin\ChannelPricesController::class, 'save'])->name('channel-prices.save');
+    });
+
     // Combo
     Route::middleware('admin.perm:menu_edit')->group(function () {
         Route::get('/combos', [CombosController::class, 'index'])->name('combos.index');
