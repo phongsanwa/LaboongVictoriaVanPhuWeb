@@ -29,7 +29,7 @@ function schedule(s) {
 function Editor({ sale, onClose, onSaved }) {
   const [f, setF] = useState(sale ? { ...sale, end_date: sale.end_date || "" } : {
     name: "", repeat: "weekly", start_date: D.today, end_date: "", weekdays: [1, 2, 3, 4, 5, 6, 7],
-    start_time: "14:00", end_time: "16:00", upcoming_hours: 2, is_active: true, items: [],
+    start_time: "14:00", end_time: "16:00", upcoming_hours: 0, is_active: true, items: [],
   });
   const [add, setAdd] = useState("");
   const [busy, setBusy] = useState(false);
@@ -86,7 +86,11 @@ function Editor({ sale, onClose, onSaved }) {
           {f.repeat === "weekly" && <div><label style={lbl}>Đến ngày (bỏ trống = không hạn)</label><input type="date" value={f.end_date} onChange={e => set("end_date", e.target.value)} style={inp} /></div>}
           <div><label style={lbl}>Giờ bắt đầu</label><input type="time" value={f.start_time} onChange={e => set("start_time", e.target.value)} style={inp} /></div>
           <div><label style={lbl}>Giờ kết thúc</label><input type="time" value={f.end_time} onChange={e => set("end_time", e.target.value)} style={inp} /></div>
-          <div><label style={lbl}>Hiện "Sắp diễn ra" trước (giờ)</label><input type="number" min="0" max="72" value={f.upcoming_hours} onChange={e => set("upcoming_hours", e.target.value)} style={inp} /></div>
+          <div><label style={lbl}>Hiện đếm ngược "Sắp diễn ra"</label>
+            <select value={String(Number(f.upcoming_hours) || 0)} onChange={e => set("upcoming_hours", Number(e.target.value))} style={inp}>
+              <option value="0">Luôn hiện khi đợt đang bật</option>
+              {[1, 2, 3, 6, 12, 24, 48, 72].map(h => <option key={h} value={h}>Chỉ trước {h} giờ</option>)}
+            </select></div>
         </div>
 
         <h3 style={{ fontSize: 15, fontWeight: 800, margin: "20px 0 8px" }}>Món flash sale</h3>

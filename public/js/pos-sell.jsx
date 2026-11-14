@@ -14,6 +14,32 @@ const PAY = { cash: "Tiền mặt", bank: "Chuyển khoản", app: "Qua app" };
 const money = (n) => Math.round(n || 0).toLocaleString("vi-VN") + "đ";
 const noAccent = (t) => (t || "").normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/đ/g, "d").replace(/Đ/g, "D").toLowerCase();
 
+/* ─── Giá theo kênh: đơn app dùng giá app (tăng % so với tại quầy hoặc giá riêng từng món) ─── */
+const PRICING = D.channelPricing || { markup: {}, round: 1000, overrides: {} };
+const isAppCh = (ch) => !!(ch && CH[ch] && CH[ch].app);
+function bump(amount, ch) {   // giống ChannelPricing::bump ở máy chủ
+  const v = Math.round(amount * (1 + (Number(PRICING.markup?.[ch]) || 0) / 100) * 100) / 100;
+  const r = Number(PRICING.round) || 0;
+  return r > 0 ? Math.ceil(v / r) * r : Math.round(v);
+}
+function basePriceFor(m, ch) {
+  if (!isAppCh(ch)) return m.price;
+  const own = PRICING.overrides?.[String(m.id).replace(/^p/, "")]?.[ch];
+  return own || bump(m.price, ch);
+}
+const extraFor = (x, ch) => (!isAppCh(ch) || !(x > 0) ? (x || 0) : bump(x, ch));
+const groupsForChannel = (groups, ch) => (!isAppCh(ch) ? groups
+  : groups.map(g => ({ ...g, options: g.options.map(o => ({ ...o, extra: extraFor(o.extra, ch) })) })));
+function unitFor(m, selections, ch, groups) {
+  let u = basePriceFor(m, ch);
+  if (selections) groups.forEach(g => {
+    const v = selections[g.key];
+    if (g.type === "size" && typeof v === "string") u += extraFor(g.options.find(o => o.id === v)?.extra || 0, ch);
+    else if (g.type === "addon" && Array.isArray(v)) v.forEach(id => { u += extraFor(g.options.find(o => o.id === id)?.extra || 0, ch); });
+  });
+  return u;
+}
+
 function csrf() { return document.querySelector('meta[name="csrf-token"]').content; }
 async function api(method, url, body) {
   const r = await fetch(url, { method, headers: { "Content-Type": "application/json", Accept: "application/json", "X-CSRF-TOKEN": csrf() }, body: body ? JSON.stringify(body) : undefined });
@@ -166,11 +192,16 @@ function SellApp() {
   const groupsOf = (item) => getProductVariantGroups(item, D.variantGroups || [], offSet);
   const isApp = channel && CH[channel]?.app;
 
+  // Đổi loại đơn khi đã có món → tính lại giá từng món theo kênh mới (giá app / giá tại quầy).
+  const repriceTo = (ch) => setLines(ls => ls.map(l => {
+    const m = (D.menu || []).find(x => x.id === l.id);
+    return m ? { ...l, unit: unitFor(m, l.selections, ch, groupsOf(m)) } : l;
+  }));
   const chooseChannel = (key) => {
     if (CH[key]?.app) { setCodeFor(key); return; }
-    setChannel(key); setCode(""); setPayment(p => (p === "app" ? "cash" : p)); setStep("menu");
+    setChannel(key); setCode(""); setPayment(p => (p === "app" ? "cash" : p)); setStep("menu"); repriceTo(key);
   };
-  const confirmCode = (c) => { setChannel(codeFor); setCode(c); setPayment("app"); setCodeFor(null); setStep("menu"); };
+  const confirmCode = (c) => { const ch = codeFor; setChannel(ch); setCode(c); setPayment("app"); setCodeFor(null); setStep("menu"); repriceTo(ch); };
 
   const cats = D.cats || [];
   const shown = useMemo(() => {
@@ -182,7 +213,7 @@ function SellApp() {
   const tapItem = (m) => {
     if (m.available === false) return;
     const groups = groupsOf(m);
-    if (!groups.length) return addLine({ id: m.id, name: m.name, unit: m.price, qty: 1, selections: null, note: "" });
+    if (!groups.length) return addLine({ id: m.id, name: m.name, unit: basePriceFor(m, channel), qty: 1, selections: null, note: "" });
     setPick({ item: m });
   };
   const addLine = (line) => {
@@ -235,7 +266,7 @@ function SellApp() {
   const ticket = (
     <div className={"ps-ticket" + (ticketOpen ? " open" : "")}>
       <div className="tk-h">
-        <div><b>Đơn mới</b> <span style={{ color: "var(--ink-3)", fontWeight: 700, fontSize: 13 }}>· {cups} ly</span></div>
+        <div><b>Đơn mới</b> <span style={{ color: "var(--ink-3)", fontWeight: 700, fontSize: 13 }}>· {cups} ly{isApp ? ` · giá ${CH[channel]?.label}` : ""}</span></div>
         {ticketOpen ? <button className="btn ghost sm" onClick={() => setTicketOpen(false)}><Icon name="close" size={16} /></button>
           : lines.length > 0 && <button className="btn ghost sm" onClick={() => { if (confirm("Xoá hết món trong đơn?")) setLines([]); }}>Xoá hết</button>}
       </div>
@@ -343,7 +374,7 @@ function SellApp() {
                         <button key={m.id} className={"ps-item" + (m.available === false ? " off" : "")} onClick={() => tapItem(m)}>
                           <div className="pic" style={m.img ? { backgroundImage: `url(${m.img})` } : { background: m.grad }}>{!m.img && <Icon name="cup" size={28} color="#fff" />}</div>
                           <div className="nm">{m.name}</div>
-                          <div className="pr">{m.available === false ? "Tạm hết" : money(m.price)}</div>
+                          <div className="pr">{m.available === false ? "Tạm hết" : money(basePriceFor(m, channel))}</div>
                           {countById[m.id] ? <span className="cnt">{countById[m.id]}</span> : null}
                         </button>
                       ))}
@@ -363,7 +394,7 @@ function SellApp() {
       )}
 
       {pick && (
-        <CustomizeSheet item={pick.item} variantGroups={groupsOf(pick.item)} withNote
+        <CustomizeSheet item={{ ...pick.item, price: basePriceFor(pick.item, channel) }} variantGroups={groupsForChannel(groupsOf(pick.item), channel)} withNote
           initialSelections={pick.line?.selections || null} initialQty={pick.line?.qty || 1} initialNote={pick.line?.note || ""}
           editing={!!pick.line} onClose={() => setPick(null)} onAdd={onSheetAdd} />
       )}

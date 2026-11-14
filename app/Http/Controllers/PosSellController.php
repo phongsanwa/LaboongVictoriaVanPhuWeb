@@ -7,6 +7,7 @@ use App\Models\Product;
 use App\Models\ProductVariant;
 use App\Models\Store;
 use App\Models\VariantGroup;
+use App\Support\ChannelPricing;
 use App\Support\ShopTime;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\JsonResponse;
@@ -43,6 +44,8 @@ class PosSellController extends Controller
             ])->values()->all(),
             'variantGroups' => $menu['variantGroups'],
             'storeOffs'     => $menu['storeOffs'],
+            // Giá bán trên app (ShopeeFood / GrabFood / Xanh SM) — cài ở Admin → Giá bán app.
+            'channelPricing' => ChannelPricing::settings(),
             'today'         => ShopTime::today()->toDateString(),
             'siteUrl'       => \App\Support\Site::base(),
             'urls'          => [
@@ -82,7 +85,7 @@ class PosSellController extends Controller
             return response()->json(['message' => 'Vui lòng nhập mã đơn ' . PosOrder::CHANNELS[$data['channel']] . '.'], 422);
         }
 
-        $items = $this->priceLines($data['lines']);
+        $items = $this->priceLines($data['lines'], $data['channel']);
         if (is_string($items)) {
             return response()->json(['message' => $items], 422);
         }
@@ -181,10 +184,11 @@ class PosSellController extends Controller
 
     /**
      * Tính giá từng dòng theo món + lựa chọn (giống cách website lưu đơn).
-     * Trả mảng dòng để lưu, hoặc chuỗi lỗi.
+     * Đơn app giao hàng dùng giá app (tăng % / giá riêng theo món). Trả mảng dòng để lưu, hoặc chuỗi lỗi.
      */
-    private function priceLines(array $lines): array|string
+    private function priceLines(array $lines, string $channel): array|string
     {
+        $pricing = ChannelPricing::settings();
         $groups = VariantGroup::all()->keyBy('key');
         $productIds = collect($lines)->map(fn ($l) => preg_match('/^p(\d+)$/', $l['id'], $m) ? (int) $m[1] : null)->filter()->unique();
         $products = Product::whereIn('id', $productIds)->get()->keyBy('id');
@@ -200,7 +204,7 @@ class PosSellController extends Controller
             $own = $variants[$pid] ?? collect();
             $find = fn (string $type, string $name) => $own->first(fn ($v) => $v->variant_type === $type && $v->name === $name);
 
-            $unit = (int) $product->base_price;
+            $unit = ChannelPricing::basePrice($product->id, (int) $product->base_price, $channel, $pricing);
             $sizeName = null;
             $levels = [];
             $toppings = [];
@@ -209,14 +213,15 @@ class PosSellController extends Controller
                 if (!$group) continue;
                 if ($group->type === 'size' && is_string($value) && $value !== '') {
                     $v = $find($key, $value);
-                    $unit += $v ? (int) $v->extra_price : 0;
+                    $unit += $v ? ChannelPricing::extra((int) $v->extra_price, $channel, $pricing) : 0;
                     $sizeName = $value;
                 } elseif ($group->type === 'addon' && is_array($value)) {
                     foreach (array_count_values(array_map('strval', $value)) as $name => $count) {
                         $v = $find($key, $name);
                         if (!$v) continue;
-                        $unit += (int) $v->extra_price * $count;
-                        $toppings[] = ['name' => $name, 'qty' => $count, 'price' => (int) $v->extra_price];
+                        $extra = ChannelPricing::extra((int) $v->extra_price, $channel, $pricing);
+                        $unit += $extra * $count;
+                        $toppings[] = ['name' => $name, 'qty' => $count, 'price' => $extra];
                     }
                 } elseif (is_string($value) && $value !== '') {
                     $levels[] = ['label' => $group->label, 'value' => $value];

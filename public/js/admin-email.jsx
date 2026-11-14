@@ -140,29 +140,41 @@ function TemplateEditor({ initial, onClose, onSaved }) {
 }
 
 /* ─── Mẫu email Flash Sale: chọn đợt → xem trước các kiểu → dùng hoặc lưu thành mẫu ─── */
-function FlashTemplatePicker({ onClose, onUse, onSaved }) {
+function FlashTemplatePicker({ onClose, onUse, onSaved, initialMode = 'now' }) {
   const sales = DATA.flashSales || [];
   const [saleId, setSaleId] = useState(sales[0]?.id || '');
-  const [designs, setDesigns] = useState(null);
+  const [data, setData] = useState(null);          // { designs, remind }
+  const [mode, setMode] = useState(initialMode);   // now: món đang flash sale · remind: nhắc sắp diễn ra
   const [err, setErr] = useState('');
   const [active, setActive] = useState(0);
+  const [sendAt, setSendAt] = useState('');        // '' = gửi ngay, ngược lại 'YYYY-MM-DDTHH:MM' (giờ VN)
   const [saving, setSaving] = useState(null);
 
   useEffect(() => {
     if (!saleId) return;
-    setDesigns(null); setErr(''); setActive(0);
+    setData(null); setErr(''); setActive(0);
     fetch(URLS.flashTemplates + '?sale_id=' + saleId, { headers: { Accept: 'application/json' } })
-      .then(r => r.json().then(j => r.ok ? setDesigns(j.designs) : setErr(j.message || 'Không tải được mẫu')))
+      .then(r => r.json().then(j => {
+        if (!r.ok) return setErr(j.message || 'Không tải được mẫu');
+        setData(j);
+        // Mặc định hẹn gửi 1 giờ trước khi bắt đầu (nếu còn kịp), không thì gửi ngay.
+        const opts = j.remind?.send_options || [];
+        setSendAt((opts.find(o => /^1 giờ/.test(o.label)) || opts[0] || {}).value || '');
+      }))
       .catch(() => setErr('Không tải được mẫu'));
   }, [saleId]);
+  useEffect(() => setActive(0), [mode]);
 
   const sale = sales.find(x => String(x.id) === String(saleId));
-  const d = designs && designs[active];
+  const remind = data?.remind || null;
+  const list = data ? (mode === 'remind' ? (remind?.reminders || []) : data.designs) : null;
+  const d = list && list[active];
 
   const save = async (des) => {
     setSaving(des.key);
     try {
-      const res = await apiFetch('POST', URLS.storeTemplate, { name: `Flash Sale · ${des.name} · ${sale?.name || ''}`.trim(), subject: des.subject, body: des.body, attach_qr: false });
+      const prefix = mode === 'remind' ? 'Nhắc Flash Sale' : 'Flash Sale';
+      const res = await apiFetch('POST', URLS.storeTemplate, { name: `${prefix} · ${des.name} · ${sale?.name || ''}`.trim(), subject: des.subject, body: des.body, attach_qr: false });
       onSaved(res.template);
     } catch (e) { setErr(e.message); } finally { setSaving(null); }
   };
@@ -188,12 +200,34 @@ function FlashTemplatePicker({ onClose, onUse, onSaved }) {
                   {sales.map(x => <option key={x.id} value={x.id}>{x.name} — {x.schedule}{x.active ? '' : ' (đang tắt)'}</option>)}
                 </select>
               </div>
+              <div style={{ display: 'flex', gap: 8, marginBottom: 12, flexWrap: 'wrap' }}>
+                {[['now', 'Giới thiệu món đang flash sale'], ['remind', '⏰ Nhắc flash sale sắp diễn ra']].map(([k, label]) => (
+                  <button key={k} className={'btn' + (mode === k ? ' primary' : ' ghost')} style={{ borderRadius: 999 }} onClick={() => setMode(k)}>{label}</button>
+                ))}
+              </div>
               {err && <div className="cp-err" style={{ marginBottom: 10 }}><Icon name="alert" size={14} color="var(--hot)" /> {err}</div>}
-              {!designs && !err && <div style={{ padding: 30, display: 'flex', justifyContent: 'center' }}><span className="lb-spin lg" /></div>}
-              {designs && (
+              {!data && !err && <div style={{ padding: 30, display: 'flex', justifyContent: 'center' }}><span className="lb-spin lg" /></div>}
+              {data && mode === 'remind' && !remind && (
+                <div style={{ padding: 24, textAlign: 'center', color: 'var(--ink-3)' }}>Đợt này không còn phiên nào sắp diễn ra để nhắc.</div>
+              )}
+              {data && mode === 'remind' && remind && (
+                <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'flex-end', padding: '10px 12px', borderRadius: 12, background: 'var(--brand-soft, rgba(15,98,63,.08))', marginBottom: 12 }}>
+                  <div style={{ flex: '1 1 220px' }}>
+                    <div style={{ fontSize: 12.5, color: 'var(--ink-2)' }}>Phiên kế tiếp</div>
+                    <div style={{ fontWeight: 800 }}>{remind.session.text}</div>
+                  </div>
+                  <div className="fld" style={{ flex: '1 1 260px', margin: 0 }}>
+                    <label>Thời điểm gửi email nhắc</label>
+                    <select className="inp" value={sendAt} onChange={e => setSendAt(e.target.value)}>
+                      {remind.send_options.map(o => <option key={o.value || 'now'} value={o.value || ''}>{o.label}</option>)}
+                    </select>
+                  </div>
+                </div>
+              )}
+              {list && list.length > 0 && (
                 <div className="ftp-grid">
                   <div className="ftp-list">
-                    {designs.map((x, i) => (
+                    {list.map((x, i) => (
                       <button key={x.key} className={'ftp-item' + (i === active ? ' on' : '')} onClick={() => setActive(i)}>
                         <div style={{ fontWeight: 800, fontSize: 14.5 }}>{i + 1}. {x.name}</div>
                         <div style={{ fontSize: 12.5, color: 'var(--ink-2)', marginTop: 3, lineHeight: 1.45 }}>{x.desc}</div>
@@ -206,7 +240,9 @@ function FlashTemplatePicker({ onClose, onUse, onSaved }) {
                       <div style={{ fontWeight: 700, margin: '2px 0 10px' }}>{d.preview_subject}</div>
                       <iframe title={'Xem trước ' + d.name} srcDoc={d.preview} sandbox="" className="ftp-frame" />
                       <div style={{ display: 'flex', gap: 10, marginTop: 12, flexWrap: 'wrap' }}>
-                        <button className="btn primary" onClick={() => onUse(d)}><Icon name="send" size={15} color="#fff" /> Dùng mẫu này để gửi</button>
+                        <button className="btn primary" onClick={() => onUse(d, mode === 'remind' ? sendAt : '')}>
+                          <Icon name={mode === 'remind' && sendAt ? 'cal' : 'send'} size={15} color="#fff" /> {mode === 'remind' && sendAt ? 'Dùng mẫu này & hẹn giờ gửi' : 'Dùng mẫu này để gửi'}
+                        </button>
                         <button className="btn ghost" disabled={saving === d.key} onClick={() => save(d)}><Icon name="copy" size={15} /> {saving === d.key ? 'Đang lưu…' : 'Lưu vào Mẫu email'}</button>
                       </div>
                     </div>
@@ -260,20 +296,20 @@ function BrandingPanel({ notify }) {
   return (
     <div className="brand-grid">
       <div className="card" style={{ padding: 18, background: 'var(--card,#fff)', borderRadius: 14, border: '1px solid var(--line,#eee)' }}>
-        <h3 style={{ margin: '0 0 4px', fontSize: 17 }}>Ảnh nền phần đầu email</h3>
+        <h3 style={{ margin: '0 0 4px', fontSize: 17 }}>Ảnh phần đầu email</h3>
         <p style={{ margin: '0 0 14px', fontSize: 13, color: 'var(--ink-2)', lineHeight: 1.5 }}>
-          Thay nền xanh ở ô "LABOONG · Victoria Văn Phú" trên cùng email. Áp dụng cho email gửi khách (khuyến mãi, flash sale…) và email chào mừng thành viên mới.
+          Mặc định là banner Laboong (logo + chữ LA BOONG trên nền xanh ô liu). Tải ảnh khác lên nếu muốn đổi theo dịp. Áp dụng cho email gửi khách (khuyến mãi, flash sale…), email chào mừng thành viên mới và email cấp lại mật khẩu.
         </p>
-        <div style={{ borderRadius: 12, overflow: 'hidden', border: '1px solid var(--line,#eee)', marginBottom: 12, background: '#0F623F', aspectRatio: '3 / 1', display: 'grid', placeItems: 'center' }}>
-          {bg ? <img src={bg} alt="Ảnh nền đầu email" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
-            : <span style={{ color: '#d8f3e6', fontWeight: 700, fontSize: 13 }}>Đang dùng nền xanh mặc định</span>}
+        <div style={{ borderRadius: 12, overflow: 'hidden', border: '1px solid var(--line,#eee)', marginBottom: 12, background: '#6D7836', aspectRatio: '3 / 1', position: 'relative' }}>
+          <img src={bg || '/images/email-header.png'} alt="Ảnh đầu email" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+          {!bg && <span style={{ position: 'absolute', right: 8, top: 8, background: 'rgba(0,0,0,.45)', color: '#fff', fontWeight: 700, fontSize: 11.5, padding: '3px 8px', borderRadius: 999 }}>Đang dùng banner mặc định</span>}
         </div>
         <input ref={fileRef} type="file" accept="image/jpeg,image/png,image/webp" hidden onChange={e => upload(e.target.files && e.target.files[0])} />
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
           <button className="btn ghost" disabled={uploading} onClick={() => fileRef.current && fileRef.current.click()}>
             {uploading ? <><span className="lb-spin" /> Đang tải…</> : <><Icon name="image" size={15} /> {bg ? 'Đổi ảnh' : 'Tải ảnh lên'}</>}
           </button>
-          {bg && <button className="btn ghost" onClick={() => setBg('')}>Dùng lại nền xanh mặc định</button>}
+          {bg && <button className="btn ghost" onClick={() => setBg('')}>Dùng lại banner Laboong mặc định</button>}
         </div>
         <div style={{ fontSize: 12, color: 'var(--ink-3)', marginTop: 8 }}>Ảnh ngang, nên dùng khoảng 1200 × 400 px (JPG/PNG/WebP, tối đa 4MB).</div>
 
@@ -321,7 +357,7 @@ function App() {
   const [composeErr, setComposeErr] = useState('');
 
   const [tplEditor, setTplEditor] = useState(null);
-  const [flashPicker, setFlashPicker] = useState(false);
+  const [flashPicker, setFlashPicker] = useState(false); // false | 'now' | 'remind'
 
   const flash = (msg, ok = true) => { setToast({ msg, ok }); setTimeout(() => setToast(null), 3000); };
 
@@ -471,8 +507,11 @@ function App() {
                       <option value="">— Không dùng mẫu —</option>
                       {templates.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
                     </select>
-                    <button className="btn ghost" style={{ whiteSpace: 'nowrap' }} onClick={() => setFlashPicker(true)}>
+                    <button className="btn ghost" style={{ whiteSpace: 'nowrap' }} onClick={() => setFlashPicker('now')}>
                       <img src="/images/flash-sale.png" alt="" width="18" height="18" /> Mẫu Flash Sale
+                    </button>
+                    <button className="btn ghost" style={{ whiteSpace: 'nowrap' }} onClick={() => setFlashPicker('remind')}>
+                      <Icon name="clock" size={16} /> Nhắc Flash Sale
                     </button>
                   </div>
                 </div>
@@ -599,8 +638,11 @@ function App() {
                 <button className="btn primary" onClick={() => setTplEditor({})}>
                   <Icon name="plus" size={16} color="#fff" /> Thêm mẫu
                 </button>
-                <button className="btn ghost" onClick={() => setFlashPicker(true)}>
+                <button className="btn ghost" onClick={() => setFlashPicker('now')}>
                   <img src="/images/flash-sale.png" alt="" width="18" height="18" /> Tạo từ mẫu Flash Sale
+                </button>
+                <button className="btn ghost" onClick={() => setFlashPicker('remind')}>
+                  <Icon name="clock" size={16} /> Tạo mẫu nhắc Flash Sale
                 </button>
               </div>
               {templates.length === 0 && <div style={{ padding: 40, textAlign: 'center', color: 'var(--ink-3)' }}>Chưa có mẫu email nào.</div>}
@@ -659,8 +701,12 @@ function App() {
 
       {tplEditor !== null && <TemplateEditor initial={tplEditor} onClose={() => setTplEditor(null)} onSaved={onTplSaved} />}
       {flashPicker && (
-        <FlashTemplatePicker onClose={() => setFlashPicker(false)}
-          onUse={d => { setTplId(''); setSubject(d.subject); setBody(d.body); setAttachQr(false); setFlashPicker(false); setTab('compose'); flash(`Đã áp dụng mẫu "${d.name}" — bạn có thể sửa trước khi gửi`); }}
+        <FlashTemplatePicker initialMode={flashPicker} onClose={() => setFlashPicker(false)}
+          onUse={(d, sendAt) => {
+            setTplId(''); setSubject(d.subject); setBody(d.body); setAttachQr(false); setFlashPicker(false); setTab('compose');
+            if (sendAt) { setWhen('later'); setScheduledAt(sendAt); } else setWhen('now');
+            flash(sendAt ? `Đã áp dụng mẫu "${d.name}" và hẹn gửi lúc ${sendAt.slice(11)} ${sendAt.slice(8, 10)}/${sendAt.slice(5, 7)}` : `Đã áp dụng mẫu "${d.name}" — bạn có thể sửa trước khi gửi`);
+          }}
           onSaved={t => { setTemplates(ts => [t, ...ts]); flash(`Đã lưu "${t.name}" vào Mẫu email`); }} />
       )}
 

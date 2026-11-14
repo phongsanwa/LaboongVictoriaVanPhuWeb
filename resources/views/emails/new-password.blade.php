@@ -11,14 +11,11 @@
   <tr><td align="center">
     <table width="520" cellpadding="0" cellspacing="0" style="max-width:520px;width:100%;">
 
-      <tr><td style="background:linear-gradient(150deg,#0F623F,#1AA86A);border-radius:16px 16px 0 0;padding:28px 32px;">
-        <div style="display:inline-block;width:40px;height:40px;background:rgba(255,255,255,.2);border-radius:11px;text-align:center;line-height:40px;font-size:20px;font-weight:800;color:#fff;vertical-align:middle;">L</div>
-        <span style="font-size:18px;font-weight:800;color:#fff;vertical-align:middle;margin-left:10px;">Laboong</span>
-        <span style="font-size:12.5px;color:rgba(255,255,255,.75);vertical-align:middle;"> · Victoria Văn Phú</span>
-        <div style="margin-top:18px;font-size:22px;font-weight:800;color:#fff;">Mật khẩu mới của bạn 🔑</div>
-      </td></tr>
+      {{-- Header thương hiệu (ảnh đổi ở Admin → Email → Giao diện email) --}}
+      @include('emails.partials.brand-header', ['brandTitle' => 'LABOONG', 'brandSub' => 'Victoria Văn Phú', 'brandTitleColor' => '#ffffff', 'brandSubColor' => '#f2d7b7', 'brandTitleSize' => '22px', 'brandRadius' => '16px 16px 0 0'])
 
       <tr><td style="background:#fff;padding:26px 32px;">
+        <div style="margin:0 0 16px;font-size:22px;font-weight:800;color:#1A1A1A;">Mật khẩu mới của bạn 🔑</div>
         <p style="margin:0 0 14px;font-size:14.5px;">Xin chào <strong>{{ $user->name }}</strong>,</p>
         <p style="margin:0 0 18px;font-size:14px;color:#374151;line-height:1.6;">
           Bạn (hoặc ai đó) vừa yêu cầu đặt lại mật khẩu cho tài khoản Laboong
