@@ -49,7 +49,9 @@ function FlashStrip({ sale, onOpen }: { sale: FlashSale; onOpen: (id: string) =>
         </div>
         <div className="hscroll" style={{ padding: 12 }}>
           {sale.items.map((it) => {
-            const pct = it.quota ? Math.min(100, Math.round((it.sold / it.quota) * 100)) : 0;
+            // Chỉ hiện số suất còn lại (không hiện đã bán); thanh đỏ = phần còn lại.
+            const left = it.quota ? Math.max(0, it.quota - (it.sold || 0)) : 0;
+            const pct = it.quota ? Math.min(100, Math.round((left / it.quota) * 100)) : 0;
             return (
               <button key={it.id} onClick={() => onOpen(it.id)} style={{ flex: "none", width: 124, border: 0, background: "none", padding: 0, textAlign: "left" }}>
                 <Thumb img={it.img} grad={it.grad} size={124} />
@@ -57,10 +59,17 @@ function FlashStrip({ sale, onOpen }: { sale: FlashSale; onOpen: (id: string) =>
                 <Price price={it.price} sale={it.flash_price} flash />
                 {live && it.quota ? (
                   <div style={{ marginTop: 6, height: 16, borderRadius: 8, background: "#FDE3DE", position: "relative", overflow: "hidden" }}>
-                    <div style={{ width: `${pct}%`, height: "100%", background: "#E4402F" }} />
-                    <span style={{ position: "absolute", inset: 0, fontSize: 10.5, fontWeight: 800, color: pct > 55 ? "#fff" : "#B3261E", textAlign: "center", lineHeight: "16px" }}>
-                      {it.sold >= it.quota ? "Hết suất" : `Đã bán ${it.sold}/${it.quota}`}
-                    </span>
+                    {/* Chữ đỏ đậm trên nền nhạt; lớp đỏ (phần còn lại) chứa cùng dòng chữ màu trắng. */}
+                    <div style={{ fontSize: 10.5, fontWeight: 800, color: "#B3261E", textAlign: "center", lineHeight: "16px", whiteSpace: "nowrap" }}>
+                      {left <= 0 ? "Hết suất" : `Còn ${left} suất`}
+                    </div>
+                    {pct > 0 && (
+                      <div style={{ position: "absolute", top: 0, bottom: 0, left: 0, width: `${pct}%`, overflow: "hidden", background: "#E4402F" }}>
+                        <div aria-hidden="true" style={{ width: `${10000 / pct}%`, fontSize: 10.5, fontWeight: 800, color: "#fff", textAlign: "center", lineHeight: "16px", whiteSpace: "nowrap" }}>
+                          {`Còn ${left} suất`}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 ) : null}
               </button>
