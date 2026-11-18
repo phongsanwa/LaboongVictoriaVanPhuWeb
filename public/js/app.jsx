@@ -253,14 +253,24 @@ function FlashSaleStrip() {
                   <span style={{ color: "#E4402F", fontWeight: 800, fontSize: 15 }}>{fmt(it.flash_price)}đ</span>
                   <span style={{ color: "#9AA19C", fontSize: 11.5, textDecoration: "line-through" }}>{fmt(it.price)}đ</span>
                 </div>
-                {it.quota != null ? (
-                  <div style={{ marginTop: 6, height: 16, borderRadius: 10, background: "#FFE0D6", position: "relative", overflow: "hidden" }}>
-                    <div style={{ position: "absolute", inset: 0, width: `${Math.min(100, (it.sold / it.quota) * 100)}%`, background: "linear-gradient(90deg,#FF7A45,#E4402F)" }} />
-                    <div style={{ position: "relative", textAlign: "center", fontSize: 10.5, fontWeight: 800, color: it.sold / it.quota > 0.5 ? "#fff" : "#8A4A3A", lineHeight: "16px" }}>
-                      {!live ? `${it.quota} suất` : soldOut ? "Đã hết suất" : `Đã bán ${it.sold}/${it.quota}`}
+                {it.quota != null ? (() => {
+                  // Chỉ cho khách thấy số suất còn lại (không hiện đã bán); thanh đỏ = phần còn lại.
+                  const left = live ? Math.max(0, it.quota - (it.sold || 0)) : it.quota;
+                  const fill = it.quota > 0 ? Math.min(1, left / it.quota) : 0;
+                  const label = soldOut ? "Đã hết suất" : `Còn ${left} suất`;
+                  const txt = { textAlign: "center", fontSize: 10.5, fontWeight: 800, lineHeight: "16px", whiteSpace: "nowrap" };
+                  // Chữ nâu trên nền nhạt; lớp đỏ cắt theo phần còn lại chứa cùng dòng chữ màu trắng → đọc rõ ở mọi mức.
+                  return (
+                    <div style={{ marginTop: 6, height: 16, borderRadius: 10, background: "#FFE0D6", position: "relative", overflow: "hidden" }}>
+                      <div style={{ ...txt, color: "#8A4A3A" }}>{label}</div>
+                      {fill > 0 && (
+                        <div style={{ position: "absolute", top: 0, bottom: 0, left: 0, width: `${fill * 100}%`, overflow: "hidden", background: "linear-gradient(90deg,#FF7A45,#E4402F)" }}>
+                          <div aria-hidden="true" style={{ ...txt, color: "#fff", width: `${100 / fill}%` }}>{label}</div>
+                        </div>
+                      )}
                     </div>
-                  </div>
-                ) : <div style={{ marginTop: 6, fontSize: 11, color: "#8A4A3A", fontWeight: 600 }}>{live ? "Không giới hạn" : "Sắp mở bán"}</div>}
+                  );
+                })() : <div style={{ marginTop: 6, fontSize: 11, color: "#8A4A3A", fontWeight: 600 }}>{live ? "Không giới hạn" : "Sắp mở bán"}</div>}
               </div>
             </a>
           );
